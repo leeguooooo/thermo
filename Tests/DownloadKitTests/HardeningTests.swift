@@ -426,6 +426,26 @@ final class HardeningTests: XCTestCase {
         XCTAssertEqual(calls.value, 3)
     }
 
+    func testBytesOnAnOlderLinkDoNotResetTheRefreshLimit() async throws {
+        let content = payload(4000)
+        let calls = Box(0)
+        let transport = FakeTransport(content: content) { request, _ in
+            guard let range = request.range else { return nil }
+            if range.lowerBound >= 2000 { return FakeTransport.response(status: 403, body: Data()) }
+            let headers = ["Content-Range": "bytes \(range.lowerBound)-\(range.upperBound - 1)/4000", "ETag": "\"v1\""]
+            return FakeTransport.response(status: 206, headers: headers, body: content.subdata(in: Int(range.lowerBound)..<Int(range.upperBound)), delayed: true)
+        }
+        let request = DownloadRequest(url: source, destination: destination, refreshLink: { _ in
+            let count = calls.value + 1
+            calls.value = count
+            return RefreshedLink(url: URL(string: "https://example.test/file.bin?sign=\(count)")!)
+        })
+        let task = try engine(transport, concurrency: 2).makeTask(request)
+        await task.start()
+        await assertFails(task, with: .linkExpired)
+        XCTAssertEqual(calls.value, 3)
+    }
+
     func testRefresherReturningNothingFails() async throws {
         let request = DownloadRequest(url: source, destination: destination, refreshLink: { _ in nil })
         let transport = FakeTransport(content: payload(100)) { _, _ in FakeTransport.response(status: 404, body: Data()) }

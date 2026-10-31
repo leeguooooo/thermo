@@ -683,7 +683,7 @@ public actor DownloadTask {
                 throw DownloadError.io(error.localizedDescription)
             }
             offset += Int64(data.count)
-            await record(segmentID, written: offset)
+            await record(segmentID, written: offset, generation: link.generation)
             // Waiting here stops reading, which is what slows the server down.
             try await engine.configuration.speedLimiter?.acquire(Int64(data.count))
             if let budget, budget <= Int64(data.count) { return }
@@ -753,11 +753,13 @@ public actor DownloadTask {
         }
     }
 
-    private func record(_ id: Int, written: Int64) {
+    /// Only bytes on the current link vouch for it: an older connection can keep streaming
+    /// after the link died, and must not reset the refresh limit.
+    private func record(_ id: Int, written: Int64, generation: Int? = nil) {
         if let index = state.segments.firstIndex(where: { $0.id == id }) {
             state.segments[index].written = written
         }
-        if written > 0 { refreshesSinceProgress = 0 }
+        if written > 0, generation == linkGeneration { refreshesSinceProgress = 0 }
         inflight[id]?.lastActivity = engine.clock()
         emitIfDue()
     }
