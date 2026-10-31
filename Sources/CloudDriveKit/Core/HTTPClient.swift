@@ -25,20 +25,18 @@ public struct HTTPResponse: Sendable, Equatable {
     public var body: Data
     /// `name=value; Path=...` entries, for providers that need the path. Empty when the transport has none.
     public var cookiesWithPath: [String]
-    public init(statusCode: Int = 200, setCookies: [String] = [], body: Data = Data(), cookiesWithPath: [String] = []) {
+    /// Response headers with lowercased names; Set-Cookie is in `setCookies` instead.
+    public var headers: [String: String]
+    public init(statusCode: Int = 200, setCookies: [String] = [], body: Data = Data(), cookiesWithPath: [String] = [], headers: [String: String] = [:]) {
         self.statusCode = statusCode
         self.setCookies = setCookies
         self.body = body
         self.cookiesWithPath = cookiesWithPath
+        self.headers = headers
     }
 
-    /// Response headers with lowercased names; Set-Cookie is in `setCookies` instead.
-    public var headers: [String: String]
-    public init(statusCode: Int = 200, setCookies: [String] = [], body: Data = Data(), headers: [String: String] = [:]) {
-        self.statusCode = statusCode
-        self.setCookies = setCookies
-        self.body = body
-        self.headers = headers
+    public func header(_ name: String) -> String? {
+        headers.first { $0.key.caseInsensitiveCompare(name) == .orderedSame }?.value
     }
 }
 
@@ -78,11 +76,8 @@ public final class URLSessionTransport: HTTPTransport {
         do {
             let (data, response) = try await session.data(for: urlRequest, delegate: RedirectGuard(follow: request.followRedirects))
             guard let http = response as? HTTPURLResponse else { throw DriveError.transport(code: 0) }
-            return HTTPResponse(statusCode: http.statusCode, setCookies: Self.setCookies(from: http), body: data,
-                                cookiesWithPath: Self.cookiesWithPath(from: http))
-    }
-
-            return HTTPResponse(statusCode: http.statusCode, setCookies: Self.setCookies(from: http), body: data, headers: Self.headers(from: http))
+                        return HTTPResponse(statusCode: http.statusCode, setCookies: Self.setCookies(from: http), body: data,
+                                cookiesWithPath: Self.cookiesWithPath(from: http), headers: Self.headers(from: http))
         } catch let error as URLError {
             // URLError carries the URL, which can hold share tokens; keep only the code.
             if error.code == .cancelled { throw CancellationError() }
@@ -99,19 +94,19 @@ public final class URLSessionTransport: HTTPTransport {
         return HTTPCookie.cookies(withResponseHeaderFields: fields, for: url).map { "\($0.name)=\($0.value)" }
     }
 
+    static func headers(from response: HTTPURLResponse) -> [String: String] {
+        response.allHeaderFields.reduce(into: [String: String]()) { result, field in
+            guard let name = (field.key as? String)?.lowercased(), name != "set-cookie" else { return }
+            if let value = field.value as? String { result[name] = value }
+        }
+    }
+
     static func cookiesWithPath(from response: HTTPURLResponse) -> [String] {
         guard let url = response.url else { return [] }
         let fields = response.allHeaderFields.reduce(into: [String: String]()) { result, field in
             if let name = field.key as? String, let value = field.value as? String { result[name] = value }
         }
         return HTTPCookie.cookies(withResponseHeaderFields: fields, for: url).map { "\($0.name)=\($0.value); Path=\($0.path)" }
-    }
-
-    static func headers(from response: HTTPURLResponse) -> [String: String] {
-        response.allHeaderFields.reduce(into: [String: String]()) { result, field in
-            guard let name = (field.key as? String)?.lowercased(), name != "set-cookie" else { return }
-            if let value = field.value as? String { result[name] = value }
-        }
     }
 
     /// Credentials must not follow a redirect to another origin.
@@ -145,14 +140,16 @@ public struct HTTPClient: Sendable {
         self.defaultHeaders = defaultHeaders
     }
 
-    public func get(_ url: String, headers: [String: String] = [:]) async throws -> HTTPResponse {
-        try await send(.get, url, headers: headers, body: nil)
+    public func get(_ url: String, headers: [String: String] = [:], followRedirects: Bool = true) async throws -> HTTPResponse {
+        try await send(.get, url, headers: headers, body: nil, followRedirects: followRedirects)
     }
 
     public func postJSON(_ url: String, json: [String: Any], headers: [String: String] = [:]) async throws -> HTTPResponse {
         let body = try JSONSerialization.data(withJSONObject: json, options: [.sortedKeys, .withoutEscapingSlashes])
         var merged = headers
-        merged["Content-Type"] = "application/json"
+        if !merged.keys.contains(where: { $0.caseInsensitiveCompare("Content-Type") == .orderedSame }) {
+            merged["Content-Type"] = "application/json"
+        }
         return try await send(.post, url, headers: merged, body: body)
     }
 
@@ -163,10 +160,10 @@ public struct HTTPClient: Sendable {
         return try await transport.send(merged)
     }
 
-    private func send(_ method: HTTPMethod, _ url: String, headers: [String: String], body: Data?) async throws -> HTTPResponse {
+    private func send(_ method: HTTPMethod, _ url: String, headers: [String: String], body: Data?, followRedirects: Bool = true) async throws -> HTTPResponse {
         guard let parsed = URL(string: url) else { throw DriveError.api(message: "请求地址无效") }
         let merged = defaultHeaders.merging(headers) { _, new in new }
-        return try await transport.send(HTTPRequest(method: method, url: parsed, headers: merged, body: body))
+        return try await transport.send(HTTPRequest(method: method, url: parsed, headers: merged, body: body, followRedirects: followRedirects))
     }
 
     /// Matches java.net.URLEncoder, which the source drives use: `+`, `/` and `=` are escaped.

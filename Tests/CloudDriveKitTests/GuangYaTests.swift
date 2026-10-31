@@ -17,7 +17,7 @@ private func guangya(_ transport: FakeTransport, updates: Box<(DriveCredential, 
     return GuangYaProvider(api: GuangYaAPI(transport: transport, credentialUpdated: { updates?.add(($0, $1)) }, sleep: record), sleep: record)
 }
 
-private func ok(_ data: String) -> HTTPResponse { json(#"{"code":"0","data":\#(data)}"#) }
+private func guangYaOK(_ data: String) -> HTTPResponse { json(#"{"code":"0","data":\#(data)}"#) }
 
 final class GuangYaCredentialTests: XCTestCase {
     func testRoundTripAndBareToken() {
@@ -171,7 +171,7 @@ final class GuangYaProviderTests: XCTestCase {
     }
 
     func testQuotaReadsStringSizes() async {
-        let transport = FakeTransport([("get_assets", ok(#"{"totalSpaceSize":"1000","usedSpaceSize":"250"}"#))])
+        let transport = FakeTransport([("get_assets", guangYaOK(#"{"totalSpaceSize":"1000","usedSpaceSize":"250"}"#))])
         let quota = await guangya(transport).quota(credential: freshCredential)
         XCTAssertEqual(quota, DriveQuota(used: 250, total: 1000))
         XCTAssertEqual(transport.requests[0].headers["did"], device.deviceId)
@@ -183,8 +183,8 @@ final class GuangYaProviderTests: XCTestCase {
         let cold = GuangYaCredential(accessToken: "old", refreshToken: secretRefresh, device: device).driveCredential
         let transport = FakeTransport([
             ("auth/token", json(#"{"data":{"access_token":"new","refresh_token":"","expires_in":3600}}"#)),
-            ("get_assets", ok(#"{"totalSpaceSize":"10","usedSpaceSize":"1"}"#)),
-            ("get_assets", ok(#"{"totalSpaceSize":"10","usedSpaceSize":"2"}"#)),
+            ("get_assets", guangYaOK(#"{"totalSpaceSize":"10","usedSpaceSize":"1"}"#)),
+            ("get_assets", guangYaOK(#"{"totalSpaceSize":"10","usedSpaceSize":"2"}"#)),
         ])
         let updates = Box<(DriveCredential, DriveCredential)>()
         let provider = guangya(transport, updates: updates)
@@ -203,7 +203,7 @@ final class GuangYaProviderTests: XCTestCase {
 
     func testRefusedRefreshKeepsTheAccessToken() async {
         let cold = GuangYaCredential(accessToken: "old", refreshToken: "r", device: device).driveCredential
-        let transport = FakeTransport([("auth/token", json(#"{"error":"invalid_grant"}"#)), ("get_assets", ok(#"{"totalSpaceSize":"1"}"#))])
+        let transport = FakeTransport([("auth/token", json(#"{"error":"invalid_grant"}"#)), ("get_assets", guangYaOK(#"{"totalSpaceSize":"1"}"#))])
         _ = await guangya(transport).quota(credential: cold)
         XCTAssertEqual(transport.requests[1].headers["Authorization"], "Bearer old")
         let refreshed = await guangya(FakeTransport([("auth/token", json(#"{"error":"invalid_grant"}"#))])).refreshCredential(cold)
@@ -211,7 +211,7 @@ final class GuangYaProviderTests: XCTestCase {
     }
 
     func testOpenSharePrefersTypedPasscode() async throws {
-        let transport = FakeTransport([("get_share_access_token", ok(#"{"accessToken":"st"}"#)), ("get_share_summary", ok(#"{"shareName":"名字"}"#))])
+        let transport = FakeTransport([("get_share_access_token", guangYaOK(#"{"accessToken":"st"}"#)), ("get_share_summary", guangYaOK(#"{"shareName":"名字"}"#))])
         let link = ParsedShareLink(shareId: "sid", passcode: "old1", platform: .guangya)
         let opened = try await guangya(transport).openShare(link, passcode: "new2", credential: nil)
         XCTAssertEqual(opened.accessToken, "st")
@@ -226,7 +226,7 @@ final class GuangYaProviderTests: XCTestCase {
     }
 
     func testSummaryFailureFallsBackToDefaultTitle() async throws {
-        let transport = FakeTransport([("get_share_access_token", ok(#"{"access_token":"st"}"#)), ("get_share_summary", json(#"{"code":"500"}"#))])
+        let transport = FakeTransport([("get_share_access_token", guangYaOK(#"{"access_token":"st"}"#)), ("get_share_summary", json(#"{"code":"500"}"#))])
         let opened = try await guangya(transport).openShare(ParsedShareLink(shareId: "s", passcode: nil, platform: .guangya), passcode: nil, credential: nil)
         XCTAssertEqual(opened.title, "光鸭分享")
         XCTAssertEqual(try transport.body(0)["code"] as? String, "")
@@ -266,8 +266,8 @@ final class GuangYaProviderTests: XCTestCase {
 
     func testShareListingFollowsCursorAndDedupes() async throws {
         let transport = FakeTransport([
-            ("get_share_page_files_list", ok(#"{"list":[{"fileId":"1","fileName":"d","resType":2},{"fileId":"2","fileName":"b.mp4","fileSize":"7","resType":1,"updatedAt":"T"}],"hasMore":true,"cursor":"c2"}"#)),
-            ("get_share_page_files_list", ok(#"{"items":[{"id":"2","name":"b.mp4"},{"id":"3","name":"c.txt","size":5}],"hasMore":false,"cursor":"zzz"}"#)),
+            ("get_share_page_files_list", guangYaOK(#"{"list":[{"fileId":"1","fileName":"d","resType":2},{"fileId":"2","fileName":"b.mp4","fileSize":"7","resType":1,"updatedAt":"T"}],"hasMore":true,"cursor":"c2"}"#)),
+            ("get_share_page_files_list", guangYaOK(#"{"items":[{"id":"2","name":"b.mp4"},{"id":"3","name":"c.txt","size":5}],"hasMore":false,"cursor":"zzz"}"#)),
         ])
         let files = try await guangya(transport).listShareFiles(session: gyShare, directoryId: nil, credential: nil)
         XCTAssertEqual(files.map(\.id), ["1", "2", "3"])
@@ -284,7 +284,7 @@ final class GuangYaProviderTests: XCTestCase {
     }
 
     func testShareListingStopsOnRepeatedCursor() async throws {
-        let page = ok(#"{"list":[{"fileId":"1","fileName":"a.txt"}],"hasMore":true,"cursor":"same"}"#)
+        let page = guangYaOK(#"{"list":[{"fileId":"1","fileName":"a.txt"}],"hasMore":true,"cursor":"same"}"#)
         let transport = FakeTransport(fallback: page)
         let files = try await guangya(transport).listShareFiles(session: gyShare, directoryId: "d", credential: nil)
         XCTAssertEqual(files.count, 1)
@@ -293,7 +293,7 @@ final class GuangYaProviderTests: XCTestCase {
 
     func testGuestDownloadUsesWebHeadersAndSurfacesRestriction() async throws {
         let transport = FakeTransport([
-            ("get_share_download_url", ok(#"{"signedURL":"https://cdn.example/f?sig=1","size":"42"}"#)),
+            ("get_share_download_url", guangYaOK(#"{"signedURL":"https://cdn.example/f?sig=1","size":"42"}"#)),
             ("get_share_download_url", json(#"{"code":"207"}"#)),
         ])
         let provider = guangya(transport)
@@ -318,12 +318,12 @@ final class GuangYaProviderTests: XCTestCase {
     func testRestrictedShareIsRestoredThroughTempFolder() async throws {
         let transport = FakeTransport([
             ("get_share_download_url", json(#"{"code":"207"}"#)),
-            ("create_dir", ok(#"{"fileId":"tmp1"}"#)),
-            ("restore_share", ok(#"{"taskId":"t9"}"#)),
-            ("get_task_status", ok(#"{"status":2,"detail":{"code":0}}"#)),
-            ("get_file_list", ok(#"{"list":[]}"#)),
-            ("get_file_list", ok(#"{"list":[{"fileId":"copy1","fileName":"a.bin","fileSize":100,"resType":1}],"total":1}"#)),
-            ("get_res_download_url", ok(#"{"downloadUrl":"https://cdn.example/own"}"#)),
+            ("create_dir", guangYaOK(#"{"fileId":"tmp1"}"#)),
+            ("restore_share", guangYaOK(#"{"taskId":"t9"}"#)),
+            ("get_task_status", guangYaOK(#"{"status":2,"detail":{"code":0}}"#)),
+            ("get_file_list", guangYaOK(#"{"list":[]}"#)),
+            ("get_file_list", guangYaOK(#"{"list":[{"fileId":"copy1","fileName":"a.bin","fileSize":100,"resType":1}],"total":1}"#)),
+            ("get_res_download_url", guangYaOK(#"{"downloadUrl":"https://cdn.example/own"}"#)),
         ])
         let sleeps = Box<UInt64>()
         let link = try await guangya(transport, sleeps: sleeps).resolveShareFile(session: gyShare, file: gyFile, credential: freshCredential, options: ShareResolveOptions())
@@ -361,9 +361,9 @@ final class GuangYaProviderTests: XCTestCase {
     func testFailedRestoreDeletesTheTempFolder() async {
         let transport = FakeTransport([
             ("get_share_download_url", json(#"{"code":"207"}"#)),
-            ("create_dir", ok(#"{"id":"tmp2"}"#)),
+            ("create_dir", guangYaOK(#"{"id":"tmp2"}"#)),
             ("restore_share", json(#"{"code":"157"}"#)),
-            ("delete_file", ok(#"{}"#)),
+            ("delete_file", guangYaOK(#"{}"#)),
         ])
         do {
             _ = try await guangya(transport).resolveShareFile(session: gyShare, file: gyFile, credential: freshCredential, options: ShareResolveOptions())
@@ -376,14 +376,14 @@ final class GuangYaProviderTests: XCTestCase {
     }
 
     func testCopiedFileChecks() async {
-        let sizeMismatch = FakeTransport([("create_dir", ok(#"{"fileId":"t"}"#)), ("restore_share", ok("{}")),
-                                          ("get_file_list", ok(#"{"list":[{"fileId":"c","fileName":"a.bin","fileSize":5,"resType":1}]}"#)), ("delete_file", ok("{}"))])
+        let sizeMismatch = FakeTransport([("create_dir", guangYaOK(#"{"fileId":"t"}"#)), ("restore_share", guangYaOK("{}")),
+                                          ("get_file_list", guangYaOK(#"{"list":[{"fileId":"c","fileName":"a.bin","fileSize":5,"resType":1}]}"#)), ("delete_file", guangYaOK("{}"))])
         do {
             _ = try await guangya(sizeMismatch).resolveShareFile(session: gyShare, file: gyFile, credential: freshCredential, options: ShareResolveOptions(preferNoSave: false))
             XCTFail("expected failure")
         } catch { XCTAssertEqual(error as? DriveError, .api(message: "光鸭转存文件大小不一致")) }
-        let duplicate = FakeTransport([("create_dir", ok(#"{"fileId":"t"}"#)), ("restore_share", ok("{}")),
-                                       ("get_file_list", ok(#"{"list":[{"fileId":"c","fileName":"a.bin","resType":1},{"fileId":"d","fileName":"a.bin","resType":1}]}"#)), ("delete_file", ok("{}"))])
+        let duplicate = FakeTransport([("create_dir", guangYaOK(#"{"fileId":"t"}"#)), ("restore_share", guangYaOK("{}")),
+                                       ("get_file_list", guangYaOK(#"{"list":[{"fileId":"c","fileName":"a.bin","resType":1},{"fileId":"d","fileName":"a.bin","resType":1}]}"#)), ("delete_file", guangYaOK("{}"))])
         do {
             _ = try await guangya(duplicate).resolveShareFile(session: gyShare, file: gyFile, credential: freshCredential, options: ShareResolveOptions(preferNoSave: false))
             XCTFail("expected failure")
@@ -391,7 +391,7 @@ final class GuangYaProviderTests: XCTestCase {
     }
 
     func testCopyThatNeverAppearsTimesOutAfterThirtyPolls() async {
-        let transport = FakeTransport([("create_dir", ok(#"{"fileId":"t"}"#)), ("restore_share", ok("{}"))], fallback: ok(#"{"list":[]}"#))
+        let transport = FakeTransport([("create_dir", guangYaOK(#"{"fileId":"t"}"#)), ("restore_share", guangYaOK("{}"))], fallback: guangYaOK(#"{"list":[]}"#))
         do {
             _ = try await guangya(transport).resolveShareFile(session: gyShare, file: gyFile, credential: freshCredential, options: ShareResolveOptions(preferNoSave: false))
             XCTFail("expected failure")
@@ -400,7 +400,7 @@ final class GuangYaProviderTests: XCTestCase {
     }
 
     func testSaveToDriveReturnsTargetDirectory() async throws {
-        let transport = FakeTransport([("restore_share", ok(#"{"taskId":"t1"}"#)), ("get_task_status", ok(#"{"status":2,"detail":{"code":0}}"#))])
+        let transport = FakeTransport([("restore_share", guangYaOK(#"{"taskId":"t1"}"#)), ("get_task_status", guangYaOK(#"{"status":2,"detail":{"code":0}}"#))])
         let id = try await guangya(transport).saveToDrive(session: gyShare, file: gyFile, directoryId: "dir9", credential: freshCredential, skipSpaceCheck: false)
         XCTAssertEqual(id, "dir9")
         XCTAssertEqual(try transport.body(0)["parentId"] as? String, "dir9")
@@ -414,12 +414,12 @@ final class GuangYaProviderTests: XCTestCase {
     }
 
     func testTaskFailureAndTimeout() async {
-        let failed = FakeTransport([("restore_share", ok(#"{"taskId":"t"}"#)), ("get_task_status", ok(#"{"status":2,"detail":{"code":5,"msg":"磁盘已满"}}"#))])
+        let failed = FakeTransport([("restore_share", guangYaOK(#"{"taskId":"t"}"#)), ("get_task_status", guangYaOK(#"{"status":2,"detail":{"code":5,"msg":"磁盘已满"}}"#))])
         do {
             try await GuangYaAPI(transport: failed, sleep: { _ in }).restoreShare(accountToken: "a", deviceId: nil, shareToken: "s", fileIds: ["f"], parentId: "")
             XCTFail("expected failure")
         } catch { XCTAssertEqual(error as? DriveError, .api(message: "磁盘已满")) }
-        let stuck = FakeTransport(fallback: ok(#"{"status":1}"#))
+        let stuck = FakeTransport(fallback: guangYaOK(#"{"status":1}"#))
         do {
             try await GuangYaAPI(transport: stuck, sleep: { _ in }).waitTask(accessToken: "a", deviceId: nil, taskId: "t")
             XCTFail("expected failure")
@@ -429,8 +429,8 @@ final class GuangYaProviderTests: XCTestCase {
 
     func testOwnListingPagesFromZeroUntilTotal() async throws {
         let transport = FakeTransport([
-            ("get_file_list", ok(#"{"list":[{"fileId":"1","fileName":"a.txt"},{"fileId":"2","dirName":"dir"}],"total":3}"#)),
-            ("get_file_list", ok(#"{"list":[{"fileId":"3","fileName":"c.txt"}],"total":3}"#)),
+            ("get_file_list", guangYaOK(#"{"list":[{"fileId":"1","fileName":"a.txt"},{"fileId":"2","dirName":"dir"}],"total":3}"#)),
+            ("get_file_list", guangYaOK(#"{"list":[{"fileId":"3","fileName":"c.txt"}],"total":3}"#)),
         ])
         let files = try await guangya(transport).listFiles(directoryId: nil, credential: freshCredential)
         XCTAssertEqual(files.map(\.id), ["1", "2", "3"])
@@ -441,7 +441,7 @@ final class GuangYaProviderTests: XCTestCase {
     }
 
     func testRepeatedOwnPageIsAnError() async {
-        let page = ok(#"{"list":[{"fileId":"1","fileName":"a.txt"}],"total":9}"#)
+        let page = guangYaOK(#"{"list":[{"fileId":"1","fileName":"a.txt"}],"total":9}"#)
         do {
             _ = try await guangya(FakeTransport(fallback: page)).listFiles(directoryId: "d", credential: freshCredential)
             XCTFail("expected failure")
@@ -449,9 +449,9 @@ final class GuangYaProviderTests: XCTestCase {
     }
 
     func testFileManagementBodies() async throws {
-        let transport = FakeTransport(fallback: ok("{}"))
+        let transport = FakeTransport(fallback: guangYaOK("{}"))
         let api = GuangYaAPI(transport: transport, sleep: { _ in })
-        let dir = try await GuangYaAPI(transport: FakeTransport([("create_dir", ok(#"{"fileId":"nd"}"#))])).createDir(accessToken: "a", deviceId: nil, parentId: "p", name: "n")
+        let dir = try await GuangYaAPI(transport: FakeTransport([("create_dir", guangYaOK(#"{"fileId":"nd"}"#))])).createDir(accessToken: "a", deviceId: nil, parentId: "p", name: "n")
         XCTAssertEqual(dir, "nd")
         try await api.renameFile(accessToken: "a", deviceId: "d", fileId: "f", newName: "x")
         try await api.moveFiles(accessToken: "a", deviceId: "d", fileIds: ["f1", "f2"], parentId: "p")
@@ -463,7 +463,7 @@ final class GuangYaProviderTests: XCTestCase {
     }
 
     func testCreateDirRejectsAFileResponse() async {
-        let transport = FakeTransport([("create_dir", ok(#"{"fileId":"x","resType":"1"}"#))])
+        let transport = FakeTransport([("create_dir", guangYaOK(#"{"fileId":"x","resType":"1"}"#))])
         do {
             _ = try await GuangYaAPI(transport: transport).createDir(accessToken: "a", deviceId: nil, parentId: "", name: "n")
             XCTFail("expected failure")
@@ -471,7 +471,7 @@ final class GuangYaProviderTests: XCTestCase {
     }
 
     func testCreateShareBodyAndFallbackURL() async throws {
-        let transport = FakeTransport([("share_file", ok(#"{"shareId":"S1"}"#))])
+        let transport = FakeTransport([("share_file", guangYaOK(#"{"shareId":"S1"}"#))])
         let info = try await GuangYaAPI(transport: transport).createShare(accessToken: "a", deviceId: nil, fileIds: ["f"], title: "T", expireDays: nil, passcode: "ab12")
         XCTAssertEqual(info, GuangYaShareInfo(shareURL: "https://www.guangyapan.com/s/S1", passcode: "ab12", shareId: "S1", title: "T"))
         let body = try transport.body(0)
@@ -482,14 +482,14 @@ final class GuangYaProviderTests: XCTestCase {
     }
 
     func testDriveFileLinkUsesFileIdOnly() async throws {
-        let transport = FakeTransport([("get_res_download_url", ok(#"{"url":"https://cdn.example/x"}"#))])
+        let transport = FakeTransport([("get_res_download_url", guangYaOK(#"{"url":"https://cdn.example/x"}"#))])
         let link = try await guangya(transport).resolveFile(id: "fid", credential: freshCredential)
         XCTAssertEqual(link.fileId, "fid")
         XCTAssertEqual(try transport.body(0)["fileId"] as? String, "fid")
     }
 
     func testCleanupDeletesTheFolder() async throws {
-        let transport = FakeTransport([("delete_file", ok("{}"))])
+        let transport = FakeTransport([("delete_file", guangYaOK("{}"))])
         await guangya(transport).cleanup(directoryId: "tmp", credential: freshCredential)
         XCTAssertEqual(try transport.body(0)["fileIds"] as? [String], ["tmp"])
     }
