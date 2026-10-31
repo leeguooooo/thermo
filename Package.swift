@@ -15,6 +15,7 @@ let package = Package(
         .library(name: "AgentCore", targets: ["AgentCore"]),
         .library(name: "SearchCore", targets: ["SearchCore"]),
         .library(name: "CaptureCore", targets: ["CaptureCore"]),
+        .library(name: "CloudDriveKit", targets: ["CloudDriveKit"]),
         .executable(name: "thermo-capture-script", targets: ["CaptureScriptWorker"]),
     ],
     dependencies: [
@@ -47,6 +48,8 @@ let package = Package(
         .target(name: "CaptureCore", dependencies: ["CWebPEncoder"], linkerSettings: [.linkedFramework("AppKit"), .linkedFramework("Vision"), .linkedFramework("AVFoundation"), .linkedFramework("JavaScriptCore")]),
         // Disk cleanup runs as the user only: the root helper must never link it.
         .target(name: "CleanKit", dependencies: ["AgentCore", "ThermoL10n"]),
+        // Cloud drive protocols and providers, ported from YunX. Runs as the user; the root helper must never link it.
+        .target(name: "CloudDriveKit"),
         .executableTarget(name: "thermo", dependencies: ["CaptureScriptCore", "ThermoKit", "AgentCore", "AgentDoctor", "CleanKit", "ThermoL10n", "SearchCore"]),
         .executableTarget(name: "ThermoHelper", dependencies: ["ThermoKit"]),
         .executableTarget(
@@ -67,6 +70,7 @@ let package = Package(
         .testTarget(name:"CaptureScriptCoreTests",dependencies:["CaptureScriptCore"]),
         .testTarget(name: "CaptureCoreTests", dependencies: ["CaptureCore"]),
         .testTarget(name: "MenuBarCoreTests", dependencies: ["MenuBarCore"]),
+        .testTarget(name: "CloudDriveKitTests", dependencies: ["CloudDriveKit"]),
     ],
     swiftLanguageVersions: [.v5]
 )
