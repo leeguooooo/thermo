@@ -665,6 +665,21 @@ final class HeadlessWebViewTests: XCTestCase {
         XCTAssertTrue(result?.contains("Safari/605.1.15") ?? false, result ?? "nil")
     }
 
+    /// Pages try to open the Douyin app; the refused deep link must not end the session.
+    func testRealWebViewSurvivesRefusedDeepLink() async {
+        let view = HeadlessWebView(parkDelay: 60)
+        let result = await view.loadAndExtract(
+            url: "data:text/html,<script>setTimeout(function(){location.href='snssdk1128://x'},10);setTimeout(function(){window.__t=1},300)</script>",
+            userAgent: "ua",
+            readyCheckJS: "window.__t===1",
+            extractJS: "'alive'",
+            timeout: 10,
+            pollInterval: 0.05,
+            documentStartJS: []
+        )
+        XCTAssertEqual(result, "alive")
+    }
+
     func testProbeRequiresTokenAndStrictTruth() {
         let probe = HeadlessWebView.probeJS("check()", token: "t9")
         XCTAssertTrue(probe.contains("window.__thermoSessionToken!=='t9'"))
