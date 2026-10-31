@@ -9,11 +9,12 @@ public struct Segment: Codable, Sendable, Equatable {
     /// SHA-256 of the finished part; a part without one is still in progress.
     public var sha256: String?
 
-    public init(id: Int, start: Int64, end: Int64?, written: Int64 = 0) {
+    public init(id: Int, start: Int64, end: Int64?, written: Int64 = 0, sha256: String? = nil) {
         self.id = id
         self.start = start
         self.end = end
         self.written = written
+        self.sha256 = sha256
     }
 
     /// Bytes this segment still owes, or nil when its end is unknown.

@@ -68,7 +68,7 @@ public protocol DownloadTransport: Sendable {
 }
 
 /// Transport over URLSession. One short-lived session per fetch keeps the delegate state simple.
-/// A slow reader suspends the task, so the body never buffers more than about `maxBufferedBytes`.
+/// A slow reader holds back delivery, so the body never buffers more than about `maxBufferedBytes`.
 public struct URLSessionTransport: DownloadTransport {
     public static let defaultMaxBufferedBytes = 4 << 20
 
@@ -132,7 +132,12 @@ public struct URLSessionTransport: DownloadTransport {
         let sameOrigin = from.scheme?.lowercased() == to.scheme?.lowercased()
             && from.host?.lowercased() == to.host?.lowercased()
             && from.port == to.port
-        if sameOrigin { return proposed }
+        if sameOrigin {
+            // URLSession drops Authorization on any redirect, so put the caller's headers back.
+            var kept = proposed
+            for (name, value) in original.allHTTPHeaderFields ?? [:] { kept.setValue(value, forHTTPHeaderField: name) }
+            return kept
+        }
         var stripped = proposed
         for name in (proposed.allHTTPHeaderFields ?? [:]).keys {
             let lower = name.lowercased()
@@ -144,87 +149,89 @@ public struct URLSessionTransport: DownloadTransport {
     }
 }
 
-/// Bounded hand-off from URLSession's callbacks to one reader. Crossing the high-water mark
-/// asks for a pause; draining to half of it asks to continue. Bytes are never dropped.
+/// Bounded hand-off from URLSession's callbacks to one reader. `append` blocks the delegate
+/// queue while full, which holds back further deliveries; each fetch has its own queue, so
+/// nothing else waits. `task.suspend()` was tried first and let loopback overshoot 20x.
 final class BodyBuffer: @unchecked Sendable {
     private let highWater: Int
-    private let lock = NSLock()
-    private let setPaused: @Sendable (Bool) -> Void
+    private let condition = NSCondition()
     private var chunks: [Data] = []
     private var head = 0
     private var buffered = 0
-    private var isPaused = false
     private var ended = false
+    private var closed = false
     private var failure: Error?
     private var waiter: CheckedContinuation<Data?, Error>?
 
-    init(highWater: Int, setPaused: @escaping @Sendable (Bool) -> Void) {
+    init(highWater: Int) {
         self.highWater = highWater
-        self.setPaused = setPaused
     }
 
+    /// Returns the buffered byte count. Data arriving after `close()` is discarded.
     @discardableResult
     func append(_ data: Data) -> Int {
-        var pause = false
-        let (reader, count) = lock.withLock { () -> (CheckedContinuation<Data?, Error>?, Int) in
-            if let reader = waiter {
-                waiter = nil
-                return (reader, buffered)
-            }
-            chunks.append(data)
-            buffered += data.count
-            if buffered >= highWater, !isPaused {
-                isPaused = true
-                pause = true
-            }
-            return (nil, buffered)
+        condition.lock()
+        while buffered >= highWater, !closed, waiter == nil { condition.wait() }
+        if closed {
+            condition.unlock()
+            return 0
         }
-        reader?.resume(returning: data)
-        if pause { setPaused(true) }
+        if let reader = waiter {
+            waiter = nil
+            let count = buffered
+            condition.unlock()
+            reader.resume(returning: data)
+            return count
+        }
+        chunks.append(data)
+        buffered += data.count
+        let count = buffered
+        condition.unlock()
         return count
     }
 
+    /// The reader went away: release a blocked `append`.
+    func close() {
+        condition.lock()
+        closed = true
+        condition.broadcast()
+        condition.unlock()
+    }
+
     func finish(throwing error: Error?) {
-        let reader = lock.withLock { () -> CheckedContinuation<Data?, Error>? in
-            ended = true
-            if failure == nil { failure = error }
-            defer { waiter = nil }
-            return waiter
-        }
+        condition.lock()
+        ended = true
+        if failure == nil { failure = error }
+        let reader = waiter
+        waiter = nil
+        condition.unlock()
         guard let reader else { return }
         if let error { reader.resume(throwing: error) } else { reader.resume(returning: nil) }
     }
 
     func next() async throws -> Data? {
         try await withCheckedThrowingContinuation { continuation in
-            var unpause = false
-            enum Step { case data(Data), wait, end(Error?) }
-            let step = lock.withLock { () -> Step in
-                if head < chunks.count {
-                    let data = chunks[head]
-                    chunks[head] = Data()
-                    head += 1
-                    if head == chunks.count {
-                        chunks.removeAll(keepingCapacity: true)
-                        head = 0
-                    }
-                    buffered -= data.count
-                    if isPaused, buffered <= highWater / 2 {
-                        isPaused = false
-                        unpause = true
-                    }
-                    return .data(data)
+            condition.lock()
+            if head < chunks.count {
+                let data = chunks[head]
+                chunks[head] = Data()
+                head += 1
+                if head == chunks.count {
+                    chunks.removeAll(keepingCapacity: true)
+                    head = 0
                 }
-                if ended { return .end(failure) }
+                buffered -= data.count
+                condition.broadcast()
+                condition.unlock()
+                continuation.resume(returning: data)
+            } else if ended {
+                let error = failure
+                condition.unlock()
+                if let error { continuation.resume(throwing: error) } else { continuation.resume(returning: nil) }
+            } else {
                 waiter = continuation
-                return .wait
-            }
-            if unpause { setPaused(false) }
-            switch step {
-            case .data(let data): continuation.resume(returning: data)
-            case .end(let error?): continuation.resume(throwing: error)
-            case .end(nil): continuation.resume(returning: nil)
-            case .wait: break
+                condition.broadcast()
+                condition.unlock()
             }
         }
     }
@@ -240,13 +247,18 @@ private final class BodyReader: Sendable {
         self.task = task
     }
 
-    deinit { task.cancel() }
+    deinit {
+        buffer.close()
+        task.cancel()
+    }
 
     func next() async throws -> Data? {
+        let buffer = self.buffer
         let task = self.task
         return try await withTaskCancellationHandler {
             try await buffer.next()
         } onCancel: {
+            buffer.close()
             task.cancel()
         }
     }
@@ -291,9 +303,7 @@ private final class FetchDelegate: NSObject, URLSessionDataDelegate, @unchecked 
         for (key, value) in http.allHeaderFields {
             if let key = key as? String, let value = value as? String { headers[key] = value }
         }
-        let body = BodyBuffer(highWater: maxBufferedBytes) { paused in
-            if paused { dataTask.suspend() } else { dataTask.resume() }
-        }
+        let body = BodyBuffer(highWater: maxBufferedBytes)
         let reader = BodyReader(buffer: body, task: dataTask)
         let stream = AsyncThrowingStream<Data, Error> { try await reader.next() }
         let waiting = lock.withLock { () -> CheckedContinuation<FetchResponse, Error>? in

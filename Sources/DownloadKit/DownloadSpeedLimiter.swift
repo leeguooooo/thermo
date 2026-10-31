@@ -9,7 +9,8 @@ public final class DownloadSpeedLimiter: @unchecked Sendable {
     private let clock: @Sendable () -> TimeInterval
     private let sleep: Sleep
     private let lock = NSLock()
-    private var tokens: Int64 = 0
+    /// Fractional, or the slivers lost on each short wait would add up to a lower rate.
+    private var tokens = 0.0
     private var lastRefill: TimeInterval?
 
     public convenience init(limit: @escaping @Sendable () -> Int64) {
@@ -32,11 +33,12 @@ public final class DownloadSpeedLimiter: @unchecked Sendable {
             let piece = min(left, rate)
             let waitMilliseconds: Int64 = lock.withLock {
                 refill(rate)
-                if piece <= tokens {
-                    tokens -= piece
+                if Double(piece) <= tokens {
+                    tokens -= Double(piece)
                     return 0
                 }
-                return min(max((piece - tokens) * 1000 / rate, 1), 200)
+                let deficit = (Double(piece) - tokens) * 1000 / Double(rate)
+                return min(max(Int64(deficit.rounded(.up)), 1), 200)
             }
             if waitMilliseconds == 0 {
                 left -= piece
@@ -50,6 +52,6 @@ public final class DownloadSpeedLimiter: @unchecked Sendable {
         let now = clock()
         defer { lastRefill = now }
         guard let lastRefill else { return }
-        tokens = min(rate, tokens + Int64(max(0, now - lastRefill) * Double(rate)))
+        tokens = min(Double(rate), tokens + max(0, now - lastRefill) * Double(rate))
     }
 }
