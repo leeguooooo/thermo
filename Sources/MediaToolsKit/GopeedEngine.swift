@@ -9,6 +9,27 @@ public enum GopeedError: Error, Equatable, Sendable {
     case api(String)
     case invalidResponse
     case missingTaskID
+    /// The kernel on disk is not the pinned build, so it may not run.
+    case kernelNotPinned
+}
+
+/// Sorts configured trackers by whether Gopeed may keep them in its config file. Private trackers
+/// put a passkey in the announce URL, so anything that looks like one travels per task instead.
+public enum GopeedTrackers {
+    private static let secretWords = ["passkey", "authkey", "torrent_pass", "token", "secret", "key"]
+
+    public static func carriesCredential(_ tracker: String) -> Bool {
+        if tracker.contains("@") { return true }
+        guard let parts = URLComponents(string: tracker), parts.scheme != nil, parts.host?.isEmpty == false else { return true }
+        if parts.user != nil || parts.password != nil || parts.percentEncodedQuery?.isEmpty == false { return true }
+        return parts.path.split(separator: "/").contains { segment in
+            let lower = segment.lowercased()
+            return secretWords.contains { lower.contains($0) } || lower.split(separator: ".").contains { $0.count >= 16 }
+        }
+    }
+
+    public static func shareable(_ trackers: [String]) -> [String] { trackers.filter { !carriesCredential($0) } }
+    public static func perTask(_ trackers: [String]) -> [String] { trackers.filter(carriesCredential) }
 }
 
 public enum GopeedProxy: Sendable, Equatable {
@@ -59,6 +80,12 @@ public struct GopeedTaskDetail: Sendable, Equatable {
     public var fileCount: Int
     /// True when the task lands as a directory rather than one file.
     public var folder: Bool
+}
+
+/// Read back from the marker `installFromArchive` writes.
+public struct GopeedInstalledPin: Codable, Sendable, Equatable {
+    public var version: String
+    public var digest: String
 }
 
 /// One entry of a resolved torrent. Its index in `GopeedResolved.files` is what `selectFiles` takes.
@@ -135,26 +162,38 @@ public actor GopeedEngine {
     private let runner: ToolRunner
     private let readyTimeout: TimeInterval
     private let stopTimeout: TimeInterval
+    private let requiredDigest: String?
     private var process: GopeedProcess?
     /// Memory only, and replaced on every start.
     private var apiToken = ""
 
     public init(root: MediaToolsRoot, transport: MediaHTTPTransport = URLSessionMediaTransport.loopback, launcher: GopeedLauncher = SystemGopeedLauncher(), runner: ToolRunner = ProcessToolRunner()) {
-        self.init(root: root, transport: transport, launcher: launcher, runner: runner, readyTimeout: 20, stopTimeout: 3)
+        self.init(root: root, transport: transport, launcher: launcher, runner: runner, readyTimeout: 20, stopTimeout: 3, requiredDigest: PinnedTools.gopeed.sha256)
     }
 
-    init(root: MediaToolsRoot, transport: MediaHTTPTransport, launcher: GopeedLauncher, runner: ToolRunner, readyTimeout: TimeInterval, stopTimeout: TimeInterval) {
+    init(root: MediaToolsRoot, transport: MediaHTTPTransport, launcher: GopeedLauncher, runner: ToolRunner, readyTimeout: TimeInterval, stopTimeout: TimeInterval, requiredDigest: String? = nil) {
         self.root = root
         self.transport = transport
         self.launcher = launcher
         self.runner = runner
         self.readyTimeout = readyTimeout
         self.stopTimeout = stopTimeout
+        self.requiredDigest = requiredDigest.flatMap(ToolInstaller.expectedSHA256)
     }
 
     // MARK: Kernel files
 
     public var isInstalled: Bool { (try? root.validatedExecutable(root.gopeedExecutable)) != nil }
+
+    public var installedPin: GopeedInstalledPin? {
+        (try? Data(contentsOf: root.gopeedPinFile)).flatMap { try? JSONDecoder().decode(GopeedInstalledPin.self, from: $0) }
+    }
+
+    /// A kernel from an older pin, or from before pins were recorded, has to be replaced before it runs.
+    public var needsReprovision: Bool {
+        guard isInstalled, let requiredDigest else { return false }
+        return installedPin?.digest != requiredDigest
+    }
 
     public func syncInstalledState() {
         guard state != .running else { return }
@@ -162,9 +201,11 @@ public actor GopeedEngine {
     }
 
     /// Accepts the official zip or a bare kernel binary, only when it hashes to `expectedSHA256`.
-    public func installFromArchive(_ archive: URL, expectedSHA256: String) async throws {
+    public func installFromArchive(_ archive: URL, expectedSHA256: String, version: String = "") async throws {
         try ToolInstaller.verify(archive, expected: expectedSHA256)
         if state == .running { await stop() }
+        // Gone first, so a swap that fails halfway cannot pass for the old pin.
+        try? FileManager.default.removeItem(at: root.gopeedPinFile)
         let target = root.gopeedExecutable
         if archive.pathExtension.lowercased() == "zip" {
             try await ToolInstaller.install(
@@ -172,6 +213,8 @@ public actor GopeedEngine {
         } else {
             try ToolInstaller.installBinary(from: archive, expectedSHA256: expectedSHA256, to: target)
         }
+        let digest = ToolInstaller.expectedSHA256(expectedSHA256) ?? expectedSHA256
+        try JSONEncoder().encode(GopeedInstalledPin(version: version, digest: digest)).write(to: root.gopeedPinFile, options: .atomic)
         lastError = nil
         state = .installed
     }
@@ -180,6 +223,7 @@ public actor GopeedEngine {
     public func uninstall() async {
         if state == .running { await stop() }
         try? FileManager.default.removeItem(at: root.gopeedExecutable)
+        try? FileManager.default.removeItem(at: root.gopeedPinFile)
         state = .notInstalled
     }
 
@@ -190,6 +234,7 @@ public actor GopeedEngine {
     public func start() async throws -> Int {
         if state == .running { return port }
         guard process == nil else { throw GopeedError.alreadyStarting }
+        if needsReprovision { throw GopeedError.kernelNotPinned }
         let executable: URL
         do {
             executable = try root.validatedExecutable(root.gopeedExecutable)
@@ -255,12 +300,12 @@ public actor GopeedEngine {
         return try await start()
     }
 
-    /// An orphan from a killed app still holds the bolt lock. Matched by path so a Gopeed the user runs is left alone.
     private static func makeAPIToken() -> String {
         var generator = SystemRandomNumberGenerator()
         return (0..<32).map { _ in String(format: "%02x", UInt8.random(in: .min ... .max, using: &generator)) }.joined()
     }
 
+    /// An orphan from a killed app still holds the bolt lock. Matched by path so a Gopeed the user runs is left alone.
     private func killStaleProcess(_ executable: URL) {
         guard let text = try? String(contentsOf: root.gopeedPIDFile, encoding: .utf8),
               let pid = Int32(text.trimmingCharacters(in: .whitespacesAndNewlines)) else { return }
@@ -389,6 +434,38 @@ public actor GopeedEngine {
             fileCount: files.count, folder: hasSubPath || files.count > 1)
     }
 
+    /// Where a task's files sit. Mirrors gopeed v1.9.3 `FetcherMeta.RootDirPath`; a torrent can land
+    /// with or without its root folder, so both are offered and only files on disk are returned.
+    /// Names come from the torrent, so anything leaving the save folder is dropped.
+    public func taskOutputFiles(_ id: String) async throws -> [URL] {
+        let data = try await getObject(Self.taskPath(id))
+        let meta = data["meta"] as? [String: Any]
+        let options = meta?["opts"] as? [String: Any]
+        let resource = meta?["res"] as? [String: Any]
+        let saveDir = options?["path"] as? String ?? ""
+        guard !saveDir.isEmpty else { return [] }
+        let base = URL(fileURLWithPath: saveDir, isDirectory: true).standardizedFileURL
+        let rename = options?["name"] as? String ?? ""
+        let folder = rename.isEmpty ? resource?["name"] as? String ?? "" : rename
+        let entries = resource?["files"] as? [[String: Any]] ?? []
+        var found: [URL] = []
+        for entry in entries {
+            let name = entry["name"] as? String ?? ""
+            let path = entry["path"] as? String ?? ""
+            guard !name.isEmpty else { continue }
+            var candidates = [base.appendingPathComponent(folder).appendingPathComponent(path).appendingPathComponent(name)]
+            candidates.append(base.appendingPathComponent(path).appendingPathComponent(name))
+            if entries.count == 1, !rename.isEmpty { candidates.append(base.appendingPathComponent(path).appendingPathComponent(rename)) }
+            for candidate in candidates.map(\.standardizedFileURL) where candidate.path.hasPrefix(base.path + "/") {
+                var isDirectory: ObjCBool = false
+                if FileManager.default.fileExists(atPath: candidate.path, isDirectory: &isDirectory), !isDirectory.boolValue, !found.contains(candidate) {
+                    found.append(candidate)
+                }
+            }
+        }
+        return found
+    }
+
     // MARK: Config
 
     /// Applies what the app owns over REST, because start-up config only counts on an empty store.
@@ -407,7 +484,7 @@ public actor GopeedEngine {
         bt["seedRatio"] = 0
         // seedTime 0 with ratio 0 means "seed forever"; 1 second is what actually stops.
         bt["seedTime"] = 1
-        bt["customTrackers"] = settings.trackers
+        bt["customTrackers"] = GopeedTrackers.shareable(settings.trackers)
         bt["disableDht"] = !settings.dhtEnabled
         protocols["bt"] = bt
 

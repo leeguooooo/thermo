@@ -1036,8 +1036,19 @@ final class YunXDownloadModel: ObservableObject {
     }
 
     private func forget(_ job: YunXJob) {
-        if let task = jobStore.load().first(where: { $0.id == job.id })?.taskId,
+        let record = jobStore.load().first { $0.id == job.id }
+        if let task = record?.taskId,
            let store = downloadStore ?? (try? DownloadStore(root: DownloadStore.defaultRoot())) { store.remove(id: task) }
+        if let task = record?.gopeedTask, !task.isEmpty, let engine = try? p2pEngine() {
+            let keepRunning = p2pRunning(except: job.id)
+            Task { [weak self] in
+                // The kernel is down after a restart, and only it can drop the URL from its store.
+                guard await engine.isInstalled else { return }
+                try? await self?.ensureCurrentKernel(engine)
+                _ = try? await engine.start()
+                await Self.retire(task, engine: engine, keepRunning: keepRunning)
+            }
+        }
         jobStore.remove(job.id)
     }
 
@@ -1083,7 +1094,14 @@ final class YunXDownloadModel: ObservableObject {
         } catch { self.error = error.localizedDescription }
     }
 
+    /// A kernel from an older pin is replaced here, before anything can launch it.
+    private func ensureCurrentKernel(_ engine: GopeedEngine) async throws {
+        guard await engine.needsReprovision else { return }
+        _ = try await GopeedKernelProvisioner(root: try toolsRoot()).provision(engine: engine)
+    }
+
     private func applyP2PSettings(_ engine: GopeedEngine) async throws {
+        try await ensureCurrentKernel(engine)
         _ = try await engine.start()
         _ = try await engine.applyRuntimeConfig(maxRunning: settings.p2pMaxRunning, settings: settings.gopeed)
     }
@@ -1099,6 +1117,24 @@ final class YunXDownloadModel: ObservableObject {
             }
             startP2P(url, engine: engine, select: [])
         } catch { self.error = error.localizedDescription }
+    }
+
+    /// Gopeed was started only to list the torrent, so with no job on it, it stops again.
+    func cancelTorrent() {
+        guard torrentPick != nil else { return }
+        torrentPick = nil
+        guard let gopeed else { return }
+        Task { [weak self] in
+            guard let self, !(await gopeed.hasActiveTasks()) else { return }
+            // Checked after the await, so a torrent added meanwhile keeps its kernel.
+            guard !self.p2pRunning(except: nil), self.torrentPick == nil else { return }
+            await gopeed.stop()
+        }
+    }
+
+    /// Whether a live job is polling Gopeed, which stopping would fail, even while it is paused.
+    private func p2pRunning(except id: UUID?) -> Bool {
+        jobs.contains { !$0.usesSlot && $0.id != id && runners[$0.id] != nil }
     }
 
     func confirmTorrent() {
@@ -1120,16 +1156,20 @@ final class YunXDownloadModel: ObservableObject {
         launch(id: id, name: name, directory: directory, usesSlot: false) { [weak self] id in
             try await self?.applyP2PSettings(engine)
             let task: String
-            if !existing.isEmpty, (try? await engine.taskStatus(existing)) != nil {
+            var reused = false
+            if !existing.isEmpty, (try? await engine.taskStatus(existing)) != nil { reused = true }
+            if reused {
                 task = existing
-                try await engine.continueTask(existing)
             } else {
-                task = try await engine.createTask(url: url, saveDir: directory.path, fileName: "", selectFiles: select)
+                // Passkey trackers go with the task, so they leave Gopeed's store when it is retired.
+                let trackers = GopeedTrackers.perTask(self?.settings.gopeed.trackers ?? [])
+                task = try await engine.createTask(url: url, saveDir: directory.path, fileName: "", trackers: trackers, selectFiles: select)
             }
             self?.p2pTasks[id] = task
             self?.jobStore.update(id) { $0.gopeedTask = task }
             self?.update(id) { $0.canPause = true }
             do {
+                if reused { try await engine.continueTask(task) }
                 while true {
                     try await Task.sleep(nanoseconds: 1_000_000_000)
                     let view = try await engine.taskStatus(task)
@@ -1144,20 +1184,24 @@ final class YunXDownloadModel: ObservableObject {
                         throw DriveError.api(message: await engine.taskError(task) ?? tr("The download failed."))
                     }
                 }
+                // Gopeed wrote these, so `DownloadFinalizer.publish` never saw them.
+                for file in try await engine.taskOutputFiles(task) { DownloadQuarantine.mark(file) }
             } catch {
-                await Self.retire(task, engine: engine)
+                self?.jobStore.update(id) { $0.gopeedTask = "" }
+                await Self.retire(task, engine: engine, keepRunning: self?.p2pRunning(except: id) == true)
                 throw error
             }
-            await Self.retire(task, engine: engine)
+            await Self.retire(task, engine: engine, keepRunning: self?.p2pRunning(except: id) == true)
             return directory
         }
     }
 
     /// Removes the task, which keeps its files, so its URL leaves Gopeed's store. Runs in its own
     /// task because a cancelled caller would cancel these requests too.
-    private nonisolated static func retire(_ task: String, engine: GopeedEngine) async {
+    private nonisolated static func retire(_ task: String, engine: GopeedEngine, keepRunning: Bool) async {
         await Task {
             try? await engine.deleteTask(task)
+            guard !keepRunning else { return }
             if !(await engine.hasActiveTasks()) { await engine.stop() }
         }.value
     }

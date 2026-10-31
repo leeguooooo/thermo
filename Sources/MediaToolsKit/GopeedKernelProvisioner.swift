@@ -63,7 +63,7 @@ public struct GopeedKernelProvisioner: Sendable {
         onStage(.verifying)
         guard digest == ToolInstaller.expectedSHA256(plan.digest) else { throw MediaToolsError.checksumMismatch }
         onStage(.installing)
-        try await engine.installFromArchive(archive, expectedSHA256: plan.digest)
+        try await engine.installFromArchive(archive, expectedSHA256: plan.digest, version: plan.version)
         onStage(.done)
         return plan
     }

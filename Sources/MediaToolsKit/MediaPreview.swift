@@ -18,10 +18,10 @@ public enum MediaPreview {
         kind(of: url) ?? kind(of: URL(fileURLWithPath: fileName))
     }
 
-    /// `headers` usually carry a cookie or referer: they stay on this asset and are never stored.
+    /// `headers` usually carry a cookie or referer, so they never go on the asset: see `MediaPreviewRelay`.
     public static func makePlayer(url: URL, headers: [String: String] = [:], fileName: String = "") -> AVPlayer? {
-        guard kind(of: url, fileName: fileName) != nil else { return nil }
-        let options: [String: Any] = headers.isEmpty ? [:] : ["AVURLAssetHTTPHeaderFieldsKey": headers]
-        return AVPlayer(playerItem: AVPlayerItem(asset: AVURLAsset(url: url, options: options)))
+        guard let kind = kind(of: url, fileName: fileName) else { return nil }
+        let asset = headers.isEmpty ? AVURLAsset(url: url) : MediaPreviewRelay.makeAsset(url: url, headers: headers, kind: kind)
+        return asset.map { AVPlayer(playerItem: AVPlayerItem(asset: $0)) }
     }
 }

@@ -2,7 +2,7 @@ import Foundation
 
 /// Origin and header policy for every playlist, redirect, map and segment request.
 public enum HlsRequestPolicy {
-    private static let sensitiveHeaders: Set<String> = ["authorization", "cookie", "origin", "proxy-authorization", "referer"]
+    private static let crossOriginHeaders: Set<String> = ["accept", "accept-encoding", "accept-language", "range", "user-agent"]
 
     public static func initialURL(_ text: String) -> URL? {
         URL(string: text).flatMap(httpsOnly)
@@ -14,7 +14,7 @@ public enum HlsRequestPolicy {
 
     public static func headers(for target: URL, credentialOrigin: URL, headers: [String: String]) -> [String: String] {
         if sameOrigin(target, credentialOrigin) { return headers }
-        return headers.filter { !sensitiveHeaders.contains($0.key.lowercased()) }
+        return headers.filter { crossOriginHeaders.contains($0.key.lowercased()) }
     }
 
     public static func sameOrigin(_ left: URL, _ right: URL) -> Bool {
@@ -89,8 +89,7 @@ public struct HlsDownloader: Sendable {
         onBytes: @escaping @Sendable (Int64) async -> Void = { _ in }
     ) async throws -> URL {
         guard let origin = HlsRequestPolicy.initialURL(url) else { throw HlsError.insecureURL }
-        let temp = destination.deletingLastPathComponent()
-            .appendingPathComponent(".\(destination.lastPathComponent).\(UUID().uuidString).download")
+        let temp = DownloadFinalizer.tempURL(beside: destination)
         defer { try? FileManager.default.removeItem(at: temp) }
         let master = try await fetchText(origin, origin: origin, headers: headers)
         let mediaURL = try Self.resolveMediaPlaylist(base: master.finalURL, text: master.text)

@@ -101,6 +101,33 @@ final class GopeedProvisionerTests: XCTestCase {
         XCTAssertTrue(transport.sent.isEmpty)
     }
 
+    func testKernelFromAnotherPinIsRefusedUntilReprovisioned() async throws {
+        let root = try makeRoot()
+        let (data, _) = try fixture()
+        let digest = sha(data)
+        let transport = FakeTransport()
+        transport.on("GET \(directURL)", .init(body: data))
+        transport.on("GET /api/v1/info", json: ["code": 0, "data": ["version": "1.9.3"]])
+        let engine = GopeedEngine(root: root, transport: transport, launcher: FakeLauncher(), runner: ProcessToolRunner(),
+                                  readyTimeout: 2, stopTimeout: 0.1, requiredDigest: digest)
+        try writeFakeBinary(root.gopeedExecutable)
+        var stale = await engine.needsReprovision
+        XCTAssertTrue(stale, "an install with no record is not trusted")
+        do { _ = try await engine.start(); XCTFail("started an unpinned kernel") } catch { XCTAssertEqual(error as? GopeedError, .kernelNotPinned) }
+
+        _ = try await provisioner(root, transport, digest: digest, size: data.count).provision(engine: engine)
+        let pin = await engine.installedPin
+        XCTAssertEqual(pin, GopeedInstalledPin(version: "v1.9.3", digest: digest))
+        stale = await engine.needsReprovision
+        XCTAssertFalse(stale)
+        _ = try await engine.start()
+        await engine.stop()
+
+        try JSONEncoder().encode(GopeedInstalledPin(version: "v1.0.0", digest: "old")).write(to: root.gopeedPinFile)
+        stale = await engine.needsReprovision
+        XCTAssertTrue(stale)
+    }
+
     func testPlainHTTPMirrorIgnored() throws {
         let plan = GopeedKernelProvisioner(root: try makeRoot(), transport: FakeTransport()).resolvePlan(mirrorPrefix: "http://mirror.test/")
         XCTAssertEqual(plan.url, PinnedTools.gopeed.url)

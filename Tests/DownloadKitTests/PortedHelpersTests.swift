@@ -72,6 +72,37 @@ final class PortedHelpersTests: XCTestCase {
         }
     }
 
+    func testHlsCarriesOnlyAllowlistedHeadersAcrossOrigins() async throws {
+        let fake = HlsFake(["https://a.test/m.m3u8": text("https://cdn.test/s.ts\n"), "https://cdn.test/s.ts": text("A")])
+        let out = directory.appendingPathComponent("v.ts")
+        try await HlsDownloader(transport: fake).download(
+            url: "https://a.test/m.m3u8", headers: ["X-Auth-Token": "t", "User-Agent": "u"], destination: out)
+        XCTAssertEqual(fake.requests.first?.headers["X-Auth-Token"], "t")
+        XCTAssertEqual(fake.requests.last?.headers, ["User-Agent": "u"])
+    }
+
+    func testHlsSavesANameThatFillsTheVolumeLimit() async throws {
+        let fake = HlsFake(["https://a.test/m.m3u8": text("s.ts\n"), "https://a.test/s.ts": text("A")])
+        let out = directory.appendingPathComponent(String(repeating: "视", count: 83) + ".ts")
+        let saved = try await HlsDownloader(transport: fake).download(url: "https://a.test/m.m3u8", destination: out)
+        XCTAssertEqual(try String(contentsOf: saved, encoding: .utf8), "A")
+    }
+
+    func testPublishAcrossVolumesCopiesWithoutOverwritingAndRemovesTheSource() throws {
+        let source = directory.appendingPathComponent("muxed.mp4")
+        try Data("new".utf8).write(to: source)
+        let folder = directory.appendingPathComponent("elsewhere", isDirectory: true)
+        try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
+        let taken = folder.appendingPathComponent("v.mp4")
+        try Data("old".utf8).write(to: taken)
+        let saved = try DownloadFinalizer.publish(source, to: taken, rename: { _, _ in errno = EXDEV; return -1 })
+        XCTAssertEqual(saved.lastPathComponent, "v (1).mp4")
+        XCTAssertEqual(try Data(contentsOf: saved), Data("new".utf8))
+        XCTAssertEqual(try Data(contentsOf: taken), Data("old".utf8))
+        XCTAssertFalse(FileManager.default.fileExists(atPath: source.path))
+        XCTAssertEqual(try FileManager.default.contentsOfDirectory(atPath: folder.path).count, 2)
+    }
+
     func testHlsRefusesPlainHttpEverywhere() async throws {
         let out = directory.appendingPathComponent("v.ts")
         await assertHlsFails(HlsFake([:]), url: "http://a.test/m.m3u8", .insecureURL)

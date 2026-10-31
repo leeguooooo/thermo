@@ -30,6 +30,7 @@ public struct MediaToolsRoot: Sendable {
     var gopeedDir: URL { url.appendingPathComponent("gopeed", isDirectory: true) }
     var gopeedExecutable: URL { gopeedDir.appendingPathComponent("bin/gopeed") }
     var gopeedStorage: URL { gopeedDir.appendingPathComponent("storage", isDirectory: true) }
+    var gopeedPinFile: URL { gopeedDir.appendingPathComponent("installed-pin.json") }
     var gopeedPIDFile: URL { gopeedDir.appendingPathComponent("engine.pid") }
     var ffmpegBin: URL { url.appendingPathComponent("ffmpeg/bin", isDirectory: true) }
     var ffmpegExecutable: URL { ffmpegBin.appendingPathComponent("ffmpeg") }

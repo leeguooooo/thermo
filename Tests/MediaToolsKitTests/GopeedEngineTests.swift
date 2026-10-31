@@ -16,6 +16,44 @@ final class GopeedEngineTests: XCTestCase {
         try XCTUnwrap(JSONSerialization.jsonObject(with: XCTUnwrap(request?.body)) as? [String: Any])
     }
 
+    func testPasskeyTrackersStayOutOfConfigAndGoWithTheTask() async throws {
+        let (engine, transport, _, _) = try make()
+        transport.on("GET /api/v1/config", json: ["code": 0, "data": [:] as [String: Any]])
+        transport.on("PUT /api/v1/config", json: ["code": 0])
+        transport.on("GET /api/v1/tasks", json: ["code": 0, "data": [] as [Any]])
+        transport.on("POST /api/v1/tasks", json: ["code": 0, "data": "t1"])
+        try await engine.start()
+        let secret = ["https://u:p@t.test/announce", "https://t.test/announce?passkey=abc", "https://t.test/0123456789abcdef0123/announce", "not a url"]
+        let open = ["udp://tracker.test:80/announce", "https://tracker.test/announce.php"]
+        try await engine.applyRuntimeConfig(maxRunning: 1, settings: GopeedRuntimeSettings(trackers: secret + open))
+        let config = try body(transport.requests("PUT", "/api/v1/config").first)
+        let bt = (config["protocolConfig"] as? [String: Any])?["bt"] as? [String: Any]
+        XCTAssertEqual(bt?["customTrackers"] as? [String], open)
+        XCTAssertEqual(GopeedTrackers.perTask(secret + open), secret)
+        _ = try await engine.createTask(url: "magnet:?xt=urn:btih:0", saveDir: "/d", fileName: "", trackers: GopeedTrackers.perTask(secret))
+        let sent = try body(transport.requests("POST", "/api/v1/tasks").first)
+        XCTAssertEqual(((sent["req"] as? [String: Any])?["extra"] as? [String: Any])?["trackers"] as? [String], secret)
+    }
+
+    func testOutputFilesAreThoseOnDiskInsideTheSaveFolder() async throws {
+        let (engine, transport, _, root) = try make()
+        let save = root.url.appendingPathComponent("save/in", isDirectory: true)
+        let kept = save.appendingPathComponent("pack/sub/a.bin")
+        try FileManager.default.createDirectory(at: kept.deletingLastPathComponent(), withIntermediateDirectories: true)
+        try Data("a".utf8).write(to: kept)
+        let outside = root.url.appendingPathComponent("save/evil.bin")
+        try Data("e".utf8).write(to: outside)
+        transport.on("GET /api/v1/tasks/t1", json: ["code": 0, "data": ["meta": [
+            "opts": ["path": save.path, "name": ""],
+            "res": ["name": "pack", "files": [
+                ["name": "a.bin", "path": "sub"], ["name": "unselected.bin", "path": ""], ["name": "evil.bin", "path": "../.."],
+            ]],
+        ]]])
+        try await engine.start()
+        let found = try await engine.taskOutputFiles("t1")
+        XCTAssertEqual(found.map(\.path), [kept.standardizedFileURL.path])
+    }
+
     func testResolveListsFilesAndSelectionTravelsWithTheRequestNotAResolveID() async throws {
         let (engine, transport, _, _) = try make()
         _ = try await engine.start()

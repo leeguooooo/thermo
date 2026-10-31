@@ -143,6 +143,48 @@ private final class BytesTransport: DownloadTransport, @unchecked Sendable {
     }
 }
 
+/// Gopeed's REST API, enough for a task that is already finished.
+private final class GopeedAPI: MediaHTTPTransport, @unchecked Sendable {
+    private let lock = NSLock()
+    private var seen: [String] = []
+    private var _failContinue = false
+    private var _savePath = ""
+    var failContinue: Bool { get { lock.withLock { _failContinue } } set { lock.withLock { _failContinue = newValue } } }
+    var savePath: String { get { lock.withLock { _savePath } } set { lock.withLock { _savePath = newValue } } }
+
+    func called(_ method: String, _ path: String) -> Bool { lock.withLock { seen.contains("\(method) \(path)") } }
+
+    func send(_ request: MediaRequest) async throws -> MediaResponse {
+        lock.withLock { seen.append("\(request.method) \(request.url.path)") }
+        var object: [String: Any] = ["code": 0, "data": [String: Any]()]
+        if request.url.path == "/api/v1/tasks" { object["data"] = [Any]() }
+        if request.url.path == "/api/v1/tasks/old", request.method == "GET" {
+            object["data"] = ["status": "done", "meta": ["opts": ["path": savePath], "res": ["files": [["name": "movie.bin", "path": ""]]]]]
+        }
+        if request.url.path.hasSuffix("/continue"), failContinue { object = ["code": 500, "msg": "no"] }
+        let body = try JSONSerialization.data(withJSONObject: object)
+        let stream = AsyncThrowingStream<Data, Error> { $0.yield(body); $0.finish() }
+        return MediaResponse(statusCode: 200, finalURL: request.url, body: stream)
+    }
+}
+
+private final class GopeedStubProcess: GopeedProcess, @unchecked Sendable {
+    private let lock = NSLock()
+    private var running = true
+    let pid: Int32 = 4242
+    var isRunning: Bool { lock.withLock { running } }
+    var exitCode: Int32? { nil }
+    func terminate() { lock.withLock { running = false } }
+    func forceKill() { terminate() }
+}
+
+private struct GopeedStubLauncher: GopeedLauncher {
+    func launch(executable: URL, arguments: [String], environment: [String: String], workingDirectory: URL) throws -> GopeedProcess { GopeedStubProcess() }
+    func executablePath(pid: Int32) -> String? { nil }
+    func forceKill(pid: Int32) {}
+    func freePort() throws -> Int { 53111 }
+}
+
 private func file(_ id: String, dir: Bool = false, name: String? = nil) -> DriveFile {
     DriveFile(id: id, name: name ?? id, size: 4, isDirectory: dir, parentId: "")
 }
@@ -160,13 +202,13 @@ final class YunXModelTests: XCTestCase {
     override func tearDown() async throws { try? FileManager.default.removeItem(at: temp) }
 
     private func model(_ drive: FakeDrive, jobs: MemoryBackend = MemoryBackend(), vault: YunXVault? = nil,
-                       defaults: UserDefaults? = nil, trackers: MemoryBackend = MemoryBackend()) -> YunXDownloadModel {
+                       defaults: UserDefaults? = nil, trackers: MemoryBackend = MemoryBackend(), gopeed: GopeedEngine? = nil) -> YunXDownloadModel {
         let store = DownloadStore(root: temp.appendingPathComponent("store"))
         let suite = defaults ?? UserDefaults(suiteName: UUID().uuidString)!
         let made = YunXDownloadModel(
             vault: vault ?? YunXVault(backend: MemoryBackend(), now: { 1 }), settingsStore: YunXSettingsStore(defaults: suite, trackers: trackers),
             jobStore: YunXJobStore(backend: jobs), drives: CloudDriveRegistry(providers: [drive]), downloadStore: store,
-            toolsRoot: { [temp] in MediaToolsRoot(url: temp!.appendingPathComponent("tools")) },
+            toolsRoot: { [temp] in MediaToolsRoot(url: temp!.appendingPathComponent("tools")) }, gopeed: gopeed,
             makeEngine: { DownloadEngine(configuration: $0, transport: BytesTransport(), store: store) })
         made.settings.saveDirectory = temp.appendingPathComponent("out").path
         return made
@@ -355,6 +397,77 @@ final class YunXModelTests: XCTestCase {
         XCTAssertEqual(account.fields["authType"], "")
         XCTAssertEqual(account.fields["refreshToken"], "refresh-token-value-1")
         XCTAssertFalse(account.fields.values.contains("PLAINPASSWORD"))
+    }
+
+    private func engine(_ api: GopeedAPI) throws -> GopeedEngine {
+        let root = MediaToolsRoot(url: temp.appendingPathComponent("tools"))
+        let binary = root.gopeedExecutable
+        try FileManager.default.createDirectory(at: binary.deletingLastPathComponent(), withIntermediateDirectories: true)
+        try Data([0xCF, 0xFA, 0xED, 0xFE, 1, 2, 3]).write(to: binary)
+        try FileManager.default.setAttributes([.posixPermissions: 0o755], ofItemAtPath: binary.path)
+        return GopeedEngine(root: root, transport: api, launcher: GopeedStubLauncher(), runner: ProcessToolRunner(), readyTimeout: 2, stopTimeout: 0.1)
+    }
+
+    private func waitFor(_ line: UInt = #line, _ done: () async -> Bool) async {
+        for _ in 0..<500 {
+            if await done() { return }
+            try? await Task.sleep(for: .milliseconds(10))
+        }
+        XCTFail("timed out", line: line)
+    }
+
+    private func restoredP2P(_ jobs: MemoryBackend, task: String) {
+        YunXJobStore(backend: jobs).put(YunXJobRecord(id: UUID(), kind: .p2p, name: "t", saveDirectory: temp.path,
+                                                      p2pURL: "magnet:?xt=urn:btih:0", gopeedTask: task))
+    }
+
+    func testCancellingARestoredP2PJobDeletesItsGopeedTaskAndStopsTheKernel() async throws {
+        let api = GopeedAPI()
+        let gopeed = try engine(api)
+        let jobs = MemoryBackend()
+        restoredP2P(jobs, task: "old")
+        let model = model(FakeDrive(), jobs: jobs, gopeed: gopeed)
+        model.restoreJobs()
+        model.cancel(try XCTUnwrap(model.jobs.first))
+        await waitFor { api.called("DELETE", "/api/v1/tasks/old") }
+        await waitFor { await gopeed.state != .running }
+    }
+
+    func testAFailedContinueRetiresTheTaskAndQuarantineCoversFinishedFiles() async throws {
+        let api = GopeedAPI()
+        api.failContinue = true
+        let gopeed = try engine(api)
+        let jobs = MemoryBackend()
+        restoredP2P(jobs, task: "old")
+        let model = model(FakeDrive(), jobs: jobs, gopeed: gopeed)
+        model.restoreJobs()
+        model.resume(try XCTUnwrap(model.jobs.first))
+        await waitFor { api.called("DELETE", "/api/v1/tasks/old") }
+        await settled(model, count: 1)
+        guard case .failed = model.jobs[0].state else { return XCTFail("\(model.jobs[0].state)") }
+        XCTAssertEqual(YunXJobStore(backend: jobs).load().first?.gopeedTask, "")
+
+        let output = temp.appendingPathComponent("movie.bin")
+        try Data("x".utf8).write(to: output)
+        api.failContinue = false
+        api.savePath = temp.path
+        let again = self.model(FakeDrive(), jobs: { let fresh = MemoryBackend(); self.restoredP2P(fresh, task: "old"); return fresh }(), gopeed: gopeed)
+        again.restoreJobs()
+        again.resume(try XCTUnwrap(again.jobs.first))
+        await settled(again, count: 1)
+        let values = try output.resourceValues(forKeys: [.quarantinePropertiesKey])
+        XCTAssertNotNil(values.quarantineProperties)
+    }
+
+    func testCancellingTheTorrentPickerStopsAnIdleKernel() async throws {
+        let api = GopeedAPI()
+        let gopeed = try engine(api)
+        try await gopeed.start()
+        let model = model(FakeDrive(), gopeed: gopeed)
+        model.torrentPick = YunXTorrentPick(url: "magnet:?xt=urn:btih:0", name: "t", files: [], selected: [])
+        model.cancelTorrent()
+        XCTAssertNil(model.torrentPick)
+        await waitFor { await gopeed.state != .running }
     }
 
     func testPreviewOffersOnlyWhatAVPlayerCanPlayWithSound() {

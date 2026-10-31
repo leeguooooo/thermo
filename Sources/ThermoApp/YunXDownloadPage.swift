@@ -58,7 +58,7 @@ struct YunXDownloadPage: View {
         .sheet(isPresented: Binding(get: { model.savePicker != nil }, set: { if !$0 { model.savePicker = nil } })) {
             YunXSavePickerSheet(model: model)
         }
-        .sheet(isPresented: Binding(get: { model.torrentPick != nil }, set: { if !$0 { model.torrentPick = nil } })) {
+        .sheet(isPresented: Binding(get: { model.torrentPick != nil }, set: { if !$0 { model.cancelTorrent() } })) {
             YunXTorrentSheet(model: model)
         }
     }
@@ -422,7 +422,7 @@ struct YunXTorrentSheet: View {
             }
             HStack {
                 Spacer()
-                Button(tr("Cancel")) { model.torrentPick = nil }.buttonStyle(PillButtonStyle())
+                Button(tr("Cancel")) { model.cancelTorrent() }.buttonStyle(PillButtonStyle())
                 Button(tr("Download selected")) { model.confirmTorrent() }
                     .buttonStyle(PillButtonStyle(prominent: true)).disabled(model.torrentPick?.selected.isEmpty != false)
             }

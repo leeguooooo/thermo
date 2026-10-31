@@ -11,7 +11,7 @@ enum DownloadFinalizer {
         let chain = try SegmentChain.select(segments: segments, size: size).get()
         let manager = FileManager.default
         let directory = destination.deletingLastPathComponent()
-        let temp = directory.appendingPathComponent(".\(destination.lastPathComponent).\(UUID().uuidString).download")
+        let temp = tempURL(beside: destination)
         do {
             try manager.createDirectory(at: directory, withIntermediateDirectories: true)
             guard manager.createFile(atPath: temp.path, contents: nil) else {
@@ -60,16 +60,35 @@ enum DownloadFinalizer {
         }
     }
 
+    /// A fixed length, because a long name plus a suffix can pass the volume's 255-byte limit.
+    static func tempURL(beside destination: URL) -> URL {
+        destination.deletingLastPathComponent().appendingPathComponent(".\(UUID().uuidString).download")
+    }
+
     /// `RENAME_EXCL` makes "does it exist" and "move" one step, so nothing can be overwritten.
-    /// Every saved download comes through here, and is quarantined before it gets its visible name.
-    static func publish(_ source: URL, to destination: URL) throws -> URL {
+    /// Files saved through this engine are quarantined before they get their visible name.
+    /// P2P output never comes through here: Gopeed writes it, and `DownloadQuarantine` is called on it directly.
+    static func publish(
+        _ source: URL, to destination: URL,
+        rename: (String, String) -> Int32 = { renamex_np($0, $1, UInt32(RENAME_EXCL)) }
+    ) throws -> URL {
         DownloadQuarantine.mark(source)
         for index in 0..<10_000 {
             let candidate = uniqueName(for: destination, index: index)
-            if renamex_np(source.path, candidate.path, UInt32(RENAME_EXCL)) == 0 { return candidate }
+            if rename(source.path, candidate.path) == 0 { return candidate }
             switch errno {
             case EEXIST:
                 continue
+            case EXDEV:
+                // A staged copy on the target volume keeps the final name from ever showing a partial file.
+                let staged = tempURL(beside: destination)
+                defer { try? FileManager.default.removeItem(at: staged) }
+                guard copyfile(source.path, staged.path, nil, copyfile_flags_t(COPYFILE_ALL | COPYFILE_EXCL)) == 0 else {
+                    throw DownloadError.io(String(cString: strerror(errno)))
+                }
+                let published = try publish(staged, to: destination)
+                unlink(source.path)
+                return published
             case ENOTSUP, EINVAL:
                 // Some network volumes lack RENAME_EXCL; a hard link is exclusive too.
                 if link(source.path, candidate.path) == 0 {
@@ -95,11 +114,11 @@ enum DownloadFinalizer {
 }
 
 /// Makes Gatekeeper treat a saved file as coming from the internet, as a browser would.
-enum DownloadQuarantine {
+public enum DownloadQuarantine {
     /// No origin URL is recorded: drive links are signed, and this attribute outlives the download.
     /// Best effort, because volumes without extended attributes (exFAT, some shares) refuse it,
     /// and that should not cost the user a finished download.
-    static func mark(_ file: URL) {
+    public static func mark(_ file: URL) {
         let properties: [String: Any] = ["LSQuarantineAgentName": "Thermo", "LSQuarantineType": "LSQuarantineTypeWebDownload"]
         try? (file as NSURL).setResourceValue(properties, forKey: .quarantinePropertiesKey)
     }
