@@ -36,6 +36,15 @@ final class ClaudeLocalDiagnosticsTests: XCTestCase {
             XCTAssertEqual(report.checks.first { $0.id == "default-claude-config.settings.DISABLE_TELEMETRY" }?.value, "opt-out-requested")
         }
     }
+    func testNestedEventContextsAreRecognizedWithoutValues() throws {
+        try fixture { home in
+            try write(home, "Library/Application Support/Claude/sentry/scope_v3.json", "{\"scope\":{\"contexts\":{}},\"event\":{\"contexts\":{\"device\":{\"cpu_description\":\"PRIVATE_CPU\"}}}}")
+            let report = scan(home)
+            XCTAssertEqual(report.checks.first { $0.id == "sentry.device" }?.status, .observed)
+            XCTAssertNil(report.checks.first { $0.id == "sentry.snapshot" })
+            XCTAssertFalse(report.json.contains("PRIVATE_CPU"))
+        }
+    }
     func testMissingInvalidAndOversizedAreNotHealthy() throws {
         try fixture { home in
             XCTAssertEqual(scan(home).checks.first { $0.id == "default-claude-config.identity" }?.status, .missing)
