@@ -1,3 +1,4 @@
+import AppKit
 import Foundation
 import WebKit
 import os
@@ -38,6 +39,33 @@ extension HeadlessFetching {
             pollInterval: 0.12,
             documentStartJS: documentStartJS
         )
+    }
+}
+
+/// The process-wide hidden page, reachable from any isolation. Created on first use, so building
+/// `VideoParsers` never starts a web process.
+public struct SharedHeadlessWebView: HeadlessFetching {
+    @MainActor private static let shared = HeadlessWebView()
+
+    public init() {}
+
+    public func loadAndExtract(
+        url: String,
+        userAgent: String,
+        readyCheckJS: String,
+        extractJS: String,
+        timeout: TimeInterval,
+        pollInterval: TimeInterval,
+        documentStartJS: [String]
+    ) async -> String? {
+        await Self.shared.loadAndExtract(
+            url: url, userAgent: userAgent, readyCheckJS: readyCheckJS, extractJS: extractJS,
+            timeout: timeout, pollInterval: pollInterval, documentStartJS: documentStartJS
+        )
+    }
+
+    public func prewarm(url: String) async {
+        await Self.shared.prewarm(url: url)
     }
 }
 
@@ -129,8 +157,8 @@ public final class HeadlessWebView: HeadlessFetching {
         let probe = Self.probeJS(readyCheckJS, token: session.token)
         let extract = Self.extractJS(extractJS)
         while !session.failed {
-            if await page.evaluate(probe) as? Bool == true {
-                let result = await page.evaluate(extract) as? String
+            if await Self.evaluate(probe, on: page, until: deadline) as? Bool == true {
+                let result = await Self.evaluate(extract, on: page, until: deadline) as? String
                 if session.failed { return nil }
                 return result
             }
@@ -168,6 +196,28 @@ public final class HeadlessWebView: HeadlessFetching {
         return !Task.isCancelled && deadline.timeIntervalSinceNow > 0
     }
 
+    /// A wedged web process never answers, so a call is bounded by the deadline and the task too.
+    private static func evaluate(_ script: String, on page: any HeadlessPage, until deadline: Date) async -> Any? {
+        let waiter = EvaluationWaiter()
+        return await withTaskCancellationHandler {
+            await withCheckedContinuation { (continuation: CheckedContinuation<UncheckedAny, Never>) in
+                waiter.continuation = continuation
+                let timer = Task { @MainActor in
+                    let remaining = max(deadline.timeIntervalSinceNow, 0)
+                    try? await Task.sleep(nanoseconds: UInt64(remaining * 1_000_000_000))
+                    if !Task.isCancelled { waiter.finish(nil) }
+                }
+                Task { @MainActor in
+                    let value = await page.evaluate(script)
+                    timer.cancel()
+                    waiter.finish(value)
+                }
+            }
+        } onCancel: {
+            Task { @MainActor in waiter.finish(nil) }
+        }.value
+    }
+
     private func parkWhenIdle() {
         parkTask?.cancel()
         let delay = UInt64(parkDelay * 1_000_000_000)
@@ -199,11 +249,25 @@ public final class HeadlessWebView: HeadlessFetching {
     }
 }
 
-/// Offscreen WKWebView. Uses a non-persistent data store: site cookies stay warm for the process
+/// Whichever of answer, deadline or cancellation comes first resumes the caller.
+@MainActor
+private final class EvaluationWaiter {
+    var continuation: CheckedContinuation<UncheckedAny, Never>?
+
+    func finish(_ value: Any?) {
+        continuation?.resume(returning: UncheckedAny(value: value))
+        continuation = nil
+    }
+}
+
+/// Offscreen WKWebView, hosted in an invisible window so WebKit has one to treat as visible. Timers
+/// run either way; animation frames did not fire under `swift test`, where the page stays `hidden`,
+/// so a site that waits on them needs checking in the running app. Uses a non-persistent data store: site cookies stay warm for the process
 /// lifetime and nothing is written to disk.
 @MainActor
 public final class WKHeadlessPage: NSObject, HeadlessPage, WKNavigationDelegate {
     private let webView: WKWebView
+    private let window: NSWindow
     public var onLoadFailed: (() -> Void)?
     public var onLoadFinished: (() -> Void)?
 
@@ -211,9 +275,24 @@ public final class WKHeadlessPage: NSObject, HeadlessPage, WKNavigationDelegate 
         let configuration = WKWebViewConfiguration()
         configuration.websiteDataStore = .nonPersistent()
         configuration.mediaTypesRequiringUserActionForPlayback = .all
+        // WebKit's default names no browser at all. This keeps the UA consistent with the engine.
+        configuration.applicationNameForUserAgent = "Version/18.0 Safari/605.1.15"
         webView = WKWebView(frame: CGRect(x: 0, y: 0, width: 1280, height: 800), configuration: configuration)
+        window = NSWindow(
+            contentRect: CGRect(x: 0, y: 0, width: 1280, height: 800),
+            styleMask: .borderless,
+            backing: .buffered,
+            defer: false
+        )
         super.init()
         webView.navigationDelegate = self
+        window.isReleasedWhenClosed = false
+        window.alphaValue = 0
+        window.ignoresMouseEvents = true
+        window.hasShadow = false
+        window.collectionBehavior = [.transient, .ignoresCycle, .stationary]
+        window.contentView = webView
+        window.orderFrontRegardless()
     }
 
     public var currentURL: String? { webView.url?.absoluteString }
@@ -244,6 +323,16 @@ public final class WKHeadlessPage: NSObject, HeadlessPage, WKNavigationDelegate 
                 continuation.resume(returning: UncheckedAny(value: value))
             }
         }.value
+    }
+
+    /// App deep links would fail the main frame and end the session.
+    public func webView(
+        _ webView: WKWebView,
+        decidePolicyFor navigationAction: WKNavigationAction,
+        decisionHandler: @escaping @MainActor (WKNavigationActionPolicy) -> Void
+    ) {
+        let scheme = navigationAction.request.url?.scheme?.lowercased() ?? ""
+        decisionHandler(["http", "https", "about", "data"].contains(scheme) ? .allow : .cancel)
     }
 
     public func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {

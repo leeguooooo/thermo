@@ -1,17 +1,17 @@
 import Foundation
 
-/// Platform to parser registry.
-///
-/// Douyin, Weibo and XHS are not ported yet; `of` returns nil for them. YunX's order is
-/// Douyin, Kuaishou, Weibo, AcFun, Bilibili, XHS, Pixiv, so insert them at those positions.
+/// Platform to parser registry. `all` is account-page order.
 public struct VideoParsers: Sendable {
     public let all: [any VideoParser]
 
-    public init(http: VideoHttp = VideoHttp()) {
+    public init(http: VideoHttp = VideoHttp(), headless: any HeadlessFetching = SharedHeadlessWebView()) {
         all = [
+            DouyinParser(http: http, headless: headless),
             KuaishouParser(http: http),
+            WeiboParser(http: http),
             AcFunParser(http: http),
             BilibiliParser(http: http),
+            XhsParser(http: http),
             PixivParser(http: http),
         ]
     }

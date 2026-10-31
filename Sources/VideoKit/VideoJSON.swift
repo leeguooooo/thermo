@@ -194,6 +194,12 @@ struct VideoJSONObject: Equatable {
         values[key].flatMap(VideoJSONArray.string) ?? fallback
     }
 
+    /// `optString` with a literal "null" treated as absent, as YunX's `str` did.
+    func str(_ key: String) -> String {
+        let text = optString(key)
+        return text == "null" ? "" : text
+    }
+
     func optInt(_ key: String, _ fallback: Int = 0) -> Int {
         values[key].flatMap(VideoJSONArray.integer).map(Int.init) ?? fallback
     }

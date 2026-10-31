@@ -214,8 +214,9 @@ final class VideoHttpTests: XCTestCase {
 final class VideoCatalogTests: XCTestCase {
     func testRegistryAndPlatformFacts() {
         let parsers = VideoParsers(http: VideoHttp(transport: FakeTransport([])))
-        XCTAssertEqual(parsers.supportedPlatforms, [.kuaishou, .acfun, .bilibili, .pixiv])
-        XCTAssertNil(parsers.of(.douyin))
+        XCTAssertEqual(parsers.supportedPlatforms, [.douyin, .kuaishou, .weibo, .acfun, .bilibili, .xhs, .pixiv])
+        XCTAssertEqual(parsers.of(.douyin)?.platform, .douyin)
+        XCTAssertEqual(Set(parsers.all.map(\.platform)), Set(VideoPlatform.allCases))
         XCTAssertEqual(parsers.of(.pixiv)?.platform, .pixiv)
         XCTAssertEqual(VideoPlatform.fromName("BILIBILI"), .bilibili)
         XCTAssertNil(VideoPlatform.fromName("bilibili"))
@@ -540,6 +541,22 @@ final class FakePage: HeadlessPage {
     }
 }
 
+/// A page whose web process stopped answering.
+@MainActor
+final class HangingPage: HeadlessPage {
+    var currentURL: String?
+    var onLoadFailed: (() -> Void)?
+    var onLoadFinished: (() -> Void)?
+    func setDocumentStartScripts(_ scripts: [String]) {}
+    func load(_ url: String) {}
+    func reload() {}
+
+    func evaluate(_ script: String) async -> Any? {
+        try? await Task.sleep(nanoseconds: 60_000_000_000)
+        return nil
+    }
+}
+
 @MainActor
 final class HeadlessWebViewTests: XCTestCase {
     private func extract(_ view: HeadlessWebView, timeout: TimeInterval = 2, url: String = "https://s/a") async -> String? {
@@ -614,6 +631,38 @@ final class HeadlessWebViewTests: XCTestCase {
         // A second prewarm leaves the existing page alone.
         await view.prewarm(url: "https://s/other")
         XCTAssertEqual(page.loads.count, 2)
+    }
+
+    func testWedgedEvaluationStillTimesOut() async {
+        let page = HangingPage()
+        let result = await extract(HeadlessWebView(parkDelay: 60) { page }, timeout: 0.05)
+        XCTAssertNil(result)
+    }
+
+    func testCancellationEndsWedgedEvaluation() async {
+        let page = HangingPage()
+        let view = HeadlessWebView(parkDelay: 60) { page }
+        let task = Task { await extract(view, timeout: 30) }
+        try? await Task.sleep(nanoseconds: 20_000_000)
+        task.cancel()
+        let result = await task.value
+        XCTAssertNil(result)
+    }
+
+    /// A site's challenge depends on timers. Animation frames are not asserted: under `swift test`
+    /// the page reports `hidden` and they never fire, even in an opaque window.
+    func testRealWebViewRunsTimersAndSendsSafariUserAgent() async {
+        let view = HeadlessWebView(parkDelay: 60)
+        let result = await view.loadAndExtract(
+            url: "data:text/html,<script>setTimeout(function(){window.__t=1},50)</script>",
+            userAgent: "ua",
+            readyCheckJS: "window.__t===1",
+            extractJS: "navigator.userAgent",
+            timeout: 10,
+            pollInterval: 0.05,
+            documentStartJS: []
+        )
+        XCTAssertTrue(result?.contains("Safari/605.1.15") ?? false, result ?? "nil")
     }
 
     func testProbeRequiresTokenAndStrictTruth() {
