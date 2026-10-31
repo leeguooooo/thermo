@@ -60,7 +60,7 @@ struct YunXDownloadPage: View {
     private func p2pPrompt(_ url: String) -> some View {
         InspectorPanel {
             HStack {
-                Text(tr("P2P downloads need the Gopeed engine, fetched from its GitHub release (about 30 MB)."))
+                Text(tr("P2P downloads need the Gopeed engine, fetched from its GitHub release."))
                     .font(.callout).foregroundStyle(Theme.textSecondary)
                 Spacer()
                 Button(tr("Cancel")) { model.pendingP2P = nil }.buttonStyle(PillButtonStyle())

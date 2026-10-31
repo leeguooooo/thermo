@@ -4001,7 +4001,7 @@ let zhHans: [String: String] = [
     "Login detected": "已检测到登录",
     "Logins are kept only in the Keychain.": "登录信息只保存在钥匙串里。",
     "Or paste the Cookie": "或粘贴 Cookie",
-    "P2P downloads need the Gopeed engine, fetched from its GitHub release (about 30 MB).": "P2P 下载需要 Gopeed 引擎，将从其 GitHub Release 下载（约 30 MB）。",
+    "P2P downloads need the Gopeed engine, fetched from its GitHub release.": "P2P 下载需要 Gopeed 引擎，将从其 GitHub Release 下载。",
     "Passcode (if any)": "提取码（如有）",
     "Password": "密码",
     "Paste a share, video or magnet link": "粘贴分享、视频或磁力链接",
