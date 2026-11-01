@@ -18,6 +18,8 @@ final class AppModels {
     lazy var softwareUpdates = AppUpdatesModel()
     lazy var nativeUpdates = NativeUpdatesModel()
     lazy var claudeCleanup = ClaudeCleanupModel()
+    lazy var plugins = PluginsModel()
+    lazy var appStore = AppStoreModel()
     private var browsers: [String: ChromePagesModel] = [:]
 
     func stopBrowserChecks() {
@@ -53,9 +55,10 @@ enum MainPage: Hashable {
     case history
     case connections
     case yunx
+    case plugins
 
     /// `--page` values: overview, sensors, fans, settings, pages, disk, disk:overview, disk:<category>,
-    /// agents, agents:<area>, apps, apps:leftovers, space, space:large, space:duplicates, memory, cpu, gpu, claude, claude:<accounts|reset|privacy>, claude-cleanup, history, connections.
+    /// agents, agents:<area>, apps, apps:leftovers, apps:store, plugins, space, space:large, space:duplicates, memory, cpu, gpu, claude, claude:<accounts|reset|privacy>, claude-cleanup, history, connections.
     init?(argument: String) {
         let parts = argument.split(separator: ":", maxSplits: 1).map(String.init)
         guard let command = parts.first else { return nil }
@@ -72,6 +75,7 @@ enum MainPage: Hashable {
         case "history": self = .history
         case "connections": self = .connections
         case "yunx": self = .yunx
+        case "plugins": self = .plugins
         case "claude": self = .claude(parts.count > 1 ? (ClaudeTab(rawValue: parts[1]) ?? .accounts) : .accounts)
         case "claude-cleanup": self = .claude(parts.count > 1 && parts[1] == "privacy" ? .privacy : .reset)
         case "cpu": self = .compute(false)
@@ -404,7 +408,7 @@ struct MainView: View {
         case let .agents(.area(a)):
             AreaPage(scanner: agents, area: a).id(a).transition(.page)
         case let .apps(tab):
-            AppsPage(model: models.apps, startup: models.startup, updates: models.softwareUpdates, native: models.nativeUpdates,
+            AppsPage(model: models.apps, startup: models.startup, updates: models.softwareUpdates, native: models.nativeUpdates, store: models.appStore,
                      tab: Binding(get: { tab }, set: { page = .apps($0) })).transition(.page)
         case let .compute(gpu):
             ComputePage(gpu: gpu).id(gpu).transition(.page)
@@ -418,6 +422,8 @@ struct MainView: View {
             ConnectionsPage(model: ConnectionsModel.shared).transition(.page)
         case .yunx:
             YunXDownloadPage(model: YunXDownloadModel.shared).transition(.page)
+        case .plugins:
+            PluginsPage(model: models.plugins, open: { page = $0 }).transition(.page)
         case .history:
             HistoryPage(model: HistoryModel.shared, open: { page = $0 }).transition(.page)
         case let .space(tab):
@@ -536,6 +542,7 @@ struct MainSidebar: View {
                     row(.apps(page.appsTab ?? .installed), tr("Software"), "square.grid.2x2", .indigo, trailing: nil,
                         selected: page.appsTab != nil)
                     row(.yunx, tr("YunX Download"), "arrow.down.circle", .blue, trailing: nil)
+                    row(.plugins, tr("Plugins"), "puzzlepiece.extension", .orange, trailing: nil)
 
                     header(tr("AI Agent Diagnostics"))
                     row(.claude(page.claudeTab ?? .accounts), tr("Claude tools"), "person.2", .orange, trailing: nil,
