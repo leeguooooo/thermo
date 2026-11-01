@@ -1,52 +1,56 @@
-import CleanKit
 import AVKit
 import AppKit
+import CleanKit
 import CloudDriveKit
 import MediaToolsKit
 import SwiftUI
 import ThermoL10n
 import UniformTypeIdentifiers
 import VideoKit
-import WebKit
 
-/// Paste a share, video or magnet link; browse it; download. Accounts and backups sit at the bottom.
+/// One column with one job: paste a link, see what it holds, watch it download. Accounts and
+/// settings are a click away in the toolbar, not part of the flow.
 struct YunXDownloadPage: View {
     @ObservedObject var model: YunXDownloadModel
-    @State private var backup: BackupMode?
-    @AppStorage(YunXClipboardSetting.key) private var clipboardPrompt = true
+    @ObservedObject var setup: YunXChromeUseSetup = .shared
+    @State private var accountsShown = false
+    @State private var settingsShown = false
 
-    enum BackupMode: Identifiable {
-        case export, restore(URL)
-        var id: String { if case .export = self { return "export" } else { return "import" } }
-    }
+    /// A column narrower than the page reads as one task, and keeps the size column near the name.
+    static let columnWidth: CGFloat = 760
 
     var body: some View {
-        WindowPage(title: tr("YunX Download"), subtitle: tr("Experimental · not verified with real accounts")) {
-            linkPanel
-            if let error = model.error { NoticeBanner(text: error, dismiss: { model.error = nil }) }
-            if let notice = model.notice { NoticeBanner(text: notice, dismiss: { model.notice = nil }) }
-            if model.importingLogin { NoticeBanner(text: tr("Checking your Chrome login…"), busy: true) }
-            if let url = model.pendingP2P { p2pPrompt(url) }
-            if model.installingP2P { NoticeBanner(text: tr("Installing the P2P engine…"), busy: true) }
-            if model.pendingFfmpeg != nil { ffmpegPrompt }
-            if model.installingFfmpeg { NoticeBanner(text: tr("Installing FFmpeg…"), busy: true) }
-            if model.browsing { browser }
-            if let video = model.video { videoPanel(video) }
-            if !model.jobs.isEmpty { jobsPanel }
-            settingsPanel
-            accountsPanel
+        ScrollView {
+            VStack(alignment: .leading, spacing: Theme.Space.xl) {
+                header
+                if setup.state == .missing || setup.state == .notConnected { YunXChromeUseCard(setup: setup) }
+                pasteField
+                messages
+                if model.browsing { YunXFileList(model: model) }
+                if let video = model.video { YunXVideoList(model: model, video: video) }
+                if !model.jobs.isEmpty { YunXJobList(model: model) }
+                if !model.browsing, model.video == nil, model.jobs.isEmpty { emptyState }
+            }
+            .frame(maxWidth: Self.columnWidth, alignment: .leading)
+            .padding(.horizontal, Theme.pagePadding).padding(.top, Theme.pageTop).padding(.bottom, Theme.Space.xxl)
+            .frame(maxWidth: .infinity)
         }
+        // The Theme is drawn for the dark window; a light system must not recolor fields on it.
+        .environment(\.colorScheme, .dark)
         .onAppear {
             model.reloadAccounts()
             model.restoreJobs()
             model.startBackgroundRefresh()
+            Task { await setup.refresh() }
         }
-        .sheet(item: $model.login) { target in
-            YunXLoginSheet(model: model, target: target)
+        .task(id: model.notice) {
+            guard model.notice != nil else { return }
+            try? await Task.sleep(for: .seconds(4))
+            if !Task.isCancelled { withAnimation(Theme.quick) { model.notice = nil } }
         }
-        .sheet(item: $backup) { mode in
-            YunXBackupSheet(model: model, mode: mode)
-        }
+        .onChange(of: model.link) { _ in if model.passcode.isEmpty { model.passcodeAsked = false } }
+        .sheet(isPresented: $accountsShown) { YunXAccountsSheet(model: model, setup: setup) }
+        .sheet(isPresented: $settingsShown) { YunXSettingsSheet(model: model) }
         .sheet(item: Binding(get: { model.preview }, set: { if $0 == nil { model.closePreview() } })) { preview in
             VStack(alignment: .leading, spacing: Theme.Space.s) {
                 HStack {
@@ -65,48 +69,93 @@ struct YunXDownloadPage: View {
         }
     }
 
-    private var linkPanel: some View {
-        InspectorPanel {
-            VStack(alignment: .leading, spacing: Theme.Space.s) {
+    private var header: some View {
+        HStack(alignment: .firstTextBaseline, spacing: Theme.Space.s) {
+            Text(tr("YunX Download")).font(Theme.pageTitle).foregroundStyle(Theme.textPrimary).accessibilityAddTraits(.isHeader)
+            StatusTag(text: tr("Experimental")).help(tr("Experimental · not verified with real accounts"))
+            Spacer()
+            YunXToolbarButton(symbol: "person.crop.circle", label: tr("Accounts")) { accountsShown = true }
+            YunXToolbarButton(symbol: "gearshape", label: tr("Download settings")) { settingsShown = true }
+        }
+    }
+
+    private var pasteField: some View {
+        VStack(alignment: .leading, spacing: Theme.Space.s) {
+            HStack(spacing: Theme.Space.s) {
+                Image(systemName: "link").font(.system(size: 14, weight: .medium)).foregroundStyle(Theme.textTertiary).accessibilityHidden(true)
                 TextField(tr("Paste a share, video or magnet link"), text: $model.link)
-                    .textFieldStyle(.roundedBorder)
+                    .textFieldStyle(.plain).font(.system(size: 15))
                     .onSubmit { Task { await model.open() } }
-                HStack {
+                if model.busy { ProgressView().controlSize(.small) }
+                Button(tr("Open")) { Task { await model.open() } }
+                    .buttonStyle(PillButtonStyle(prominent: true)).disabled(model.busy || model.link.isEmpty)
+            }
+            .padding(.leading, 14).padding(.trailing, 8).frame(height: 48)
+            .background(RoundedRectangle(cornerRadius: Theme.radius, style: .continuous).fill(Theme.surfaceRaised))
+            .overlay(RoundedRectangle(cornerRadius: Theme.radius, style: .continuous).strokeBorder(Theme.border))
+            HStack(spacing: Theme.Space.m) {
+                if model.passcodeAsked || !model.passcode.isEmpty {
                     TextField(tr("Passcode (if any)"), text: $model.passcode)
-                        .textFieldStyle(.roundedBorder).frame(maxWidth: 180)
-                    Spacer()
-                    if model.busy { ProgressView().controlSize(.small) }
-                    Button(tr("Open .torrent…")) { pickTorrent() }.buttonStyle(PillButtonStyle())
-                    Button(tr("Open")) { Task { await model.open() } }
-                        .buttonStyle(PillButtonStyle(prominent: true))
-                        .disabled(model.busy || model.link.isEmpty)
+                        .textFieldStyle(.plain).font(Theme.body)
+                        .onSubmit { Task { await model.open() } }
+                        .padding(.horizontal, 10).frame(width: 160, height: 28)
+                        .background(RoundedRectangle(cornerRadius: Theme.radiusSmall, style: .continuous).fill(Theme.surface))
+                        .overlay(RoundedRectangle(cornerRadius: Theme.radiusSmall, style: .continuous).strokeBorder(Theme.hairline))
                 }
-            }.padding(Theme.Space.m)
+                Spacer()
+                Button(tr("Open .torrent…")) { pickTorrent() }
+                    .buttonStyle(.plain).font(Theme.secondary).foregroundStyle(Theme.textSecondary)
+            }
         }
     }
 
-    private func p2pPrompt(_ url: String) -> some View {
-        InspectorPanel {
-            HStack {
-                Text(tr("P2P downloads need the Gopeed engine, fetched from its GitHub release."))
-                    .font(.callout).foregroundStyle(Theme.textSecondary)
-                Spacer()
-                Button(tr("Cancel")) { model.pendingP2P = nil }.buttonStyle(PillButtonStyle())
-                Button(tr("Install")) { Task { await model.installP2P() } }.buttonStyle(PillButtonStyle(prominent: true))
-            }.padding(Theme.Space.m)
+    @ViewBuilder private var messages: some View {
+        if let error = model.error { NoticeBanner(text: error, dismiss: { model.error = nil }) }
+        if let notice = model.notice { NoticeBanner(text: notice, dismiss: { model.notice = nil }).transition(.opacity) }
+        if model.importingLogin { NoticeBanner(text: tr("Checking your Chrome login…"), busy: true) }
+        if let target = model.chromeWaiting { YunXChromeWaiting(model: model, target: target) }
+        if let url = model.pendingP2P {
+            prompt(tr("P2P downloads need the Gopeed engine, fetched from its GitHub release."), decline: tr("Cancel"), { model.pendingP2P = nil }) {
+                Task { await model.installP2P() }
+            }.id(url)
         }
+        if model.installingP2P { NoticeBanner(text: tr("Installing the P2P engine…"), busy: true) }
+        if model.pendingFfmpeg != nil {
+            prompt(tr("Merging video and audio works best with FFmpeg, fetched from martin-riedl.de."), decline: tr("Use built-in"), { model.declineFfmpeg() }) {
+                Task { await model.installFfmpeg() }
+            }
+        }
+        if model.installingFfmpeg { NoticeBanner(text: tr("Installing FFmpeg…"), busy: true) }
     }
 
-    private var ffmpegPrompt: some View {
-        InspectorPanel {
-            HStack {
-                Text(tr("Merging video and audio works best with FFmpeg, fetched from martin-riedl.de."))
-                    .font(.callout).foregroundStyle(Theme.textSecondary)
-                Spacer()
-                Button(tr("Use built-in")) { model.declineFfmpeg() }.buttonStyle(PillButtonStyle())
-                Button(tr("Install")) { Task { await model.installFfmpeg() } }.buttonStyle(PillButtonStyle(prominent: true))
-            }.padding(Theme.Space.m)
+    private func prompt(_ text: String, decline: String, _ no: @escaping () -> Void, install: @escaping () -> Void) -> some View {
+        HStack(spacing: Theme.Space.m) {
+            Text(text).font(Theme.secondary).foregroundStyle(Theme.textSecondary).fixedSize(horizontal: false, vertical: true)
+            Spacer()
+            Button(decline, action: no).buttonStyle(PillButtonStyle()).controlSize(.small)
+            Button(tr("Install"), action: install).buttonStyle(PillButtonStyle(prominent: true)).controlSize(.small)
         }
+        .padding(.horizontal, 14).padding(.vertical, 10)
+        .background(RoundedRectangle(cornerRadius: Theme.radiusSmall + 2, style: .continuous).fill(Theme.surface))
+    }
+
+    /// Says what the field takes, then stays out of the way.
+    private var emptyState: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            hint("externaldrive.badge.icloud", tr("Drive shares"), tr("Quark, UC, Xunlei, 115, 123, 139 and more"))
+            hint("play.rectangle", tr("Video pages"), tr("Bilibili, Douyin, Xiaohongshu, Kuaishou, Weibo, AcFun, Pixiv"))
+            hint("arrow.triangle.branch", tr("Magnets and torrents"), tr("Pick the files you want before it starts"))
+        }
+        .padding(.top, Theme.Space.s)
+    }
+
+    private func hint(_ symbol: String, _ title: String, _ detail: String) -> some View {
+        HStack(spacing: Theme.Space.m) {
+            Image(systemName: symbol).font(.system(size: 14)).foregroundStyle(Theme.textTertiary).frame(width: 22).accessibilityHidden(true)
+            Text(title).font(Theme.body).foregroundStyle(Theme.textSecondary).frame(width: 110, alignment: .leading)
+            Text(detail).font(Theme.secondary).foregroundStyle(Theme.textTertiary).lineLimit(1)
+            Spacer(minLength: 0)
+        }.frame(height: 34)
     }
 
     private func pickTorrent() {
@@ -115,73 +164,74 @@ struct YunXDownloadPage: View {
         guard panel.runModal() == .OK, let url = panel.url else { return }
         Task { await model.openTorrent(url) }
     }
+}
 
-    private var settingsPanel: some View {
-        InspectorPanel {
-            DisclosureGroup(tr("Download settings")) {
-                VStack(alignment: .leading, spacing: Theme.Space.s) {
-                    HStack {
-                        Text(tr("Save to")).font(.callout)
-                        Text(model.saveDirectoryLabel).font(.caption).foregroundStyle(Theme.textSecondary).lineLimit(1).truncationMode(.middle)
-                        Spacer()
-                        if !model.settings.saveDirectory.isEmpty {
-                            Button(tr("Use Downloads")) { model.settings.saveDirectory = "" }.buttonStyle(.link)
-                        }
-                        Button(tr("Choose…")) { pickFolder() }.buttonStyle(.link)
-                    }
-                    Toggle(tr("Offer to open supported links I copy"), isOn: Binding(get: { clipboardPrompt }, set: {
-                        clipboardPrompt = $0
-                        YunXClipboardPrompt.shared.refresh()
-                    })).toggleStyle(.checkbox)
-                    number(tr("Speed limit (KB/s, 0 is unlimited)"), $model.settings.speedLimitKB)
-                    Text(tr("The limit covers HTTP downloads, not P2P.")).font(.caption).foregroundStyle(Theme.textSecondary)
-                    number(tr("P2P connections"), $model.settings.p2pConnections)
-                    number(tr("P2P tasks at once"), $model.settings.p2pMaxRunning)
-                    Toggle(tr("DHT"), isOn: $model.settings.p2pDHT).toggleStyle(.checkbox)
-                    Picker(tr("P2P proxy"), selection: $model.settings.proxyMode) {
-                        Text(tr("Direct")).tag(YunXSettings.ProxyMode.direct)
-                        Text(tr("System")).tag(YunXSettings.ProxyMode.system)
-                        Text(tr("Manual")).tag(YunXSettings.ProxyMode.manual)
-                    }.frame(maxWidth: 260)
-                    if model.settings.proxyMode == .manual {
-                        HStack {
-                            TextField(tr("Proxy host"), text: $model.settings.proxyHost).textFieldStyle(.roundedBorder)
-                            number(tr("Port"), $model.settings.proxyPort)
-                        }
-                    }
-                    Text(tr("Extra trackers, one per line")).font(.callout)
-                    TextEditor(text: Binding(get: { model.settings.trackers.joined(separator: "\n") }, set: { text in
-                        model.settings.trackers = text.components(separatedBy: "\n")
-                    })).font(.caption).frame(height: 56).border(Theme.textTertiary.opacity(0.3))
-                }.padding(.top, Theme.Space.xs)
-            }.padding(Theme.Space.m)
+struct YunXToolbarButton: View {
+    let symbol: String
+    let label: String
+    let action: () -> Void
+    @State private var hover = false
+
+    var body: some View {
+        Button(action: action) {
+            Image(systemName: symbol).font(.system(size: 14, weight: .medium))
+                .foregroundStyle(hover ? Theme.textPrimary : Theme.textSecondary)
+                .frame(width: 30, height: 30)
+                .background(RoundedRectangle(cornerRadius: 7, style: .continuous).fill(hover ? Theme.surfaceRaised : .clear))
+                .contentShape(Rectangle())
         }
+        .buttonStyle(.plain).onHover { hover = $0 }.help(label).accessibilityLabel(label)
     }
+}
 
-    private func number(_ title: String, _ value: Binding<Int>) -> some View {
-        HStack {
-            Text(title).font(.callout)
-            TextField("", value: value, format: .number.grouping(.never)).textFieldStyle(.roundedBorder).frame(width: 90)
+/// A small icon that shows on a hovered row.
+struct YunXRowIcon: View {
+    let symbol: String
+    let label: String
+    let action: () -> Void
+    var body: some View {
+        Button(action: action) {
+            Image(systemName: symbol).font(.system(size: 12, weight: .medium)).foregroundStyle(Theme.textSecondary)
+                .frame(width: 24, height: 24).contentShape(Rectangle())
+        }.buttonStyle(.plain).help(label).accessibilityLabel(label)
+    }
+}
+
+struct YunXChromeWaiting: View {
+    @ObservedObject var model: YunXDownloadModel
+    let target: YunXLoginTarget
+
+    var body: some View {
+        HStack(spacing: Theme.Space.m) {
+            ProgressView().controlSize(.small)
+            Text(tr("Finish signing in to %1$@ in Chrome", target.title)).font(Theme.secondary).foregroundStyle(Theme.textPrimary)
+            Spacer()
+            Button(tr("Cancel")) { model.cancelChromeLogin() }.buttonStyle(PillButtonStyle()).controlSize(.small)
         }
+        .padding(.horizontal, 14).padding(.vertical, 8)
+        .background(RoundedRectangle(cornerRadius: Theme.radiusSmall + 2, style: .continuous).fill(Theme.surface))
+        .overlay(RoundedRectangle(cornerRadius: Theme.radiusSmall + 2, style: .continuous).strokeBorder(Theme.hairline))
     }
+}
 
-    private func pickFolder() {
-        let panel = NSOpenPanel()
-        panel.canChooseFiles = false
-        panel.canChooseDirectories = true
-        panel.canCreateDirectories = true
-        guard panel.runModal() == .OK, let url = panel.url else { return }
-        model.settings.saveDirectory = url.path
-    }
+/// Fixed column widths, shared by the file list and the downloads, so sizes line up down the page.
+private enum Columns {
+    static let size: CGFloat = 112
+    static let trailing: CGFloat = 84
+}
 
-    private var browser: some View {
-        InspectorPanel {
-            VStack(alignment: .leading, spacing: Theme.Space.xs) {
-                HStack(spacing: 4) {
-                    ForEach(Array(model.path.enumerated()), id: \.offset) { index, item in
-                        if index > 0 { Image(systemName: "chevron.right").font(.caption2).foregroundStyle(Theme.textTertiary) }
-                        Button(item.name) { Task { await model.goUp(to: index) } }.buttonStyle(.link).lineLimit(1)
-                    }
+struct YunXFileList: View {
+    @ObservedObject var model: YunXDownloadModel
+
+    private var pickable: [DriveFile] { model.files }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: Theme.Space.s) {
+            breadcrumbs
+            InspectorPanel {
+                HStack(spacing: Theme.Space.s) {
+                    SelectAllButton(available: pickable.count, selected: model.selected.count,
+                                    selectAll: { model.selected = Set(pickable.map(\.id)) }, clear: { model.selected = [] })
                     Spacer()
                     if model.canSaveToDrive {
                         Button(tr("Save to drive")) { Task { await model.beginSave() } }
@@ -190,183 +240,266 @@ struct YunXDownloadPage: View {
                     Button(tr("Download selected")) { model.downloadSelected() }
                         .buttonStyle(PillButtonStyle(prominent: true)).controlSize(.small).disabled(model.selected.isEmpty)
                 }
-                if model.files.isEmpty, !model.busy {
-                    Text(tr("This folder is empty.")).font(.callout).foregroundStyle(Theme.textSecondary)
+                .padding(.horizontal, Theme.Space.m).frame(height: 40)
+                Rectangle().fill(Theme.hairline).frame(height: 1)
+                if model.files.isEmpty {
+                    if model.busy { SkeletonBar(height: 10).padding(Theme.Space.l) }
+                    else { EmptyState(symbol: "folder", title: tr("This folder is empty.")) }
                 }
-                ForEach(model.files, id: \.id) { file in row(file) }
-            }.padding(Theme.Space.m)
-        }
-    }
-
-    private func row(_ file: DriveFile) -> some View {
-        HStack {
-            if file.isDirectory {
-                Toggle("", isOn: ticked(file)).toggleStyle(.checkbox).labelsHidden().accessibilityLabel(file.name)
-                Image(systemName: "folder").foregroundStyle(Theme.accent).accessibilityHidden(true)
-                Button(file.name) { Task { await model.enter(file) } }.buttonStyle(.link).lineLimit(1)
-                Spacer()
-                Button { model.downloadSelected(only: file) } label: { Image(systemName: "arrow.down.circle") }
-                    .buttonStyle(.plain).help(tr("Download")).accessibilityLabel(tr("Download"))
-            } else {
-                Toggle(isOn: ticked(file)) { Text(file.name).lineLimit(1) }.toggleStyle(.checkbox)
-                Spacer()
-                Text(ByteFormat.string(file.size)).font(.caption).foregroundStyle(Theme.textSecondary)
-                if model.previewable(file) {
-                    Button { Task { await model.preview(file) } } label: { Image(systemName: "play.circle") }
-                        .buttonStyle(.plain).help(tr("Preview")).accessibilityLabel(tr("Preview"))
+                ForEach(Array(model.files.enumerated()), id: \.element.id) { index, file in
+                    if index > 0 { InspectorDivider(inset: 0) }
+                    YunXFileRow(model: model, file: file)
                 }
-                Button { model.downloadSelected(only: file) } label: { Image(systemName: "arrow.down.circle") }
-                    .buttonStyle(.plain).help(tr("Download")).accessibilityLabel(tr("Download"))
             }
         }
     }
 
-    private func ticked(_ file: DriveFile) -> Binding<Bool> {
-        Binding(get: { model.selected.contains(file.id) }, set: { on in
-            if on { model.selected.insert(file.id) } else { model.selected.remove(file.id) }
-        })
+    private var breadcrumbs: some View {
+        HStack(spacing: 4) {
+            ForEach(Array(model.path.enumerated()), id: \.offset) { index, item in
+                if index > 0 {
+                    Image(systemName: "chevron.right").font(.system(size: 9, weight: .semibold)).foregroundStyle(Theme.textTertiary).accessibilityHidden(true)
+                }
+                Button(item.name) { Task { await model.goUp(to: index) } }
+                    .buttonStyle(.plain).lineLimit(1).truncationMode(.middle)
+                    .font(index == model.path.count - 1 ? Theme.rowTitle : Theme.body)
+                    .foregroundStyle(index == model.path.count - 1 ? Theme.textPrimary : Theme.textSecondary)
+                    .allowsHitTesting(index != model.path.count - 1)
+            }
+            Spacer(minLength: 0)
+        }.padding(.horizontal, 2)
+    }
+}
+
+struct YunXFileRow: View {
+    @ObservedObject var model: YunXDownloadModel
+    let file: DriveFile
+    @State private var hover = false
+
+    private var selected: Bool { model.selected.contains(file.id) }
+
+    private func toggle() {
+        if selected { model.selected.remove(file.id) } else { model.selected.insert(file.id) }
     }
 
-    private func videoPanel(_ video: VideoParseResult) -> some View {
-        InspectorPanel {
-            VStack(alignment: .leading, spacing: Theme.Space.xs) {
-                Text(video.title.isEmpty ? video.platform.displayName : video.title).font(.headline).lineLimit(2)
-                if !video.author.isEmpty { Text(video.author).font(.caption).foregroundStyle(Theme.textSecondary) }
-                if !video.notice.isEmpty { Text(video.notice).font(.caption).foregroundStyle(Theme.textSecondary) }
+    var body: some View {
+        HStack(spacing: Theme.Space.s) {
+            SelectToggle(selected: selected, label: file.name, toggle: toggle)
+            Image(systemName: file.isDirectory ? "folder.fill" : YunXFileIcon.symbol(file.name)).font(.system(size: 13))
+                .foregroundStyle(file.isDirectory ? Theme.accent : Theme.textTertiary).frame(width: 18).accessibilityHidden(true)
+            Text(file.name).font(Theme.body).foregroundStyle(Theme.textPrimary).lineLimit(1).truncationMode(.middle)
+                .frame(maxWidth: .infinity, alignment: .leading)
+            Text(file.isDirectory ? "" : ByteFormat.string(file.size)).font(Theme.figure(.row, weight: .regular)).foregroundStyle(Theme.textSecondary)
+                .frame(width: Columns.size, alignment: .trailing)
+            HStack(spacing: 0) {
+                Spacer(minLength: 0)
+                if hover {
+                    if model.previewable(file) { YunXRowIcon(symbol: "play", label: tr("Preview")) { Task { await model.preview(file) } } }
+                    YunXRowIcon(symbol: "arrow.down.to.line", label: tr("Download")) { model.downloadSelected(only: file) }
+                } else if file.isDirectory {
+                    Image(systemName: "chevron.right").font(.system(size: 10, weight: .semibold)).foregroundStyle(Theme.textTertiary)
+                        .frame(width: 24, height: 24).accessibilityHidden(true)
+                }
+            }.frame(width: Columns.trailing)
+        }
+        .padding(.leading, Theme.Space.s).padding(.trailing, Theme.Space.m).frame(height: 36)
+        .background(selected ? Theme.accent.opacity(0.13) : hover ? Theme.surface : .clear)
+        .contentShape(Rectangle())
+        .onTapGesture { if file.isDirectory { Task { await model.enter(file) } } else { toggle() } }
+        .onHover { hover = $0 }
+    }
+}
+
+enum YunXFileIcon {
+    static func symbol(_ name: String) -> String {
+        switch (name as NSString).pathExtension.lowercased() {
+        case "mp4", "mkv", "mov", "avi", "webm", "flv", "ts", "wmv", "rmvb": return "film"
+        case "mp3", "flac", "m4a", "wav", "aac": return "music.note"
+        case "jpg", "jpeg", "png", "gif", "webp", "heic": return "photo"
+        case "zip", "rar", "7z", "tar", "gz": return "doc.zipper"
+        default: return "doc"
+        }
+    }
+}
+
+struct YunXVideoList: View {
+    @ObservedObject var model: YunXDownloadModel
+    let video: VideoParseResult
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: Theme.Space.s) {
+            VStack(alignment: .leading, spacing: 2) {
+                Text(video.title.isEmpty ? video.platform.displayName : video.title).font(Theme.heading).foregroundStyle(Theme.textPrimary).lineLimit(2)
+                ForEach([video.author, video.notice].filter { !$0.isEmpty }, id: \.self) {
+                    Text($0).font(Theme.secondary).foregroundStyle(Theme.textSecondary)
+                }
+            }.padding(.horizontal, 2)
+            InspectorPanel {
                 if !video.qualities.isEmpty {
                     Picker(tr("Quality"), selection: Binding(get: { video.selectedQn }, set: { qn in Task { await model.selectQuality(qn) } })) {
                         ForEach(video.qualities, id: \.qn) { Text($0.label).tag($0.qn) }
-                    }.frame(maxWidth: 240)
+                    }.frame(maxWidth: 240).padding(Theme.Space.s)
+                    Rectangle().fill(Theme.hairline).frame(height: 1)
                 }
-                ForEach(Array(video.medias.enumerated()), id: \.offset) { _, media in
-                    HStack {
-                        Text(YunXDownloadModel.fileName(media, title: video.title)).lineLimit(1)
-                        if !media.quality.isEmpty { Text(media.quality).font(.caption).foregroundStyle(Theme.textSecondary) }
-                        Spacer()
-                        if model.previewable(media) {
-                            Button(tr("Preview")) { Task { await model.preview(media) } }.buttonStyle(PillButtonStyle()).controlSize(.small)
-                        }
-                        Button(tr("Download")) { model.download(media) }.buttonStyle(PillButtonStyle()).controlSize(.small)
-                    }
+                ForEach(Array(video.medias.enumerated()), id: \.offset) { index, media in
+                    if index > 0 { InspectorDivider(inset: Theme.Space.m) }
+                    HStack(spacing: Theme.Space.s) {
+                        Text(YunXDownloadModel.fileName(media, title: video.title)).font(Theme.body).foregroundStyle(Theme.textPrimary)
+                            .lineLimit(1).truncationMode(.middle).frame(maxWidth: .infinity, alignment: .leading)
+                        if !media.quality.isEmpty { Text(media.quality).font(Theme.secondary).foregroundStyle(Theme.textSecondary) }
+                        if model.previewable(media) { YunXRowIcon(symbol: "play", label: tr("Preview")) { Task { await model.preview(media) } } }
+                        YunXRowIcon(symbol: "arrow.down.to.line", label: tr("Download")) { model.download(media) }
+                    }.padding(.horizontal, Theme.Space.m).frame(height: 36)
                 }
-            }.padding(Theme.Space.m)
+            }
         }
     }
+}
 
-    private var jobsPanel: some View {
-        InspectorPanel {
-            VStack(alignment: .leading, spacing: Theme.Space.s) {
-                HStack {
-                    Text(tr("Downloads")).font(.headline)
-                    Spacer()
-                    Button(tr("Clear finished")) { model.clearFinished() }.buttonStyle(.link)
-                }
-                ForEach(model.jobGroups) { group in
+struct YunXJobList: View {
+    @ObservedObject var model: YunXDownloadModel
+    @State private var collapsed: Set<String> = []
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: Theme.Space.s) {
+            SectionHeader(title: tr("Downloads")) {
+                Button(tr("Clear finished")) { model.clearFinished() }
+                    .buttonStyle(.plain).font(Theme.secondary).foregroundStyle(Theme.textSecondary)
+                    .disabled(!model.jobs.contains { !$0.state.isActive })
+            }
+            InspectorPanel {
+                let groups = model.jobGroups
+                ForEach(Array(groups.enumerated()), id: \.element.id) { index, group in
+                    if index > 0 { InspectorDivider(inset: 0) }
                     if group.isFolder {
-                        HStack {
-                            Image(systemName: "folder").foregroundStyle(Theme.accent).accessibilityHidden(true)
-                            Text(group.title).font(.callout.weight(.medium)).lineLimit(1)
-                            Spacer()
-                            Text(tr("%1$@ files", String(group.jobs.count))).font(.caption).foregroundStyle(Theme.textSecondary)
+                        groupRow(group)
+                        if !collapsed.contains(group.id) {
+                            ForEach(group.jobs) { job in
+                                InspectorDivider(inset: 40)
+                                YunXJobRow(model: model, job: job, indent: 22)
+                            }
                         }
+                    } else if let job = group.jobs.first {
+                        YunXJobRow(model: model, job: job, indent: 0)
                     }
-                    ForEach(group.jobs) { job in jobRow(job).padding(.leading, group.isFolder ? Theme.Space.s : 0) }
                 }
-            }.padding(Theme.Space.m)
+            }
         }
     }
 
-    private func jobRow(_ job: YunXJob) -> some View {
-        VStack(alignment: .leading, spacing: 3) {
-            HStack {
-                Text(job.name).lineLimit(1)
-                Spacer()
-                switch job.state {
-                case .queued:
-                    Button(tr("Cancel")) { model.cancel(job) }.buttonStyle(.link)
-                case .running:
-                    if job.canPause { Button(tr("Pause")) { model.pause(job) }.buttonStyle(.link) }
-                    Button(tr("Cancel")) { model.cancel(job) }.buttonStyle(.link)
-                case .paused:
-                    Button(tr("Resume")) { model.resume(job) }.buttonStyle(.link)
-                    Button(tr("Cancel")) { model.cancel(job) }.buttonStyle(.link)
-                case let .finished(url):
-                    Button(tr("Show in Finder")) { model.reveal(url) }.buttonStyle(.link)
-                case .failed, .cancelled: EmptyView()
+    private func groupRow(_ group: YunXJobGroup) -> some View {
+        let shut = collapsed.contains(group.id)
+        return Button {
+            withAnimation(Theme.quick) { if shut { collapsed.remove(group.id) } else { collapsed.insert(group.id) } }
+        } label: {
+            HStack(spacing: Theme.Space.s) {
+                DisclosureChevron(expanded: !shut)
+                Image(systemName: "folder.fill").font(.system(size: 13)).foregroundStyle(Theme.accent).accessibilityHidden(true)
+                Text(group.title).font(Theme.rowTitle).foregroundStyle(Theme.textPrimary).lineLimit(1)
+                Text(tr("%1$@ files", String(group.jobs.count))).font(Theme.caption).foregroundStyle(Theme.textTertiary)
+                Spacer(minLength: Theme.Space.s)
+                Text(group.total > 0 ? "\(ByteFormat.string(group.received)) / \(ByteFormat.string(group.total))" : "")
+                    .font(Theme.caption.monospacedDigit()).foregroundStyle(Theme.textSecondary)
+                    .frame(width: Columns.size + Columns.trailing, alignment: .trailing)
+            }
+            .padding(.leading, Theme.Space.s).padding(.trailing, Theme.Space.m).frame(height: 36).contentShape(Rectangle())
+        }.buttonStyle(.plain).hoverHighlight()
+    }
+}
+
+struct YunXJobRow: View {
+    @ObservedObject var model: YunXDownloadModel
+    let job: YunXJob
+    let indent: CGFloat
+    @State private var hover = false
+
+    private var failure: String? { if case let .failed(message) = job.state { return message } else { return nil } }
+
+    var body: some View {
+        HStack(spacing: Theme.Space.s) {
+            Image(systemName: YunXFileIcon.symbol(job.name)).font(.system(size: 13)).foregroundStyle(Theme.textTertiary).frame(width: 18).accessibilityHidden(true)
+            VStack(alignment: .leading, spacing: 4) {
+                Text(job.name).font(Theme.body).foregroundStyle(Theme.textPrimary).lineLimit(1).truncationMode(.middle)
+                if job.state.isActive { progress }
+                if let failure {
+                    Text(failure).font(Theme.caption).foregroundStyle(Theme.danger).lineLimit(2).textSelection(.enabled)
+                        .fixedSize(horizontal: false, vertical: true)
                 }
+            }.frame(maxWidth: .infinity, alignment: .leading)
+            Text(sizeText).font(Theme.caption.monospacedDigit()).foregroundStyle(Theme.textSecondary)
+                .lineLimit(1).frame(width: Columns.size, alignment: .trailing)
+            ZStack(alignment: .trailing) {
+                Text(statusText).font(Theme.caption.monospacedDigit()).foregroundStyle(statusColor).lineLimit(1).opacity(hover && hasActions ? 0 : 1)
+                if hover { HStack(spacing: 0) { actions } }
+            }.frame(width: Columns.trailing, height: 24, alignment: .trailing)
+        }
+        .padding(.leading, Theme.Space.m + indent).padding(.trailing, Theme.Space.m).padding(.vertical, 8)
+        .frame(minHeight: 40)
+        .background(hover ? Theme.surface : .clear)
+        .contentShape(Rectangle())
+        .onHover { hover = $0 }
+    }
+
+    /// A thin bar, so a long list of downloads stays calm.
+    private var progress: some View {
+        GeometryReader { box in
+            let share = job.total.map { $0 > 0 ? min(1, Double(job.received) / Double($0)) : 0 } ?? 0
+            ZStack(alignment: .leading) {
+                Capsule().fill(Theme.surfaceRaised)
+                Capsule().fill(job.state == .paused ? Theme.textTertiary : Theme.accent).frame(width: share > 0 ? max(3, box.size.width * share) : 0)
             }
-            if job.state.isActive {
-                if let total = job.total, total > 0 {
-                    ProgressView(value: Double(job.received), total: Double(max(total, job.received)))
-                } else { ProgressView().progressViewStyle(.linear) }
-            }
-            Text(status(job)).font(.caption).foregroundStyle(Theme.textSecondary).lineLimit(2)
+        }.frame(height: 3).accessibilityHidden(true)
+    }
+
+    private var sizeText: String {
+        switch job.state {
+        case .finished: return job.total.map(ByteFormat.string) ?? ByteFormat.string(job.received)
+        default:
+            guard job.received > 0 || job.total != nil else { return "" }
+            return ByteFormat.string(job.received) + (job.total.map { " / " + ByteFormat.string($0) } ?? "")
         }
     }
 
-    private func status(_ job: YunXJob) -> String {
+    private var statusText: String {
         switch job.state {
         case .queued: return tr("Queued")
-        case .running:
-            let done = ByteFormat.string(job.received)
-            let total = job.total.map { " / " + ByteFormat.string($0) } ?? ""
-            return "\(done)\(total) · \(ByteFormat.string(Int64(job.speed)))/s"
+        case .running: return job.speed > 0 ? "\(ByteFormat.string(Int64(job.speed)))/s" : ""
         case .paused: return tr("Paused")
         case .finished: return tr("Finished")
-        case let .failed(message): return message
+        case .failed: return tr("Failed")
         case .cancelled: return tr("Cancelled")
         }
     }
 
-    private var accountsPanel: some View {
-        InspectorPanel {
-            VStack(alignment: .leading, spacing: Theme.Space.s) {
-                HStack {
-                    Text(tr("Accounts")).font(.headline)
-                    Spacer()
-                    Button(tr("Import backup…")) { pickBackup() }.buttonStyle(.link)
-                    Button(tr("Export backup…")) { backup = .export }.buttonStyle(.link)
-                }
-                Text(tr("Logins are kept only in the Keychain.")).font(.caption).foregroundStyle(Theme.textSecondary)
-                ForEach(DrivePlatform.allCases, id: \.self) { platform in
-                    accountRow(.drive(platform), own: true)
-                }
-                ForEach(VideoPlatform.allCases.filter(\.needsLogin), id: \.self) { platform in
-                    accountRow(.video(platform), own: false)
-                }
-            }.padding(Theme.Space.m)
+    private var statusColor: Color {
+        switch job.state {
+        case .failed: return Theme.danger
+        case .finished: return Theme.good
+        default: return Theme.textSecondary
         }
     }
 
-    private func accountRow(_ target: YunXLoginTarget, own: Bool) -> some View {
-        let accounts = model.accounts(for: target.platform)
-        return VStack(alignment: .leading, spacing: 2) {
-            HStack {
-                Text(target.title)
-                Spacer()
-                if own, !accounts.isEmpty, case let .drive(platform) = target {
-                    Button(tr("Browse")) { Task { await model.browseDrive(platform) } }.buttonStyle(.link)
-                }
-                Button(tr("Add account")) { Task { await model.addAccount(target) } }.buttonStyle(.link).disabled(model.importingLogin)
-            }
-            ForEach(accounts) { account in
-                HStack {
-                    Image(systemName: account.isPrimary ? "checkmark.circle.fill" : "circle")
-                        .foregroundStyle(account.isPrimary ? Theme.accent : Theme.textTertiary).accessibilityHidden(true)
-                    Text(account.nickname.isEmpty ? tr("Unnamed account") : account.nickname).font(.callout)
-                    Spacer()
-                    if !account.isPrimary { Button(tr("Use")) { model.makePrimary(account) }.buttonStyle(.link) }
-                    Button(tr("Remove"), role: .destructive) { model.remove(account) }.buttonStyle(.link)
-                }.padding(.leading, Theme.Space.s)
-            }
+    private var hasActions: Bool {
+        switch job.state {
+        case .failed, .cancelled: return false
+        default: return true
         }
     }
 
-    private func pickBackup() {
-        let panel = NSOpenPanel()
-        panel.allowedContentTypes = [.json, .data]
-        guard panel.runModal() == .OK, let url = panel.url else { return }
-        backup = .restore(url)
+    @ViewBuilder private var actions: some View {
+        switch job.state {
+        case .queued:
+            YunXRowIcon(symbol: "xmark", label: tr("Cancel")) { model.cancel(job) }
+        case .running:
+            if job.canPause { YunXRowIcon(symbol: "pause", label: tr("Pause")) { model.pause(job) } }
+            YunXRowIcon(symbol: "xmark", label: tr("Cancel")) { model.cancel(job) }
+        case .paused:
+            YunXRowIcon(symbol: "play", label: tr("Resume")) { model.resume(job) }
+            YunXRowIcon(symbol: "xmark", label: tr("Cancel")) { model.cancel(job) }
+        case let .finished(url):
+            YunXRowIcon(symbol: "magnifyingglass", label: tr("Show in Finder")) { model.reveal(url) }
+        case .failed, .cancelled: EmptyView()
+        }
     }
 }
 
@@ -439,7 +572,7 @@ struct YunXTorrentSheet: View {
 /// Asks for the backup password, then the place to save it.
 struct YunXBackupSheet: View {
     @ObservedObject var model: YunXDownloadModel
-    let mode: YunXDownloadPage.BackupMode
+    let mode: YunXAccountsSheet.BackupMode
     @State private var password = ""
     @Environment(\.dismiss) private var dismiss
 
@@ -475,15 +608,14 @@ struct YunXBackupSheet: View {
     }
 }
 
-/// One login. Each sheet gets a throwaway web session, so adding a second account never reuses the first.
+/// A password or SMS login, for platforms with no web login. Everything else signs in through Chrome.
 struct YunXLoginSheet: View {
     @ObservedObject var model: YunXDownloadModel
     let target: YunXLoginTarget
-    enum Mode: Hashable { case web, password, sms }
+    enum Mode: Hashable { case password, sms }
     @State private var mode: Mode?
     @State private var code = ""
     @State private var challenge: YunXSmsChallenge?
-    @State private var detected: String?
     @State private var account = ""
     @State private var password = ""
     @State private var message: String?
@@ -509,28 +641,9 @@ struct YunXLoginSheet: View {
                     Button(challenge == nil ? tr("Send code") : tr("Send again")) { sendCode() }
                         .buttonStyle(PillButtonStyle()).disabled(saving || account.isEmpty)
                 }
-            case .web:
-                switch target.method {
-                case let .cookie(url, domains, required, anyOf):
-                    if let address = URL(string: url), !url.isEmpty {
-                        YunXLoginWeb(url: address, zoom: zoom, detected: $detected) { web, done in
-                            web.configuration.websiteDataStore.httpCookieStore.getAllCookies { cookies in
-                                done(YunXLoginMethod.detect(cookies.map { ($0.domain, $0.name, $0.value) }, domains: domains, required: required, anyOf: anyOf))
-                            }
-                        }
-                    }
-                default:
-                    YunXLoginWeb(url: URL(string: YunXXunleiWeb.loginURL)!, zoom: zoom, detected: $detected) { web, done in
-                        web.evaluateJavaScript(YunXXunleiWeb.readScript) { value, _ in
-                            let raw = (value as? String)?.removingPercentEncoding ?? ""
-                            done(raw.isEmpty || XunleiCredential.parseWebLogin(raw) == nil ? nil : raw)
-                        }
-                    }
-                }
             }
             if let message { Text(message).font(.callout).foregroundStyle(.red) }
             HStack {
-                if detected != nil { Text(tr("Login detected")).font(.callout).foregroundStyle(Theme.textSecondary) }
                 Spacer()
                 if saving { ProgressView().controlSize(.small) }
                 Button(tr("Cancel")) { dismiss() }.buttonStyle(PillButtonStyle())
@@ -538,17 +651,13 @@ struct YunXLoginSheet: View {
             }
         }
         .padding(Theme.Space.l)
-        .frame(width: current == .web ? webSheet.width : 380, height: current == .web ? webSheet.height : nil)
+        .frame(width: 380)
     }
-
-    private var webSheet: CGSize { YunXLoginLayout.sheet(screen: NSScreen.main?.visibleFrame.size ?? CGSize(width: 1280, height: 800)) }
-    private var zoom: CGFloat { YunXLoginLayout.zoom(pageWidth: webSheet.width - 2 * Theme.Space.l) }
 
     private var modes: [Mode] {
         switch target {
-        case .drive(.xunlei): return [.web, .password, .sms]
         case .drive(.guangya): return [.password, .sms]
-        default: return [target.method == .form ? .password : .web]
+        default: return [.password]
         }
     }
 
@@ -556,7 +665,6 @@ struct YunXLoginSheet: View {
 
     private func title(_ mode: Mode) -> String {
         switch mode {
-        case .web: return tr("Web")
         case .password: return tr("Password")
         case .sms: return tr("SMS")
         }
@@ -574,7 +682,6 @@ struct YunXLoginSheet: View {
 
     private var canSave: Bool {
         switch current {
-        case .web: return detected != nil
         case .sms: return challenge != nil && !account.isEmpty && !code.isEmpty
         case .password: return !account.isEmpty && !password.isEmpty
         }
@@ -588,14 +695,6 @@ struct YunXLoginSheet: View {
             do {
                 if current == .sms, let challenge {
                     try await model.smsLogin(phone: account, code: code.trimmingCharacters(in: .whitespaces), challenge: challenge)
-                } else if current == .password, target == .drive(.xunlei) {
-                    if let needed = try await model.xunleiPasswordLogin(account: account, password: password) {
-                        challenge = needed
-                        mode = .sms
-                        return
-                    }
-                } else if current == .web, let secret = detected {
-                    try await model.saveLogin(target, secret: secret)
                 } else if case let .drive(platform) = target {
                     try await model.formLogin(platform, account: account, password: password)
                 }
@@ -605,37 +704,3 @@ struct YunXLoginSheet: View {
     }
 }
 
-/// The site's own login page in a non-persistent store. `probe` runs on a timer until it finds a login.
-struct YunXLoginWeb: NSViewRepresentable {
-    typealias Probe = (WKWebView, @escaping (String?) -> Void) -> Void
-    let url: URL
-    let zoom: CGFloat
-    @Binding var detected: String?
-    let probe: Probe
-
-    func makeNSView(context: Context) -> WKWebView {
-        let config = WKWebViewConfiguration()
-        config.websiteDataStore = .nonPersistent()
-        let web = WKWebView(frame: .zero, configuration: config)
-        web.pageZoom = zoom
-        web.load(URLRequest(url: url))
-        context.coordinator.begin(web, probe: probe) { detected = $0 }
-        return web
-    }
-
-    func updateNSView(_ view: WKWebView, context: Context) {}
-    static func dismantleNSView(_ view: WKWebView, coordinator: Coordinator) { coordinator.timer?.invalidate() }
-    func makeCoordinator() -> Coordinator { Coordinator() }
-
-    final class Coordinator {
-        var timer: Timer?
-        @MainActor func begin(_ web: WKWebView, probe: @escaping Probe, found: @escaping (String?) -> Void) {
-            timer = Timer.scheduledTimer(withTimeInterval: 1.5, repeats: true) { [weak web] _ in
-                MainActor.assumeIsolated {
-                    guard let web else { return }
-                    probe(web) { value in found(value) }
-                }
-            }
-        }
-    }
-}

@@ -68,6 +68,7 @@ enum YunXXunleiWeb {
     static let loginURL = "https://pan.xunlei.com/"
     static let readScript = """
     (function(){try{
+      var h=location.hostname;if(h!=='xunlei.com'&&h.slice(-11)!=='.xunlei.com')return '';
       var prefix='credentials_Xqp0kJBXWhwaTpB6';
       var sub=localStorage.getItem('current_sub');
       var raw=sub?localStorage.getItem(prefix+'@'+sub):localStorage.getItem(prefix);
@@ -116,6 +117,14 @@ enum YunXLoginTarget: Identifiable, Equatable {
         switch self {
         case let .drive(p): return .of(p)
         case let .video(p): return .of(p)
+        }
+    }
+    /// The page to sign in on in Chrome; nil for a platform that signs in with a form here.
+    var chromeURL: String? {
+        switch method {
+        case let .cookie(url, _, _, _): return url.isEmpty ? nil : url
+        case .xunleiWeb: return YunXXunleiWeb.loginURL
+        case .form: return nil
         }
     }
 }
@@ -218,6 +227,8 @@ final class YunXDownloadModel: ObservableObject {
 
     @Published var link = ""
     @Published var passcode = ""
+    /// The open failed on a share with no code in its link, so the page asks for one.
+    @Published var passcodeAsked = false
     @Published private(set) var busy = false
     @Published var error: String?
     @Published private(set) var files: [DriveFile] = []
@@ -229,6 +240,11 @@ final class YunXDownloadModel: ObservableObject {
     @Published private(set) var accounts: [YunXAccount] = []
     @Published var login: YunXLoginTarget?
     @Published private(set) var importingLogin = false
+    /// Chrome was opened on this platform's login page, and the page is watching for the login.
+    @Published private(set) var chromeWaiting: YunXLoginTarget?
+    private var chromeWait: Task<Void, Never>?
+    var chromePollInterval: Duration = .seconds(3)
+    var chromePollTimeout: Duration = .seconds(300)
     @Published var pendingP2P: String?
     @Published private(set) var installingP2P = false
     @Published var notice: String?
@@ -312,26 +328,86 @@ final class YunXDownloadModel: ObservableObject {
         reloadAccounts()
     }
 
-    /// The Add button: Chrome's login when it verifies, otherwise the sheet. An account that is already
-    /// saved also opens the sheet, or a second account could never be added. Platforms with no login
-    /// cookie to look for have nothing to verify, so they stay in the sheet too.
+    /// The Add button. A platform with a web login signs in only through Chrome: what Chrome already
+    /// has is imported, otherwise Chrome opens on the login page and is watched until a login appears.
+    /// An account that is already saved also goes to Chrome, or a second one could never be added.
     func addAccount(_ target: YunXLoginTarget) async {
-        guard !importingLogin else { return }
-        guard case let .cookie(_, domains, required, anyOf) = target.method, !(required.isEmpty && anyOf.isEmpty) else {
+        guard !importingLogin, chromeWaiting == nil else { return }
+        guard let url = target.chromeURL else {
             login = target
             return
         }
-        importingLogin = true
-        defer { importingLogin = false }
-        let known = accounts(for: target.platform).count
         let chrome = chromeCookies
-        let secret = await Task.detached { chrome.header(domains: domains, required: required, anyOf: anyOf) }.value
-        if let secret, (try? await saveLogin(target, secret: secret, requireVerified: true)) != nil,
-           accounts(for: target.platform).count > known {
-            notice = tr("Imported from Chrome")
-        } else {
-            login = target
+        importingLogin = true
+        guard await Task.detached(operation: { chrome.available }).value else {
+            importingLogin = false
+            error = tr("Install chrome-use to sign in.")
+            return
         }
+        let known = accounts(for: target.platform).count
+        if case .cookie = target.method, let secret = await chromeSecret(target, live: false),
+           (try? await saveLogin(target, secret: secret, requireVerified: true)) != nil,
+           accounts(for: target.platform).count > known {
+            importingLogin = false
+            notice = tr("Imported from Chrome")
+            return
+        }
+        let opened = await Task.detached { chrome.open(url) }.value
+        importingLogin = false
+        guard opened else {
+            error = tr("Could not open Chrome. Install Google Chrome, then try again.")
+            return
+        }
+        chromeWaiting = target
+        let waiter = Task<Void, Never> { [weak self] in await self?.watchChrome(target, known: known) }
+        chromeWait = waiter
+        await waiter.value
+    }
+
+    func cancelChromeLogin() {
+        chromeWait?.cancel()
+        chromeWait = nil
+        chromeWaiting = nil
+    }
+
+    private func chromeSecret(_ target: YunXLoginTarget, live: Bool) async -> String? {
+        let chrome = chromeCookies
+        let method = target.method
+        return await Task.detached {
+            switch method {
+            case let .cookie(_, domains, required, anyOf): return chrome.header(domains: domains, required: required, anyOf: anyOf, live: live)
+            case .xunleiWeb: return chrome.xunleiLogin()
+            case .form: return nil
+            }
+        }.value
+    }
+
+    /// Only runs while waiting. A login already refused is not re-sent to the drive on every tick,
+    /// but is tried again now and then in case the drive was only unreachable.
+    private func watchChrome(_ target: YunXLoginTarget, known: Int) async {
+        let clock = ContinuousClock()
+        let deadline = clock.now + chromePollTimeout
+        var refused: String?
+        var ticks = 0
+        while clock.now < deadline {
+            try? await Task.sleep(for: chromePollInterval)
+            if Task.isCancelled { return }
+            ticks += 1
+            guard let secret = await chromeSecret(target, live: true), !Task.isCancelled,
+                  secret != refused || ticks % 10 == 0 else { continue }
+            if (try? await saveLogin(target, secret: secret, requireVerified: true)) != nil,
+               accounts(for: target.platform).count > known {
+                chromeWaiting = nil
+                chromeWait = nil
+                notice = tr("Imported from Chrome")
+                return
+            }
+            refused = secret
+        }
+        guard !Task.isCancelled else { return }
+        chromeWaiting = nil
+        chromeWait = nil
+        error = tr("No new login appeared in Chrome. Try again.")
     }
 
     /// Validates a captured secret, then stores it. Throws what the sheet should show.
@@ -453,6 +529,20 @@ final class YunXDownloadModel: ObservableObject {
         return fresh
     }
 
+    /// What a resolve should use now. An opened share keeps its session, because file tokens are bound
+    /// to its stoken, but the account comes from the vault each time, as YunX's `currentCredential()`
+    /// does: one added after opening must not leave the download on the guest path. An unreadable
+    /// vault keeps what the source had.
+    private func current(_ source: Source) async -> Source {
+        switch source {
+        case let .share(provider, session, _):
+            guard (try? vault.accounts()) != nil else { return source }
+            return .share(provider, session, await credential(provider.platform, provider: provider))
+        case let .drive(provider, held):
+            return .drive(provider, await credential(provider.platform, provider: provider) ?? held)
+        }
+    }
+
     // MARK: Background refresh
 
     /// Starts with the page rather than the app, so the Keychain is not touched until it is wanted.
@@ -562,7 +652,13 @@ final class YunXDownloadModel: ObservableObject {
         let credential = await credential(parsed.platform, provider: provider)
         if credential == nil, !provider.capabilities.contains(.guestShareAccess) { throw DriveError.loginRequired }
         let code = passcode.trimmingCharacters(in: .whitespaces)
-        let session = try await provider.openShare(link, passcode: code.isEmpty ? link.passcode : code, credential: credential)
+        let session: ShareSession
+        do {
+            session = try await provider.openShare(link, passcode: code.isEmpty ? link.passcode : code, credential: credential)
+        } catch {
+            if link.passcode == nil { passcodeAsked = true }
+            throw error
+        }
         source = .share(provider, session, credential)
         shareLink = (link, code.isEmpty ? (link.passcode ?? "") : code)
         path = [("", session.title.isEmpty ? YunXNames.drive(parsed.platform) : session.title)]
@@ -620,6 +716,13 @@ final class YunXDownloadModel: ObservableObject {
 
     #if DEBUG
     func loadVideoForTesting(_ result: VideoParseResult) { video = result }
+    func loadPageForTesting(files: [DriveFile] = [], path: [String] = [], jobs: [YunXJob] = [], accounts: [YunXAccount] = []) {
+        self.files = files
+        self.path = path.map { ("", $0) }
+        browsing = !path.isEmpty
+        self.jobs = jobs
+        self.accounts = accounts
+    }
     #endif
 
     func selectQuality(_ qn: Int) async {
@@ -775,7 +878,8 @@ final class YunXDownloadModel: ObservableObject {
         }
     }
 
-    private func transfer(_ id: UUID, file: DriveFile, name: String, source: Source, directory: URL, restoring: UUID?) async throws -> URL {
+    private func transfer(_ id: UUID, file: DriveFile, name: String, source opened: Source, directory: URL, restoring: UUID?) async throws -> URL {
+        let source = await current(opened)
         let cleanups = YunXCleanups()
         let resolve: @Sendable () async throws -> ResolvedLink = {
             let link = try await Self.resolve(file, source: source)
@@ -901,12 +1005,15 @@ final class YunXDownloadModel: ObservableObject {
     // MARK: Save to drive
 
     var canSaveToDrive: Bool {
-        guard case let .share(provider, _, credential)? = source else { return false }
-        return credential != nil && provider.capabilities.contains(.saveToDrive)
+        guard case let .share(provider, _, held)? = source else { return false }
+        return (held != nil || !accounts(for: provider.platform.rawValue).isEmpty) && provider.capabilities.contains(.saveToDrive)
     }
 
     func beginSave(only: DriveFile? = nil) async {
-        guard canSaveToDrive, case let .share(provider, _, _)? = source else { return }
+        guard canSaveToDrive, let opened = source else { return }
+        let refreshed = await current(opened)
+        source = refreshed
+        guard case let .share(provider, _, _?) = refreshed else { return }
         let items = only.map { [$0] } ?? files.filter { selected.contains($0.id) }
         guard !items.isEmpty else { return }
         savePicker = YunXSavePicker(items: items, trail: [("", YunXNames.drive(provider.platform))])
@@ -951,8 +1058,9 @@ final class YunXDownloadModel: ObservableObject {
     func previewable(_ media: VideoMedia) -> Bool { media.kind == .video && media.audioUrl.isEmpty }
 
     func preview(_ file: DriveFile) async {
-        guard let source else { return }
+        guard let opened = source else { return }
         await working {
+            let source = await current(opened)
             let link = try await Self.resolve(file, source: source)
             if let directory = link.cleanupDirectoryId {
                 previewCleanup = {

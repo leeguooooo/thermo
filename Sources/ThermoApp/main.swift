@@ -52,6 +52,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate, UNU
         PulseRecorder.shared.start()
         TabAutomation.shared.start()
         YunXClipboardPrompt.shared.refresh()
+        Task { await YunXChromeUseSetup.shared.offerOnLaunch() }
         if Bundle.main.bundleIdentifier != nil { UNUserNotificationCenter.current().delegate = self }
 
         statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)

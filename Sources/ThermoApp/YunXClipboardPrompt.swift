@@ -7,7 +7,7 @@ import ThermoL10n
     static let shared = YunXClipboardPrompt()
     private static let pollInterval: TimeInterval = 1
     private static let visibleSeconds: TimeInterval = 10
-    private static let size = NSSize(width: 400, height: 132)
+    private static let size = NSSize(width: 372, height: 76)
     private static let margin: CGFloat = 24
 
     private final class Panel: NSPanel {
@@ -97,34 +97,42 @@ import ThermoL10n
     }
 }
 
+/// A system notification in shape: one line of what was copied, one primary action.
 struct YunXClipboardPromptView: View {
     let hit: YunXClipboardHit
     let ignore: () -> Void
     let open: () -> Void
+    @State private var hover = false
 
     var body: some View {
-        VStack(spacing: Theme.Space.s) {
-            HStack(spacing: Theme.Space.s) {
-                Image(systemName: hit.symbol).frame(width: 36, height: 36)
-                    .background(Circle().fill(Color.accentColor.opacity(0.18)))
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(hit.title).font(.callout.weight(.medium)).lineLimit(1)
-                    Text(hit.link).font(.caption).foregroundStyle(Theme.textSecondary).lineLimit(1).truncationMode(.middle)
-                }
-                Spacer(minLength: 0)
-                Button(action: ignore) { Image(systemName: "xmark") }
-                    .buttonStyle(.plain).foregroundStyle(Theme.textSecondary)
-                    .accessibilityLabel(tr("Close"))
+        HStack(spacing: 10) {
+            Image(systemName: hit.symbol).font(.system(size: 15, weight: .medium)).foregroundStyle(.white)
+                .frame(width: 32, height: 32)
+                .background(RoundedRectangle(cornerRadius: 8, style: .continuous).fill(Color.accentColor))
+                .accessibilityHidden(true)
+            VStack(alignment: .leading, spacing: 1) {
+                Text(hit.title).font(.system(size: 13, weight: .semibold)).foregroundStyle(.primary).lineLimit(1)
+                Text(hit.link).font(.system(size: 11)).foregroundStyle(.secondary).lineLimit(1).truncationMode(.middle)
             }
             Spacer(minLength: 0)
-            HStack {
-                Spacer()
-                Button(tr("Ignore"), action: ignore).buttonStyle(PillButtonStyle())
-                Button(tr("Open"), action: open).buttonStyle(PillButtonStyle(prominent: true))
-            }
+            // Not a system prominent button: this panel never turns key, and those go grey.
+            Button(tr("Open"), action: open).controlSize(.small).buttonStyle(PillButtonStyle(prominent: true, color: .accentColor))
         }
-        .padding(Theme.Space.m)
-        .frame(width: 400, height: 132)
-        .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 16))
+        .padding(.horizontal, 12)
+        .frame(width: 360, height: 64)
+        .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+        .overlay(RoundedRectangle(cornerRadius: 14, style: .continuous).strokeBorder(.primary.opacity(0.1)))
+        .overlay(alignment: .topLeading) {
+            // Appears under the pointer, as on a notification.
+            Button(action: ignore) {
+                Image(systemName: "xmark").font(.system(size: 8, weight: .bold)).foregroundStyle(.secondary)
+                    .frame(width: 18, height: 18).background(.regularMaterial, in: Circle())
+                    .overlay(Circle().strokeBorder(.primary.opacity(0.12)))
+            }
+            .buttonStyle(.plain).opacity(hover ? 1 : 0).offset(x: -4, y: -4)
+            .help(tr("Ignore")).accessibilityLabel(tr("Ignore"))
+        }
+        .padding(6)
+        .onHover { hover = $0 }
     }
 }

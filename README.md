@@ -17,6 +17,8 @@ Fans
 
 ## 安装
 
+> 云析下载的登录依赖 [chrome-use](https://github.com/leeguooooo/chrome-use) 和 Google Chrome：在云析下载页点「安装 chrome-use」，再按提示连接 Chrome 扩展。其他功能不需要它。
+
 Homebrew（App 和 `thermo` 命令行一起装）：
 
 ```sh

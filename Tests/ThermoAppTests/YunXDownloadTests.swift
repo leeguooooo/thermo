@@ -1,6 +1,8 @@
+import AppKit
 import CloudDriveKit
 import DownloadKit
 @testable import MediaToolsKit
+import ThermoL10n
 import VideoKit
 import XCTest
 @testable import ThermoApp
@@ -104,6 +106,7 @@ private final class FakeDrive: CloudDriveProvider, @unchecked Sendable {
     private let lock = NSLock()
     private(set) var saved: [(String, String?)] = []
     private(set) var resolves = 0
+    private(set) var resolveCredentials: [String?] = []
     private(set) var openedPasscodes: [String?] = []
     private(set) var refreshes: [String] = []
     var refreshWorks = true
@@ -127,7 +130,7 @@ private final class FakeDrive: CloudDriveProvider, @unchecked Sendable {
         return "new"
     }
     func resolveShareFile(session: ShareSession, file: DriveFile, credential: DriveCredential?, options: ShareResolveOptions) async throws -> ResolvedLink {
-        lock.withLock { resolves += 1 }
+        lock.withLock { resolves += 1; resolveCredentials.append(credential?.value) }
         return ResolvedLink(url: URL(string: "https://\(host)/\(file.id)?sign=SECRETSIGN")!, headers: ["Cookie": "SECRETCOOKIE"], fileId: file.id, filename: file.name, size: 4)
     }
 }
@@ -220,6 +223,24 @@ final class YunXModelTests: XCTestCase {
             try? await Task.sleep(for: .milliseconds(10))
         }
         XCTFail("jobs did not settle: \(model.jobs.map(\.state))", line: line)
+    }
+
+    /// Opened as a guest, then signed in: the download must use the account, as the page shows it.
+    func testAccountAddedAfterOpeningAShareIsUsedForTheDownload() async throws {
+        let drive = FakeDrive()
+        drive.credentialRefreshInterval = nil
+        drive.tree[""] = [DriveFile(id: "f", name: "big.bin", size: 4, isDirectory: false, parentId: "")]
+        let made = model(drive)
+        made.link = "https://pan.quark.cn/s/abc123"
+        await made.open()
+        XCTAssertEqual(made.files.count, 1)
+        XCTAssertFalse(made.canSaveToDrive)
+        try made.vault.add(platform: "quark", fields: ["cookie": "signed-in"], key: "cookie")
+        made.reloadAccounts()
+        XCTAssertTrue(made.canSaveToDrive)
+        made.downloadSelected(only: made.files[0])
+        await settled(made, count: 1)
+        XCTAssertEqual(drive.resolveCredentials, ["signed-in"])
     }
 
     func testFolderDownloadRecursesKeepsPathsGroupsAndClearsRecords() async throws {
@@ -574,56 +595,166 @@ final class YunXChromeLoginTests: XCTestCase {
         XCTAssertEqual(log.all, [["browsers", "--json"], ["cookies", "export", "--from", "Default", "--domain", "quark.cn", "--json"]])
     }
 
-    func testMissingChromeUseOpensTheSheet() async throws {
-        let model = try await run(YunXChromeCookies { nil })
-        XCTAssertEqual(model.login, .drive(.quark))
+    private func make(_ chrome: YunXChromeCookies, state: DriveAccountState = .signedIn(nickname: "me")) -> YunXDownloadModel {
+        let settings = YunXSettingsStore(defaults: UserDefaults(suiteName: UUID().uuidString)!, trackers: ChromeMemoryBackend())
+        let model = YunXDownloadModel(vault: YunXVault(backend: ChromeMemoryBackend()), settingsStore: settings,
+                                      jobStore: YunXJobStore(backend: ChromeMemoryBackend()),
+                                      drives: CloudDriveRegistry(providers: [VerifyingDrive(state)]), chromeCookies: chrome)
+        model.chromePollInterval = .milliseconds(5)
+        model.chromePollTimeout = .milliseconds(60)
+        return model
+    }
+
+    func testMissingChromeUseAsksForItAndNeverOpensASheet() async throws {
+        let model = make(YunXChromeCookies(runner: { nil }))
+        await model.addAccount(.drive(.quark))
+        XCTAssertNil(model.login)
+        XCTAssertEqual(model.error, tr("Install chrome-use to sign in."))
+    }
+
+    func testNotLoggedInOpensChromeAndTimesOutWithoutASheet() async throws {
+        let log = ArgsLog()
+        let model = make(fake(Self.loggedOut, log: log))
+        await model.addAccount(.drive(.quark))
+        XCTAssertNil(model.login)
+        XCTAssertNil(model.chromeWaiting)
+        XCTAssertNotNil(model.error)
+        XCTAssertTrue(log.all.contains(["--session", "thermo-yunx", "open", QuarkConstants.loginURL, "--new-tab"]))
+        XCTAssertTrue(log.all.contains(["--session", "thermo-yunx", "cookies", "get", "--json"]))
         XCTAssertTrue(model.accounts.isEmpty)
     }
 
-    func testNoLoginInChromeOpensTheSheet() async throws {
-        let model = try await run(fake(Self.loggedOut))
-        XCTAssertEqual(model.login, .drive(.quark))
-        XCTAssertTrue(model.accounts.isEmpty)
+    func testLoginAppearingInTheLiveBrowserIsSaved() async throws {
+        let live = #"{"success":true,"data":{"cookies":[{"name":"__pus","value":"a","domain":".quark.cn","expires":-1},{"name":"__puus","value":"b","domain":".quark.cn","expires":-1}]}}"#
+        let model = make(YunXChromeCookies(runner: {
+            { args in
+                if args.contains("browsers") { return Self.browsers }
+                if args.contains("get") { return live }
+                return args.contains("open") ? "" : Self.loggedOut
+            }
+        }))
+        model.chromePollTimeout = .seconds(5)
+        await model.addAccount(.drive(.quark))
+        XCTAssertEqual(try model.vault.active("quark")?.fields["cookie"], "__pus=a; __puus=b")
+        XCTAssertNotNil(model.notice)
     }
 
-    func testFailedExportOpensTheSheet() async throws {
-        let model = try await run(fake(nil))
-        XCTAssertEqual(model.login, .drive(.quark))
+    func testCancelStopsWatching() async throws {
+        let log = ArgsLog()
+        let model = make(fake(Self.loggedOut, log: log))
+        model.chromePollTimeout = .seconds(30)
+        let add = Task { await model.addAccount(.drive(.quark)) }
+        while model.chromeWaiting == nil { try await Task.sleep(for: .milliseconds(2)) }
+        model.cancelChromeLogin()
+        await add.value
+        let count = log.all.count
+        try await Task.sleep(for: .milliseconds(30))
+        XCTAssertEqual(log.all.count, count)
+        XCTAssertNil(model.chromeWaiting)
+        XCTAssertNil(model.error)
     }
 
-    func testFailedOrUnconfirmedVerificationOpensTheSheet() async throws {
+    func testChromeThatCannotOpenSaysSo() async throws {
+        var chrome = YunXChromeCookies(runner: { { args in args[0] == "browsers" ? Self.browsers : nil } })
+        chrome.openInChrome = { _ in false }
+        let model = make(chrome)
+        await model.addAccount(.drive(.quark))
+        XCTAssertEqual(model.error, tr("Could not open Chrome. Install Google Chrome, then try again."))
+    }
+
+    func testUnverifiedLoginIsNotSaved() async throws {
         for state in [DriveAccountState.signedOut, .unverified] {
-            let model = try await run(fake(Self.loggedIn), state: state)
-            XCTAssertEqual(model.login, .drive(.quark))
+            let model = make(fake(Self.loggedIn), state: state)
+            await model.addAccount(.drive(.quark))
+            XCTAssertNil(model.login)
             XCTAssertTrue(model.accounts.isEmpty)
             XCTAssertNil(model.notice)
         }
     }
 
-    func testAlreadySavedAccountStillReachesTheSheet() async throws {
-        let model = try await run(fake(Self.loggedIn))
-        await model.addAccount(.drive(.quark))
-        XCTAssertEqual(model.login, .drive(.quark))
-        XCTAssertEqual(model.accounts.count, 1)
-    }
-
-    func testFormPlatformsNeverTouchChrome() async throws {
+    func testXunleiReadsLocalStorageFromItsChromeTabAndFormsStayLocal() async throws {
         let log = ArgsLog()
-        let model = try await run(fake(Self.loggedIn, log: log))
+        let model = make(fake(Self.loggedIn, log: log))
+        await model.addAccount(.drive(.xunlei))
+        XCTAssertTrue(log.all.contains { $0.contains("eval") })
+        XCTAssertFalse(log.all.contains { $0.contains("export") })
+        XCTAssertNil(model.login)
         let before = log.all.count
         await model.addAccount(.drive(.pan123))
-        await model.addAccount(.drive(.xunlei))
         XCTAssertEqual(log.all.count, before)
-        XCTAssertEqual(model.login, .drive(.xunlei))
+        XCTAssertEqual(model.login, .drive(.pan123))
     }
 
-    func testHostsMatchExactlyAndViewportStaysDesktop() {
+    func testHostsMatchExactly() {
         XCTAssertTrue(YunXChromeCookies.belongs(".115.com", to: ["115.com"]))
         XCTAssertTrue(YunXChromeCookies.belongs("my.115.com", to: ["115.com"]))
         XCTAssertFalse(YunXChromeCookies.belongs("x115.com", to: ["115.com"]))
-        XCTAssertEqual(YunXLoginLayout.zoom(pageWidth: 1192), 1)
-        XCTAssertEqual(YunXLoginLayout.zoom(pageWidth: 590), 0.5, accuracy: 0.001)
-        XCTAssertEqual(YunXLoginLayout.sheet(screen: CGSize(width: 1280, height: 800)), CGSize(width: 1200, height: 720))
+    }
+}
+
+private final class SetupRuns: @unchecked Sendable {
+    let lock = NSLock()
+    var calls: [(String, [String], [String: String])] = []
+    var probes: [YunXChromeUseSetup.Probe]
+    var failing: String?
+    init(_ probes: [YunXChromeUseSetup.Probe]) { self.probes = probes }
+    func next() -> YunXChromeUseSetup.Probe { lock.withLock { probes.count > 1 ? probes.removeFirst() : probes[0] } }
+    func run(_ tool: String, _ args: [String], _ env: [String: String]) -> Int32 {
+        lock.withLock { calls.append((tool, args, env)); return tool == failing ? 7 : 0 }
+    }
+}
+
+@MainActor
+final class YunXChromeUseSetupTests: XCTestCase {
+    private func make(_ runs: SetupRuns) -> YunXChromeUseSetup {
+        YunXChromeUseSetup(detect: { runs.next() }, run: { tool, args, env, line in
+            line("ran \(tool)")
+            return runs.run(tool, args, env)
+        }, defaults: UserDefaults(suiteName: UUID().uuidString)!)
+    }
+
+    func testDetected() async {
+        let runs = SetupRuns([.init(tool: "/x/chrome-use", connected: true)])
+        let setup = make(runs)
+        await setup.refresh()
+        XCTAssertEqual(setup.state, .ready)
+        XCTAssertTrue(runs.calls.isEmpty)
+    }
+
+    func testMissingRunsNothingUntilTheClickThenInstalls() async {
+        let runs = SetupRuns([.init(), .init(tool: "/x/chrome-use", connected: false, profile: "Leo")])
+        let setup = make(runs)
+        await setup.refresh()
+        XCTAssertEqual(setup.state, .missing)
+        XCTAssertTrue(runs.calls.isEmpty)
+        await setup.install()
+        XCTAssertEqual(runs.calls.map(\.0), ["/usr/bin/curl", "/bin/sh", "/x/chrome-use"])
+        XCTAssertEqual(runs.calls[0].1.last, YunXChromeUseSetup.installerURL)
+        XCTAssertEqual(runs.calls[2].1, ["extension", "install", "--no-open"])
+        XCTAssertEqual(setup.state, .notConnected)
+        XCTAssertFalse(setup.output.isEmpty)
+        XCTAssertNil(setup.failure)
+    }
+
+    func testInstallFailureStopsAndShows() async {
+        let runs = SetupRuns([.init()])
+        runs.failing = "/usr/bin/curl"
+        let setup = make(runs)
+        await setup.refresh()
+        await setup.install()
+        XCTAssertEqual(runs.calls.count, 1)
+        XCTAssertNotNil(setup.failure)
+        XCTAssertEqual(setup.state, .missing)
+        XCTAssertFalse(setup.working)
+    }
+
+    func testConnectAsksChromeUseThenChecksAgain() async {
+        let runs = SetupRuns([.init(tool: "/x/chrome-use", connected: false, profile: "Leo"), .init(tool: "/x/chrome-use", connected: true)])
+        let setup = make(runs)
+        await setup.refresh()
+        await setup.connect()
+        XCTAssertEqual(runs.calls.last?.1, ["connect", "--browser", "Leo", "--wait", "120"])
+        XCTAssertEqual(setup.state, .ready)
     }
 }
 
