@@ -1129,8 +1129,17 @@ final class YunXDownloadModel: ObservableObject {
         launch(id: record.id, name: record.name, directory: directory) { [weak self] id in
             guard let self else { throw CancellationError() }
             let source = try await self.source(for: record)
-            return try await self.transfer(id, file: record.file, name: record.name, source: source, directory: directory, restoring: record.taskId)
+            let file = await self.currentFile(record, source: source)
+            return try await self.transfer(id, file: file, name: record.name, source: source, directory: directory, restoring: record.taskId)
         }
+    }
+
+    /// A share's file tokens belong to the session that listed them, so a reopened share lists again.
+    private func currentFile(_ record: YunXJobRecord, source: Source) async -> DriveFile {
+        guard case let .share(provider, session, credential) = source,
+              let listed = try? await provider.listShareFiles(session: session, directoryId: record.parentId.isEmpty ? nil : record.parentId, credential: credential),
+              let fresh = listed.first(where: { $0.id == record.fileId }) else { return record.file }
+        return fresh
     }
 
     private func source(for record: YunXJobRecord) async throws -> Source {

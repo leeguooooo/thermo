@@ -106,6 +106,7 @@ private final class FakeDrive: CloudDriveProvider, @unchecked Sendable {
     private let lock = NSLock()
     private(set) var saved: [(String, String?)] = []
     private(set) var resolves = 0
+    private(set) var resolvedTokens: [String] = []
     private(set) var resolveCredentials: [String?] = []
     private(set) var openedPasscodes: [String?] = []
     private(set) var refreshes: [String] = []
@@ -130,6 +131,7 @@ private final class FakeDrive: CloudDriveProvider, @unchecked Sendable {
         return "new"
     }
     func resolveShareFile(session: ShareSession, file: DriveFile, credential: DriveCredential?, options: ShareResolveOptions) async throws -> ResolvedLink {
+        resolvedTokens.append(file.fileToken)
         lock.withLock { resolves += 1; resolveCredentials.append(credential?.value) }
         return ResolvedLink(url: URL(string: "https://\(host)/\(file.id)?sign=SECRETSIGN")!, headers: ["Cookie": "SECRETCOOKIE"], fileId: file.id, filename: file.name, size: 4)
     }
@@ -290,6 +292,19 @@ final class YunXModelTests: XCTestCase {
         guard case .finished? = model.jobs.first?.state else { return XCTFail("\(model.jobs)") }
         XCTAssertEqual(drive.openedPasscodes, ["pw12"])
         XCTAssertTrue(FileManager.default.fileExists(atPath: temp.appendingPathComponent("out/Folder/a.bin").path))
+    }
+
+    func testRetryUsesTheFileTokenOfTheReopenedShare() async throws {
+        let drive = FakeDrive()
+        drive.tree = ["": [DriveFile(id: "a.bin", name: "a.bin", size: 4, isDirectory: false, parentId: "", fileToken: "fresh")]]
+        let jobs = MemoryBackend()
+        YunXJobStore(backend: jobs).put(YunXJobRecord(id: UUID(), kind: .share, name: "a.bin", saveDirectory: temp.appendingPathComponent("out").path,
+                                                      platform: "quark", shareId: "abc123", fileId: "a.bin", fileName: "a.bin", fileSize: 4, fileToken: "stale"))
+        let model = model(drive, jobs: jobs)
+        model.restoreJobs()
+        model.resume(model.jobs[0])
+        await settled(model, count: 1)
+        XCTAssertEqual(drive.resolvedTokens.first, "fresh")
     }
 
     func testRestoreKeepsTheFailureReasonAndRetryClearsIt() async throws {
