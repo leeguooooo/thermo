@@ -77,6 +77,9 @@ public struct ShareLinkRouter: Sendable {
         return apply(rulesAfter115Command)
     }
 
+    /// A passcode written beside the link, for callers that cut the link out of a message.
+    public static func textPasscode(in text: String) -> String? { captures(textPasscode, in: text)?.first }
+
     private static func firstURL(in text: String) -> String? {
         let range = NSRange(text.startIndex..., in: text)
         return url.firstMatch(in: text, range: range).flatMap { Range($0.range, in: text) }.map { String(text[$0]) }

@@ -523,6 +523,14 @@ final class YunXDownloadModel: ObservableObject {
         }
     }
 
+    /// A link from the clipboard prompt. A running open keeps going; the link waits in the field.
+    func openCopied(_ link: String, passcode: String?) async {
+        self.link = link
+        self.passcode = passcode ?? ""
+        guard !busy else { return }
+        await open()
+    }
+
     private func openShare(_ parsed: ParsedShareLink) async throws {
         let (link, provider) = try drives.router.route(self.link)
         let credential = await credential(parsed.platform, provider: provider)

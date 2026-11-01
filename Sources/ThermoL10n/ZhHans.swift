@@ -4062,4 +4062,10 @@ let zhHans: [String: String] = [
     "Xunlei Drive": "迅雷云盘",
     "YunX Download": "云析下载",
     "iLanzou": "蓝奏云优享",
+    "Found %1$@ share link": "发现%1$@分享链接",
+    "Found %1$@ video link": "发现%1$@视频链接",
+    "Ignore": "忽略",
+    "Found a magnet link": "发现磁力链接",
+    "Found an ed2k link": "发现 ed2k 链接",
+    "Offer to open supported links I copy": "复制受支持的链接时弹窗提示",
 ]

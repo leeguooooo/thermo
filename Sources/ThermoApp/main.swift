@@ -51,6 +51,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate, UNU
         // Slowdown history and alerts, in the background whether or not the panel is open.
         PulseRecorder.shared.start()
         TabAutomation.shared.start()
+        YunXClipboardPrompt.shared.refresh()
         if Bundle.main.bundleIdentifier != nil { UNUserNotificationCenter.current().delegate = self }
 
         statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)

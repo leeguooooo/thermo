@@ -13,6 +13,7 @@ import WebKit
 struct YunXDownloadPage: View {
     @ObservedObject var model: YunXDownloadModel
     @State private var backup: BackupMode?
+    @AppStorage(YunXClipboardSetting.key) private var clipboardPrompt = true
 
     enum BackupMode: Identifiable {
         case export, restore(URL)
@@ -127,6 +128,10 @@ struct YunXDownloadPage: View {
                         }
                         Button(tr("Choose…")) { pickFolder() }.buttonStyle(.link)
                     }
+                    Toggle(tr("Offer to open supported links I copy"), isOn: Binding(get: { clipboardPrompt }, set: {
+                        clipboardPrompt = $0
+                        YunXClipboardPrompt.shared.refresh()
+                    })).toggleStyle(.checkbox)
                     number(tr("Speed limit (KB/s, 0 is unlimited)"), $model.settings.speedLimitKB)
                     Text(tr("The limit covers HTTP downloads, not P2P.")).font(.caption).foregroundStyle(Theme.textSecondary)
                     number(tr("P2P connections"), $model.settings.p2pConnections)
