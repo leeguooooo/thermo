@@ -149,6 +149,16 @@ public struct DownloadStore: Sendable {
         return names.compactMap(UUID.init(uuidString:)).compactMap { try? load(id: $0) }
     }
 
+    /// What is really on disk: part lengths lead the state file, which is only saved now and then.
+    public func receivedBytes(_ state: DownloadState) -> Int64 {
+        let bytes = state.segments.reduce(Int64(0)) { sum, segment in
+            let path = partURL(id: state.id, segment: segment.id).path
+            let length = ((try? FileManager.default.attributesOfItem(atPath: path))?[.size] as? NSNumber)?.int64Value ?? 0
+            return sum + max(segment.written, length)
+        }
+        return state.size.map { min($0, bytes) } ?? bytes
+    }
+
     public func remove(id: UUID) {
         try? FileManager.default.removeItem(at: directory(for: id))
     }

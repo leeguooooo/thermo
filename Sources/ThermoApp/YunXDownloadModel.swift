@@ -148,7 +148,9 @@ enum YunXNames {
 struct YunXJob: Identifiable, Equatable {
     enum State: Equatable {
         case queued, running, paused, finished(URL), failed(String), cancelled
-        var isActive: Bool { self == .queued || self == .running || self == .paused }
+        /// Restored from a run that ended before any transfer began.
+        case notStarted
+        var isActive: Bool { self == .queued || self == .running || self == .paused || self == .notStarted }
     }
     let id: UUID
     var name: String
@@ -163,6 +165,8 @@ struct YunXJob: Identifiable, Equatable {
     var speed: Double = 0
     var state: State = .running
     var canPause = false
+    /// A saved record exists, so Retry can open the source again.
+    var canRetry = false
 }
 
 /// A code was sent; holds what the second step needs. Lives only as long as the login sheet.
@@ -444,16 +448,6 @@ final class YunXDownloadModel: ObservableObject {
         var fields = YunXCredentialCodec.fields(platform, credential: credential, base: extra)
         fields["nickname"] = nickname
         try vault.add(platform: platform.rawValue, fields: fields, key: YunXBackupStore.key(platform.rawValue))
-    }
-
-    /// Xunlei password login. Returns a challenge when the account must also confirm by SMS, which
-    /// a new device always does. The password is sent once and never stored.
-    func xunleiPasswordLogin(account: String, password: String) async throws -> YunXSmsChallenge? {
-        let device = XunleiDevice.generate()
-        let step = try await xunlei.loginWithPassword(username: account, password: password, device: device)
-        if step.needSMS { return try await sendSms(.xunlei, phone: account, device: device) }
-        try await finishXunlei(step, username: account, device: device)
-        return nil
     }
 
     func sendSms(_ platform: DrivePlatform, phone: String) async throws -> YunXSmsChallenge {
@@ -754,7 +748,8 @@ final class YunXDownloadModel: ObservableObject {
     /// Adds the job, or takes over one restored after a restart, and runs `body`. HTTP jobs wait for a free slot.
     private func launch(id: UUID = UUID(), name: String, directory: URL, usesSlot: Bool = true, body: @escaping @MainActor (UUID) async throws -> URL) {
         if jobs.contains(where: { $0.id == id }) {
-            update(id) { $0.state = .queued }
+            update(id) { $0.state = .queued; $0.received = 0; $0.speed = 0 }
+            jobStore.update(id) { $0.failure = nil }
         } else {
             jobs.insert(YunXJob(id: id, name: leafName(name), relativeName: name, saveDirectory: directory.path, usesSlot: usesSlot, state: .queued), at: 0)
         }
@@ -773,7 +768,10 @@ final class YunXDownloadModel: ObservableObject {
                 self?.cancelled(id)
             } catch {
                 // The record stays, so the partial file can be picked up after a restart.
-                self?.update(id) { $0.state = .failed(error.localizedDescription) }
+                let message = error.localizedDescription
+                self?.jobStore.update(id) { $0.failure = message }
+                let saved = self?.jobStore.load().contains { $0.id == id } ?? false
+                self?.update(id) { $0.state = .failed(message); $0.canRetry = saved }
             }
             self?.tasks[id] = nil
             self?.runners[id] = nil
@@ -1101,15 +1099,23 @@ final class YunXDownloadModel: ObservableObject {
     func restoreJobs() {
         guard !restored else { return }
         restored = true
-        let saved = (try? (downloadStore ?? DownloadStore(root: DownloadStore.defaultRoot())).list()) ?? []
+        let store = downloadStore ?? (try? DownloadStore(root: DownloadStore.defaultRoot()))
+        let saved = store?.list() ?? []
         for record in jobStore.load() where !jobs.contains(where: { $0.id == record.id }) {
             let state = saved.first { $0.id == record.taskId }
             var job = YunXJob(id: record.id, name: leafName(record.name), relativeName: record.name, saveDirectory: record.saveDirectory,
-                              usesSlot: record.kind != .p2p, state: .paused)
-            job.received = state?.segments.reduce(0) { $0 + $1.written } ?? 0
+                              usesSlot: record.kind != .p2p, state: Self.restoredState(record, hasProgress: state != nil))
+            job.canRetry = true
+            job.received = state.map { store?.receivedBytes($0) ?? 0 } ?? 0
             job.total = state?.size ?? (record.fileSize > 0 ? record.fileSize : nil)
             jobs.append(job)
         }
+    }
+
+    /// Only a transfer that really began reads as paused; a job with no progress never did.
+    nonisolated static func restoredState(_ record: YunXJobRecord, hasProgress: Bool) -> YunXJob.State {
+        if let failure = record.failure { return .failed(failure) }
+        return hasProgress || record.kind == .p2p ? .paused : .notStarted
     }
 
     private func continueRecord(_ record: YunXJobRecord) {

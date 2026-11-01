@@ -283,13 +283,30 @@ final class YunXModelTests: XCTestCase {
         let model = model(drive, jobs: jobs)
         model.restoreJobs()
         model.restoreJobs()
-        XCTAssertEqual(model.jobs.map(\.state), [.paused])
+        XCTAssertEqual(model.jobs.map(\.state), [.notStarted])
         XCTAssertEqual(drive.resolves, 0, "listing must not touch the network")
         model.resume(model.jobs[0])
         await settled(model, count: 1)
         guard case .finished? = model.jobs.first?.state else { return XCTFail("\(model.jobs)") }
         XCTAssertEqual(drive.openedPasscodes, ["pw12"])
         XCTAssertTrue(FileManager.default.fileExists(atPath: temp.appendingPathComponent("out/Folder/a.bin").path))
+    }
+
+    func testRestoreKeepsTheFailureReasonAndRetryClearsIt() async throws {
+        let drive = FakeDrive()
+        drive.tree = ["": [file("a.bin")]]
+        let jobs = MemoryBackend()
+        var record = YunXJobRecord(id: UUID(), kind: .share, name: "a.bin", saveDirectory: temp.appendingPathComponent("out").path,
+                                   platform: "quark", shareId: "abc123", fileId: "a.bin", fileName: "a.bin", fileSize: 4)
+        record.failure = "链接已失效"
+        YunXJobStore(backend: jobs).put(record)
+        let model = model(drive, jobs: jobs)
+        model.restoreJobs()
+        XCTAssertEqual(model.jobs.map(\.state), [.failed("链接已失效")])
+        XCTAssertTrue(model.jobs[0].canRetry)
+        model.resume(model.jobs[0])
+        await settled(model, count: 1)
+        guard case .finished? = model.jobs.first?.state else { return XCTFail("\(model.jobs)") }
     }
 
     func testNoSignedLinkOrCookieReachesTheRecordsOrStateFiles() async throws {
@@ -399,25 +416,6 @@ final class YunXModelTests: XCTestCase {
         XCTAssertNil(model.pendingFfmpeg)
         XCTAssertEqual(model.jobs.count, 1)
         model.cancel(model.jobs[0])
-    }
-
-    func testXunleiPasswordLoginFallsBackToSmsOnOneDeviceAndStoresAnAppToken() async throws {
-        let http = XunleiFlow()
-        let vault = YunXVault(backend: MemoryBackend(), now: { 1 })
-        let store = DownloadStore(root: temp)
-        let api = XunleiAPI(transport: http, sleep: { _ in })
-        let model = YunXDownloadModel(
-            vault: vault, settingsStore: YunXSettingsStore(defaults: UserDefaults(suiteName: UUID().uuidString)!, trackers: MemoryBackend()),
-            jobStore: YunXJobStore(backend: MemoryBackend()), drives: CloudDriveRegistry(transport: http), downloadStore: store, xunlei: api)
-        let challenge = try await model.xunleiPasswordLogin(account: "13800000000", password: "PLAINPASSWORD")
-        guard case let .xunlei(creditKey, _, device)? = challenge else { return XCTFail("expected SMS") }
-        XCTAssertEqual(creditKey, "ck")
-        try await model.smsLogin(phone: "13800000000", code: "1234", challenge: try XCTUnwrap(challenge))
-        let account = try XCTUnwrap(vault.active("xunlei"))
-        XCTAssertEqual(account.fields["deviceId"], device.deviceId)
-        XCTAssertEqual(account.fields["authType"], "")
-        XCTAssertEqual(account.fields["refreshToken"], "refresh-token-value-1")
-        XCTAssertFalse(account.fields.values.contains("PLAINPASSWORD"))
     }
 
     private func engine(_ api: GopeedAPI) throws -> GopeedEngine {

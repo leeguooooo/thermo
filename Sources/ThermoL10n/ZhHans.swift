@@ -338,6 +338,7 @@ let zhHans: [String: String] = [
     "Resume": "继续",
     "Pause": "暂停",
     "Paused": "已暂停",
+    "Not started": "未开始",
     "System audio": "系统声音",
     "Show cursor": "显示鼠标指针",
     "Start delay": "开始延迟",

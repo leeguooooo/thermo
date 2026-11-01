@@ -465,6 +465,7 @@ struct YunXJobRow: View {
         case .queued: return tr("Queued")
         case .running: return job.speed > 0 ? "\(ByteFormat.string(Int64(job.speed)))/s" : ""
         case .paused: return tr("Paused")
+        case .notStarted: return tr("Not started")
         case .finished: return tr("Finished")
         case .failed: return tr("Failed")
         case .cancelled: return tr("Cancelled")
@@ -481,6 +482,7 @@ struct YunXJobRow: View {
 
     private var hasActions: Bool {
         switch job.state {
+        case let .failed(_) where job.canRetry: return true
         case .failed, .cancelled: return false
         default: return true
         }
@@ -493,12 +495,17 @@ struct YunXJobRow: View {
         case .running:
             if job.canPause { YunXRowIcon(symbol: "pause", label: tr("Pause")) { model.pause(job) } }
             YunXRowIcon(symbol: "xmark", label: tr("Cancel")) { model.cancel(job) }
-        case .paused:
+        case .paused, .notStarted:
             YunXRowIcon(symbol: "play", label: tr("Resume")) { model.resume(job) }
             YunXRowIcon(symbol: "xmark", label: tr("Cancel")) { model.cancel(job) }
         case let .finished(url):
             YunXRowIcon(symbol: "magnifyingglass", label: tr("Show in Finder")) { model.reveal(url) }
-        case .failed, .cancelled: EmptyView()
+        case .failed:
+            if job.canRetry {
+                YunXRowIcon(symbol: "arrow.clockwise", label: tr("Retry")) { model.resume(job) }
+                YunXRowIcon(symbol: "xmark", label: tr("Cancel")) { model.cancel(job) }
+            }
+        case .cancelled: EmptyView()
         }
     }
 }

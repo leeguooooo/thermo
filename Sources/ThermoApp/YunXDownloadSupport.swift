@@ -95,6 +95,8 @@ struct YunXJobRecord: Codable, Equatable, Identifiable, CustomStringConvertible,
     var p2pURL = ""
     var gopeedTask = ""
     var selectFiles: [Int] = []
+    /// Why the last attempt failed, so a restart can still say so.
+    var failure: String?
 
     var file: DriveFile {
         DriveFile(id: fileId, name: fileName, size: fileSize, isDirectory: false, parentId: parentId, fileToken: fileToken)
