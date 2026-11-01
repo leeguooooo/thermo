@@ -519,3 +519,116 @@ private final class XunleiFlow: HTTPTransport, @unchecked Sendable {
         return HTTPResponse(statusCode: 200, body: Data(json.utf8))
     }
 }
+
+private final class ArgsLog: @unchecked Sendable {
+    private let lock = NSLock()
+    private var calls: [[String]] = []
+    func add(_ args: [String]) { lock.withLock { calls.append(args) } }
+    var all: [[String]] { lock.withLock { calls } }
+}
+
+private final class VerifyingDrive: CloudDriveProvider, @unchecked Sendable {
+    let platform = DrivePlatform.quark
+    let capabilities: DriveCapabilities = []
+    var credentialRefreshInterval: TimeInterval? = nil
+    let state: DriveAccountState
+    init(_ state: DriveAccountState) { self.state = state }
+    func isWellFormed(credential: DriveCredential) -> Bool { true }
+    func accountState(credential: DriveCredential?) async -> DriveAccountState { state }
+    func refreshCredential(_ credential: DriveCredential) async -> DriveCredential? { nil }
+    func openShare(_ link: ParsedShareLink, passcode: String?, credential: DriveCredential?) async throws -> ShareSession { throw DriveError.loginRequired }
+    func listShareFiles(session: ShareSession, directoryId: String?, credential: DriveCredential?) async throws -> [DriveFile] { [] }
+    func resolveShareFile(session: ShareSession, file: DriveFile, credential: DriveCredential?, options: ShareResolveOptions) async throws -> ResolvedLink { throw DriveError.loginRequired }
+}
+
+@MainActor
+final class YunXChromeLoginTests: XCTestCase {
+    private static let browsers = #"{"data":{"browsers":[{"dir":"Profile 3","connected":false,"default":false},{"dir":"Default","connected":true,"default":true}]},"success":true}"#
+    private static let loggedIn = #"{"success":true,"data":[{"name":"__pus","value":"a","domain":".quark.cn"},{"name":"__puus","value":"b","domain":"pan.quark.cn","expires":4102444800},{"name":"other","value":"x","domain":".notquark.cn"}]}"#
+    private static let loggedOut = #"{"success":true,"data":[{"name":"__pus","value":"a","domain":".quark.cn"},{"name":"__puus","value":"old","domain":".quark.cn","expires":1000}]}"#
+
+    private func fake(_ export: String?, log: ArgsLog = ArgsLog()) -> YunXChromeCookies {
+        YunXChromeCookies {
+            { args in
+                log.add(args)
+                return args[0] == "browsers" ? Self.browsers : export
+            }
+        }
+    }
+
+    private func run(_ chrome: YunXChromeCookies, state: DriveAccountState = .signedIn(nickname: "me")) async throws -> YunXDownloadModel {
+        let settings = YunXSettingsStore(defaults: UserDefaults(suiteName: UUID().uuidString)!, trackers: ChromeMemoryBackend())
+        let model = YunXDownloadModel(vault: YunXVault(backend: ChromeMemoryBackend()), settingsStore: settings,
+                                      jobStore: YunXJobStore(backend: ChromeMemoryBackend()),
+                                      drives: CloudDriveRegistry(providers: [VerifyingDrive(state)]), chromeCookies: chrome)
+        await model.addAccount(.drive(.quark))
+        return model
+    }
+
+    func testImportsReadOnlyFromTheConnectedProfileWithoutTheSheet() async throws {
+        let log = ArgsLog()
+        let model = try await run(fake(Self.loggedIn, log: log))
+        XCTAssertNil(model.login)
+        XCTAssertNotNil(model.notice)
+        XCTAssertEqual(try model.vault.active("quark")?.fields[YunXBackupStore.key("quark")], "__pus=a; __puus=b")
+        XCTAssertEqual(log.all, [["browsers", "--json"], ["cookies", "export", "--from", "Default", "--domain", "quark.cn", "--json"]])
+    }
+
+    func testMissingChromeUseOpensTheSheet() async throws {
+        let model = try await run(YunXChromeCookies { nil })
+        XCTAssertEqual(model.login, .drive(.quark))
+        XCTAssertTrue(model.accounts.isEmpty)
+    }
+
+    func testNoLoginInChromeOpensTheSheet() async throws {
+        let model = try await run(fake(Self.loggedOut))
+        XCTAssertEqual(model.login, .drive(.quark))
+        XCTAssertTrue(model.accounts.isEmpty)
+    }
+
+    func testFailedExportOpensTheSheet() async throws {
+        let model = try await run(fake(nil))
+        XCTAssertEqual(model.login, .drive(.quark))
+    }
+
+    func testFailedOrUnconfirmedVerificationOpensTheSheet() async throws {
+        for state in [DriveAccountState.signedOut, .unverified] {
+            let model = try await run(fake(Self.loggedIn), state: state)
+            XCTAssertEqual(model.login, .drive(.quark))
+            XCTAssertTrue(model.accounts.isEmpty)
+            XCTAssertNil(model.notice)
+        }
+    }
+
+    func testAlreadySavedAccountStillReachesTheSheet() async throws {
+        let model = try await run(fake(Self.loggedIn))
+        await model.addAccount(.drive(.quark))
+        XCTAssertEqual(model.login, .drive(.quark))
+        XCTAssertEqual(model.accounts.count, 1)
+    }
+
+    func testFormPlatformsNeverTouchChrome() async throws {
+        let log = ArgsLog()
+        let model = try await run(fake(Self.loggedIn, log: log))
+        let before = log.all.count
+        await model.addAccount(.drive(.pan123))
+        await model.addAccount(.drive(.xunlei))
+        XCTAssertEqual(log.all.count, before)
+        XCTAssertEqual(model.login, .drive(.xunlei))
+    }
+
+    func testHostsMatchExactlyAndViewportStaysDesktop() {
+        XCTAssertTrue(YunXChromeCookies.belongs(".115.com", to: ["115.com"]))
+        XCTAssertTrue(YunXChromeCookies.belongs("my.115.com", to: ["115.com"]))
+        XCTAssertFalse(YunXChromeCookies.belongs("x115.com", to: ["115.com"]))
+        XCTAssertEqual(YunXLoginLayout.zoom(pageWidth: 1192), 1)
+        XCTAssertEqual(YunXLoginLayout.zoom(pageWidth: 590), 0.5, accuracy: 0.001)
+        XCTAssertEqual(YunXLoginLayout.sheet(screen: CGSize(width: 1280, height: 800)), CGSize(width: 1200, height: 720))
+    }
+}
+
+private final class ChromeMemoryBackend: YunXSecretBackend, @unchecked Sendable {
+    private var data: Data?
+    func read() throws -> Data? { data }
+    func write(_ data: Data) throws { self.data = data }
+}

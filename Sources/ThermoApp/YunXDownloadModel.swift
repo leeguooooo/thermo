@@ -228,6 +228,7 @@ final class YunXDownloadModel: ObservableObject {
     @Published private(set) var jobs: [YunXJob] = []
     @Published private(set) var accounts: [YunXAccount] = []
     @Published var login: YunXLoginTarget?
+    @Published private(set) var importingLogin = false
     @Published var pendingP2P: String?
     @Published private(set) var installingP2P = false
     @Published var notice: String?
@@ -251,6 +252,7 @@ final class YunXDownloadModel: ObservableObject {
     private let makeEngine: (DownloadConfiguration) throws -> DownloadEngine
     private let xunlei: XunleiAPI
     private let limit: YunXLimitBox
+    private let chromeCookies: YunXChromeCookies
     private var drivesOverride: CloudDriveRegistry?
     private lazy var drives: CloudDriveRegistry = {
         if let drivesOverride { return drivesOverride }
@@ -275,7 +277,7 @@ final class YunXDownloadModel: ObservableObject {
     init(vault: YunXVault = YunXVault(), settingsStore: YunXSettingsStore = YunXSettingsStore(), jobStore: YunXJobStore = YunXJobStore(),
          drives: CloudDriveRegistry? = nil, downloadStore: DownloadStore? = nil, xunlei: XunleiAPI = XunleiAPI(),
          toolsRoot: @escaping () throws -> MediaToolsRoot = { try MediaToolsRoot.applicationSupport() },
-         gopeed: GopeedEngine? = nil,
+         gopeed: GopeedEngine? = nil, chromeCookies: YunXChromeCookies = .live,
          makeEngine: ((DownloadConfiguration) throws -> DownloadEngine)? = nil) {
         self.vault = vault
         self.settingsStore = settingsStore
@@ -285,6 +287,7 @@ final class YunXDownloadModel: ObservableObject {
         self.xunlei = xunlei
         self.toolsRoot = toolsRoot
         self.gopeed = gopeed
+        self.chromeCookies = chromeCookies
         self.makeEngine = makeEngine ?? { try DownloadEngine(configuration: $0) }
         let loaded = settingsStore.load()
         settings = loaded
@@ -309,8 +312,31 @@ final class YunXDownloadModel: ObservableObject {
         reloadAccounts()
     }
 
-    /// Validates a captured or pasted secret, then stores it. Throws what the sheet should show.
-    func saveLogin(_ target: YunXLoginTarget, secret: String, extra: [String: String] = [:]) async throws {
+    /// The Add button: Chrome's login when it verifies, otherwise the sheet. An account that is already
+    /// saved also opens the sheet, or a second account could never be added. Platforms with no login
+    /// cookie to look for have nothing to verify, so they stay in the sheet too.
+    func addAccount(_ target: YunXLoginTarget) async {
+        guard !importingLogin else { return }
+        guard case let .cookie(_, domains, required, anyOf) = target.method, !(required.isEmpty && anyOf.isEmpty) else {
+            login = target
+            return
+        }
+        importingLogin = true
+        defer { importingLogin = false }
+        let known = accounts(for: target.platform).count
+        let chrome = chromeCookies
+        let secret = await Task.detached { chrome.header(domains: domains, required: required, anyOf: anyOf) }.value
+        if let secret, (try? await saveLogin(target, secret: secret, requireVerified: true)) != nil,
+           accounts(for: target.platform).count > known {
+            notice = tr("Imported from Chrome")
+        } else {
+            login = target
+        }
+    }
+
+    /// Validates a captured secret, then stores it. Throws what the sheet should show.
+    /// `requireVerified` refuses a login the provider could not confirm, as when it is unreachable.
+    func saveLogin(_ target: YunXLoginTarget, secret: String, extra: [String: String] = [:], requireVerified: Bool = false) async throws {
         switch target {
         case let .drive(platform):
             guard let provider = provider(platform) else { throw DriveError.providerUnavailable(platform) }
@@ -321,7 +347,7 @@ final class YunXDownloadModel: ObservableObject {
                 guard let parsed = XunleiCredential.parseWebLogin(value) else { throw YunXLoginError.rejected }
                 value = parsed.driveCredential.value
             }
-            try await save(DriveCredential(value), platform: platform, provider: provider, extra: extra)
+            try await save(DriveCredential(value), platform: platform, provider: provider, extra: extra, requireVerified: requireVerified)
         case let .video(platform):
             guard let parser = parsers.of(platform) else { throw YunXLoginError.rejected }
             let cookie = secret.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -331,12 +357,12 @@ final class YunXDownloadModel: ObservableObject {
         reloadAccounts()
     }
 
-    private func save(_ credential: DriveCredential, platform: DrivePlatform, provider: any CloudDriveProvider, extra: [String: String]) async throws {
+    private func save(_ credential: DriveCredential, platform: DrivePlatform, provider: any CloudDriveProvider, extra: [String: String], requireVerified: Bool = false) async throws {
         guard provider.isWellFormed(credential: credential) else { throw YunXLoginError.rejected }
         var nickname = extra["nickname"] ?? ""
         switch await provider.accountState(credential: credential) {
         case .signedOut: throw YunXLoginError.rejected
-        case .unverified: break
+        case .unverified: if requireVerified { throw YunXLoginError.rejected }
         case let .signedIn(name): nickname = name
         }
         var fields = YunXCredentialCodec.fields(platform, credential: credential, base: extra)
