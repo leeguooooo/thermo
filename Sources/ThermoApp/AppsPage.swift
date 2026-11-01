@@ -4,7 +4,7 @@ import CleanKit
 import SwiftUI
 
 enum AppsTab: String, Hashable, CaseIterable {
-    case installed, leftovers, startup, updates
+    case installed, leftovers, startup, updates, store
 
     var title: String {
         switch self {
@@ -12,6 +12,7 @@ enum AppsTab: String, Hashable, CaseIterable {
         case .leftovers: return tr("Leftovers")
         case .startup: return tr("Startup items")
         case .updates: return tr("Updates")
+        case .store: return tr("Store")
         }
     }
 }
@@ -330,6 +331,7 @@ struct AppsPage: View {
     let startup: StartupItemsModel
     let updates: AppUpdatesModel
     let native: NativeUpdatesModel
+    let store: AppStoreModel
     @Binding var tab: AppsTab
     @State private var search = ""
     @State private var open: Set<String> = []
@@ -338,6 +340,7 @@ struct AppsPage: View {
         Group {
             if tab == .startup { StartupItemsPage(model: startup, tab: $tab) }
             else if tab == .updates { AppUpdatesPage(model: updates, native: native, tab: $tab) }
+            else if tab == .store { AppStorePage(model: store, tab: $tab) }
             else { uninstallBody }
         }
     }
@@ -460,6 +463,7 @@ struct AppsPage: View {
             return model.orphanScanComplete ? tr("%1$@ in %2$@ apps that are gone", orphanSize(o), String(o.count)) : tr("Residual scan incomplete; showing known results")
         case .startup: return tr("Startup items")
         case .updates: return tr("Updates")
+        case .store: return tr("Store")
         }
     }
 

@@ -550,6 +550,8 @@ if let i = CommandLine.arguments.firstIndex(of: "--render-preview"), i + 1 < Com
         case .apps(.updates): return models.softwareUpdates.channel == "native"
             ? models.nativeUpdates.loaded && !models.nativeUpdates.loading
             : models.softwareUpdates.report != nil && !models.softwareUpdates.busy
+        case .apps(.store): return models.appStore.loaded
+        case .plugins: return models.plugins.loaded && !models.plugins.checkingUpdates
         case .compute: return ComputeModel.shared.current?.cpu != nil && Date().timeIntervalSince(started) > 4
         case .connections: return ConnectionsModel.shared.bluetooth != nil || ConnectionsModel.shared.bluetoothFailed
         case .memory: return MemoryModel.shared.breakdown != nil && Date().timeIntervalSince(started) > 4
