@@ -24,6 +24,7 @@ struct YunXDownloadPage: View {
             linkPanel
             if let error = model.error { NoticeBanner(text: error, dismiss: { model.error = nil }) }
             if let notice = model.notice { NoticeBanner(text: notice, dismiss: { model.notice = nil }) }
+            if model.importingLogin { NoticeBanner(text: tr("Checking your Chrome login…"), busy: true) }
             if let url = model.pendingP2P { p2pPrompt(url) }
             if model.installingP2P { NoticeBanner(text: tr("Installing the P2P engine…"), busy: true) }
             if model.pendingFfmpeg != nil { ffmpegPrompt }
@@ -341,7 +342,7 @@ struct YunXDownloadPage: View {
                 if own, !accounts.isEmpty, case let .drive(platform) = target {
                     Button(tr("Browse")) { Task { await model.browseDrive(platform) } }.buttonStyle(.link)
                 }
-                Button(tr("Add account")) { model.login = target }.buttonStyle(.link)
+                Button(tr("Add account")) { Task { await model.addAccount(target) } }.buttonStyle(.link).disabled(model.importingLogin)
             }
             ForEach(accounts) { account in
                 HStack {
@@ -478,7 +479,6 @@ struct YunXLoginSheet: View {
     @State private var code = ""
     @State private var challenge: YunXSmsChallenge?
     @State private var detected: String?
-    @State private var pasted = ""
     @State private var account = ""
     @State private var password = ""
     @State private var message: String?
@@ -497,7 +497,6 @@ struct YunXLoginSheet: View {
             case .password:
                 TextField(tr("Account"), text: $account).textFieldStyle(.roundedBorder)
                 SecureField(tr("Password"), text: $password).textFieldStyle(.roundedBorder)
-                if target == .drive(.lanzou) { pasteField }
             case .sms:
                 TextField(tr("Phone number"), text: $account).textFieldStyle(.roundedBorder)
                 HStack {
@@ -509,21 +508,19 @@ struct YunXLoginSheet: View {
                 switch target.method {
                 case let .cookie(url, domains, required, anyOf):
                     if let address = URL(string: url), !url.isEmpty {
-                        YunXLoginWeb(url: address, detected: $detected) { web, done in
+                        YunXLoginWeb(url: address, zoom: zoom, detected: $detected) { web, done in
                             web.configuration.websiteDataStore.httpCookieStore.getAllCookies { cookies in
                                 done(YunXLoginMethod.detect(cookies.map { ($0.domain, $0.name, $0.value) }, domains: domains, required: required, anyOf: anyOf))
                             }
                         }
                     }
-                    pasteField
                 default:
-                    YunXLoginWeb(url: URL(string: YunXXunleiWeb.loginURL)!, detected: $detected) { web, done in
+                    YunXLoginWeb(url: URL(string: YunXXunleiWeb.loginURL)!, zoom: zoom, detected: $detected) { web, done in
                         web.evaluateJavaScript(YunXXunleiWeb.readScript) { value, _ in
                             let raw = (value as? String)?.removingPercentEncoding ?? ""
                             done(raw.isEmpty || XunleiCredential.parseWebLogin(raw) == nil ? nil : raw)
                         }
                     }
-                    SecureField(tr("Or paste the Cookie or token"), text: $pasted).textFieldStyle(.roundedBorder)
                 }
             }
             if let message { Text(message).font(.callout).foregroundStyle(.red) }
@@ -536,8 +533,11 @@ struct YunXLoginSheet: View {
             }
         }
         .padding(Theme.Space.l)
-        .frame(width: current == .web ? 760 : 380, height: current == .web ? 620 : nil)
+        .frame(width: current == .web ? webSheet.width : 380, height: current == .web ? webSheet.height : nil)
     }
+
+    private var webSheet: CGSize { YunXLoginLayout.sheet(screen: NSScreen.main?.visibleFrame.size ?? CGSize(width: 1280, height: 800)) }
+    private var zoom: CGFloat { YunXLoginLayout.zoom(pageWidth: webSheet.width - 2 * Theme.Space.l) }
 
     private var modes: [Mode] {
         switch target {
@@ -567,15 +567,11 @@ struct YunXLoginSheet: View {
         }
     }
 
-    private var pasteField: some View {
-        SecureField(tr("Or paste the Cookie"), text: $pasted).textFieldStyle(.roundedBorder)
-    }
-
     private var canSave: Bool {
         switch current {
-        case .web: return detected != nil || !pasted.isEmpty
+        case .web: return detected != nil
         case .sms: return challenge != nil && !account.isEmpty && !code.isEmpty
-        case .password: return !pasted.isEmpty || (!account.isEmpty && !password.isEmpty)
+        case .password: return !account.isEmpty && !password.isEmpty
         }
     }
 
@@ -593,7 +589,7 @@ struct YunXLoginSheet: View {
                         mode = .sms
                         return
                     }
-                } else if let secret = pasted.isEmpty ? (current == .web ? detected : nil) : pasted {
+                } else if current == .web, let secret = detected {
                     try await model.saveLogin(target, secret: secret)
                 } else if case let .drive(platform) = target {
                     try await model.formLogin(platform, account: account, password: password)
@@ -608,6 +604,7 @@ struct YunXLoginSheet: View {
 struct YunXLoginWeb: NSViewRepresentable {
     typealias Probe = (WKWebView, @escaping (String?) -> Void) -> Void
     let url: URL
+    let zoom: CGFloat
     @Binding var detected: String?
     let probe: Probe
 
@@ -615,6 +612,7 @@ struct YunXLoginWeb: NSViewRepresentable {
         let config = WKWebViewConfiguration()
         config.websiteDataStore = .nonPersistent()
         let web = WKWebView(frame: .zero, configuration: config)
+        web.pageZoom = zoom
         web.load(URLRequest(url: url))
         context.coordinator.begin(web, probe: probe) { detected = $0 }
         return web
