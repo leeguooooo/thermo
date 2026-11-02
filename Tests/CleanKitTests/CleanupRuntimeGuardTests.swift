@@ -48,7 +48,10 @@ final class CleanupRuntimeGuardTests: XCTestCase {
                              paths: ["/fixture/repo/target"], blocked: "an agent is running in it", group: "/fixture/repo")
         XCTAssertNil(Cleaner.refusal(item, mode: .auto, processes: ProcessTable(entries: [])))
         let active = ProcessTable(entries: [.init(pid: 123, name: "codex", cwd: "/fixture/repo")])
-        XCTAssertNotNil(Cleaner.refusal(item, mode: .auto, processes: active))
+        XCTAssertNil(Cleaner.refusal(item, mode: .auto, processes: active))
+        let large = CleanItem(id: "project/large/fixture", category: .projects, title: "Fixture", safety: .review, bytes: 100,
+                              paths: ["/fixture/repo/data"], group: "/fixture/repo")
+        XCTAssertNotNil(Cleaner.refusal(large, mode: .auto, processes: active))
     }
 
     func testBuildAndExecutableProtectProjectOutput() {

@@ -384,14 +384,16 @@ final class CleanKitTests: XCTestCase {
         XCTAssertEqual(Projects.protectedArtifacts(home + "/src/broken", ["target", ".build"]), ["target", ".build"])
     }
 
-    func testRunningAgentBlocksProjectArtifact() throws {
+    func testRunningAgentWarnsButDoesNotLockProjectArtifact() throws {
         try write("src/web/package.json", "{}", age: 90)
         try write("src/web/node_modules/output", String(repeating: "x", count: 1_100_000), age: 90)
         let dir = home + "/src/web"
         let item = try XCTUnwrap(Projects.make(.artifact(project: dir, kind: "Node", name: "node_modules",
                                                        activity: now.addingTimeInterval(-90 * 86400), source: nil),
                                              ctx: context(agentDirs: [dir + "/src"])))
-        XCTAssertEqual(item.blocked, "an agent is running in it")
+        XCTAssertNil(item.blocked)
+        XCTAssertEqual(item.safety, .review)
+        XCTAssertTrue(item.note?.contains("an agent is open in this project") == true)
     }
 
     func testExplicitProjectRootsStayWithinScopeAndEmitItems() throws {

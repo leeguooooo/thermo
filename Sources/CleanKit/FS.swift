@@ -336,7 +336,8 @@ public enum Cleaner {
                 return cwd == dir || cwd.hasPrefix(dir + "/") ||
                     (dir.hasPrefix(cwd + "/") && ProjectSignals.isRepoRoot(cwd, containing: dir))
             }
-            if processes.agentDirectories().contains(where: related) { return tr("an agent is running in it") }
+            // Only folders that are not build output stay locked while an agent works there.
+            if item.id.hasPrefix("project/large/"), processes.agentDirectories().contains(where: related) { return tr("an agent is running in it") }
             let builders = ["swift", "swift-build", "swift-frontend", "cargo", "rustc", "xcodebuild", "clang", "clang++",
                             "cmake", "ninja", "make", "gradle", "mvn", "flutter", "dart", "npm", "pnpm", "yarn",
                             "node", "java", "python", "python3", "dotnet", "zig", "go"]
@@ -428,7 +429,7 @@ public enum Cleaner {
                     result.failed[path] = "Git tracks this output, or its status could not be verified"
                     continue
                 }
-                if let processes = projectProcesses,
+                if item.id.hasPrefix("project/large/"), let processes = projectProcesses,
                    processes.agentDirectories().contains(where: { $0 == dir || $0.hasPrefix(dir + "/") ||
                        (dir.hasPrefix($0 + "/") && ProjectSignals.isRepoRoot($0, containing: dir)) }) {
                     result.failed[path] = "an agent is running in it"

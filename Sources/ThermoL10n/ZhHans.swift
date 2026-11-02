@@ -1544,6 +1544,7 @@ let zhHans: [String: String] = [
     "clean, detached checkout": "无改动，游离检出",
     "clean; branch %1$@ stays in the repository": "无改动；分支 %1$@ 仍保留在仓库里",
     "an agent is running in it": "有 agent 正在里面运行",
+    "an agent is open in this project; it may have to rebuild": "有 agent 开在这个项目里，删除后可能要重新构建",
     "modified in the last 2 hours": "2 小时内有改动",
     "project changed recently; it will rebuild": "项目最近有改动，删除后需要重新构建",
     "Aider repo map cache": "Aider 仓库地图缓存",

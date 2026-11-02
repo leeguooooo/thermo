@@ -205,17 +205,17 @@ enum Projects {
                 $0 == dir || $0.hasPrefix(dir + "/") ||
                     (dir.hasPrefix($0 + "/") && ProjectSignals.isRepoRoot($0, containing: dir))
             }
-            let blocked: String?
-            if evident && evidence == nil { blocked = tr("Build cache evidence changed; scan and review again.") }
-            else if agentRunning { blocked = tr("an agent is running in it") }
-            else { blocked = nil }
+            // An open agent session idles in its repo for days; that alone must not lock rebuildable
+            // output. Live build tools, executables and open files still refuse at removal time.
+            if agentRunning { note = [note, tr("an agent is open in this project; it may have to rebuild")].compactMap { $0 }.joined(separator: tr("; ")) }
+            let blocked: String? = evident && evidence == nil ? tr("Build cache evidence changed; scan and review again.") : nil
             var item = CleanItem(
                 id: "project/" + id(p, ctx: ctx), category: .projects,
                 title: "\((dir as NSString).lastPathComponent) · \(a)",
                 detail: FS.tilde(dir, home: ctx.home) + " · \(kind)",
                 // Generic output folders can hold things worth keeping (a rendered video in `out`, a
                 // release binary in `dist`): never in the one-click safe set, always to the Trash.
-                safety: stale && (evidence != nil || !generic.contains(a)) ? .safe : .review,
+                safety: stale && !agentRunning && (evidence != nil || !generic.contains(a)) ? .safe : .review,
                 bytes: s.bytes, files: s.files, lastUsed: activity, paths: [p], note: note, blocked: blocked, group: dir)
             item.regenerable = evidence != nil || !generic.contains(a)
             item.buildCacheEvidence = evidence.map { [p: $0] }
