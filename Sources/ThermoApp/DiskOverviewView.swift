@@ -350,7 +350,8 @@ struct DiskOverviewView: View {
                 SpaceTile(style: style)
                 VStack(alignment: .leading, spacing: 2) {
                     Text(style.title ?? e.title).font(Theme.rowTitle).foregroundStyle(Theme.textPrimary).lineLimit(1)
-                    if Self.cleanupRoute(for: e.id) != nil {
+                    // Unattributed space has no folder to clean; its sheet still points to a scan.
+                    if e.id != "other", Self.cleanupRoute(for: e.id) != nil {
                         Text(tr("Can be cleaned")).font(Theme.caption).foregroundStyle(Theme.accent)
                     } else if e.complete == false, let measured = e.measuredLocations, let total = e.totalLocations {
                         Text(tr("%1$@ of %2$@ locations measured", String(measured), String(total))).font(Theme.caption).foregroundStyle(Theme.caution)
