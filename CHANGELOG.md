@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.4.5
+
+- 磁盘清理不用等扫描结束：已找到的项目可以边扫边清理，每一行也能单独清理；空间透视重新测量时同样可以移到废纸篓。
+- `thermo clean` 被取消时报告 `stopReason`（budget、user、signal）、`budgetSeconds`、`unfinishedSteps` 和 `unfinishedCategories`，错误信息写明原因。
+- `thermo clean overview` 默认预算改为 120 秒，可用 `--budget` 加长；到期返回下限并以退出码 3 结束。
+- 项目目录里超过 5 GB 的非构建文件夹（快照、备份等）作为「需要你决定」的条目列出，不会自动选中。
+
 ## 1.4.4
 
 - 修复重试分享下载时报「转存文件 token 校验异常」：重新打开分享后会刷新文件 token。

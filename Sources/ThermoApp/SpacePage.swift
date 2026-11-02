@@ -46,6 +46,8 @@ final class SpaceLensModel: ObservableObject {
     @Published private(set) var stoppingDuplicates = false
     @Published private(set) var duplicateProgress: Duplicates.Progress?
     private var cancellation: ScanCancellation?
+    /// Trashed while a measurement runs; its tree still holds them.
+    private var removedDuringScan = Set<String>()
     private var scanGeneration = UUID(), needsRestoreRefresh = false, pendingRestoreRefresh = false
     private var lastOpenedGeneration = UUID()
     @Published private(set) var loadingLastOpened = false
@@ -107,6 +109,7 @@ final class SpaceLensModel: ObservableObject {
         scanning = true
         stopping = false
         progress = nil
+        removedDuringScan = []
         let root = root
         let measure = self.measure, cache = self.cache
         Task.detached(priority: .userInitiated) {
@@ -124,6 +127,12 @@ final class SpaceLensModel: ObservableObject {
                 if self.pendingRestoreRefresh { self.pendingRestoreRefresh = false; self.scan(); return }
                 guard self.scanGeneration == generation else { return }
                 self.tree = tree
+                if !self.removedDuringScan.isEmpty {
+                    let updated = tree.removing(self.removedDuringScan)
+                    self.tree = updated
+                    if !token.isCancelled { SpaceLens.save(updated, to: cache) }
+                }
+                self.removedDuringScan = []
                 if self.tree?.folder(self.path) == nil { self.path = root }
                 self.lastOpened = [:]
                 if self.wantsLastOpened { self.loadLastOpened() }
@@ -177,7 +186,7 @@ final class SpaceLensModel: ObservableObject {
     }
 
     func removalReview() -> ManualRemovalReview? {
-        guard !scanning, !working, !basket.isEmpty else { return nil }
+        guard !working, !stopping, !basket.isEmpty else { return nil }
         return ManualRemovalReview(selection: basket,
             measured: basket.filter { sizeState($0.key) != .unavailable && sizeState($0.key) != .unmeasured },
             incomplete: Set(basket.keys.filter { sizeState($0) != .complete }), identities: selectionIdentities,
@@ -211,6 +220,7 @@ final class SpaceLensModel: ObservableObject {
     func afterTrash(_ result: CleanResult) {
         working = false
         let removed = Set(result.removed)
+        if scanning { removedDuringScan.formUnion(removed) }
         if !removed.isEmpty {
             lastOpenedGeneration = UUID(); lastOpenedCancellation?.cancel()
             lastOpened = lastOpened.filter { path, _ in !removed.contains { path == $0 || path.hasPrefix($0 + "/") } }
@@ -506,7 +516,7 @@ struct SpacePage: View {
                 .font(Theme.caption.monospacedDigit()).foregroundStyle(Theme.textTertiary)
             Button(model.basket.isEmpty ? tr("Move to Trash") : tr("Review %1$@…", model.basketSizeText)) { confirming = model.removalReview() }
                 .buttonStyle(PillButtonStyle(prominent: true))
-                .disabled(model.basket.isEmpty || model.working || model.scanning)
+                .disabled(model.basket.isEmpty || model.working || model.stopping)
         }
     }
 

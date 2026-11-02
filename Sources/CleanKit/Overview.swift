@@ -33,6 +33,9 @@ public struct SpaceOverview: Codable, Sendable {
     public var entries: [Entry]
     public var duration: TimeInterval
     public var cancelled: Bool? = nil
+    /// Why it stopped: `budget`, `user` or `signal`.
+    public var stopReason: String? = nil
+    public var budgetSeconds: TimeInterval? = nil
     public var measuredAt: Date? = nil
     public var language: String? = nil
     public var unreadable: [String]? = nil
@@ -250,6 +253,7 @@ public struct SpaceOverview: Codable, Sendable {
         var result = SpaceOverview(capacity: capacity, free: free, purgeable: max(0, important - free), entries: list,
                                    duration: Date().timeIntervalSince(started))
         result.cancelled = cancellation.isCancelled
+        result.stopReason = cancellation.reason
         result.measuredAt = started
         result.language = language
         result.unreadable = Array(Set(unreadable)).sorted()

@@ -114,7 +114,58 @@ enum Projects {
             }
         }
         queue.waitUntilAllOperationsAreFinished()
+        if ctx.options.categories.contains(.projects) {
+            let existing = Set(items.flatMap(\.paths))
+            for item in largeFolders(roots: roots.filter { $0 != ctx.home }, ctx: ctx) where !existing.contains(item.paths[0]) {
+                items.append(item); onItem?(item)
+            }
+        }
         return items
+    }
+
+    /// A folder this size that is not build output is the answer to "why is my disk full",
+    /// whether or not it can be cleaned, so the user gets to decide.
+    static let largeFolderBytes: Int64 = 5_000_000_000
+
+    /// Folders in project roots that hold at least `threshold` of something other than build
+    /// output (snapshots, backups, copied checkouts), named as deep as the size can be pinned.
+    /// Git is not consulted: such folders often sit outside any repository.
+    static func largeFolders(roots: [String], ctx: ScanContext, threshold: Int64 = largeFolderBytes, maxDepth: Int = 4) -> [CleanItem] {
+        let rebuilt = Set(kinds.flatMap(\.artifacts)).union(skip)
+        var found: [CleanItem] = []
+        var seen = Set<String>()
+        func measured(_ dir: String) -> (own: [(path: String, size: TreeSize)], rebuilt: Int64) {
+            var own: [(String, TreeSize)] = [], regenerated: Int64 = 0
+            for entry in FS.entries(dir) ?? [] where entry.isDir {
+                guard ScanCancellation.current?.isCancelled != true else { break }
+                let path = dir + "/" + entry.name
+                let size = FS.discoverySize(path, maxEntries: 50_000)
+                if rebuilt.contains(entry.name) { regenerated += size.bytes }
+                else if !entry.name.hasPrefix(".") { own.append((path, size)) }
+            }
+            return (own, regenerated)
+        }
+        func emit(_ path: String, _ size: TreeSize) {
+            let running = ctx.agentDirs.contains { $0 == path || $0.hasPrefix(path + "/") }
+            var item = CleanItem(id: "project/large/" + id(path, ctx: ctx), category: .projects,
+                                 title: tr("Large folder") + " · \((path as NSString).lastPathComponent)", detail: FS.tilde(path, home: ctx.home),
+                                 safety: .review, bytes: size.bytes, files: size.files, lastUsed: size.newest, paths: [path],
+                                 note: tr("Not build output. Thermo cannot tell whether you still need it; it is listed for you to decide."),
+                                 blocked: running ? tr("an agent is running in it") : nil, group: (path as NSString).deletingLastPathComponent)
+            item.estimatedSize = !ctx.options.exactSizes; item.sizeIncomplete = size.incomplete
+            found.append(item)
+        }
+        func visit(_ dir: String, depth: Int) {
+            for (path, size) in measured(dir).own where size.bytes >= threshold {
+                guard ScanCancellation.current?.isCancelled != true, seen.insert(path).inserted, linkedWorktreeRepository(path) == nil else { continue }
+                let inside = depth < maxDepth ? measured(path) : (own: [], rebuilt: 0)
+                let bigger = inside.own.contains { $0.size.bytes >= threshold }
+                if bigger { visit(path, depth: depth + 1) }
+                else if size.bytes - inside.rebuilt >= threshold { emit(path, size) }
+            }
+        }
+        for root in roots { visit(root, depth: 1) }
+        return found
     }
 
     static func id(_ path: String, ctx: ScanContext) -> String {

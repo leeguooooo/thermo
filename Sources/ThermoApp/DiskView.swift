@@ -74,19 +74,24 @@ final class DiskModel: ObservableObject {
     }
 
     private let queue = DispatchQueue(label: "dev.thermo.app.disk", qos: .background)
+    /// Scans hold `queue` for minutes; cleaning found items must not wait behind them.
+    private let cleanQueue = DispatchQueue(label: "dev.thermo.app.disk.clean", qos: .utility)
+    /// Handled while this scan runs: id → what is left. The scan's report still lists them.
+    private var cleanedDuringScan: [String: CleanItem?] = [:]
 
     /// What a clean would remove: ticked items, narrowed to the parts still ticked.
     var selectedItems: [CleanItem] {
         // An unreadable whitelist disables cleaning altogether.
         guard report?.whitelistError == nil else { return [] }
-        return (report?.items ?? []).filter {
-            selected.contains($0.id) && $0.cleanable && ($0.category != .aiSessions ||
-                (sessionRetentionDays != nil && report?.sessionPolicyVersion == ScanOptions.sessionPolicyVersion && report?.sessionRetentionDays == sessionRetentionDays))
-        }.compactMap { i in
+        return (report?.items ?? []).filter { selected.contains($0.id) && isEligible($0) }.compactMap { i in
             guard let off = excluded[i.id], !off.isEmpty, let parts = i.parts else { return i }
             let narrowed = i.only(Set(parts.map(\.id)).subtracting(off))
             return narrowed.bytes > 0 ? narrowed : nil
         }
+    }
+    func isEligible(_ item: CleanItem) -> Bool {
+        report?.whitelistError == nil && item.cleanable && (item.category != .aiSessions ||
+            (sessionRetentionDays != nil && report?.sessionPolicyVersion == ScanOptions.sessionPolicyVersion && report?.sessionRetentionDays == sessionRetentionDays))
     }
     var languageStale: Bool { report.map { $0.language != L10n.current.rawValue } ?? false }
     var selectedBytes: Int64 { selectedItems.reduce(0) { $0 + $1.bytes } }
@@ -197,6 +202,7 @@ final class DiskModel: ObservableObject {
         report = nil
         selected = []
         excluded = [:]
+        cleanedDuringScan = [:]
         invalidateSavedLoad()
         let cancellation = ScanCancellation()
         scanCancellation = cancellation
@@ -208,6 +214,7 @@ final class DiskModel: ObservableObject {
             report.categories = category.map { [$0] } ?? CleanCategory.allCases.filter { requestedScope == .all || $0.isAI }
             report.sessionRetentionDays = category == .aiSessions || (category == nil && requestedScope == .ai) ? retention : nil
             report.sessionPolicyVersion = ScanOptions.sessionPolicyVersion
+            report.stopReason = cancellation.reason
             return report
         }
         queue.async { [weak self] in
@@ -238,6 +245,9 @@ final class DiskModel: ObservableObject {
             DispatchQueue.main.async {
                 guard let self, self.scanCancellation === cancellation else { return }
                 self.acceptScan(result)
+                // The scanner saved its report after any cleanup had cleared the old one.
+                if self.cleaning || !self.cleanedDuringScan.isEmpty { self.cleanQueue.async { ScanReportCache.invalidate() } }
+                self.cleanedDuringScan = [:]
                 self.scanning = false
                 self.stopping = false
                 self.scanCancellation = nil
@@ -247,8 +257,13 @@ final class DiskModel: ObservableObject {
     }
 
     /// Preserve choices made while partial results were arriving. Only newly discovered safe items are selected.
-    func acceptScan(_ result: ScanReport) {
+    func acceptScan(_ scanned: ScanReport) {
         invalidateSavedLoad()
+        var result = scanned
+        result.items = result.items.compactMap { item in
+            if let left = cleanedDuringScan[item.id] { return left }
+            return item
+        }
         let seen = Set(report?.items.map(\.id) ?? [])
         let newSafe = result.items.filter { !seen.contains($0.id) && $0.automaticallySelected }
         selected = selected.intersection(result.items.filter(\.cleanable).map(\.id)).union(newSafe.map(\.id))
@@ -264,7 +279,7 @@ final class DiskModel: ObservableObject {
         guard scanning, let scanCancellation else { return }
         stopping = true
         progress = tr("stopping…")
-        scanCancellation.cancel()
+        scanCancellation.cancel(reason: "user")
     }
 
     /// Tell the user a scan finished, unless they are looking at it.
@@ -280,7 +295,7 @@ final class DiskModel: ObservableObject {
     }
 
     func clean(review: DiskCleanupReview? = nil) {
-        guard !cleaning, !scanning else { return }
+        guard !cleaning else { return }
         if let review, !isCurrentCleanupReview(review) {
             error = tr("Cleanup plan changed. Review the current items before cleaning.")
             lastResult = nil
@@ -289,13 +304,13 @@ final class DiskModel: ObservableObject {
         let items = review?.items ?? selectedItems
         let scannedAt = review == nil ? report?.started : review?.scannedAt
         let originals = Dictionary(uniqueKeysWithValues: (report?.items ?? []).map { ($0.id, $0) })
-        guard !items.isEmpty, !cleaning, !scanning else { return }
+        guard !items.isEmpty else { return }
         error = nil; lastResult = nil
         invalidateSavedLoad()
         cleaning = true
         cleaningDone = 0
         cleaningTotal = items.count
-        queue.async { [weak self] in
+        cleanQueue.async { [weak self] in
             do { _ = try Whitelist.loadForRemoval() } catch {
                 let why = Whitelist.unreadable(error)
                 DispatchQueue.main.async { self?.error = why; self?.cleaning = false }
@@ -324,6 +339,7 @@ final class DiskModel: ObservableObject {
                     remaining[i.id] = rest
                 }
             }
+            ScanReportCache.invalidate()
             let observation = DiskSpaceObservation(before: spaceBefore, after: DiskSpaceSnapshot.measure())
             var text = estimateIncomplete
                 ? (freed == 0 ? tr("Removed size is unknown") : tr("Measured removed size: %1$@; total size is unknown", ByteFormat.string(freed)))
@@ -348,6 +364,7 @@ final class DiskModel: ObservableObject {
                 self.lastResult = text
                 // Drop what was cleaned instead of rescanning the whole disk.
                 let cleaned = Set(items.map(\.id))
+                if self.scanning { for id in cleaned { self.cleanedDuringScan[id] = .some(remainingItems[id]) } }
                 if var r = self.report {
                     r.items = r.items.compactMap { cleaned.contains($0.id) ? remainingItems[$0.id] : $0 }
                     self.report = r

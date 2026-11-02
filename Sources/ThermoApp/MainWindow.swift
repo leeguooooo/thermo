@@ -401,7 +401,7 @@ struct MainView: View {
                 page = category.map { .disk(.category($0)) } ?? .disk(.home)
             }, cleanupDisabled: disk.scanning || disk.cleaning).transition(.page)
         case let .disk(.category(c)):
-            DiskCategoryPage(model: disk, category: c, clean: startClean).id(c)
+            DiskCategoryPage(model: disk, category: c, clean: startClean, cleanOne: { item in if cleanReview == nil { cleanReview = disk.cleanupReview(of: item) } }).id(c)
                 .transition(.page)
         case .agents(.home):
             DiagnosticsHome(scanner: agents, open: { a in page = .agents(.area(a)) }).transition(.page)

@@ -209,6 +209,12 @@ public struct ScanReport: Codable, Sendable {
     public var claudeCleanupDays: Int?
     /// The scan was stopped before it finished; `items` is what had been found so far.
     public var cancelled: Bool
+    /// Why it stopped: `budget`, `user` or `signal`; nil when it finished or the cause is unknown.
+    public var stopReason: String? = nil
+    public var budgetSeconds: TimeInterval? = nil
+    /// Scan steps and categories that did not finish; their findings are missing or partial.
+    public var unfinishedSteps: [String]? = nil
+    public var unfinishedCategories: [CleanCategory]? = nil
     /// What the scan covered, so a saved report is only reused for selections it can answer.
     public var categories: [CleanCategory]?
     public var olderThanDays: Int?
@@ -235,7 +241,7 @@ public struct ScanReport: Codable, Sendable {
     }
 
     private enum CodingKeys: String, CodingKey {
-        case items, denied, started, duration, claudeCleanupDays, cancelled, categories, olderThanDays, sessionRetentionDays, sessionPolicyVersion, projectRoots, discoverProjectRoots, language, spaceContext, growth, changesSince, exactSizes, whitelistError
+        case items, denied, started, duration, claudeCleanupDays, cancelled, categories, olderThanDays, sessionRetentionDays, sessionPolicyVersion, projectRoots, discoverProjectRoots, language, spaceContext, growth, changesSince, exactSizes, whitelistError, stopReason, budgetSeconds, unfinishedSteps, unfinishedCategories
     }
 
     public init(from decoder: Decoder) throws {
@@ -255,6 +261,10 @@ public struct ScanReport: Codable, Sendable {
         growth = try c.decodeIfPresent([ScanGrowth].self, forKey: .growth)
         changesSince = try c.decodeIfPresent(Date.self, forKey: .changesSince)
         whitelistError = try c.decodeIfPresent(String.self, forKey: .whitelistError)
+        stopReason = try c.decodeIfPresent(String.self, forKey: .stopReason)
+        budgetSeconds = try c.decodeIfPresent(TimeInterval.self, forKey: .budgetSeconds)
+        unfinishedSteps = try c.decodeIfPresent([String].self, forKey: .unfinishedSteps)
+        unfinishedCategories = try c.decodeIfPresent([CleanCategory].self, forKey: .unfinishedCategories)
         language = try c.decodeIfPresent(String.self, forKey: .language)
         projectRoots = try c.decodeIfPresent([String].self, forKey: .projectRoots)
         discoverProjectRoots = try c.decodeIfPresent(Bool.self, forKey: .discoverProjectRoots)

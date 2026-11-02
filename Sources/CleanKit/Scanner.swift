@@ -58,7 +58,9 @@ public final class DiskScanner: @unchecked Sendable {
         defer { ScanCancellation.current = previousCancellation }
         // Stopped before it began: skip even the setup (reading every process is slow on a busy Mac).
         if cancellation.isCancelled {
-            return ScanReport(items: [], denied: [], started: started, duration: 0, cancelled: true)
+            var report = ScanReport(items: [], denied: [], started: started, duration: 0, cancelled: true)
+            report.stopReason = cancellation.reason
+            return report
         }
         let timing = ProcessInfo.processInfo.environment["THERMO_CLEAN_TIMING"] != nil
         if timing { FileHandle.standardError.write(Data("scan: reading processes\n".utf8)) }
@@ -77,13 +79,25 @@ public final class DiskScanner: @unchecked Sendable {
         let whitelist: Whitelist?, whitelistError: String?
         do { whitelist = try Whitelist.loadForRemoval(home: options.home); whitelistError = nil }
         catch { whitelist = nil; whitelistError = Whitelist.unreadable(error) }
+        // Streamed items can be cleaned before the scan ends, so they carry their identities too.
+        let identified: ([CleanItem]) -> [CleanItem] = { found in
+            found.map { item in
+                var i = item
+                if !i.paths.isEmpty {
+                    var ids: [String: String] = [:]
+                    for p in i.paths { ids[p] = FileIdentity.of(p) }
+                    i.identities = ids
+                }
+                return i
+            }
+        }
         let mark: ([CleanItem]) -> [CleanItem] = { found in
-            if let whitelist { return whitelist.apply(found) }
-            return found.map { item in var i = item; if !i.paths.isEmpty || !(i.commands ?? []).isEmpty { i.blocked = whitelistError }; return i }
+            if let whitelist { return whitelist.apply(identified(found)) }
+            return identified(found).map { item in var i = item; if !i.paths.isEmpty || !(i.commands ?? []).isEmpty { i.blocked = whitelistError }; return i }
         }
 
         var jobs: [(String, Set<CleanCategory>, () -> [CleanItem])] = [
-            ("projects", [.projects, .agentWorktrees, .aiCaches], { Projects.scan(ctx, onItem: { self.onItems?(mark([$0])) }) }),
+            ("projects", [.projects, .agentWorktrees, .aiCaches], { Projects.scan(ctx, onItem: { item in if self.options.categories.contains(item.category) { self.onItems?(mark([item])) } }) }),
             ("AI sessions", [.aiSessions, .aiCaches], { AISessions.scan(ctx) }),
             ("AI tools", [.aiCaches], { AITools.scan(ctx) }),
             ("AI models", [.aiModels], { AIModels.scan(ctx) }),
@@ -106,6 +120,7 @@ public final class DiskScanner: @unchecked Sendable {
             jobs = jobs.filter { job in ids.contains { Self.step(job.0, ruleIDs: ruleIDs, mayProduce: $0) } }
         }
 
+        var finished = Set<Int>()
         func runJob(_ i: Int) {
             guard !cancellation.isCancelled else { return }
             let t0 = Date()
@@ -114,6 +129,7 @@ public final class DiskScanner: @unchecked Sendable {
             if timing { FileHandle.standardError.write(String(format: "%6.2fs %@\n", Date().timeIntervalSince(t0), jobs[i].0).data(using: .utf8)!) }
             lock.lock()
             items += found
+            if !cancellation.isCancelled { finished.insert(i) }
             lock.unlock()
             if !found.isEmpty && jobs[i].0 != "projects" { onItems?(found) }
             onProgress?(jobs[i].0)
@@ -128,17 +144,21 @@ public final class DiskScanner: @unchecked Sendable {
         }
         queue.waitUntilAllOperationsAreFinished()
 
-        for i in items.indices where !items[i].paths.isEmpty {
-            var ids: [String: String] = [:]
-            for p in items[i].paths { ids[p] = FileIdentity.of(p) }
-            items[i].identities = ids
-        }
         let order = Dictionary(uniqueKeysWithValues: CleanCategory.allCases.enumerated().map { ($1, $0) })
         items.sort { (order[$0.category]!, -$0.bytes, $0.id) < (order[$1.category]!, -$1.bytes, $1.id) }
         var report = ScanReport(items: items, denied: Array(Set(denied)).sorted(), started: started,
                                 duration: Date().timeIntervalSince(started), claudeCleanupDays: claudeCleanupDays(),
                                 cancelled: cancellation.isCancelled)
         report.whitelistError = whitelistError
+        let describeStop = { (report: inout ScanReport) in
+            guard report.cancelled else { return }
+            report.stopReason = self.cancellation.reason
+            let unfinished = jobs.indices.filter { !finished.contains($0) }
+            report.unfinishedSteps = unfinished.map { jobs[$0].0 }
+            let categories = unfinished.reduce(into: Set<CleanCategory>()) { $0.formUnion(jobs[$1].1) }.intersection(self.options.categories)
+            report.unfinishedCategories = CleanCategory.allCases.filter { categories.contains($0) }
+        }
+        describeStop(&report)
         report.categories = CleanCategory.allCases.filter { options.categories.contains($0) }
         report.olderThanDays = options.olderThanDays
         report.sessionRetentionDays = options.sessionRetentionDays
@@ -151,6 +171,7 @@ public final class DiskScanner: @unchecked Sendable {
             onProgress?("space context")
             report.spaceContext = CleanSpaceContext.read(home: options.home, cancellation: cancellation)
             report.cancelled = cancellation.isCancelled
+            describeStop(&report)
             report.duration = Date().timeIntervalSince(started)
             CleanScanHistory.record(&report, home: options.home)
         }

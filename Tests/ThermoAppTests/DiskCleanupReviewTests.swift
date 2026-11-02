@@ -52,3 +52,40 @@ final class DiskCleanupReviewTests: XCTestCase {
     }
 
 }
+
+final class CleanDuringScanTests: XCTestCase {
+    private func item(_ id: String) -> CleanItem {
+        CleanItem(id: id, category: .devCaches, title: id, safety: .safe, bytes: 10, paths: ["/nonexistent/thermo-fixture/" + id])
+    }
+    @MainActor func testItemCleanedMidScanDoesNotReturnWithTheFinalReport() async throws {
+        let a = item("a"), b = item("b"), release = DispatchSemaphore(value: 0), streamed = expectation(description: "streamed")
+        let io = DiskScanIO(options: { _, _, _ in ScanOptions() }, cached: { _, _ in nil }, scan: { _, _, _, found in
+            found([a]); DispatchQueue.main.async { streamed.fulfill() }
+            release.wait()
+            return ScanReport(items: [a, b], denied: [], started: Date(), duration: 1)
+        })
+        let model = DiskModel(scanIO: io, requestNotifications: {})
+        model.scan()
+        await fulfillment(of: [streamed], timeout: 5)
+        for _ in 0..<100 where model.report?.items.isEmpty != false { try await Task.sleep(nanoseconds: 10_000_000) }
+        let review = try XCTUnwrap(model.cleanupReview(of: a))
+        XCTAssertTrue(model.scanning)
+        model.clean(review: review)
+        XCTAssertTrue(model.cleaning, "Cleaning must start while the scan is running")
+        for _ in 0..<500 where model.cleaning { try await Task.sleep(nanoseconds: 10_000_000) }
+        XCTAssertFalse(model.cleaning, "Cleaning must not wait behind the scan")
+        release.signal()
+        for _ in 0..<500 where model.scanning { try await Task.sleep(nanoseconds: 10_000_000) }
+        // The fixture path is missing, so the cleaned item survives only as a blocked remainder,
+        // not as the scanner's fresh, cleanable copy.
+        XCTAssertEqual(model.report?.items.first { $0.id == "a" }?.cleanable, false)
+        XCTAssertEqual(model.report?.items.first { $0.id == "b" }?.cleanable, true)
+    }
+    func testReviewedSelectionStaysValidWhenNewFindingsArrive() throws {
+        let a = item("a"), model = DiskModel(report: ScanReport(items: [a], denied: [], started: Date(), duration: 1))
+        model.selected = ["a"]
+        let single = try XCTUnwrap(model.cleanupReview(of: a))
+        model.selected = []
+        XCTAssertTrue(model.isCurrentCleanupReview(single), "A row's clean does not depend on what is ticked")
+    }
+}

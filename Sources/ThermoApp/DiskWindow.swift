@@ -21,8 +21,10 @@ enum DiskPage: Hashable {
 
 extension DiskModel {
     /// One line per item for the confirmation: how it goes, size, name, paths.
-    var planLines: [String] {
-        selectedItems.flatMap { i -> [String] in
+    var planLines: [String] { planLines(for: selectedItems) }
+
+    func planLines(for items: [CleanItem]) -> [String] {
+        items.flatMap { i -> [String] in
             let native=i.runsNativeClean(.auto) ? i.native : nil
             let deleted=i.paths.filter { native?.owns($0) != true }
             let how=native != nil ? tr("tool clean") : !(i.commands ?? []).isEmpty ? tr("permanent tool removal") : !RemovalMode.auto.trashes(i) ? tr("delete") : tr("trash")
@@ -41,8 +43,9 @@ extension DiskModel {
         }
     }
 
-    var confirmSummary: String {
-        let items = selectedItems
+    var confirmSummary: String { confirmSummary(for: selectedItems) }
+
+    func confirmSummary(for items: [CleanItem]) -> String {
         let trash = items.filter { RemovalMode.auto.trashes($0) && ($0.commands ?? []).isEmpty }
         let toolItems = items.filter { !($0.commands ?? []).isEmpty }
         var parts = [trCount(items.count, "%1$@ item.", "%1$@ items.")]
@@ -63,8 +66,10 @@ extension DiskModel {
         return parts.joined(separator: " ")
     }
 
-    var confirmationIsDestructive: Bool {
-        selectedItems.contains { !($0.commands ?? []).isEmpty || (!RemovalMode.auto.trashes($0) && !$0.paths.isEmpty) }
+    var confirmationIsDestructive: Bool { confirmationIsDestructive(for: selectedItems) }
+
+    func confirmationIsDestructive(for items: [CleanItem]) -> Bool {
+        items.contains { !($0.commands ?? []).isEmpty || (!RemovalMode.auto.trashes($0) && !$0.paths.isEmpty) }
     }
 
     var safeItems: [CleanItem] { (report?.items ?? []).filter(\.automaticallySelected) }
@@ -278,7 +283,15 @@ struct DiskHome: View {
                 HeroStatus(symbol: "magnifyingglass", color: Theme.accent,
                            title: model.report.map { tr("%1$@ found so far", ByteFormat.string($0.totalBytes)) } ?? tr("Looking for space you can free…"),
                            subtitle: model.progress, spinning: true)
-                Button(tr("Stop")) { model.stop() }.buttonStyle(PillButtonStyle()).disabled(model.stopping)
+                HStack(spacing: Theme.Space.m) {
+                    Button(tr("Stop")) { model.stop() }.buttonStyle(PillButtonStyle()).disabled(model.stopping)
+                    if !model.safeItems.isEmpty {
+                        Button(tr("Clean %1$@", ByteFormat.string(model.safeBytes))) {
+                            model.selectSafe()
+                            clean()
+                        }.buttonStyle(PillButtonStyle(prominent: true))
+                    }
+                }
             }
         } else if let r = model.report {
             let summary = DiskScanSummary(r, safeBytes: model.safeBytes)
@@ -313,6 +326,7 @@ struct DiskCategoryPage: View {
     @ObservedObject var model: DiskModel
     let category: CleanCategory
     let clean: () -> Void
+    var cleanOne: (CleanItem) -> Void = { _ in }
     @State private var search = ""
     @State private var open: Set<String> = []
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
@@ -447,7 +461,7 @@ struct DiskCategoryPage: View {
                                    for i in pickable { model.excluded[i.id] = nil }
                                },
                                clear: { model.selected.subtract(pickable.map(\.id)) })
-            .disabled(model.cleaning || model.scanning)
+            .disabled(model.cleaning)
     }
 
     var header: some View {
@@ -487,6 +501,11 @@ struct DiskCategoryPage: View {
                 Spacer(minLength: Theme.Space.m)
                 Text(ByteFormat.string(model.selectedItems.first { $0.id == i.id }?.bytes ?? i.bytes))
                     .font(Theme.figure(.row)).foregroundStyle(Theme.textPrimary).contentTransition(.numericText())
+                if i.cleanable {
+                    Button { cleanOne(i) } label: { Image(systemName: "trash") }
+                        .buttonStyle(.plain).foregroundStyle(Theme.textTertiary).disabled(model.cleaning)
+                        .help(tr("Clean this item")).accessibilityLabel(tr("Clean %1$@", i.title))
+                }
                 Button { toggleOpen(i.id) } label: { DisclosureChevron(expanded: expanded) }
                     .buttonStyle(.plain).accessibilityLabel(tr("Details for %1$@", i.title))
                     .accessibilityValue(expanded ? tr("Expanded") : tr("Collapsed"))
@@ -503,6 +522,7 @@ struct DiskCategoryPage: View {
         .hoverHighlight()
         .animation(Theme.quick.unlessReduced(reduceMotion), value: ticked)
         .contextMenu {
+            Button(tr("Clean this item")) { cleanOne(i) }.disabled(!i.cleanable || model.cleaning)
             Button(tr("Show in Finder")) { model.reveal(i) }.disabled(i.paths.isEmpty)
             Button(tr("Always keep")) { model.alwaysKeep(i) }
                 .disabled((i.paths.isEmpty && (i.commandScope ?? []).isEmpty) || i.blocked == tr(Whitelist.reason) || model.cleaning || model.scanning)
@@ -518,6 +538,9 @@ struct DiskCategoryPage: View {
                 Spacer()
                 Button(model.stopping ? tr("stopping…") : tr("Stop")) { model.stop() }
                     .buttonStyle(PillButtonStyle()).disabled(model.stopping)
+                Button(tr("Clean %1$@", ByteFormat.string(model.selectedBytes)), action: clean)
+                    .buttonStyle(PillButtonStyle(prominent: true))
+                    .disabled(model.selectedItems.isEmpty || model.cleaning)
             } else {
                 selectAll(items)
                 Button(tr("Safe")) {
@@ -532,7 +555,7 @@ struct DiskCategoryPage: View {
                     .font(Theme.caption.monospacedDigit()).foregroundStyle(Theme.textTertiary)
                 Button(tr("Clean %1$@", ByteFormat.string(model.selectedBytes)), action: clean)
                     .buttonStyle(PillButtonStyle(prominent: true))
-                    .disabled(model.selectedItems.isEmpty || model.cleaning || model.scanning)
+                    .disabled(model.selectedItems.isEmpty || model.cleaning)
             }
         }
     }

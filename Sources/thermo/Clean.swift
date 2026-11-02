@@ -70,28 +70,63 @@ struct CleanCommand {
         return value
     }
 
+    /// `clean overview` walks everything; without a limit a full disk took 19 minutes.
+    static let overviewBudget: TimeInterval = 120
+
+    static func incompleteMessage(_ what: String, reason: String?, budget: TimeInterval?, unfinished: [String]? = nil) -> String {
+        var message = what + " is incomplete"
+        switch reason {
+        case "budget": message += ": the \(Int(budget ?? 0))-second budget ran out; retry with a larger --budget"
+        case "signal": message += ": stopped by a signal"
+        case "user": message += ": stopped by the user"
+        default: break
+        }
+        if let unfinished, !unfinished.isEmpty { message += " (unfinished: " + unfinished.joined(separator: ", ") + ")" }
+        return message + "."
+    }
+
+    /// Ctrl-C or SIGTERM ends the scan through its normal path; a second signal kills the process.
+    static func stopOnSignals(_ cancellation: ScanCancellation) -> () -> Void {
+        let sources = [SIGINT, SIGTERM].map { number -> DispatchSourceSignal in
+            signal(number, SIG_IGN)
+            let source = DispatchSource.makeSignalSource(signal: number, queue: .global(qos: .utility))
+            source.setEventHandler { cancellation.cancel(reason: "signal"); signal(number, SIG_DFL) }
+            source.resume()
+            return source
+        }
+        return {
+            sources.forEach { $0.cancel() }
+            signal(SIGINT, SIG_DFL); signal(SIGTERM, SIG_DFL)
+        }
+    }
+
     static func deadline(after seconds: TimeInterval?, cancellation: ScanCancellation) -> DispatchWorkItem? {
         guard let seconds else { return nil }
-        let item = DispatchWorkItem { cancellation.cancel() }
+        let item = DispatchWorkItem { cancellation.cancel(reason: "budget") }
         DispatchQueue.global(qos: .utility).asyncAfter(deadline: .now() + seconds, execute: item)
         return item
     }
 
     func overview() throws {
         let cancellation = ScanCancellation()
-        let deadline = Self.deadline(after: try Self.budget(args), cancellation: cancellation)
+        let budget = try Self.budget(args) ?? Self.overviewBudget
+        let deadline = Self.deadline(after: budget, cancellation: cancellation)
         defer { deadline?.cancel() }
+        let restoreSignals = Self.stopOnSignals(cancellation)
+        defer { restoreSignals() }
         let stream = args.has("stream") ? ScanStream() : nil
         stream?.start()
         let tty = isatty(STDERR_FILENO) != 0 && !args.has("json") && stream == nil
-        let o = SpaceOverview.measure(onProgress: { step in
+        var o = SpaceOverview.measure(onProgress: { step in
             stream?.emit(.init(event: "progress", step: step))
             if tty { FileHandle.standardError.write(Data(".".utf8)) }
         }, onEntry: { entry in stream?.emit(.init(event: "entry", entry: entry)) }, cancellation: cancellation)
-        if let stream { stream.emit(.init(event: "finished", overview: o)); o.save(); if o.cancelled == true { throw CLIError("Overview scan is incomplete.",exitCode:3) }; return }
+        if o.cancelled == true { o.budgetSeconds = budget }
+        let incomplete = Self.incompleteMessage("Overview scan", reason: o.stopReason, budget: budget)
+        if let stream { stream.emit(.init(event: "finished", overview: o)); o.save(); if o.cancelled == true { throw CLIError(incomplete,exitCode:3) }; return }
         o.save()  // the app's Overview opens with these numbers
         if tty { FileHandle.standardError.write("\n".data(using: .utf8)!) }
-        if args.has("json") { print(Export.json(o)); if o.cancelled == true { throw CLIError("Overview scan is incomplete.",exitCode:3) }; return }
+        if args.has("json") { print(Export.json(o)); if o.cancelled == true { throw CLIError(incomplete,exitCode:3) }; return }
         func gb(_ b: Int64) -> String { b >= 1_000_000_000 ? String(format: "%.1f GB", Double(b) / 1e9) : String(format: "%.0f MB", Double(b) / 1e6) }
         var lines = [style.bold("Disk") + style.dim(String(format: " · %@ used of %@ · %@ free", gb(o.used), gb(o.capacity), gb(o.free))
                      + (o.purgeable > 1_000_000_000 ? " (+\(gb(o.purgeable)) purgeable)" : "")), ""]
@@ -134,8 +169,11 @@ struct CleanCommand {
         if let categories { o.categories = categories }
         o.onlyIDs = onlyIDs
         let scanner = DiskScanner(options: o)
-        let deadline = Self.deadline(after: try Self.budget(args) ?? 60, cancellation: scanner.cancellation)
+        let budget = try Self.budget(args) ?? 60
+        let deadline = Self.deadline(after: budget, cancellation: scanner.cancellation)
         defer { deadline?.cancel() }
+        let restoreSignals = Self.stopOnSignals(scanner.cancellation)
+        defer { restoreSignals() }
         let stream = args.has("stream") ? ScanStream() : nil
         stream?.start()
         if let stream {
@@ -156,7 +194,8 @@ struct CleanCommand {
             existing?(step)
             FileHandle.standardError.write(Data("scan: \(step)\n".utf8))
         }
-        let r = scanner.scan()
+        var r = scanner.scan()
+        if r.cancelled { r.budgetSeconds = budget }
         stream?.emit(.init(event: "finished", report: r))
         FileHandle.standardError.write(Data("scan finished: \(r.items.count) items; partial=\(r.cancelled)\n".utf8))
         return r
@@ -189,7 +228,7 @@ struct CleanCommand {
 
     func writeReport(_ r: ScanReport, categories cats: Set<CleanCategory>?, write: (String) -> Void = { print($0) }) throws {
         renderReport(r, categories: cats, write: write)
-        if r.cancelled { throw CLIError("Scan is incomplete; emitted results remain partial.", exitCode: 3) }
+        if r.cancelled { throw CLIError(Self.incompleteMessage("Scan", reason: r.stopReason, budget: r.budgetSeconds, unfinished: r.unfinishedSteps), exitCode: 3) }
     }
 
     static func emptyScanMessage(_ r: ScanReport) -> String {
@@ -246,7 +285,7 @@ struct CleanCommand {
                 lines.append(style.dim("  + \(more.count) more (\(ByteFormat.string(more.reduce(0) { $0 + $1.bytes }))) · thermo clean \(c.rawValue)"))
             }
         }
-        if r.cancelled { lines.append(style.yellow("scan stopped · completed findings only; results are incomplete")) }
+        if r.cancelled { lines.append(style.yellow("scan stopped · completed findings only; results are incomplete" + (r.unfinishedCategories?.isEmpty == false ? " · unfinished: " + r.unfinishedCategories!.map(\.rawValue).joined(separator: ", ") : ""))) }
         else if r.resultState == .incomplete { lines.append(style.yellow("scan incomplete · some locations, rules or sizes could not be checked")) }
         if let why = r.whitelistError { lines.append(style.red(why + " · " + tr("cleanup is disabled until it is fixed"))) }
         if r.items.isEmpty {

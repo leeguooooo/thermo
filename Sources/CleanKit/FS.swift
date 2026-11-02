@@ -675,16 +675,23 @@ enum Shell {
 public final class ScanCancellation: @unchecked Sendable {
     private let lock = NSLock()
     private var cancelled = false
+    private var stopReason: String?
 
     public init() {}
+
+    /// Why the work stopped: `budget`, `user` or `signal`. The first caller decides.
+    public var reason: String? {
+        lock.lock(); defer { lock.unlock() }
+        return stopReason
+    }
 
     public var isCancelled: Bool {
         lock.lock(); defer { lock.unlock() }
         return cancelled
     }
 
-    public func cancel() {
-        lock.lock(); cancelled = true; lock.unlock()
+    public func cancel(reason: String? = nil) {
+        lock.lock(); if !cancelled { stopReason = reason }; cancelled = true; lock.unlock()
     }
 
     private static let currentKey = "dev.thermo.scanCancellation"
