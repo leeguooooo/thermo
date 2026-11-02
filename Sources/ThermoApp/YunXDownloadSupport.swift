@@ -187,14 +187,16 @@ struct YunXJobGroup: Identifiable, Equatable {
 
     static func make(_ jobs: [YunXJob], globalRoot: String?) -> [YunXJobGroup] {
         var groups: [YunXJobGroup] = []
+        var positions: [String: Int] = [:]
         for job in jobs {
             let item = DownloadGrouping.Item(fileName: job.relativeName, savePath: job.savedPath, saveDirectory: job.saveDirectory)
             let key = DownloadGrouping.groupKey(item, globalRoot: globalRoot)
             let isFolder = job.relativeName.contains("/")
             let id = isFolder ? "\(key.root)\u{0}\(key.folder)" : job.id.uuidString
-            if let index = groups.firstIndex(where: { $0.id == id }) {
+            if let index = positions[id] {
                 groups[index].jobs.append(job)
             } else {
+                positions[id] = groups.count
                 groups.append(YunXJobGroup(id: id, title: key.folder, isFolder: isFolder, jobs: [job]))
             }
         }

@@ -77,6 +77,8 @@ public struct CleanItem: Codable, Identifiable, Sendable, Equatable {
     public var detail: String
     public var safety: Safety
     public var bytes: Int64
+    /// Set when `bytes` is private blocks and this much more shows in `du`: the difference is shared.
+    public var allocatedBytes: Int64? = nil
     public var files: Int
     /// Newest modification among the paths, when known.
     public var lastUsed: Date?

@@ -138,7 +138,7 @@ public final class DiskScanner: @unchecked Sendable {
         // (concurrentPerform used every core).
         let queue = OperationQueue()
         queue.maxConcurrentOperationCount = min(4, max(2, ProcessInfo.processInfo.activeProcessorCount / 2))
-        queue.qualityOfService = options.lowPriority ? .background : .utility
+        queue.qualityOfService = options.lowPriority ? .background : .userInitiated
         for i in jobs.indices {
             queue.addOperation { ScanCancellation.withCurrent(self.cancellation) { runJob(i) } }
         }

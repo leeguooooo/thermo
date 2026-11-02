@@ -797,7 +797,12 @@ final class YunXDownloadModel: ObservableObject {
         jobStore.update(id) { $0.taskId = task.id }
         update(id) { $0.canPause = true }
         let watcher = Task { [weak self] in
+            // Every published change redraws the page; four a second reads as live.
+            var shown = ContinuousClock.now - .seconds(1), phase: DownloadPhase?
             for await progress in task.progress {
+                let now = ContinuousClock.now
+                guard now - shown >= .milliseconds(250) || progress.phase != phase || progress.receivedBytes == progress.totalBytes else { continue }
+                shown = now; phase = progress.phase
                 self?.update(id) { job in
                     job.received = progress.receivedBytes
                     job.total = progress.totalBytes

@@ -239,14 +239,17 @@ public struct SpaceOverview: Codable, Sendable {
         }
         let counted = list.reduce(Int64(0)) { $0 + $1.bytes }
         let used = capacity - free
-        if !cancellation.isCancelled, used > counted {
-            let snapshots = includeVolumes ? Self.localSnapshots() : 0
+        // Also after a stopped measurement: "what is unknown" matters most then.
+        if used > counted, !cancellation.isCancelled || !list.isEmpty {
+            let snapshots = includeVolumes && !cancellation.isCancelled ? Self.localSnapshots() : 0
             let note = snapshots > 0
                 ? tr("%1$@ local snapshots, APFS metadata and folders only macOS can read; Time Machine snapshots go away on their own as space is needed", String(snapshots))
                 : tr("APFS metadata and folders only macOS can read (Spotlight index, file versions); not measured one by one")
-            let complete = list.allSatisfy { $0.effectiveSizeState == .complete }
+            let complete = !cancellation.isCancelled && list.allSatisfy { $0.effectiveSizeState == .complete }
             list.append(Entry(id: "other", title: tr("Not attributed to a folder"), path: nil, bytes: used - counted,
-                              children: [], note: complete ? note : tr("Includes unmeasured locations; this residual is not a measured folder size."),
+                              children: [], note: (complete ? note : tr("Includes unmeasured locations; this residual is not a measured folder size."))
+                                  + (important > free ? tr("; ") + tr("%1$@ of it is purgeable", ByteFormat.string(important - free)) : "")
+                                  + (unreadable.isEmpty ? "" : tr("; ") + tr("%1$@ folders could not be read", String(Set(unreadable).count))),
                               complete: complete, sizeState: complete ? .complete : .unavailable))
         }
         list.sort { $0.bytes > $1.bytes }

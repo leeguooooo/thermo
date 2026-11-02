@@ -435,6 +435,7 @@ struct CleanCommand {
         let skipped: [CleanItem]
         let missingSelectors: [String]
         let spaceObservation: DiskSpaceObservation
+        var spaceShortfall: String? = nil
         let estimatedDeletedBytes: Int64
         let trashedBytes: Int64
     }
@@ -550,7 +551,7 @@ struct CleanCommand {
         let complete = !r.cancelled && skipped.isEmpty && missingSelectors.isEmpty && results.allSatisfy { $0.failed.isEmpty }
         if args.has("json") {
             write(Export.json(ExecutionReport(outcome: complete ? "succeeded" : "partial", complete: complete, scanComplete: !r.cancelled,
-                results: results, skipped: skipped, missingSelectors: missingSelectors, spaceObservation: observation,
+                results: results, skipped: skipped, missingSelectors: missingSelectors, spaceObservation: observation, spaceShortfall: observation.shortfall(expected: freed),
                 estimatedDeletedBytes: freed, trashedBytes: trashed)))
             if !complete { throw CLIError("Cleanup was partial; inspect the JSON report before another action.", exitCode: 3) }
             return
@@ -568,6 +569,7 @@ struct CleanCommand {
         }
         if results.contains(where: { $0.bytesIncomplete == true }) { summary += "; some removed sizes could not be measured completely" }
         print(observation.summary)
+        if let warning = observation.shortfall(expected: freed) { print(style.yellow(warning)) }
         print(style.bold(summary) + style.dim(" · log: \(FS.tilde(Cleaner.logURL.path))"))
         if !complete { throw CLIError("Cleanup was partial; inspect results before another action.", exitCode: 3) }
     }

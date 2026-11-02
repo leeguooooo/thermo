@@ -48,6 +48,14 @@ public struct DiskSpaceObservation: Codable, Sendable, Equatable {
         return after.measuredAt >= before.measuredAt
     }
 
+    /// Said when deleting gave back much less than the files measured: APFS clones, snapshots
+    /// or other writes kept the space. Below 1 GB ordinary disk activity would drown it out.
+    public func shortfall(expected: Int64) -> String? {
+        guard expected >= 1_000_000_000, let delta = availableChangeBytes, delta < expected / 2 else { return nil }
+        return tr("Expected about %1$@ but free space changed by %2$@; the rest may be shared with APFS clones or snapshots, or was used by other activity.",
+                  ByteFormat.string(expected), ByteFormat.string(delta))
+    }
+
     public var summary: String {
         guard let before, let after, let delta = availableChangeBytes else {
             return tr("Disk free space could not be verified")

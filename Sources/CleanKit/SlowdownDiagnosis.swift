@@ -679,6 +679,8 @@ public final class SessionActivity: @unchecked Sendable {
     nonisolated(unsafe) public static var current = SessionActivity()
     private let lock = NSLock()
     private var loaded: (at: Date, byCwd: [String: Date])?
+    /// A session file's cwd never changes, so each is opened once.
+    private var codexCwds: [String: String] = [:]
     let home: String
     public init(home: String = NSHomeDirectory()) { self.home = home }
 
@@ -697,24 +699,30 @@ public final class SessionActivity: @unchecked Sendable {
         let claude = home + "/.claude/projects"
         var claudeLatest: [String: Date] = [:]
         for dir in (try? fm.contentsOfDirectory(atPath: claude)) ?? [] {
-            for f in (try? fm.contentsOfDirectory(atPath: claude + "/" + dir)) ?? [] where f.hasSuffix(".jsonl") {
-                if let m = FS.mtime(claude + "/" + dir + "/" + f), m > (claudeLatest[dir] ?? .distantPast) { claudeLatest[dir] = m }
+            let files = (try? fm.contentsOfDirectory(at: URL(fileURLWithPath: claude + "/" + dir), includingPropertiesForKeys: [.contentModificationDateKey])) ?? []
+            for f in files where f.pathExtension == "jsonl" {
+                if let m = (try? f.resourceValues(forKeys: [.contentModificationDateKey]))?.contentModificationDate, m > (claudeLatest[dir] ?? .distantPast) { claudeLatest[dir] = m }
             }
         }
         for (dir, date) in claudeLatest { out["claude:" + dir] = date }
         // A long session keeps writing the file of the day it started, so look at every file's time, not recent folders.
         let codex = home + "/.codex/sessions"
         let since = now.addingTimeInterval(-3 * 86400)
+        var cwds: [String: String] = [:]
         let walker = fm.enumerator(at: URL(fileURLWithPath: codex), includingPropertiesForKeys: [.contentModificationDateKey], options: [.skipsHiddenFiles])
         while let url = walker?.nextObject() as? URL {
             guard url.pathExtension == "jsonl",
-                  let m = (try? url.resourceValues(forKeys: [.contentModificationDateKey]))?.contentModificationDate, m >= since,
-                  let h = try? FileHandle(forReadingFrom: url) else { continue }
+                  let m = (try? url.resourceValues(forKeys: [.contentModificationDateKey]))?.contentModificationDate, m >= since else { continue }
+            if let cwd = codexCwds[url.path] { cwds[url.path] = cwd; note(cwd, m); continue }
+            guard let h = try? FileHandle(forReadingFrom: url) else { continue }
             // session_meta can be far longer than what is read (it embeds the instructions): find "cwd" in the head.
             let head = String(decoding: h.readData(ofLength: 8192), as: UTF8.self); try? h.close()
             guard let key = head.range(of: "\"cwd\":\""), let end = head[key.upperBound...].firstIndex(of: "\"") else { continue }
-            note(String(head[key.upperBound..<end]).replacingOccurrences(of: "\\/", with: "/"), m)
+            let cwd = String(head[key.upperBound..<end]).replacingOccurrences(of: "\\/", with: "/")
+            cwds[url.path] = cwd
+            note(cwd, m)
         }
+        codexCwds = cwds
         return out
     }
 

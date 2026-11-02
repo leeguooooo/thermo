@@ -53,6 +53,9 @@ enum Projects {
 
     static let maxDepth = 6
 
+    /// Build output this big gets its private size even in a default scan.
+    static let privateSizeThreshold: Int64 = 500_000_000
+
     /// Output folders whose names projects also use for real files (some commit `dist`): skipped
     /// when git tracks them, and only ever offered for review.
     static let generic = ["dist", "build", "out", "coverage"]
@@ -75,8 +78,8 @@ enum Projects {
         ctx.signals = ProjectSignals.collect(home: ctx.home)
         if timing { FileHandle.standardError.write(Data(String(format: "projects: activity %.2fs\n", Date().timeIntervalSince(began)).utf8)) }
         let queue = OperationQueue()
-        queue.maxConcurrentOperationCount = 2
-        queue.qualityOfService = ctx.options.lowPriority ? .background : .utility
+        queue.maxConcurrentOperationCount = 4
+        queue.qualityOfService = ctx.options.lowPriority ? .background : .userInitiated
         let lock = NSLock()
         var items: [CleanItem] = []
         let cancellation = ScanCancellation.current
@@ -106,7 +109,7 @@ enum Projects {
         if ctx.options.categories.contains(.projects) {
             for root in FS.children(ctx.path("~/.cache")) where FS.isDirectory(root) {
                 let name = (root as NSString).lastPathComponent.lowercased()
-                let target = name == "target" || name.hasSuffix("-target") || name.hasSuffix("_target")
+                let target = name == "target" || name.hasPrefix("target-") || name.hasSuffix("-target") || name.hasSuffix("_target")
                 if target, FS.exists(root + "/.rustc_info.json") || FS.isDirectory(root + "/debug") || FS.isDirectory(root + "/release") {
                     enqueue(.artifact(project: (root as NSString).deletingLastPathComponent, kind: "Rust cache", name: (root as NSString).lastPathComponent,
                                       activity: FS.mtime(root), source: nil))
@@ -177,8 +180,21 @@ enum Projects {
         switch c {
         case let .artifact(dir, kind, a, activity, source, evident):
             let p = dir + "/" + a
-            let s = ctx.options.exactSizes ? FS.size(p) : FS.discoverySize(p)
+            // `build`/`bin`/`obj` are only build output when they are not tracked source folders.
+            guard protectedArtifacts(dir, [a]).isEmpty else { return nil }
+            var s = ctx.options.exactSizes ? FS.size(p) : FS.discoverySize(p)
             guard s.bytes > 1_000_000 else { return nil }
+            // Cloned targets look huge to `du` and free little, and the big ones are what people
+            // pick by size. Worth a second walk only for those.
+            var exact = ctx.options.exactSizes
+            if !exact, s.allocated >= privateSizeThreshold {
+                let precise = FS.size(p)
+                if !precise.incomplete {
+                    s = precise; exact = true
+                    // A full clone owns nothing yet stays removable; zero bytes would hide the item.
+                    s.bytes = max(s.bytes, 4096)
+                }
+            }
             let evidence = evident ? BuildCacheEvidence.capture(p) : nil
             let stale = activity.map { $0 < ctx.staleBefore } ?? true
             var note = activity.map { d in
@@ -203,7 +219,11 @@ enum Projects {
                 bytes: s.bytes, files: s.files, lastUsed: activity, paths: [p], note: note, blocked: blocked, group: dir)
             item.regenerable = evidence != nil || !generic.contains(a)
             item.buildCacheEvidence = evidence.map { [p: $0] }
-            item.estimatedSize = !ctx.options.exactSizes; item.sizeIncomplete = s.incomplete
+            item.estimatedSize = !exact; item.sizeIncomplete = s.incomplete
+            if exact, s.allocated - s.bytes >= s.allocated / 10 {
+                item.allocatedBytes = s.allocated
+                item.note = [item.note, tr("%1$@ on disk, shared with clones or snapshots; removing it frees about the size shown, more only if every copy goes", ByteFormat.string(s.allocated))].compactMap { $0 }.joined(separator: tr("; "))
+            }
             return item
         case let .worktree(wt, repo):
             return worktreeItem(wt, repo: repo, repoName: (repo as NSString).lastPathComponent, ctx: ctx)
@@ -221,6 +241,15 @@ enum Projects {
         guard let entries = FS.entries(dir) else { return }
         let names = entries.map(\.name)
         let set = Set(names)
+        // Any name: CARGO_TARGET_DIR gives `target-foo`, which declares itself the same way. Read
+        // from this listing; a stat per subfolder is what a throttled scan cannot afford.
+        if depth > 0, set.contains("CACHEDIR.TAG"), ctx.options.categories.contains(.projects), isEvidentCache(dir) {
+            let parent = (dir as NSString).deletingLastPathComponent, name = (dir as NSString).lastPathComponent
+            let candidate = Candidate.artifact(project: parent, kind: "Build cache", name: name, activity: FS.mtime(dir), source: nil, evident: true)
+            out.append(candidate)
+            onCandidate?(candidate)
+            return
+        }
         var claimed = Set<String>()
 
         let matches = ctx.options.categories.contains(.projects) ? kinds.filter { k in
@@ -253,8 +282,9 @@ enum Projects {
             var source: String?
             if let use = ctx.signals.lastUse(of: dir), use.date > (activity ?? .distantPast) { activity = use.date; source = use.source }
             if let git = ProjectSignals.gitActivity(dir), git > (activity ?? .distantPast) { activity = git; source = "git" }
-            let protected = protectedArtifacts(dir, Array(existingArtifacts) + evident)
-            for a in evident where !protected.contains(a) {
+            // Git is asked per candidate on the measuring queue: one process per project here
+            // spent most of a scan waiting, with every later project behind it.
+            for a in evident {
                 // The folder it sits in is settled either way: never offered whole as well.
                 claimed.insert(String(a.split(separator: "/").first ?? Substring(a)))
                 let candidate = Candidate.artifact(project: dir, kind: "Build cache", name: a, activity: activity, source: source, evident: true)
@@ -265,8 +295,6 @@ enum Projects {
                 for a in k.artifacts where existingArtifacts.contains(a) && !claimed.contains(a) {
                     let p = dir + "/" + a
                     guard FS.isDirectory(p) else { continue }
-                    // `build`/`bin`/`obj` are only build output when they are not tracked source folders.
-                    if protected.contains(a) { continue }
                     claimed.insert(a)
                     let candidate = Candidate.artifact(project: dir, kind: k.name, name: a, activity: activity, source: source)
                     out.append(candidate)

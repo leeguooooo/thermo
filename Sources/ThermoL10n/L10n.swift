@@ -31,6 +31,8 @@ public enum L10n {
 
     private static let lock = NSLock()
     private static var _override: Language?
+    /// `system` copies the environment and reads the locale; `tr` runs for every visible string.
+    private static var _system: Language?
 
     /// Set by the app from its Settings, or by the CLI from THERMO_LANG; nil follows the system.
     public static var override: Language? {
@@ -38,7 +40,15 @@ public enum L10n {
         set { lock.lock(); _override = newValue; lock.unlock() }
     }
 
-    public static var current: Language { override ?? system }
+    public static var current: Language {
+        lock.lock()
+        if let language = _override ?? _system { lock.unlock(); return language }
+        lock.unlock()
+        let found = system
+        lock.lock(); defer { lock.unlock() }
+        _system = found
+        return _override ?? found
+    }
 
     public static var system: Language {
         if let env = ProcessInfo.processInfo.environment["THERMO_LANG"], let l = parse(env) { return l }
@@ -59,6 +69,7 @@ public enum L10n {
     /// Applies the app's stored preference ("system" or a language code).
     public static func apply(preference: String?) {
         override = preference.flatMap { $0 == "system" ? nil : Language(rawValue: $0) }
+        lock.lock(); _system = nil; lock.unlock()
     }
 }
 
