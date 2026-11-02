@@ -149,6 +149,9 @@ enum Projects {
             return (own, regenerated)
         }
         func emit(_ path: String, _ size: TreeSize) {
+            // Hidden folders in home (~/.codex, ~/.claude, ~/.wx-rs) are tools' own state, not
+            // projects: deleting one breaks the tool. Their build output is still listed.
+            if path.hasPrefix(ctx.home + "/.") { return }
             let running = ctx.agentDirs.contains { $0 == path || $0.hasPrefix(path + "/") }
             var item = CleanItem(id: "project/large/" + id(path, ctx: ctx), category: .projects,
                                  title: tr("Large folder") + " · \((path as NSString).lastPathComponent)", detail: FS.tilde(path, home: ctx.home),

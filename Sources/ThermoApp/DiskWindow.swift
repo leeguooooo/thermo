@@ -453,7 +453,7 @@ struct DiskCategoryPage: View {
 
     /// Ticks every item of `rows` that can be cleaned, or clears them all when they already are.
     func selectAll(_ rows: [CleanItem], title: String? = nil) -> some View {
-        let pickable = rows.filter(\.cleanable)
+        let pickable = rows.filter(\.bulkSelectable)
         return SelectAllButton(title: title, available: pickable.count,
                                selected: pickable.filter { model.selected.contains($0.id) }.count,
                                selectAll: {

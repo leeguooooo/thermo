@@ -132,6 +132,10 @@ public struct CleanItem: Codable, Identifiable, Sendable, Equatable {
 
     public var cleanable: Bool { blocked == nil && bytes > 0 && (!paths.isEmpty || !(commands ?? []).isEmpty) }
 
+    /// A large folder is not build output: only Thermo's size says it might go, so it is ticked
+    /// one at a time and never by a select-all.
+    public var bulkSelectable: Bool { cleanable && !id.hasPrefix("project/large/") }
+
     /// The item narrowed to some of its parts (all of them when `keep` covers every part).
     public func only(_ keep: Set<String>) -> CleanItem {
         guard let parts else { return self }

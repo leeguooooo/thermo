@@ -21,6 +21,21 @@ final class LargeFolderTests: XCTestCase {
         XCTAssertEqual(found.map { ($0.paths[0] as NSString).lastPathComponent }, ["snapshot"])
         XCTAssertEqual(found.first?.safety, .review)
         XCTAssertFalse(found.first?.automaticallySelected ?? true)
+        XCTAssertFalse(found.first?.bulkSelectable ?? true)
+    }
+
+    func testHiddenToolFoldersInHomeAreNeverOfferedAsLargeFolders() throws {
+        let root = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString).path
+        defer { try? FileManager.default.removeItem(atPath: root) }
+        for path in [".codex/artifacts/a.bin", ".codex/artifacts/b.bin", ".claude/projects/a.bin", ".claude/projects/b.bin"] {
+            let full = root + "/" + path
+            try FileManager.default.createDirectory(atPath: (full as NSString).deletingLastPathComponent, withIntermediateDirectories: true)
+            try Data(count: 2_000_000).write(to: URL(fileURLWithPath: full))
+        }
+        var options = ScanOptions(); options.home = root
+        let ctx = ScanContext(options: options, now: Date(), processes: ProcessTable.current(.init(cpu: false)), agentDirs: [],
+                              liveClaudeSessions: [], liveClaudeStarts: [])
+        XCTAssertEqual(Projects.largeFolders(roots: [root + "/.codex", root + "/.claude"], ctx: ctx, threshold: 3_000_000), [])
     }
 
     func testCustomCargoTargetDeclaresItselfByCacheTag() throws {
