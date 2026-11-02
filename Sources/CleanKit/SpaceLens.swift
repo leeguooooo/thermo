@@ -50,9 +50,12 @@ public struct SpaceTree: Codable, Sendable {
 
     public func folder(_ path: String) -> SpaceFolder? { folders[path] }
 
+    /// `path` is the root or inside it (every absolute path when the root is the whole disk).
+    public func covers(_ path: String) -> Bool { path == root || path.hasPrefix(root == "/" ? "/" : root + "/") }
+
     /// The folders from the root down to `path`, for the path bar.
     public func trail(to path: String) -> [SpaceEntry] {
-        guard path == root || path.hasPrefix(root + "/") else { return [] }
+        guard covers(path) else { return [] }
         var out: [SpaceEntry] = []
         var p = path
         while true {
@@ -68,7 +71,7 @@ public struct SpaceTree: Codable, Sendable {
     public func removing(_ paths: Set<String>) -> SpaceTree {
         var t = self
         var selected: [String] = []
-        for path in paths.sorted() where path == root || path.hasPrefix(root + "/") {
+        for path in paths.sorted() where covers(path) {
             if !selected.contains(where: { path.hasPrefix($0 + "/") }) { selected.append(path) }
         }
         var uncertain = Set<String>()
@@ -157,13 +160,56 @@ public enum SpaceLens {
             return SpaceTree(root: rootPath, scanned: started, folders: [:], large: [], unreadable: [rootPath],
                              complete: false, duration: 0, language: L10n.current.rawValue, sizeVersion: 1, cancelled: cancellation.isCancelled)
         }
-        let walker = Walker(root: rootPath, device: st.st_dev, cancellation: cancellation, progress: progress)
+        var devices: Set<dev_t> = [st.st_dev]
+        var skip: Set<String> = []
+        if rootPath == "/" {
+            // The sealed system volume reaches the Data volume through firmlinks (/Users, /Applications,
+            // /Library, /private …). Its other mount points would count volumes twice or not be this disk.
+            var data = stat()
+            if lstat(NSHomeDirectory(), &data) == 0 { devices.insert(data.st_dev) }
+            skip = ["/System/Volumes", "/Volumes", "/dev", "/net", "/home", "/cores"]
+        }
+        let walker = Walker(root: rootPath, devices: devices, skip: skip, cancellation: cancellation, progress: progress)
         walker.run()
+        if rootPath == "/", !cancellation.isCancelled { addUnwalkedSpace(to: walker) }
         return SpaceTree(root: rootPath, scanned: started, folders: walker.folders,
                          large: walker.large.sorted { $0.bytes > $1.bytes }, unreadable: Set(walker.unreadable).sorted(),
                          complete: !cancellation.isCancelled && walker.folders[rootPath]?.entry.effectiveSizeState == .complete,
                          duration: Date().timeIntervalSince(started), language: L10n.current.rawValue,
                          sizeVersion: 1, cancelled: cancellation.isCancelled)
+    }
+
+    /// Rows in a whole-disk tree that are not folders: other volumes in the container and what
+    /// could not be read. Their paths start with this and nothing can be done to them here.
+    public static let virtualPrefix = "/.thermo-space/"
+    public static func isVirtual(_ path: String) -> Bool { path.hasPrefix(virtualPrefix) }
+
+    /// A whole-disk walk sees the system and Data volumes. Swap, boot, recovery and simulator
+    /// volumes share the same free space, and root-only folders cannot be listed: both become
+    /// rows of "/", so the top level adds up to what the disk uses.
+    static func addUnwalkedSpace(to walker: Walker) {
+        guard var top = walker.folders["/"] else { return }
+        var rows: [SpaceEntry] = []
+        for v in SpaceOverview.containerVolumes(home: NSHomeDirectory()) ?? [] where v.bytes >= floor && !v.roles.contains("System") {
+            let kind = v.roles.contains("VM") ? tr("Swap (memory moved to disk)") : v.roles.contains("Preboot") ? tr("Boot files")
+                : v.roles.contains("Recovery") ? tr("Recovery system") : v.name
+            rows.append(SpaceEntry(path: virtualPrefix + "volume/" + v.device, name: kind, isDir: false, bytes: v.bytes, files: 0, sizeState: .complete))
+        }
+        var fs = statfs()
+        if statfs(NSHomeDirectory(), &fs) == 0 {
+            let used = Int64(fs.f_blocks - fs.f_bfree) * Int64(fs.f_bsize)
+            let counted = top.entry.bytes + rows.reduce(0) { $0 + $1.bytes }
+            // statfs on the Data volume reports the whole container's use.
+            if used - counted >= floor {
+                rows.append(SpaceEntry(path: virtualPrefix + "unreadable", name: tr("Could not be read (system-protected folders, APFS metadata)"),
+                                       isDir: false, bytes: used - counted, files: 0, sizeState: .complete))
+                // Every byte the disk uses now has a row, so the total is no longer a lower bound.
+                top.entry.sizeState = .complete
+            }
+        }
+        top.children = (top.children + rows).sorted { $0.bytes > $1.bytes }
+        top.entry.bytes += rows.reduce(0) { $0 + $1.bytes }
+        walker.folders["/"] = top
     }
 
     /// A fixed pool of threads takes folders off shared stacks, at every depth. Listing a folder is
@@ -191,7 +237,10 @@ public enum SpaceLens {
         }
 
         let root: String
-        let device: dev_t
+        /// Volumes to stay on: the scanned folder's, plus the Data volume for a whole-disk walk.
+        let devices: Set<dev_t>
+        /// Folders never entered: on a whole-disk walk, mount points that would count a volume twice.
+        let skip: Set<String>
         let cancellation: ScanCancellation
         let progress: ((Progress) -> Void)?
         let lock = NSLock()
@@ -209,8 +258,8 @@ public enum SpaceLens {
         var lastReport = Date.distantPast
         static let threads = 16
 
-        init(root: String, device: dev_t, cancellation: ScanCancellation, progress: ((Progress) -> Void)?) {
-            self.root = root; self.device = device; self.cancellation = cancellation; self.progress = progress
+        init(root: String, devices: Set<dev_t>, skip: Set<String> = [], cancellation: ScanCancellation, progress: ((Progress) -> Void)?) {
+            self.root = root; self.devices = devices; self.skip = skip; self.cancellation = cancellation; self.progress = progress
         }
 
         func run() {
@@ -259,12 +308,13 @@ public enum SpaceLens {
 
         private func list(_ node: Node) {
             let dir = node.path
+            let base = dir == "/" ? "" : dir
             var subdirs: [String] = []
             var fileEntries: [BulkWalk.Entry] = []
             var failures: [String] = []
             let listed = BulkWalk.entries(of: dir, cancellation: cancellation) { e in
-                if e.error != 0 { failures.append(dir + "/" + e.name); return }
-                if e.isDir { subdirs.append(dir + "/" + e.name) } else { fileEntries.append(e) }
+                if e.error != 0 { failures.append(base + "/" + e.name); return }
+                if e.isDir { subdirs.append(base + "/" + e.name) } else { fileEntries.append(e) }
             }
             node.listed = true
             node.ok = listed && failures.isEmpty && !cancellation.isCancelled
@@ -272,7 +322,7 @@ public enum SpaceLens {
             var own: Int64 = 0
             for e in fileEntries {
                 if cancellation.isCancelled { node.ok = false; break }
-                let path = dir + "/" + e.name
+                let path = base + "/" + e.name
                 var size: Int64
                 if e.links > 1 {
                     lock.lock(); let first = linksSeen.insert(e.fileID).inserted; lock.unlock()
@@ -297,9 +347,10 @@ public enum SpaceLens {
             node.total = own
             // Stay on this volume: mounted images and network shares are not this disk's space.
             let local = subdirs.filter { path in
+                guard !skip.contains(path) else { return false }
                 var st = stat()
                 guard lstat(path, &st) == 0 else { failures.append(path); node.ok = false; return false }
-                return st.st_dev == device
+                return devices.contains(st.st_dev)
             }
 
             lock.lock()

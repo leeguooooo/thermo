@@ -25,7 +25,10 @@ struct ManualRemovalReview: Identifiable, Sendable {
 final class SpaceLensModel: ObservableObject {
     static let shared = SpaceLensModel()
 
+    /// Where measuring starts: the whole disk, so the folders add up to what the disk uses.
     let root: String
+    /// Whose files may be moved to the Trash; never the scan root, which can be "/".
+    let home: String
     @Published private(set) var tree: SpaceTree?
     @Published var path: String
     @Published private(set) var scanning = false
@@ -64,7 +67,7 @@ final class SpaceLensModel: ObservableObject {
     private var selectionRequirements: [String: [String: String]] = [:]
     private let remove: @Sendable ([String], [String: Int64], String, Set<String>, [String: String], [String: String]) -> CleanResult
 
-    init(root: String = NSHomeDirectory(), cache: URL = SpaceLens.cacheURL,
+    init(root: String = "/", home: String? = nil, cache: URL = SpaceLens.cacheURL,
          measure: @escaping @Sendable (String, ScanCancellation, ((SpaceLens.Progress) -> Void)?) -> SpaceTree = { SpaceLens.scan($0, cancellation: $1, progress: $2) },
          remove: @escaping @Sendable ([String], [String: Int64], String, Set<String>, [String: String], [String: String]) -> CleanResult = {
              ManualRemoval.trash($0, sizes: $1, home: $2, incompletePaths: $3, reviewIdentities: $4, requiredIdentities: $5)
@@ -72,7 +75,7 @@ final class SpaceLensModel: ObservableObject {
              Duplicates.scan(in: $0, cancellation: $1, progress: $2)
          }, readLastOpened: @escaping @Sendable (String) -> Date? = { SpaceLens.lastOpened($0) }) {
         self.readLastOpened = readLastOpened
-        self.root = root
+        self.root = root; self.home = home ?? (root == "/" ? NSHomeDirectory() : root)
         self.cache = cache; self.measure = measure; self.remove = remove
         self.searchDuplicates = searchDuplicates
         path = root
@@ -149,7 +152,7 @@ final class SpaceLensModel: ObservableObject {
     }
 
     func invalidateAfterRestore(_ paths: [String]) {
-        guard paths.contains(where: { $0 == root || $0.hasPrefix(root + "/") }) else { return }
+        guard paths.contains(where: { $0 == root || $0.hasPrefix(root == "/" ? "/" : root + "/") }) else { return }
         scanGeneration = UUID(); needsRestoreRefresh = true; pendingRestoreRefresh = false
         cancellation?.cancel(); progress = nil
         if scanning { stopping = true }
@@ -162,7 +165,10 @@ final class SpaceLensModel: ObservableObject {
 
     func open(_ path: String) { if tree?.folder(path) != nil { self.path = path } }
 
-    func refusal(_ path: String) -> String? { ManualRemoval.refusal(path, home: root) }
+    func refusal(_ path: String) -> String? {
+        if SpaceLens.isVirtual(path) { return tr("Not a folder: this space is a separate volume or could not be read") }
+        return ManualRemoval.refusal(path, home: home)
+    }
 
     func toggle(_ path: String, bytes: Int64) {
         guard !working else { return }
@@ -207,12 +213,12 @@ final class SpaceLensModel: ObservableObject {
             outcomeIsWarning = true; outcome = tr("Selection changed after review; review the items again."); return
         }
         let picked = frozen.selection, measured = frozen.measured, incomplete = frozen.incomplete
-        let identities = frozen.identities, required = frozen.required, remove = self.remove, root = root
+        let identities = frozen.identities, required = frozen.required, remove = self.remove, home = home
         stopDuplicates()
         working = true; exitRequested = false
         let lease = AppExitGuard.beginManualRemoval { self.exitRequested = true }
         Task.detached(priority: .userInitiated) {
-            let result = remove(picked.keys.sorted(), measured, root, incomplete, identities, required)
+            let result = remove(picked.keys.sorted(), measured, home, incomplete, identities, required)
             await MainActor.run { self.afterTrash(result); AppExitGuard.endManualRemoval(lease) }
         }
     }
@@ -304,7 +310,7 @@ final class SpaceLensModel: ObservableObject {
         findingDuplicates = true
         stoppingDuplicates = false
         duplicateProgress = nil
-        let roots = Duplicates.defaultRoots(home: root)
+        let roots = Duplicates.defaultRoots(home: home)
         let search = searchDuplicates
         Task.detached(priority: .userInitiated) {
             let report = search(roots, token) { p in
@@ -491,11 +497,12 @@ struct SpacePage: View {
     var subtitle: String {
         if model.stopping { return tr("Stopping…") }
         if model.scanning {
-            guard let p = model.progress else { return tr("Measuring your home folder…") }
+            guard let p = model.progress else { return model.root == "/" ? tr("Measuring the whole disk…") : tr("Measuring your home folder…") }
             return tr("Measuring… %1$@ files, %2$@", String(p.files), ByteFormat.string(p.bytes))
         }
         guard let t = model.tree, let top = t.folder(t.root) else { return tr("Size unavailable") }
-        return tr("Home folder %1$@ · measured %2$@", top.entry.sizeText, AgeFormat.string(t.scanned))
+        return t.root == "/" ? tr("Whole disk %1$@ · measured %2$@", top.entry.sizeText, AgeFormat.string(t.scanned))
+            : tr("Home folder %1$@ · measured %2$@", top.entry.sizeText, AgeFormat.string(t.scanned))
     }
 
     var footer: some View {
@@ -574,6 +581,9 @@ struct SpacePage: View {
         }
     }
 
+    /// The startup disk's name, as Finder shows it.
+    static let diskName = (try? URL(fileURLWithPath: "/").resourceValues(forKeys: [.volumeLocalizedNameKey]).volumeLocalizedName) ?? "Macintosh HD"
+
     func pathBar(_ t: SpaceTree) -> some View {
         ScrollView(.horizontal, showsIndicators: false) {
             HStack(spacing: Theme.Space.xs) {
@@ -587,13 +597,17 @@ struct SpacePage: View {
                 ForEach(Array(trail.enumerated()), id: \.element.path) { i, e in
                     if i > 0 { Image(systemName: "chevron.right").font(.system(size: 9)).foregroundStyle(Theme.textTertiary) }
                     Button { model.open(e.path) } label: {
-                        Text(i == 0 ? "~" : e.name).font(i == trail.count - 1 ? Theme.sectionTitle : Theme.secondary)
+                        Text(i == 0 ? (t.root == "/" ? Self.diskName : "~") : (e.path == model.home ? "~" : e.name)).font(i == trail.count - 1 ? Theme.sectionTitle : Theme.secondary)
                             .foregroundStyle(i == trail.count - 1 ? Theme.textPrimary : Theme.textSecondary).lineLimit(1)
                     }
                     .buttonStyle(.plain)
                 }
                 Text(model.folder?.entry.sizeText ?? tr("Size unavailable")).font(Theme.caption.monospacedDigit()).foregroundStyle(Theme.textTertiary)
                     .padding(.leading, 6).contentTransition(.numericText())
+                if t.root == "/", model.path != model.home, !model.path.hasPrefix(model.home + "/"), t.folder(model.home) != nil {
+                    Button { model.open(model.home) } label: { Label(tr("Home folder"), systemImage: "house") }
+                        .buttonStyle(PillButtonStyle()).controlSize(.small).padding(.leading, Theme.Space.s)
+                }
             }
         }
     }
