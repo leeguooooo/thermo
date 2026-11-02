@@ -172,7 +172,7 @@ struct DiskOverviewView: View {
     @ObservedObject var model = SpaceOverviewModel.shared
     var openCleanup: (CleanCategory?) -> Void = { _ in }
     var cleanupDisabled = false
-    @State private var open: Set<String> = []
+    @State private var detail: SpaceOverview.Entry?
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
@@ -211,8 +211,9 @@ struct DiskOverviewView: View {
                         SkeletonList(rows: 6)
                     }
                 } else {
+                    let groups = SpaceStyle.split(model.entries)
                     VStack(alignment: .leading, spacing: Theme.Space.s) {
-                        SectionHeader(title: tr("Where your disk space is")) {
+                        SectionHeader(title: tr("Your data")) {
                             if model.measuring, model.overview != nil {
                                 InfoButton(text: tr("Categories update as folders finish; unfinished totals are lower bounds."))
                             }
@@ -221,9 +222,20 @@ struct DiskOverviewView: View {
                             }
                         }
                         InspectorPanel {
-                            ForEach(Array(model.entries.enumerated()), id: \.element.id) { i, e in
-                                if i > 0 { InspectorDivider(inset: Theme.Space.m + 2) }
+                            ForEach(Array(groups.yours.enumerated()), id: \.element.id) { i, e in
+                                if i > 0 { InspectorDivider(inset: 54) }
                                 row(e)
+                            }
+                        }
+                    }
+                    if !groups.system.isEmpty {
+                        VStack(alignment: .leading, spacing: Theme.Space.s) {
+                            SectionHeader(title: tr("Managed by macOS"))
+                            InspectorPanel {
+                                ForEach(Array(groups.system.enumerated()), id: \.element.id) { i, e in
+                                    if i > 0 { InspectorDivider(inset: 54) }
+                                    row(e)
+                                }
                             }
                         }
                     }
@@ -235,6 +247,10 @@ struct DiskOverviewView: View {
         }
         .onAppear { model.measureIfStale() }
         .onDisappear { model.stop() }
+        .sheet(item: $detail) { e in
+            SpaceDetailSheet(entry: e, route: Self.cleanupRoute(for: e.id), cleanupDisabled: cleanupDisabled,
+                             openCleanup: openCleanup) { detail = nil }
+        }
     }
 
     var header: some View {
@@ -256,48 +272,53 @@ struct DiskOverviewView: View {
         return tr("measured %1$@", at.formatted(date: .abbreviated, time: .shortened))
     }
 
-    /// The page's hero: how full the disk is, as one figure and one bar.
+    /// The page's hero: how full the disk is, and what fills it, as one figure and one bar.
     func capacityBar(capacity: Int64, free: Int64, purgeable: Int64 = 0) -> some View {
         let usedBytes = max(0, capacity - free)
         let used = capacity > 0 ? min(1, max(0, Double(usedBytes) / Double(capacity))) : 0
-        let fill = used > 0.95 ? Theme.danger : used > 0.85 ? Theme.caution : Theme.accent
+        let tone = used > 0.95 ? Theme.danger : used > 0.85 ? Theme.caution : Theme.textSecondary
+        // Before any place is measured the bar still shows how full the disk is.
+        let measured = SpaceStyle.segments(model.entries, used: usedBytes)
+        let segments = measured.isEmpty && usedBytes > 0 ? [SpaceStyle.Segment(id: "used", title: tr("Used"), color: tone, bytes: usedBytes)] : measured
         return VStack(alignment: .leading, spacing: Theme.Space.m) {
             HStack(alignment: .firstTextBaseline, spacing: Theme.Space.s) {
                 Text(ByteFormat.string(free)).font(Theme.figure(.hero)).foregroundStyle(Theme.textPrimary)
                     .contentTransition(.numericText())
                 Text(tr("free")).font(Theme.body).foregroundStyle(Theme.textSecondary)
                 Spacer()
-                Text(String(format: "%.0f%%", used * 100)).font(Theme.figure(.large)).foregroundStyle(fill)
+                Text(tr("%1$@ of %2$@ used", ByteFormat.string(usedBytes), ByteFormat.string(capacity)))
+                    .font(Theme.secondary.monospacedDigit()).foregroundStyle(tone)
             }
             GeometryReader { g in
-                ZStack(alignment: .leading) {
-                    RoundedRectangle(cornerRadius: 3, style: .continuous).fill(Color.white.opacity(0.07))
-                    RoundedRectangle(cornerRadius: 3, style: .continuous).fill(fill)
-                        .frame(width: g.size.width * CGFloat(used))
-                        .animation(Theme.gentle.unlessReduced(reduceMotion), value: used)
+                HStack(spacing: 1.5) {
+                    ForEach(segments) { seg in
+                        Rectangle().fill(seg.color)
+                            .frame(width: max(2, (g.size.width - CGFloat(segments.count) * 1.5) * CGFloat(Double(seg.bytes) / Double(max(1, capacity)))))
+                            .help(seg.title + " · " + ByteFormat.string(seg.bytes))
+                    }
+                    Spacer(minLength: 0)
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .background(Color.white.opacity(0.07))
+                .clipShape(RoundedRectangle(cornerRadius: 5, style: .continuous))
+                .animation(Theme.gentle.unlessReduced(reduceMotion), value: segments.map(\.bytes))
+            }
+            .frame(height: 22)
+            // The legend names what the colours are, like the bar in System Settings.
+            FlowLayout(spacing: Theme.Space.m) {
+                ForEach(segments) { seg in
+                    HStack(spacing: 5) {
+                        Circle().fill(seg.color).frame(width: 8, height: 8)
+                        Text(seg.title).font(Theme.caption).foregroundStyle(Theme.textSecondary)
+                    }
                 }
             }
-            .frame(height: 8)
-            Text(tr("%1$@ used of %2$@ · %3$@ free", ByteFormat.string(usedBytes), ByteFormat.string(capacity), ByteFormat.string(free))
-                 + (purgeable > 1_000_000_000 ? " · " + tr("%1$@ more can be freed by macOS on demand", ByteFormat.string(purgeable)) : ""))
-                .font(Theme.caption.monospacedDigit()).foregroundStyle(Theme.textTertiary)
+            if purgeable > 1_000_000_000 {
+                Text(tr("%1$@ more can be freed by macOS on demand", ByteFormat.string(purgeable)))
+                    .font(Theme.caption.monospacedDigit()).foregroundStyle(Theme.textTertiary)
+            }
         }
         .padding(Theme.Space.l + 2).glass()
-    }
-
-    func entryHeader(_ entry: SpaceOverview.Entry, expanded: Bool) -> some View {
-        HStack(spacing: Theme.Space.s) {
-            if entry.children.isEmpty {
-                Circle().fill(Theme.textTertiary).frame(width: 5, height: 5).frame(width: 22)
-            } else {
-                DisclosureChevron(expanded: expanded)
-            }
-            Text(entry.title).font(Theme.rowTitle).foregroundStyle(Theme.textPrimary)
-            Spacer()
-            Text(entry.sizeText).font(Theme.figure(.row)).foregroundStyle(entry.effectiveSizeState == .complete ? Theme.textPrimary : Theme.caution)
-                .contentTransition(.numericText())
-        }
-        .contentShape(Rectangle())
     }
 
     /// A command reads as one (monospaced, selectable so it can be copied); a sentence as text.
@@ -323,59 +344,203 @@ struct DiskOverviewView: View {
     }
 
     func row(_ e: SpaceOverview.Entry) -> some View {
-        let total = max(1, model.diskSpace.map { $0.capacityBytes - $0.availableBytes } ?? model.overview?.used ?? model.entries.reduce(0) { $0 + $1.bytes })
-        let expanded = open.contains(e.id)
-        return VStack(alignment: .leading, spacing: Theme.Space.s - 2) {
-            if e.children.isEmpty {
-                entryHeader(e, expanded: expanded)
-            } else {
-                Button {
-                    withAnimation(Theme.standard.unlessReduced(reduceMotion)) { if expanded { open.remove(e.id) } else { open.insert(e.id) } }
-                } label: { entryHeader(e, expanded: expanded) }
-                .buttonStyle(.plain)
-                .accessibilityLabel(tr("Details for %1$@", e.title))
-                .accessibilityValue(expanded ? tr("Expanded") : tr("Collapsed"))
-            }
-            GeometryReader { g in
-                ZStack(alignment: .leading) {
-                    Capsule().fill(Color.white.opacity(0.06))
-                    Capsule().fill(Theme.accent.opacity(0.75))
-                        .frame(width: min(g.size.width, max(2, g.size.width * CGFloat(e.bytes) / CGFloat(total))))
+        let style = SpaceStyle.of(e.id)
+        return Button { detail = e } label: {
+            HStack(spacing: Theme.Space.m) {
+                SpaceTile(style: style)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(style.title ?? e.title).font(Theme.rowTitle).foregroundStyle(Theme.textPrimary).lineLimit(1)
+                    if Self.cleanupRoute(for: e.id) != nil {
+                        Text(tr("Can be cleaned")).font(Theme.caption).foregroundStyle(Theme.accent)
+                    } else if e.complete == false, let measured = e.measuredLocations, let total = e.totalLocations {
+                        Text(tr("%1$@ of %2$@ locations measured", String(measured), String(total))).font(Theme.caption).foregroundStyle(Theme.caution)
+                    }
                 }
+                Spacer(minLength: Theme.Space.s)
+                Text(e.sizeText).font(Theme.figure(.row, weight: .medium))
+                    .foregroundStyle(e.effectiveSizeState == .complete ? Theme.textSecondary : Theme.caution)
+                    .contentTransition(.numericText())
+                Image(systemName: "info.circle").font(.system(size: 15)).foregroundStyle(Theme.textTertiary)
             }
-            .frame(height: 4).padding(.leading, 30)
-            if e.complete == false, let measured = e.measuredLocations, let total = e.totalLocations {
-                Text(tr("%1$@ of %2$@ locations measured", String(measured), String(total)))
-                    .font(Theme.caption).foregroundStyle(Theme.caution).padding(.leading, 30)
+            .padding(.horizontal, Theme.Space.m + 2).padding(.vertical, Theme.Space.s + 1)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .hoverHighlight()
+        .accessibilityLabel(tr("Details for %1$@", style.title ?? e.title))
+        .accessibilityValue(e.sizeText)
+    }
+}
+
+/// One place's story: what it is, what to do about it, and its biggest folders.
+struct SpaceDetailSheet: View {
+    let entry: SpaceOverview.Entry
+    var route: (label: String, category: CleanCategory?)?
+    var cleanupDisabled = false
+    var openCleanup: (CleanCategory?) -> Void = { _ in }
+    let close: () -> Void
+
+    var body: some View {
+        let style = SpaceStyle.of(entry.id)
+        VStack(alignment: .leading, spacing: Theme.Space.l) {
+            HStack(spacing: Theme.Space.m) {
+                SpaceTile(style: style, size: 40)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(style.title ?? entry.title).font(Theme.heading).foregroundStyle(Theme.textPrimary)
+                    if style.title != nil { Text(entry.title).font(Theme.caption).foregroundStyle(Theme.textTertiary).lineLimit(1) }
+                }
+                Spacer()
+                Text(entry.sizeText).font(Theme.figure(.metric)).foregroundStyle(entry.effectiveSizeState == .complete ? Theme.textPrimary : Theme.caution)
             }
-            if let n = e.note { Text(n).font(Theme.caption).foregroundStyle(Theme.textTertiary).padding(.leading, 30) }
-            if let a = e.action { actionLine(a).padding(.leading, 30) }
-            if let route = Self.cleanupRoute(for: e.id) {
-                Button(route.label) { openCleanup(route.category) }
-                    .buttonStyle(PillButtonStyle()).controlSize(.small).disabled(cleanupDisabled).padding(.leading, 30).padding(.top, 2)
+            if let note = entry.note {
+                Text(note).font(Theme.body).foregroundStyle(Theme.textSecondary).fixedSize(horizontal: false, vertical: true)
             }
-            if expanded {
-                VStack(alignment: .leading, spacing: Theme.Space.xs) {
-                    ForEach(e.children) { c in
-                        HStack(spacing: Theme.Space.s) {
-                            Text(c.title).font(Theme.mono).foregroundStyle(Theme.textSecondary).lineLimit(1).truncationMode(.middle)
+            if route != nil || entry.action != nil {
+                VStack(alignment: .leading, spacing: Theme.Space.s) {
+                    Text(tr("What you can do")).font(Theme.sectionTitle).foregroundStyle(Theme.textSecondary)
+                    if let a = entry.action {
+                        let command = a.hasPrefix("xcrun ") || a.hasPrefix("brew ") || a.hasPrefix("thermo ")
+                        HStack {
+                            Text(a).font(command ? Theme.mono : Theme.secondary).foregroundStyle(Theme.textPrimary).textSelection(.enabled)
                             Spacer()
-                            if let a = c.action { actionLine(a) }
-                            Text(c.sizeText).font(Theme.secondary.monospacedDigit()).foregroundStyle(Theme.textSecondary)
-                            if let p = c.path {
-                                Button { NSWorkspace.shared.activateFileViewerSelecting([URL(fileURLWithPath: p)]) } label: {
-                                    Image(systemName: "magnifyingglass")
-                                }
-                                .buttonStyle(.borderless).foregroundStyle(Theme.textTertiary).help(tr("Reveal in Finder"))
+                            if command {
+                                Button { NSPasteboard.general.clearContents(); NSPasteboard.general.setString(a, forType: .string) } label: {
+                                    Image(systemName: "doc.on.doc")
+                                }.buttonStyle(.borderless).help(tr("Copy"))
                             }
                         }
                     }
+                    if let route {
+                        Button(route.label) { close(); openCleanup(route.category) }
+                            .buttonStyle(PillButtonStyle(prominent: true)).disabled(cleanupDisabled)
+                    }
                 }
-                .padding(.leading, 30).padding(.top, Theme.Space.xs)
-                .transition(.opacity.combined(with: .move(edge: .top)))
+                .padding(Theme.Space.m).frame(maxWidth: .infinity, alignment: .leading)
+                .background(RoundedRectangle(cornerRadius: Theme.radiusSmall, style: .continuous).fill(Theme.surface))
+            }
+            if !entry.children.isEmpty {
+                VStack(alignment: .leading, spacing: Theme.Space.s) {
+                    Text(tr("Biggest inside")).font(Theme.sectionTitle).foregroundStyle(Theme.textSecondary)
+                    ScrollView {
+                        InspectorPanel {
+                            ForEach(Array(entry.children.enumerated()), id: \.element.id) { i, c in
+                                if i > 0 { InspectorDivider(inset: Theme.Space.m) }
+                                child(c)
+                            }
+                        }
+                    }
+                    .frame(maxHeight: 300)
+                }
+            }
+            HStack {
+                Spacer()
+                Button(tr("Done"), action: close).keyboardShortcut(.defaultAction)
             }
         }
-        .padding(.horizontal, Theme.Space.m + 2).padding(.vertical, Theme.Space.s + 2)
-        .hoverHighlight()
+        .padding(Theme.Space.xl)
+        .frame(width: 560)
+    }
+
+    func child(_ c: SpaceOverview.Entry) -> some View {
+        HStack(spacing: Theme.Space.s) {
+            VStack(alignment: .leading, spacing: 4) {
+                Text(c.title).font(Theme.mono).foregroundStyle(Theme.textPrimary).lineLimit(1).truncationMode(.middle)
+                GeometryReader { g in
+                    Capsule().fill(SpaceStyle.of(entry.id).color.opacity(0.8))
+                        .frame(width: max(2, g.size.width * CGFloat(Double(c.bytes) / Double(max(1, entry.bytes)))))
+                }.frame(height: 3)
+                if let a = c.action { Text(a).font(Theme.caption).foregroundStyle(Theme.caution).lineLimit(2) }
+            }
+            Spacer(minLength: Theme.Space.s)
+            Text(c.sizeText).font(Theme.secondary.monospacedDigit()).foregroundStyle(Theme.textSecondary)
+            if let p = c.path {
+                Button { NSWorkspace.shared.activateFileViewerSelecting([URL(fileURLWithPath: p)]) } label: {
+                    Image(systemName: "magnifyingglass")
+                }
+                .buttonStyle(.borderless).foregroundStyle(Theme.textTertiary).help(tr("Reveal in Finder"))
+            }
+        }
+        .padding(.horizontal, Theme.Space.m).padding(.vertical, Theme.Space.s)
     }
 }
+
+/// The coloured rounded square in front of each place, the way System Settings marks categories.
+struct SpaceTile: View {
+    let style: SpaceStyle
+    var size: CGFloat = 28
+    var body: some View {
+        RoundedRectangle(cornerRadius: size * 0.26, style: .continuous)
+            .fill(LinearGradient(colors: [style.color.opacity(0.95), style.color.opacity(0.75)], startPoint: .top, endPoint: .bottom))
+            .frame(width: size, height: size)
+            .overlay(Image(systemName: style.symbol).font(.system(size: size * 0.5, weight: .semibold)).foregroundStyle(.white))
+            .accessibilityHidden(true)
+    }
+}
+
+/// How each overview place looks: a short name, a symbol and a colour. Places macOS manages share
+/// grey, so the coloured part of the bar is what you can do something about.
+struct SpaceStyle {
+    var title: String?
+    var symbol: String
+    var color: Color
+
+    static let systemIDs: Set<String> = ["macos", "swap", "apple-assets", "system-data", "other", "volumes"]
+    static let systemGrey = Color(white: 0.55)
+
+    static func of(_ id: String) -> SpaceStyle {
+        switch id {
+        case "apps": return .init(title: tr("Applications"), symbol: "square.grid.2x2.fill", color: Color(red: 0.25, green: 0.52, blue: 0.98))
+        case "app-data": return .init(title: tr("App data"), symbol: "tray.full.fill", color: Color(red: 0.42, green: 0.40, blue: 0.95))
+        case "projects": return .init(title: tr("Projects"), symbol: "hammer.fill", color: Color(red: 0.98, green: 0.55, blue: 0.20))
+        case "home-tools": return .init(title: tr("Tool and agent folders"), symbol: "terminal.fill", color: Color(red: 0.18, green: 0.72, blue: 0.70))
+        case "home-other": return .init(title: tr("Other home folders"), symbol: "folder.fill", color: Color(red: 0.36, green: 0.62, blue: 0.86))
+        case "documents": return .init(title: tr("Documents"), symbol: "doc.fill", color: Color(red: 0.95, green: 0.75, blue: 0.20))
+        case "downloads": return .init(title: tr("Downloads"), symbol: "arrow.down.circle.fill", color: Color(red: 0.30, green: 0.78, blue: 0.45))
+        case "library-other": return .init(title: tr("Mail, Messages and more"), symbol: "envelope.fill", color: Color(red: 0.30, green: 0.70, blue: 0.95))
+        case "caches": return .init(title: tr("Caches"), symbol: "shippingbox.fill", color: Color(red: 0.70, green: 0.52, blue: 0.36))
+        case "developer": return .init(title: tr("Xcode and simulators"), symbol: "chevron.left.forwardslash.chevron.right", color: Color(red: 0.62, green: 0.42, blue: 0.95))
+        case "simulator-runtimes": return .init(title: tr("Simulator runtimes"), symbol: "iphone", color: Color(red: 0.78, green: 0.40, blue: 0.90))
+        case "homebrew": return .init(title: "Homebrew", symbol: "mug.fill", color: Color(red: 0.90, green: 0.62, blue: 0.30))
+        case "trash": return .init(title: tr("Trash"), symbol: "trash.fill", color: Color(red: 0.55, green: 0.58, blue: 0.62))
+        case "temp": return .init(title: tr("Temporary files"), symbol: "clock.arrow.circlepath", color: Color(red: 0.92, green: 0.40, blue: 0.45))
+        case "apple-assets": return .init(title: tr("Apple downloads"), symbol: "apple.logo", color: systemGrey)
+        case "system-data": return .init(title: tr("System-wide data"), symbol: "gearshape.2.fill", color: systemGrey)
+        case "macos": return .init(title: "macOS", symbol: "laptopcomputer", color: systemGrey)
+        case "swap": return .init(title: tr("Swap"), symbol: "memorychip.fill", color: systemGrey)
+        case "volumes": return .init(title: tr("Other volumes"), symbol: "externaldrive.fill", color: systemGrey)
+        case "other": return .init(title: tr("Not attributed"), symbol: "questionmark.folder.fill", color: Color(white: 0.42))
+        default: return .init(title: nil, symbol: "folder.fill", color: Color(white: 0.5))
+        }
+    }
+
+    static func split(_ entries: [SpaceOverview.Entry]) -> (yours: [SpaceOverview.Entry], system: [SpaceOverview.Entry]) {
+        (entries.filter { !systemIDs.contains($0.id) }, entries.filter { systemIDs.contains($0.id) })
+    }
+
+    struct Segment: Identifiable {
+        var id: String
+        var title: String
+        var color: Color
+        var bytes: Int64
+    }
+
+    /// The bar: the biggest of your places in their colours, the rest of yours as one, and macOS's
+    /// share in grey. Scaled down when hard links make the headings add up to more than is used.
+    static func segments(_ entries: [SpaceOverview.Entry], used: Int64, shown: Int = 6) -> [Segment] {
+        let (yours, system) = split(entries)
+        let sorted = yours.filter { $0.bytes > 0 }.sorted { $0.bytes > $1.bytes }
+        var out = sorted.prefix(shown).map { e in
+            let s = of(e.id)
+            return Segment(id: e.id, title: s.title ?? e.title, color: s.color, bytes: e.bytes)
+        }
+        let rest = sorted.dropFirst(shown).reduce(Int64(0)) { $0 + $1.bytes }
+        if rest > 0 { out.append(Segment(id: "rest", title: tr("Other"), color: Color(white: 0.7), bytes: rest)) }
+        let sys = system.reduce(Int64(0)) { $0 + $1.bytes }
+        if sys > 0 { out.append(Segment(id: "system", title: tr("Managed by macOS"), color: systemGrey.opacity(0.6), bytes: sys)) }
+        let total = out.reduce(Int64(0)) { $0 + $1.bytes }
+        guard total > used, total > 0 else { return out }
+        let scale = Double(used) / Double(total)
+        return out.map { var s = $0; s.bytes = Int64(Double(s.bytes) * scale); return s }
+    }
+}
+
