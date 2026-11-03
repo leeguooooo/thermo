@@ -438,6 +438,8 @@ struct SpacePage: View {
     @Binding var tab: SpaceTab
     @State private var confirming: ManualRemovalReview?
     @State private var olderThan = 0
+    @State private var asking: LocalAIQuestion?
+    @ObservedObject private var ai = LocalAIStore.shared
 
     var body: some View {
         VStack(spacing: 0) {
@@ -469,6 +471,8 @@ struct SpacePage: View {
             if t != .duplicates { model.stopDuplicates() }
         }
         .onDisappear { model.stopLastOpened(); model.stopDuplicates() }
+        .sheet(item: $asking) { q in AskAISheet(question: q) { asking = nil } }
+        .onAppear { ai.discover() }
         .sheet(item: $confirming) { review in
             ConfirmSheet(title: tr("Move %1$@ to the Trash?", review.sizeText),
                          summary: tr("%1$@ you picked go to the Trash. Each one is checked again first; anything a program has open is skipped.",
@@ -660,6 +664,21 @@ struct SpacePage: View {
     @ViewBuilder func pathMenu(_ path: String) -> some View {
         Button(tr("Show in Finder")) { NSWorkspace.shared.activateFileViewerSelecting([URL(fileURLWithPath: path)]) }
         Button(tr("Copy path")) { NSPasteboard.general.clearContents(); NSPasteboard.general.setString(path, forType: .string) }
+        if ai.backend != nil, !SpaceLens.isVirtual(path) {
+            Divider()
+            Button(tr("Ask AI…")) { asking = question(path) }
+        }
+    }
+
+    func question(_ path: String) -> LocalAIQuestion {
+        let folder = model.tree?.folder(path)
+        let file = model.tree?.large.first { $0.path == path }
+        let attrs = try? FileManager.default.attributesOfItem(atPath: path)
+        return LocalAIQuestion(title: (path as NSString).lastPathComponent, path: path,
+                               bytes: folder?.entry.bytes ?? file?.bytes ?? (attrs?[.size] as? NSNumber)?.int64Value,
+                               modified: folder?.entry.newest ?? file?.modified ?? attrs?[.modificationDate] as? Date,
+                               children: folder.map { $0.children.map { "\($0.name) (\($0.sizeText))" } } ?? LocalAIQuestion.names(in: path),
+                               blocked: model.refusal(path), home: model.home)
     }
 
     // MARK: Large files

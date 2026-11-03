@@ -419,6 +419,11 @@ struct SpaceDetailSheet: View {
                 .padding(Theme.Space.m).frame(maxWidth: .infinity, alignment: .leading)
                 .background(RoundedRectangle(cornerRadius: Theme.radiusSmall, style: .continuous).fill(Theme.surface))
             }
+            AskAIPanel {
+                LocalAIQuestion(title: SpaceStyle.of(entry.id).title ?? entry.title, path: entry.path, bytes: entry.bytes,
+                                note: [entry.note, entry.action].compactMap { $0 }.joined(separator: " "),
+                                children: entry.children.map { "\($0.title) (\($0.sizeText))" })
+            }
             if !entry.children.isEmpty {
                 VStack(alignment: .leading, spacing: Theme.Space.s) {
                     Text(tr("Biggest inside")).font(Theme.sectionTitle).foregroundStyle(Theme.textSecondary)

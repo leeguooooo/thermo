@@ -609,6 +609,9 @@ struct DiskItemDetail: View {
                 Text(safetyText).fixedSize(horizontal: false, vertical: true)
             }
             .font(Theme.caption).foregroundStyle(Theme.textTertiary)
+            if item.safety != .safe, !item.paths.isEmpty {
+                AskAIPanel { Self.question(item) }
+            }
             if let parts = item.parts, parts.count > 1 {
                 let ticked = parts.filter { model.isTicked($0, of: item) }.count
                 HStack {
@@ -657,6 +660,13 @@ struct DiskItemDetail: View {
             }
         }
         .padding(.leading, 36)
+    }
+
+    static func question(_ i: CleanItem) -> LocalAIQuestion {
+        let single = i.paths.count == 1 ? i.paths[0] : nil
+        return LocalAIQuestion(title: i.title, path: single, bytes: i.bytes, modified: i.lastUsed,
+                               note: i.note ?? (i.detail.isEmpty ? nil : i.detail),
+                               children: single.map { LocalAIQuestion.names(in: $0) } ?? i.paths, blocked: i.blocked)
     }
 
     var safetyText: String {
