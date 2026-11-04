@@ -4171,4 +4171,15 @@ let zhHans: [String: String] = [
     "The store is not available right now": "应用商店暂不可用",
     "Check the connection and refresh, or visit app.leeguoo.com.": "请检查网络后刷新，或访问 app.leeguoo.com。",
     "Loading the store…": "正在加载应用商店…",
+    // Space Lens permanent delete
+    "git metadata: the repository's history, branches, stashes and unpushed commits go with it": "git 元数据：这个仓库的历史、分支、stash 和没推送的提交会一起没掉",
+    "Nothing was deleted.": "没有删除任何东西。",
+    "Deleted %1$@ permanently (%2$@).": "已永久删除 %1$@（%2$@）。",
+    "Not deleted: %1$@": "未删除：%1$@",
+    "Delete %1$@ permanently?": "永久删除 %1$@？",
+    "%1$@ you picked are deleted right away, without going to the Trash. Each one is checked again first; anything a program has open is skipped.": "你选的 %1$@ 会直接删除，不进废纸篓。删除前逐个再检查一次，正被程序打开的会跳过。",
+    "What will be deleted": "将删除的内容",
+    "This cannot be undone: nothing goes to the Trash and Thermo cannot put it back. Deletions are listed in ~/Library/Logs/Thermo/clean.log.": "无法撤销：不经过废纸篓，Thermo 也没法放回。删除记录在 ~/Library/Logs/Thermo/clean.log。",
+    "Delete Permanently": "永久删除",
+    "Delete permanently, skip the Trash": "直接删除，不放进废纸篓",
 ]

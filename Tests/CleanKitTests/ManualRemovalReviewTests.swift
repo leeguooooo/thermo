@@ -119,4 +119,27 @@ final class ManualRemovalReviewTests: XCTestCase {
         XCTAssertEqual(result.whitelisted, [path]); XCTAssertTrue(result.removed.isEmpty)
         XCTAssertTrue(FileManager.default.fileExists(atPath: path))
     }
+    func testPermanentDeleteSkipsTheTrash() throws {
+        let path = try file("a")
+        var deleted: [String] = []
+        let result = ManualRemoval.trash([path], sizes: [path: 8], home: home, openFiles: { .init(holders: []) }, permanent: true,
+                                         move: { _ in XCTFail("Permanent delete must not use the Trash"); return URL(fileURLWithPath: "/unused") },
+                                         delete: { deleted.append($0); try FileManager.default.removeItem(atPath: $0) })
+        XCTAssertEqual(result.removed, [path]); XCTAssertEqual(deleted, [path]); XCTAssertFalse(result.trashed)
+        XCTAssertNil(result.trashBatchID); XCTAssertEqual(result.bytes, 8)
+        XCTAssertFalse(FileManager.default.fileExists(atPath: path))
+        XCTAssertEqual(ManualRemoval.feedback(result).first, tr("Deleted %1$@ permanently (%2$@).", trCount(1, "%1$@ item", "%1$@ items"), AppSize.text(8, state: .complete)))
+    }
+    func testGitMetadataNeedsExplicitAllowance() throws {
+        let git = home + "/Downloads/project/.git"
+        try FileManager.default.createDirectory(atPath: git, withIntermediateDirectories: true)
+        XCTAssertNotNil(ManualRemoval.refusal(git, home: home))
+        XCTAssertNil(ManualRemoval.refusal(git, home: home, allowGitMetadata: true))
+        XCTAssertNotNil(ManualRemoval.caution(git)); XCTAssertNil(ManualRemoval.caution(home + "/Downloads/project"))
+        XCTAssertNotNil(ManualRemoval.refusal(home + "/.ssh/id_ed25519", home: home, allowGitMetadata: true))
+        let refused = ManualRemoval.trash([git], sizes: [:], home: home, openFiles: { .init(holders: []) }, move: move)
+        XCTAssertTrue(refused.removed.isEmpty); XCTAssertTrue(FileManager.default.fileExists(atPath: git))
+        let allowed = ManualRemoval.trash([git], sizes: [:], home: home, openFiles: { .init(holders: []) }, allowGitMetadata: true, move: move)
+        XCTAssertEqual(allowed.removed, [git]); XCTAssertFalse(FileManager.default.fileExists(atPath: git))
+    }
 }

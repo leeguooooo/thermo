@@ -16,6 +16,8 @@ struct ManualRemovalReview: Identifiable, Sendable {
     let required: [String: String]
     let sizeText: String
     let lines: [String]
+    /// Soft-locked picks (git metadata) and what goes with each.
+    var cautions: [String] = []
 }
 
 /// The space browser: the home folder measured once, then any folder looked into without walking
@@ -66,17 +68,22 @@ final class SpaceLensModel: ObservableObject {
     private var selectionSizeStates: [String: AppSizeState] = [:]
     private var selectionRequirements: [String: [String: String]] = [:]
     private let remove: @Sendable ([String], [String: Int64], String, Set<String>, [String: String], [String: String]) -> CleanResult
+    /// Same contract as `remove`, but deletes for good instead of moving to the Trash.
+    private let delete: @Sendable ([String], [String: Int64], String, Set<String>, [String: String], [String: String]) -> CleanResult
 
     init(root: String = "/", home: String? = nil, cache: URL = SpaceLens.cacheURL,
          measure: @escaping @Sendable (String, ScanCancellation, ((SpaceLens.Progress) -> Void)?) -> SpaceTree = { SpaceLens.scan($0, cancellation: $1, progress: $2) },
          remove: @escaping @Sendable ([String], [String: Int64], String, Set<String>, [String: String], [String: String]) -> CleanResult = {
-             ManualRemoval.trash($0, sizes: $1, home: $2, incompletePaths: $3, reviewIdentities: $4, requiredIdentities: $5)
+             ManualRemoval.trash($0, sizes: $1, home: $2, incompletePaths: $3, reviewIdentities: $4, requiredIdentities: $5, allowGitMetadata: true)
+         }, delete: @escaping @Sendable ([String], [String: Int64], String, Set<String>, [String: String], [String: String]) -> CleanResult = {
+             ManualRemoval.trash($0, sizes: $1, home: $2, incompletePaths: $3, reviewIdentities: $4, requiredIdentities: $5,
+                                 permanent: true, allowGitMetadata: true)
          }, searchDuplicates: @escaping @Sendable ([String], ScanCancellation, ((Duplicates.Progress) -> Void)?) -> DuplicateScanReport = {
              Duplicates.scan(in: $0, cancellation: $1, progress: $2)
          }, readLastOpened: @escaping @Sendable (String) -> Date? = { SpaceLens.lastOpened($0) }) {
         self.readLastOpened = readLastOpened
         self.root = root; self.home = home ?? (root == "/" ? NSHomeDirectory() : root)
-        self.cache = cache; self.measure = measure; self.remove = remove
+        self.cache = cache; self.measure = measure; self.remove = remove; self.delete = delete
         self.searchDuplicates = searchDuplicates
         path = root
         tree = SpaceLens.cached(root: root, from: cache)
@@ -167,7 +174,7 @@ final class SpaceLensModel: ObservableObject {
 
     func refusal(_ path: String) -> String? {
         if SpaceLens.isVirtual(path) { return tr("Not a folder: this space is a separate volume or could not be read") }
-        return ManualRemoval.refusal(path, home: home)
+        return ManualRemoval.refusal(path, home: home, allowGitMetadata: true)
     }
 
     func toggle(_ path: String, bytes: Int64) {
@@ -198,10 +205,11 @@ final class SpaceLensModel: ObservableObject {
             incomplete: Set(basket.keys.filter { sizeState($0) != .complete }), identities: selectionIdentities,
             required: basket.keys.reduce(into: [String: String]()) { result, path in
                 result.merge(selectionRequirements[path] ?? [:]) { first, _ in first }
-            }, sizeText: basketSizeText, lines: basketLines)
+            }, sizeText: basketSizeText, lines: basketLines,
+            cautions: basket.keys.sorted().compactMap { p in ManualRemoval.caution(p).map { FSPath.tilde(p) + "  " + $0 } })
     }
 
-    func trash(review: ManualRemovalReview? = nil) {
+    func trash(review: ManualRemovalReview? = nil, permanent: Bool = false) {
         guard !working else { return }
         guard let current = removalReview() else {
             if review != nil { outcomeIsWarning = true; outcome = tr("Selection changed after review; review the items again.") }
@@ -213,7 +221,7 @@ final class SpaceLensModel: ObservableObject {
             outcomeIsWarning = true; outcome = tr("Selection changed after review; review the items again."); return
         }
         let picked = frozen.selection, measured = frozen.measured, incomplete = frozen.incomplete
-        let identities = frozen.identities, required = frozen.required, remove = self.remove, home = home
+        let identities = frozen.identities, required = frozen.required, remove = permanent ? self.delete : self.remove, home = home
         stopDuplicates()
         working = true; exitRequested = false
         let lease = AppExitGuard.beginManualRemoval { self.exitRequested = true }
@@ -474,13 +482,9 @@ struct SpacePage: View {
         .sheet(item: $asking) { q in AskAISheet(question: q) { asking = nil } }
         .onAppear { ai.discover() }
         .sheet(item: $confirming) { review in
-            ConfirmSheet(title: tr("Move %1$@ to the Trash?", review.sizeText),
-                         summary: tr("%1$@ you picked go to the Trash. Each one is checked again first; anything a program has open is skipped.",
-                                     trCount(review.selection.count, "%1$@ item", "%1$@ items")),
-                         destructive: false, heading: tr("What will be moved to the Trash"), lines: review.lines,
-                         footnote: tr("You can put them back from the Trash. Moves are listed in ~/Library/Logs/Thermo/clean.log."),
-                         confirmTitle: tr("Move to Trash"),
-                         confirm: { confirming = nil; model.trash(review: review) }, cancel: { confirming = nil })
+            ManualRemovalSheet(review: review,
+                               confirm: { permanent in confirming = nil; model.trash(review: review, permanent: permanent) },
+                               cancel: { confirming = nil })
         }
     }
 
@@ -658,7 +662,7 @@ struct SpacePage: View {
             if let action { action() } else { model.toggle(path, bytes: bytes) }
         }
         .disabled(model.working || (model.isCovered(path) && model.basket[path] == nil))
-        .help(refusal ?? (picked ? tr("Picked to move to the Trash") : tr("Pick to move to the Trash")))
+        .help(refusal ?? ManualRemoval.caution(path) ?? (picked ? tr("Picked to move to the Trash") : tr("Pick to move to the Trash")))
     }
 
     @ViewBuilder func pathMenu(_ path: String) -> some View {
@@ -968,5 +972,30 @@ struct Treemap: View {
         }
         if !row.isEmpty { layout(row) }
         return out
+    }
+}
+
+/// The Space Lens confirmation: the Trash by default, or deleted for good when the user says so here.
+struct ManualRemovalSheet: View {
+    let review: ManualRemovalReview
+    let confirm: (Bool) -> Void
+    let cancel: () -> Void
+    @State private var permanent = false
+
+    var body: some View {
+        let count = trCount(review.selection.count, "%1$@ item", "%1$@ items")
+        ConfirmSheet(title: permanent ? tr("Delete %1$@ permanently?", review.sizeText) : tr("Move %1$@ to the Trash?", review.sizeText),
+                     summary: permanent
+                        ? tr("%1$@ you picked are deleted right away, without going to the Trash. Each one is checked again first; anything a program has open is skipped.", count)
+                        : tr("%1$@ you picked go to the Trash. Each one is checked again first; anything a program has open is skipped.", count),
+                     destructive: permanent || !review.cautions.isEmpty,
+                     heading: permanent ? tr("What will be deleted") : tr("What will be moved to the Trash"), lines: review.lines,
+                     detailLines: review.cautions,
+                     footnote: permanent
+                        ? tr("This cannot be undone: nothing goes to the Trash and Thermo cannot put it back. Deletions are listed in ~/Library/Logs/Thermo/clean.log.")
+                        : tr("You can put them back from the Trash. Moves are listed in ~/Library/Logs/Thermo/clean.log."),
+                     confirmTitle: permanent ? tr("Delete Permanently") : tr("Move to Trash"),
+                     accessory: AnyView(Toggle(tr("Delete permanently, skip the Trash"), isOn: $permanent).toggleStyle(.checkbox)),
+                     confirm: { confirm(permanent) }, cancel: cancel)
     }
 }

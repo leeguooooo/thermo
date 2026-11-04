@@ -234,7 +234,8 @@ public enum ManualRemoval {
         guard let parent = FileIdentity.of((location as NSString).deletingLastPathComponent) else { return nil }
         return SHA256.hash(data: Data((entry + "\n" + location + "\n" + parent).utf8)).map { String(format: "%02x", $0) }.joined()
     }
-    public static func refusal(_ path: String, home: String = NSHomeDirectory(), whitelist: Whitelist? = nil) -> String? {
+    /// `allowGitMetadata` lifts only the soft lock on `.git`: the caller shows `caution` before anything moves.
+    public static func refusal(_ path: String, home: String = NSHomeDirectory(), whitelist: Whitelist? = nil, allowGitMetadata: Bool = false) -> String? {
         if !path.hasPrefix("/") || path.split(separator: "/").contains(where: { $0 == ".." || $0 == "." }) { return tr("not a full path") }
         if let why = Whitelist.refusal(path, home: home, whitelist: whitelist) { return why }
         let real = Guard.deletionLocation(path)
@@ -249,20 +250,30 @@ public enum ManualRemoval {
                       ".claude/.credentials.json", ".codex/auth.json", ".claude/agent-memory", ".codex/memories"].map { home + "/" + $0 }
         for x in sealed where p == x || p.hasPrefix(x + "/") { return tr("keys, credentials, mail or iCloud files") }
         if p.contains(".photoslibrary/") { return tr("inside a photo library; use Photos") }
-        if p.hasSuffix("/.git") || p.contains("/.git/") { return tr("git metadata") }
+        if !allowGitMetadata, isGitMetadata(p) { return tr("git metadata") }
         return nil
+    }
+
+    static func isGitMetadata(_ path: String) -> Bool { path.hasSuffix("/.git") || path.contains("/.git/") }
+
+    /// What the confirmation must say before a soft-locked path goes, or nil.
+    public static func caution(_ path: String) -> String? {
+        isGitMetadata(path) ? tr("git metadata: the repository's history, branches, stashes and unpushed commits go with it") : nil
     }
 
     /// Moves each path to the Trash after checking it again: allowed, still there, not held open by a running program.
     public static func trash(_ paths: [String], sizes: [String: Int64] = [:], home: String = NSHomeDirectory(), incompletePaths: Set<String> = [],
-                             reviewIdentities: [String: String]? = nil, requiredIdentities: [String: String] = [:]) -> CleanResult {
-        trash(paths, sizes: sizes, home: home, incompletePaths: incompletePaths, reviewIdentities: reviewIdentities, requiredIdentities: requiredIdentities, move: RemovalOperations.live.trash)
+                             reviewIdentities: [String: String]? = nil, requiredIdentities: [String: String] = [:],
+                             permanent: Bool = false, allowGitMetadata: Bool = false) -> CleanResult {
+        trash(paths, sizes: sizes, home: home, incompletePaths: incompletePaths, reviewIdentities: reviewIdentities, requiredIdentities: requiredIdentities,
+              permanent: permanent, allowGitMetadata: allowGitMetadata, move: RemovalOperations.live.trash)
     }
 
     static func trash(_ paths: [String], sizes: [String: Int64], home: String, incompletePaths: Set<String> = [],
                        reviewIdentities: [String: String]? = nil, requiredIdentities: [String: String] = [:], openFiles: () -> OpenFiles? = { OpenFiles.current() },
-                       move: (String) throws -> URL) -> CleanResult {
-        var result = CleanResult(id: "manual", trashed: true)
+                       permanent: Bool = false, allowGitMetadata: Bool = false,
+                       move: (String) throws -> URL, delete: (String) throws -> Void = RemovalOperations.live.remove) -> CleanResult {
+        var result = CleanResult(id: "manual", trashed: !permanent)
         let batchID = UUID().uuidString
         let paths = Array(Set(paths)).sorted()
         let reviewed = reviewIdentities ?? paths.reduce(into: [String: String]()) { $0[$1] = reviewIdentity($1) }
@@ -275,7 +286,7 @@ public enum ManualRemoval {
                 break
             }
             if whitelist.protects(path) { result.whitelisted = (result.whitelisted ?? []) + [path]; continue }
-            if let why = refusal(path, home: home, whitelist: whitelist) { result.failed[path] = why; continue }
+            if let why = refusal(path, home: home, whitelist: whitelist, allowGitMetadata: allowGitMetadata) { result.failed[path] = why; continue }
             guard FileManager.default.fileExists(atPath: path) || (try? FileManager.default.destinationOfSymbolicLink(atPath: path)) != nil else { continue }
             guard let open else { result.failed[path] = tr("could not check whether a program is using it"); continue }
             if let h = open.holder(of: path) { result.failed[path] = tr("%1$@ has files open here", h.name); continue }
@@ -287,6 +298,13 @@ public enum ManualRemoval {
             }
             guard let identity = reviewed[path], reviewIdentity(path) == identity else {
                 result.failed[path] = tr("The selected item changed after review; select it again")
+                continue
+            }
+            if permanent {
+                do { try delete(path) } catch { result.failed[path] = (error as NSError).localizedDescription; continue }
+                result.removed.append(path)
+                if incompletePaths.contains(path) || sizes[path] == nil { result.bytesIncomplete = true }
+                result.bytes += sizes[path] ?? 0
                 continue
             }
             do {

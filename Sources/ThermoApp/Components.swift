@@ -124,6 +124,8 @@ struct ConfirmSheet: View {
     let footnote: String
     let confirmTitle: String
     var confirmEnabled = true
+    /// An optional control shown above the footnote, such as a removal option.
+    var accessory: AnyView? = nil
     let confirm: () -> Void
     let cancel: () -> Void
 
@@ -165,6 +167,7 @@ struct ConfirmSheet: View {
             }
             // ImageRenderer cannot draw scroll views; previews get the plain list.
             if renderingPreview { reviewContent } else { ScrollView { reviewContent }.frame(maxHeight: 220) }
+            if let accessory { accessory }
             Text(footnote).font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
             HStack {
                 Spacer()
