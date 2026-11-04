@@ -121,6 +121,8 @@ fi
 # --- Signing (inside-out) ---------------------------------------------------
 # Generated copies may inherit Finder/resource-fork attributes from synced folders.
 # Clear them on the generated bundle only, before signing; leave source assets untouched.
+# Read-only source files (e.g. 0444 license texts) arrive read-only; make the copies writable first.
+chmod -R u+w "$APP"
 xattr -cr "$APP"
 if [ "$SIGN_ID" = "-" ]; then TS="--timestamp=none"; else TS="--timestamp"; fi
 sign() { codesign --force --options runtime $TS -s "$SIGN_ID" "$@"; }
