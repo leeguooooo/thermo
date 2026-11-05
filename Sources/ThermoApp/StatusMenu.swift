@@ -47,7 +47,6 @@ final class StatusMenu: NSObject, NSMenuDelegate {
         menu.addItem(.separator())
         menu.addItem(item(tr("Capture saving and after-actions"), "square.and.arrow.down") { CaptureWorkspace.shared.showSavingSettings() })
         menu.addItem(item(tr("Capture shortcuts and actions"), "keyboard") { CaptureWorkspace.shared.showActionSettings() })
-        menu.addItem(item(tr("Settings…"), "gearshape", key: ",") { MainWindow.show(.settings) })
         menu.addItem(.separator())
 
         menu.addItem(page(tr("Overview"), "gauge.with.dots.needle.67percent", .overview))
@@ -77,6 +76,7 @@ final class StatusMenu: NSObject, NSMenuDelegate {
         menu.addItem(.separator())
 
         menu.addItem(page(tr("History"), "clock.arrow.circlepath", .history))
+        menu.addItem(item(tr("Settings…"), "gearshape", key: ",") { MainWindow.show(.settings) })
         let check = item(tr("Check for Updates…"), "arrow.triangle.2.circlepath") { AppModels.shared.updates.checkForUpdates() }
         check.isEnabled = AppModels.shared.updates.canCheck
         menu.addItem(check)

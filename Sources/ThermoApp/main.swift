@@ -459,6 +459,20 @@ private final class PageMenuTarget: NSObject, NSMenuItemValidation {
 
 L10n.apply(preference: UserDefaults.standard.string(forKey: L10n.defaultsKey))
 let app = NSApplication.shared
+// `--dump-status-menu`: print the menu bar item's menu (titles, separators, submenus) and quit,
+// so its grouping and wording can be reviewed without opening it on screen.
+if CommandLine.arguments.contains("--dump-status-menu") {
+    MainActor.assumeIsolated {
+        func dump(_ menu: NSMenu, _ depth: Int) {
+            for item in menu.items {
+                print(String(repeating: "    ", count: depth) + (item.isSeparatorItem ? "────" : item.title))
+                if let sub = item.submenu { dump(sub, depth + 1) }
+            }
+        }
+        dump(StatusMenu.shared.make(battery: true), 0)
+    }
+    exit(0)
+}
 // Snapshot/render jobs do not present interactive windows or create Dock items.
 if !CommandLine.arguments.contains("--offscreen"), !CommandLine.arguments.contains("--render-preview"), !CommandLine.arguments.contains("--verify-lifecycle") {
     do {
