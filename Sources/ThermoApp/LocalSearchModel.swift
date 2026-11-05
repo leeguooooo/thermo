@@ -2,13 +2,15 @@ import AppKit
 import Combine
 import SearchCore
 import ThermoL10n
+import UniformTypeIdentifiers
 
 @MainActor final class LocalSearchModel: ObservableObject {
     static let shared = LocalSearchModel()
-    @Published var query = "" { didSet { if query != oldValue { submit() } } }
+    @Published var query = "" { didSet { if query != oldValue { error = nil; submit() } } }
     @Published private(set) var response = SearchResponse(query: "", items: [])
     @Published private(set) var searching = false
     @Published private(set) var indexing = false
+    @Published private(set) var directPath: String?
     @Published var selection: String?
     @Published var error: String?
     @Published var showSettings = false
@@ -67,19 +69,36 @@ import ThermoL10n
     }
     func refresh() { error = nil; indexer?.refresh() }
     func refreshApplications() { indexer?.refreshApplications() }
+    var canOpenInPreview: Bool {
+        guard let selected else { return false }
+        return canOpenInPreview(selected)
+    }
+    func canOpenInPreview(_ item: SearchItem) -> Bool {
+        guard item.kind == .file,
+              let type = UTType(filenameExtension: URL(fileURLWithPath: item.path).pathExtension) else { return false }
+        return type.conforms(to: .image) || type.conforms(to: .pdf)
+    }
+    func openInPreview() {
+        guard canOpenInPreview, let selected,
+              let app = NSWorkspace.shared.urlForApplication(withBundleIdentifier: "com.apple.Preview") else { return }
+        open(selected, using: app)
+    }
     func submit() {
         guard let store else { return }
         generation &+= 1
         let current = generation, term = query, oldSelection = selection
+        directPath = nil
         cancellation?.cancel(); queryTask?.cancel()
         let token = SearchCancellation(); cancellation = token; searching = true
         queryTask = Task { [weak self] in
             do {
                 if !term.isEmpty { try await Task.sleep(nanoseconds: 25_000_000) }
                 let executeQuery = self?.executeQuery
-                let result = try await Task.detached(priority: .userInitiated) { try executeQuery?(term, token) ?? store.query(term, cancellation: token) }.value
+                let (result, path) = try await Task.detached(priority: .userInitiated) {
+                    (try executeQuery?(term, token) ?? store.query(term, cancellation: token), SearchDirectPath.path(from: term))
+                }.value
                 guard !Task.isCancelled, let self, current == self.generation else { return }
-                self.response = result; self.searching = false
+                self.response = result; self.directPath = path; self.searching = false
                 self.selection = result.items.contains { $0.id == oldSelection } ? oldSelection : result.items.first?.id
             } catch is CancellationError { }
             catch {
@@ -129,9 +148,9 @@ import ThermoL10n
     }
     func clearHistory() { do { try store?.clearHistory(); submit() } catch { self.error = String(describing: error) } }
     func openSelected() { if let selected { open(selected) } }
-    func open(_ item: SearchItem) {
+    func open(_ item: SearchItem, using application: URL? = nil) {
         guard response.query == query, response.items.contains(where: { $0.id == item.id }) else { return }
-        guard FileManager.default.fileExists(atPath: item.path) else { error = tr("This item is no longer available. Refresh the index."); return }
+        guard FileManager.default.fileExists(atPath: item.path) else { error = tr("This item is no longer available. Check its location and try again."); return }
         let url = URL(fileURLWithPath: item.path)
         let configuration = NSWorkspace.OpenConfiguration()
         configuration.activates = true
@@ -142,12 +161,13 @@ import ThermoL10n
             }
         }
         LocalSearchPanel.shared.hide(restoreFocus: false)
-        if item.kind == .application { NSWorkspace.shared.openApplication(at: url, configuration: configuration, completionHandler: completion) }
+        if let application { NSWorkspace.shared.open([url], withApplicationAt: application, configuration: configuration, completionHandler: completion) }
+        else if item.kind == .application { NSWorkspace.shared.openApplication(at: url, configuration: configuration, completionHandler: completion) }
         else { NSWorkspace.shared.open(url, configuration: configuration, completionHandler: completion) }
     }
     func revealSelected() {
         guard let selected else { return }
-        guard FileManager.default.fileExists(atPath: selected.path) else { error = tr("This item is no longer available. Refresh the index."); return }
+        guard FileManager.default.fileExists(atPath: selected.path) else { error = tr("This item is no longer available. Check its location and try again."); return }
         LocalSearchPanel.shared.hide(restoreFocus: false)
         NSWorkspace.shared.activateFileViewerSelecting([URL(fileURLWithPath: selected.path)])
     }

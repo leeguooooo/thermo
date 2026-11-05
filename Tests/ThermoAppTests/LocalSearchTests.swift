@@ -39,6 +39,29 @@ import SearchCore
         XCTAssertEqual(model.selected?.path, "/a")
         model.stop()
     }
+    func testPastedPathSelectsUnindexedFileAndClearsStaleActions() async throws {
+        let directory = FileManager.default.temporaryDirectory.appendingPathComponent("thermo-path-ui-" + UUID().uuidString)
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let file = directory.appendingPathComponent("说明 report.pdf")
+        try Data().write(to: file)
+        let model = LocalSearchModel(directory: directory.appendingPathComponent("db"))
+        model.query = file.path
+        for _ in 0..<100 where model.response.query != file.path { try await Task.sleep(nanoseconds: 10_000_000) }
+        XCTAssertEqual(model.selected?.name, file.lastPathComponent)
+        XCTAssertEqual(model.directPath, SearchDirectPath.path(from: file.path))
+        XCTAssertTrue(model.canOpenInPreview)
+        model.query = directory.appendingPathComponent("missing.pdf").path
+        XCTAssertNil(model.selected)
+        XCTAssertFalse(model.canOpenInPreview)
+        for _ in 0..<100 where model.response.query != model.query { try await Task.sleep(nanoseconds: 10_000_000) }
+        XCTAssertNotNil(model.directPath)
+        XCTAssertTrue(model.response.items.isEmpty)
+        for (name, kind, expected) in [("image.png", SearchItemKind.file, true), ("movie.mp4", .file, false), ("notes.md", .file, false), ("folder.pdf", .folder, false), ("Preview.app", .application, false)] {
+            XCTAssertEqual(model.canOpenInPreview(SearchItem(path: "/tmp/" + name, name: name, kind: kind)), expected)
+        }
+        model.stop()
+    }
     func testSearchShortcutConflictPreservesPreviousLeaseAndSuppressesRepeat() throws {
         let backend = Backend(); var calls = 0
         let model = LocalSearchShortcut(backend: backend) { calls += 1 }

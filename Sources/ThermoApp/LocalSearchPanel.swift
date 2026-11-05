@@ -13,6 +13,9 @@ import ThermoL10n
         override var canBecomeKey: Bool { true }
         override var canBecomeMain: Bool { false }
     }
+    private final class PreviewWindow: NSWindow {
+        override func cancelOperation(_ sender: Any?) { close() }
+    }
     init() {
         let panel = Panel(contentRect: NSRect(x: 0, y: 0, width: 680, height: 520),
                           styleMask: [.titled, .fullSizeContentView, .nonactivatingPanel], backing: .buffered, defer: false)
@@ -53,22 +56,31 @@ import ThermoL10n
         guard !model.presentingDialog, !model.showSettings, model.aliasTarget == nil, preview?.isVisible != true else { return }
         hide(restoreFocus: false)
     }
+    func windowWillClose(_ notification: Notification) {
+        guard let closing = notification.object as? NSWindow, closing === preview else { return }
+        preview?.contentView = nil; preview = nil
+        if window?.isVisible == true { window?.makeKeyAndOrderFront(nil) }
+    }
     func previewSelected() {
         guard let item = model.selected, item.kind != .application else { return }
-        guard FileManager.default.fileExists(atPath: item.path) else { model.error = tr("This item is no longer available. Refresh the index."); return }
+        guard FileManager.default.fileExists(atPath: item.path) else { model.error = tr("This item is no longer available. Check its location and try again."); return }
         if preview?.isVisible == true { preview?.close(); preview = nil; window?.makeKeyAndOrderFront(nil); return }
-        let panel = NSPanel(contentRect: NSRect(x: 0, y: 0, width: 720, height: 560), styleMask: [.titled, .closable, .resizable], backing: .buffered, defer: false)
-        panel.title = item.name; panel.isReleasedWhenClosed = false; panel.level = .floating
-        guard let view = QLPreviewView(frame: panel.contentLayoutRect, style: .normal) else { return }
-        view.autoresizingMask = [.width, .height]; view.shouldCloseWithWindow = true
-        view.previewItem = URL(fileURLWithPath: item.path) as NSURL
-        panel.contentView = view; preview = panel; panel.center(); panel.makeKeyAndOrderFront(nil)
+        let available = window?.screen?.visibleFrame ?? NSScreen.main?.visibleFrame ?? NSRect(x: 0, y: 0, width: 1280, height: 900)
+        let panel = PreviewWindow(contentRect: NSRect(x: 0, y: 0, width: min(980, available.width - 80), height: min(740, available.height - 80)), styleMask: [.titled, .closable, .resizable], backing: .buffered, defer: false)
+        panel.title = item.name; panel.isReleasedWhenClosed = false; panel.level = .floating; panel.delegate = self
+        panel.minSize = NSSize(width: 640, height: 400)
+        panel.contentView = NSHostingView(rootView: SearchFilePreviewView(item: item, open: { [weak self] in
+            self?.model.open(item)
+        }, reveal: { [weak self] in
+            self?.model.selection = item.id; self?.model.revealSelected()
+        }))
+        preview = panel; panel.center(); NSApp.activate(ignoringOtherApps: true); panel.makeKeyAndOrderFront(nil)
     }
 }
 
 extension Notification.Name { static let localSearchFocus = Notification.Name("dev.thermo.search.focus") }
 
-private struct LocalSearchView: View {
+struct LocalSearchView: View {
     @ObservedObject var model: LocalSearchModel
     @ObservedObject private var shortcut = LocalSearchShortcut.shared
     @State private var confirmingSpotlight = false
@@ -114,8 +126,11 @@ private struct LocalSearchView: View {
                     LazyVStack(spacing: 2) {
                         if model.response.items.isEmpty && !model.searching {
                             VStack(alignment: .leading, spacing: 10) {
-                                Text(model.query.isEmpty ? tr("Your apps, one shortcut away") : tr("No matching apps or files")).font(Theme.heading)
-                                if model.preferences.roots.isEmpty {
+                                Text(model.directPath != nil ? tr("This path is unavailable") : model.query.isEmpty ? tr("Your apps, one shortcut away") : tr("No matching apps or files")).font(Theme.heading)
+                                if let path = model.directPath {
+                                    Text(tr("Check the path. The item may have moved, been deleted, or its disk may be disconnected.")).font(Theme.body).foregroundStyle(Theme.textSecondary)
+                                    Text(path).font(Theme.caption).foregroundStyle(Theme.textTertiary).textSelection(.enabled)
+                                } else if model.preferences.roots.isEmpty {
                                     Text(tr("Add folders to search local files. Everything stays on this Mac.")).font(Theme.body).foregroundStyle(Theme.textSecondary)
                                     Button(tr("Add folders…")) { model.chooseFolder() }
                                 } else {
@@ -146,6 +161,9 @@ private struct LocalSearchView: View {
                                     Button(tr("Open")) { model.selection = item.id; model.open(item) }
                                     Button(tr("Show in Finder")) { model.selection = item.id; model.revealSelected() }
                                     if item.kind != .application { Button(tr("Preview")) { model.selection = item.id; LocalSearchPanel.shared.previewSelected() } }
+                                    if model.canOpenInPreview(item) {
+                                        Button(tr("Open with Preview")) { model.selection = item.id; model.openInPreview() }
+                                    }
                                     Button(tr("Copy path")) { model.selection = item.id; model.copySelectedPath() }
                                     Divider()
                                     Button(item.favorite ? tr("Remove favorite") : tr("Add favorite")) { model.favorite(item) }
@@ -156,18 +174,47 @@ private struct LocalSearchView: View {
                 }.onChange(of: model.selection) { id in if let id { proxy.scrollTo(id, anchor: .center) } }
             }.frame(maxHeight: .infinity)
             Rectangle().fill(Theme.hairline).frame(height: 1)
-            HStack(spacing: 14) {
-                if model.indexing { ProgressView().controlSize(.mini); Text(tr("Indexing…")).font(Theme.caption) }
-                else if model.response.limited { Text(tr("More matches; refine search")).font(Theme.caption).foregroundStyle(Theme.caution).lineLimit(1) }
-                else if !model.response.complete { Text(tr("Some results are unavailable")).font(Theme.caption).foregroundStyle(Theme.caution).lineLimit(1) }
+            if let selected = model.selected {
+                VStack(alignment: .leading, spacing: 12) {
+                    HStack(spacing: 6) {
+                        Text(selected.name).font(Theme.secondary).lineLimit(1).truncationMode(.middle)
+                        Spacer(minLength: 8)
+                        if model.directPath != nil {
+                            Text(tr("Path ready · no indexing needed")).font(Theme.caption).foregroundStyle(Theme.textTertiary)
+                        }
+                    }
+                    HStack(spacing: 10) {
+                        Menu {
+                            Button(tr("Open")) { model.openSelected() }
+                            if model.canOpenInPreview { Button(tr("Open with Preview")) { model.openInPreview() } }
+                        } label: {
+                            Label(tr("Open") + "  ↩", systemImage: "arrow.up.forward.app")
+                        } primaryAction: { model.openSelected() }
+                        .menuStyle(.borderlessButton).fixedSize().padding(.horizontal, 12).padding(.vertical, 7)
+                            .background(Theme.surfaceActive).clipShape(RoundedRectangle(cornerRadius: 6))
+                        Button { model.revealSelected() } label: { Label(tr("Show in Finder") + "  ⌘↩", systemImage: "folder") }
+                        if selected.kind != .application {
+                            Button { LocalSearchPanel.shared.previewSelected() } label: { Label(tr("Preview") + "  ⌘Y", systemImage: "eye") }
+                        }
+                        Spacer(minLength: 0)
+                    }.buttonStyle(.borderless).font(Theme.secondary)
+                }.padding(.horizontal, 20).padding(.vertical, 14)
+                Rectangle().fill(Theme.hairline).frame(height: 1)
+            }
+            HStack(spacing: 8) {
+                if model.directPath != nil {
+                    Image(systemName: "internaldrive")
+                    Text(tr("Local path"))
+                } else if model.indexing { ProgressView().controlSize(.mini); Text(tr("Indexing…")) }
+                else if model.response.limited { Text(tr("More matches; refine search")).foregroundStyle(Theme.caution) }
+                else if !model.response.complete { Text(tr("Some results are unavailable")).foregroundStyle(Theme.caution) }
                 else if model.preferences.roots.isEmpty {
                     Button(tr("Add folders…")) { model.chooseFolder() }.buttonStyle(.plain).foregroundStyle(Theme.accent)
-                } else { Text(tr("Local search")).font(Theme.caption).foregroundStyle(Theme.textTertiary) }
+                } else { Text(tr("Local search")) }
                 Spacer()
-                Button("↩ " + tr("Open")) { model.openSelected() }.buttonStyle(.plain).disabled(model.selected == nil)
-                Button("⌘↩ " + tr("Show in Finder")) { model.revealSelected() }.buttonStyle(.plain).disabled(model.selected == nil)
-                Button("⌘Y " + tr("Preview")) { LocalSearchPanel.shared.previewSelected() }.buttonStyle(.plain).disabled(model.selected == nil || model.selected?.kind == .application)
-            }.font(Theme.caption).padding(.horizontal, 18).padding(.vertical, 12)
+                if model.selected != nil { Text(tr("Right-click for more actions")) }
+            }.font(Theme.caption).foregroundStyle(Theme.textTertiary).lineLimit(1).padding(.horizontal, 20).padding(.vertical, 10)
+
         }.foregroundStyle(Theme.textPrimary).background(Theme.canvas)
             .sheet(isPresented: $model.showSettings) { LocalSearchSettings(model: model) }
             .alert(tr("Use ⌘Space for Thermo search?"), isPresented: $confirmingSpotlight) {

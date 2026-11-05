@@ -183,7 +183,25 @@ public final class SearchStore: @unchecked Sendable {
     }
     public func clearHistory() throws { try synchronized { try run("UPDATE item_preferences SET visits=0,opened=0") } }
     public func query(_ query: String, limit: Int = 50, cancellation: SearchCancellation? = nil) throws -> SearchResponse {
-        guard query.count <= 256, !query.contains("\0"), (1...200).contains(limit) else { throw SearchFailure("Use a query of at most 256 characters and a limit from 1 to 200.") }
+        guard !query.contains("\0"), (1...200).contains(limit) else { throw SearchFailure("Use a query of at most 256 characters and a limit from 1 to 200.") }
+        if let path = SearchDirectPath.path(from: query) {
+            if cancellation?.isCancelled == true { throw CancellationError() }
+            var items: [SearchItem] = []
+            if var item = SearchDirectPath.item(at: path) {
+                try synchronized {
+                    let s = try statement("SELECT alias,favorite,visits,opened FROM item_preferences WHERE path=?", [item.path])
+                    defer { sqlite3_finalize(s) }
+                    if sqlite3_step(s) == SQLITE_ROW {
+                        item.alias = sqlite3_column_type(s, 0) == SQLITE_NULL ? nil : text(s, 0)
+                        item.favorite = sqlite3_column_int(s, 1) != 0
+                        item.visits = Int(sqlite3_column_int64(s, 2)); item.lastOpened = sqlite3_column_double(s, 3)
+                    }
+                }
+                items = [item]
+            }
+            return SearchResponse(query: query, items: items)
+        }
+        guard query.count <= 256 else { throw SearchFailure("Use a query of at most 256 characters and a limit from 1 to 200.") }
         let q = query.trimmingCharacters(in: .whitespacesAndNewlines)
         var response = try synchronized {
             let roots = try rootsReport()
