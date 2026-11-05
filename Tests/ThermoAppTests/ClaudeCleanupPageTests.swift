@@ -37,6 +37,7 @@ final class ClaudeCleanupPageTests: XCTestCase {
         XCTAssertEqual(MainPage(argument: "claude-cleanup"), .claude(.reset))
         XCTAssertEqual(MainPage(argument: "claude-cleanup:privacy"), .claude(.privacy))
         XCTAssertEqual(MainPage(argument: "claude"), .claude(.accounts))
+        XCTAssertEqual(MainPage(argument: "checkup"), .checkup)
         XCTAssertEqual(MainPage(argument: "claude:reset"), .claude(.reset))
     }
     @MainActor func testResetStartsUnselectedAndFolderSelectionExcludesItsChildren() {

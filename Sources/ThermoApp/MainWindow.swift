@@ -44,6 +44,7 @@ enum ClaudeTab: String, Hashable, CaseIterable {
 /// Where the main window is.
 enum MainPage: Hashable {
     case overview, sensors, fans, settings
+    case checkup
     case browser(String)
     case disk(DiskPage)
     case agents(SidebarEntry)
@@ -57,13 +58,14 @@ enum MainPage: Hashable {
     case yunx
     case plugins
 
-    /// `--page` values: overview, sensors, fans, settings, pages, disk, disk:overview, disk:<category>,
+    /// `--page` values: overview, checkup, sensors, fans, settings, pages, disk, disk:overview, disk:<category>,
     /// agents, agents:<area>, apps, apps:leftovers, apps:store, plugins, space, space:large, space:duplicates, memory, cpu, gpu, claude, claude:<accounts|reset|privacy>, claude-cleanup, history, connections.
     init?(argument: String) {
         let parts = argument.split(separator: ":", maxSplits: 1).map(String.init)
         guard let command = parts.first else { return nil }
         switch command {
         case "overview": self = .overview
+        case "checkup": self = .checkup
         case "sensors": self = .sensors
         case "fans": self = .fans
         case "settings": self = .settings
@@ -380,6 +382,8 @@ struct MainView: View {
         switch page {
         case .overview:
             OverviewPage(monitor: monitor, open: { page = $0 }).transition(.page)
+        case .checkup:
+            CheckupPage(monitor: monitor, open: { page = $0 }).transition(.page)
         case .sensors:
             SensorsPage(monitor: monitor).transition(.page)
         case .fans:
@@ -511,6 +515,7 @@ struct MainSidebar: View {
                     row(.overview, tr("Overview"), "gauge.with.dots.needle.67percent", .orange,
                         trailing: monitor.snapshot.map { tempText($0.maximumKnownTemperature, fahrenheit: fahrenheit) },
                         trailingColor: monitor.snapshot.map { heatColor($0.maximumKnownTemperature) })
+                    row(.checkup, tr("AI Check-up"), "stethoscope", .mint, trailing: nil)
                     row(.sensors, tr("Sensors"), "thermometer.medium", .red, trailing: nil)
                     row(.fans, tr("Fans"), "fan", .blue,
                         trailing: monitor.snapshot.flatMap { FanControlPresentation.speedSummary($0.fans) })
