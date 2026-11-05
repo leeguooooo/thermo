@@ -58,6 +58,67 @@ public struct LocalAIAnswer: Sendable, Equatable {
     public var source: String
 }
 
+/// A whole folder at once: what is directly inside it, biggest first. Facts only, never contents.
+public struct LocalAIFolderQuestion: Sendable, Identifiable {
+    public struct Item: Sendable, Hashable {
+        public var name: String
+        public var path: String
+        public var isDir: Bool
+        public var bytes: Int64
+        public var files: Int
+        public var modified: Date?
+        /// Why Thermo will not remove it, if it won't.
+        public var locked: String?
+        public init(name: String, path: String, isDir: Bool, bytes: Int64, files: Int = 0, modified: Date? = nil, locked: String? = nil) {
+            self.name = name; self.path = path; self.isDir = isDir; self.bytes = bytes; self.files = files; self.modified = modified; self.locked = locked
+        }
+    }
+    public static let limit = 40
+    public var id: String { path }
+    public var path: String
+    public var bytes: Int64?
+    public var items: [Item]
+    /// Small items not listed one by one.
+    public var otherCount: Int
+    public var otherBytes: Int64
+    public var home: String
+
+    public init(path: String, bytes: Int64? = nil, items: [Item], otherCount: Int = 0, otherBytes: Int64 = 0, home: String = NSHomeDirectory()) {
+        let sorted = items.sorted { $0.bytes > $1.bytes }
+        self.path = path; self.bytes = bytes; self.items = Array(sorted.prefix(Self.limit))
+        self.otherCount = otherCount + max(0, sorted.count - Self.limit)
+        self.otherBytes = otherBytes + sorted.dropFirst(Self.limit).reduce(0) { $0 + $1.bytes }
+        self.home = home
+    }
+
+    func tilde(_ p: String) -> String { p == home ? "~" : p.hasPrefix(home + "/") ? "~" + p.dropFirst(home.count) : p }
+
+    /// Exactly what is sent, shown to the user before the first question.
+    public var facts: String {
+        let size = { (b: Int64) in ByteCountFormatter.string(fromByteCount: b, countStyle: .file) }
+        let day = { (d: Date) in ISO8601DateFormatter.string(from: d, timeZone: .current, formatOptions: [.withFullDate]) }
+        var lines = ["Folder: \(tilde(path))"]
+        if let bytes { lines.append("Total: \(size(bytes))") }
+        lines.append("Items:")
+        for i in items {
+            var parts = [i.isDir ? "folder" : "file", size(i.bytes)]
+            if i.isDir, i.files > 0 { parts.append("\(i.files) files") }
+            if let m = i.modified { parts.append("changed \(day(m))") }
+            if let l = i.locked { parts.append("locked: \(l)") }
+            lines.append("- \(i.name) (" + parts.joined(separator: ", ") + ")")
+        }
+        if otherCount > 0 { lines.append("Plus \(otherCount) smaller items, \(size(otherBytes)) in all, not listed.") }
+        return lines.joined(separator: "\n")
+    }
+}
+
+public struct LocalAIFolderAnswer: Sendable, Equatable {
+    public var summary: String
+    /// Item path → verdict; items the AI skipped are absent.
+    public var verdicts: [String: LocalAIAnswer]
+    public var source: String
+}
+
 public enum LocalAIBackend: Sendable, Equatable {
     case http(name: String, base: URL, model: String)
     case claudeCLI(path: String)
@@ -131,7 +192,14 @@ public enum LocalAI {
     public static func ask(_ q: LocalAIQuestion, using backend: LocalAIBackend, session: URLSession = .shared) async throws -> LocalAIAnswer {
         if let hit = await cache.get(q.cacheKey) { return hit }
         let lang = Locale.preferredLanguages.first ?? "en"
-        let user = q.facts + "\n\nAnswer in the language with code \(lang)."
+        let raw = try await send(system: system, user: q.facts + "\n\nAnswer in the language with code \(lang).", using: backend, maxTokens: 1500, session: session)
+        guard var answer = parse(raw, source: backend.label) else { throw LocalAIError.emptyAnswer }
+        answer.source = backend.label
+        await cache.put(q.cacheKey, answer)
+        return answer
+    }
+
+    static func send(system: String, user: String, using backend: LocalAIBackend, maxTokens: Int, session: URLSession) async throws -> String {
         let raw: String
         switch backend {
         case .http(let name, let base, let model):
@@ -139,7 +207,7 @@ public enum LocalAI {
             req.httpMethod = "POST"
             req.setValue("application/json", forHTTPHeaderField: "Content-Type")
             req.httpBody = try JSONSerialization.data(withJSONObject: [
-                "model": model, "max_tokens": 1500,
+                "model": model, "max_tokens": maxTokens,
                 "messages": [["role": "system", "content": system], ["role": "user", "content": user]],
             ])
             let data: Data, resp: URLResponse
@@ -153,10 +221,47 @@ public enum LocalAI {
         case .claudeCLI(let path):
             raw = try await runCLI(path, ["-p", "--model", "haiku", system + "\n\n" + user])
         }
-        guard var answer = parse(raw, source: backend.label) else { throw LocalAIError.emptyAnswer }
-        answer.source = backend.label
-        await cache.put(q.cacheKey, answer)
+        return raw
+    }
+
+    static let folderSystem = """
+    You help someone tidy one folder on their Mac to free disk space. You get the folder and the items \
+    directly inside it: name, kind, size, file count, last change (no file contents). Judge EVERY item. \
+    Reply with ONLY a JSON object: {"summary": "<one or two sentences about this folder>", \
+    "items": [{"name": "<exact item name>", "verdict": "delete" | "careful" | "keep", "reason": "<one short sentence>", "how": "<a better command, or empty>"}]}. \
+    "delete": safe to remove, it regenerates (build output, caches, node_modules, target, DerivedData) or is clearly leftover \
+    (old installers, duplicates, logs). "careful": depends on the person, say what to check. "keep": source code, documents, \
+    settings, an app's data, or anything personal. Prefer a tool's own clean command in "how" (cargo clean, npm cache clean, \
+    xcrun simctl delete unavailable, brew cleanup). Items marked locked cannot be removed by Thermo; still judge them. \
+    Never suggest deleting ~/.codex, ~/.claude or other agent data wholesale. Be concrete and brief.
+    """
+
+    /// One request for a whole folder: a verdict per item, matched back by name.
+    public static func review(_ q: LocalAIFolderQuestion, using backend: LocalAIBackend, session: URLSession = .shared) async throws -> LocalAIFolderAnswer {
+        let lang = Locale.preferredLanguages.first ?? "en"
+        let raw = try await send(system: folderSystem, user: q.facts + "\n\nAnswer in the language with code \(lang).",
+                                 using: backend, maxTokens: 6000, session: session)
+        guard let answer = parseFolder(raw, question: q, source: backend.label) else { throw LocalAIError.emptyAnswer }
         return answer
+    }
+
+    /// Keeps only verdicts for items that were asked about; unknown names are dropped, never invented.
+    public static func parseFolder(_ raw: String, question q: LocalAIFolderQuestion, source: String) -> LocalAIFolderAnswer? {
+        let text = raw.trimmingCharacters(in: .whitespacesAndNewlines)
+        struct Item: Decodable { var name: String; var verdict: String; var reason: String; var how: String? }
+        struct Wire: Decodable { var summary: String?; var items: [Item] }
+        guard let a = text.firstIndex(of: "{"), let b = text.lastIndex(of: "}"), a < b,
+              let w = try? JSONDecoder().decode(Wire.self, from: Data(text[a...b].utf8)) else { return nil }
+        let byName = Dictionary(q.items.map { ($0.name, $0.path) }, uniquingKeysWith: { first, _ in first })
+        var verdicts: [String: LocalAIAnswer] = [:]
+        for i in w.items {
+            guard let path = byName[i.name] ?? byName[i.name.trimmingCharacters(in: CharacterSet(charactersIn: "/ "))], verdicts[path] == nil else { continue }
+            let how = i.how?.trimmingCharacters(in: .whitespacesAndNewlines)
+            verdicts[path] = LocalAIAnswer(verdict: LocalAIAnswer.Verdict(rawValue: i.verdict.lowercased()) ?? .careful,
+                                           reason: i.reason, how: how?.isEmpty == false ? how : nil, source: source)
+        }
+        guard !verdicts.isEmpty else { return nil }
+        return LocalAIFolderAnswer(summary: w.summary?.trimmingCharacters(in: .whitespacesAndNewlines) ?? "", verdicts: verdicts, source: source)
     }
 
     /// The model is asked for JSON; anything else is kept as a cautious plain-text answer.

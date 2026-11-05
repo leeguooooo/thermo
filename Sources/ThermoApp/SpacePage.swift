@@ -422,6 +422,13 @@ final class SpaceLensModel: ObservableObject {
     /// Whether `path` can be ticked by a select-all: not refused, not inside a picked folder.
     func pickable(_ path: String) -> Bool { refusal(path) == nil && !isCovered(path) }
 
+    /// Adds what the user accepted from an AI review; never removes a pick, never overrides a lock.
+    func pick(_ chosen: [String: Int64]) {
+        for (path, bytes) in chosen.sorted(by: { $0.key.count < $1.key.count }) where basket[path] == nil && pickable(path) {
+            toggle(path, bytes: bytes)
+        }
+    }
+
     /// Picks every listed path that is not picked yet, each through the same checks as one tick.
     func pick(_ files: [(path: String, bytes: Int64)]) {
         guard !working else { return }
@@ -447,6 +454,7 @@ struct SpacePage: View {
     @State private var confirming: ManualRemovalReview?
     @State private var olderThan = 0
     @State private var asking: LocalAIQuestion?
+    @State private var tidying: LocalAIFolderQuestion?
     @ObservedObject private var ai = LocalAIStore.shared
 
     var body: some View {
@@ -480,6 +488,7 @@ struct SpacePage: View {
         }
         .onDisappear { model.stopLastOpened(); model.stopDuplicates() }
         .sheet(item: $asking) { q in AskAISheet(question: q) { asking = nil } }
+        .sheet(item: $tidying) { q in AIFolderReviewSheet(question: q, model: model) { tidying = nil } }
         .onAppear { ai.discover() }
         .sheet(item: $confirming) { review in
             ManualRemovalSheet(review: review,
@@ -543,7 +552,14 @@ struct SpacePage: View {
                 VStack(alignment: .leading, spacing: Theme.Space.m) {
                     // The page's hero: the folder drawn to scale.
                     VStack(alignment: .leading, spacing: Theme.Space.s) {
-                        pathBar(t)
+                        HStack(spacing: Theme.Space.s) {
+                            pathBar(t)
+                            if let backend = ai.backend, !SpaceLens.isVirtual(model.path), !f.children.isEmpty {
+                                Button { tidying = folderQuestion(f) } label: { Label(tr("Tidy with AI"), systemImage: "sparkles") }
+                                    .buttonStyle(PillButtonStyle()).controlSize(.small).disabled(model.working)
+                                    .help(tr("Ask %1$@ which items in this folder can go", backend.label))
+                            }
+                        }
                         Treemap(entries: f.children, parentBytes: f.entry.bytes, picked: Set(model.basket.keys)) { e in
                             if e.isDir { model.open(e.path) }
                         }
@@ -672,6 +688,13 @@ struct SpacePage: View {
             Divider()
             Button(tr("Ask AI…")) { asking = question(path) }
         }
+    }
+
+    func folderQuestion(_ f: SpaceFolder) -> LocalAIFolderQuestion {
+        LocalAIFolderQuestion(path: f.entry.path, bytes: f.entry.bytes,
+                              items: f.children.map { e in
+                                  .init(name: e.name, path: e.path, isDir: e.isDir, bytes: e.bytes, files: e.files, modified: e.newest, locked: model.refusal(e.path))
+                              }, otherCount: f.otherCount, otherBytes: f.otherBytes, home: model.home)
     }
 
     func question(_ path: String) -> LocalAIQuestion {
@@ -997,5 +1020,165 @@ struct ManualRemovalSheet: View {
                      confirmTitle: permanent ? tr("Delete Permanently") : tr("Move to Trash"),
                      accessory: AnyView(Toggle(tr("Delete permanently, skip the Trash"), isOn: $permanent).toggleStyle(.checkbox)),
                      confirm: { confirm(permanent) }, cancel: cancel)
+    }
+}
+
+/// "Tidy with AI": one question for the whole folder, a verdict per item, and the user decides what
+/// to tick. Ticked items only join the basket; removing still goes through the normal review.
+struct AIFolderReviewSheet: View {
+    let question: LocalAIFolderQuestion
+    @ObservedObject var model: SpaceLensModel
+    let close: () -> Void
+    @ObservedObject private var store = LocalAIStore.shared
+    @State private var phase: Phase = .idle
+    @State private var chosen: Set<String> = []
+
+    enum Phase: Equatable { case idle, preview, asking, answered(LocalAIFolderAnswer), failed(String) }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: Theme.Space.l) {
+            HStack(spacing: Theme.Space.m) {
+                Image(nsImage: NSWorkspace.shared.icon(forFile: question.path)).resizable().frame(width: 32, height: 32).accessibilityHidden(true)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(tr("Tidy this folder with AI")).font(Theme.heading).foregroundStyle(Theme.textPrimary)
+                    Text(FSPath.tilde(question.path)).font(Theme.mono).foregroundStyle(Theme.textTertiary).lineLimit(1).truncationMode(.middle)
+                }
+                Spacer()
+                if let b = question.bytes { Text(ByteFormat.string(b)).font(Theme.figure(.metric)).foregroundStyle(Theme.textPrimary) }
+            }
+            content
+            footer
+        }
+        .padding(Theme.Space.xl)
+        .frame(width: 620)
+        .frame(minHeight: 260, maxHeight: 640)
+        .onAppear {
+            guard phase == .idle, let backend = store.backend else { return }
+            if store.consented { ask(backend) } else { phase = .preview }
+        }
+    }
+
+    @ViewBuilder var content: some View {
+        switch phase {
+        case .idle:
+            Text(tr("No AI found on this Mac.")).font(Theme.secondary).foregroundStyle(Theme.textTertiary)
+        case .preview:
+            VStack(alignment: .leading, spacing: Theme.Space.s) {
+                Text(tr("Sent to %1$@", store.backend?.label ?? "")).font(Theme.sectionTitle).foregroundStyle(Theme.textSecondary)
+                ScrollView {
+                    Text(question.facts).font(Theme.mono).foregroundStyle(Theme.textPrimary).textSelection(.enabled)
+                        .frame(maxWidth: .infinity, alignment: .leading).fixedSize(horizontal: false, vertical: true)
+                }.frame(maxHeight: 280)
+                Text(tr("Only these facts are sent, never file contents. The AI may pass them to the cloud model it uses."))
+                    .font(Theme.caption).foregroundStyle(Theme.textTertiary).fixedSize(horizontal: false, vertical: true)
+            }
+        case .asking:
+            HStack(spacing: Theme.Space.s) {
+                ProgressView().controlSize(.small)
+                Text(tr("Asking %1$@ about %2$@…", store.backend?.label ?? "", trCount(question.items.count, "%1$@ item", "%1$@ items")))
+                    .font(Theme.caption).foregroundStyle(Theme.textTertiary)
+            }
+            .frame(maxWidth: .infinity, minHeight: 120)
+        case .answered(let a):
+            VStack(alignment: .leading, spacing: Theme.Space.s) {
+                if !a.summary.isEmpty {
+                    Text(a.summary).font(Theme.secondary).foregroundStyle(Theme.textPrimary).textSelection(.enabled).fixedSize(horizontal: false, vertical: true)
+                }
+                ScrollView {
+                    LazyVStack(spacing: 0) {
+                        ForEach(Array(rows(a).enumerated()), id: \.element.item.path) { i, row in
+                            if i > 0 { InspectorDivider(inset: 0) }
+                            itemRow(row.item, row.answer)
+                        }
+                    }
+                }
+                .background(RoundedRectangle(cornerRadius: Theme.radiusSmall, style: .continuous).fill(Theme.surface))
+                Text(tr("AI answer · %1$@. AI can be wrong: ticked items only join your picks, and nothing is removed until you review it.", a.source))
+                    .font(Theme.caption).foregroundStyle(Theme.textTertiary).fixedSize(horizontal: false, vertical: true)
+            }
+        case .failed(let why):
+            Text(why).font(Theme.secondary).foregroundStyle(Theme.caution).fixedSize(horizontal: false, vertical: true)
+        }
+    }
+
+    @ViewBuilder var footer: some View {
+        HStack {
+            if case .failed = phase, let backend = store.backend {
+                Button(tr("Try again")) { ask(backend) }.buttonStyle(PillButtonStyle())
+            }
+            Spacer()
+            Button(tr("Cancel"), action: close).keyboardShortcut(.cancelAction)
+            switch phase {
+            case .preview:
+                Button(tr("Send")) { store.consented = true; if let b = store.backend { ask(b) } }
+                    .keyboardShortcut(.defaultAction).buttonStyle(.borderedProminent)
+            case .answered:
+                let picked = question.items.filter { chosen.contains($0.path) }
+                Button(picked.isEmpty ? tr("Tick") : tr("Tick %1$@ (%2$@)", trCount(picked.count, "%1$@ item", "%1$@ items"),
+                                                          ByteFormat.string(picked.reduce(0) { $0 + $1.bytes }))) {
+                    model.pick(Dictionary(picked.map { ($0.path, $0.bytes) }, uniquingKeysWith: { a, _ in a })); close()
+                }
+                .keyboardShortcut(.defaultAction).buttonStyle(.borderedProminent).disabled(picked.isEmpty)
+            default:
+                EmptyView()
+            }
+        }
+    }
+
+    struct Row { let item: LocalAIFolderQuestion.Item; let answer: LocalAIAnswer? }
+
+    /// Can-delete first, then check-first, keep, and anything the AI skipped; biggest first within each.
+    func rows(_ a: LocalAIFolderAnswer) -> [Row] {
+        func rank(_ v: LocalAIAnswer.Verdict?) -> Int { switch v { case .delete: 0; case .careful: 1; case .keep: 2; case nil: 3 } }
+        return question.items.map { Row(item: $0, answer: a.verdicts[$0.path]) }
+            .sorted { (rank($0.answer?.verdict), -$0.item.bytes) < (rank($1.answer?.verdict), -$1.item.bytes) }
+    }
+
+    func itemRow(_ item: LocalAIFolderQuestion.Item, _ answer: LocalAIAnswer?) -> some View {
+        let already = model.basket[item.path] != nil || model.isCovered(item.path)
+        let lock = model.refusal(item.path)
+        return HStack(alignment: .top, spacing: Theme.Space.s + 2) {
+            SelectToggle(selected: already || chosen.contains(item.path), locked: lock != nil && !already, label: tr("Select %1$@", item.name)) {
+                if chosen.contains(item.path) { chosen.remove(item.path) } else { chosen.insert(item.path) }
+            }
+            .disabled(already || lock != nil)
+            .help(lock ?? (already ? tr("Already picked") : ManualRemoval.caution(item.path) ?? tr("Pick to move to the Trash")))
+            VStack(alignment: .leading, spacing: 3) {
+                HStack(spacing: Theme.Space.s) {
+                    if let answer {
+                        let (text, color) = AskAIPanel.verdict(answer.verdict)
+                        Text(text).font(Theme.label).foregroundStyle(color)
+                            .padding(.horizontal, 6).padding(.vertical, 1).background(Capsule().fill(color.opacity(0.15)))
+                    }
+                    Text(item.name).font(Theme.rowTitle).foregroundStyle(Theme.textPrimary).lineLimit(1).truncationMode(.middle)
+                    Spacer(minLength: Theme.Space.s)
+                    Text(ByteFormat.string(item.bytes)).font(Theme.caption.monospacedDigit()).foregroundStyle(Theme.textSecondary)
+                }
+                Text(answer?.reason ?? tr("The AI did not judge this item.")).font(Theme.caption).foregroundStyle(Theme.textTertiary)
+                    .textSelection(.enabled).fixedSize(horizontal: false, vertical: true)
+                if let how = answer?.how {
+                    HStack(spacing: Theme.Space.xs) {
+                        Text(how).font(Theme.mono).foregroundStyle(Theme.textPrimary).textSelection(.enabled).lineLimit(2)
+                        Button { NSPasteboard.general.clearContents(); NSPasteboard.general.setString(how, forType: .string) } label: {
+                            Image(systemName: "doc.on.doc")
+                        }.buttonStyle(.borderless).help(tr("Copy"))
+                    }
+                }
+                if let lock { Text(tr("Thermo still won't remove it: %1$@", lock)).font(Theme.caption).foregroundStyle(Theme.caution) }
+            }
+        }
+        .padding(.horizontal, Theme.Space.m).padding(.vertical, Theme.Space.s)
+    }
+
+    func ask(_ backend: LocalAIBackend) {
+        phase = .asking
+        Task {
+            do {
+                let a = try await LocalAI.review(question, using: backend)
+                // Start with what the AI says can go and Thermo allows; the user changes the rest.
+                chosen = Set(a.verdicts.filter { $0.value.verdict == .delete && model.pickable($0.key) && model.basket[$0.key] == nil }.keys)
+                phase = .answered(a)
+            } catch { phase = .failed(error.localizedDescription) }
+        }
     }
 }

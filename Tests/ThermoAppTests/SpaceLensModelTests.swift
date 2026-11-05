@@ -313,4 +313,15 @@ final class SpaceLensModelTests: XCTestCase {
         XCTAssertEqual(model.tree?.complete, false)
         XCTAssertEqual(model.folder?.entry.effectiveSizeState, .unavailable)
     }
+
+    @MainActor func testPickFromAIAddsOnlyAllowedItemsAndKeepsExistingPicks() throws {
+        let root = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString).resolvingSymlinksInPath()
+        let a = root.appendingPathComponent("p/target").path, b = root.appendingPathComponent("p/docs").path
+        for p in [a, b, root.appendingPathComponent("Documents").path] { try FileManager.default.createDirectory(atPath: p, withIntermediateDirectories: true) }
+        defer { try? FileManager.default.removeItem(at: root) }
+        let model = SpaceLensModel(root: root.path, cache: root.appendingPathComponent("cache"), remove: { _, _, _, _, _, _ in CleanResult(id: "fixture", trashed: true) })
+        model.toggle(b, bytes: 5)
+        model.pick([a: 10, b: 5, root.appendingPathComponent("Documents").path: 99, a + "/inner": 1])
+        XCTAssertEqual(model.basket, [a: 10, b: 5])
+    }
 }

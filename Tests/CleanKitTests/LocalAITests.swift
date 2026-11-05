@@ -45,6 +45,37 @@ final class LocalAITests: XCTestCase {
         XCTAssertFalse(StubProtocol.seen.isEmpty)
         XCTAssertTrue(StubProtocol.seen.allSatisfy { $0.host == "127.0.0.1" })
     }
+
+    func testFolderReviewMatchesNamesAndDropsInventedOnes() {
+        let home = "/Users/x"
+        let q = LocalAIFolderQuestion(path: home + "/p", items: [
+            .init(name: "target", path: home + "/p/target", isDir: true, bytes: 6_000_000_000, files: 26735),
+            .init(name: ".git", path: home + "/p/.git", isDir: true, bytes: 242_000_000, locked: "git metadata"),
+            .init(name: "docs", path: home + "/p/docs", isDir: true, bytes: 164_000_000),
+        ], home: home)
+        XCTAssertTrue(q.facts.contains("Folder: ~/p"))
+        XCTAssertTrue(q.facts.contains("- .git (folder, 242 MB"), q.facts)
+        XCTAssertTrue(q.facts.contains("locked: git metadata"))
+        let raw = #"Sure: {"summary":"Rust project.","items":[{"name":"target","verdict":"delete","reason":"Build output.","how":"cargo clean"},{"name":"docs/","verdict":"keep","reason":"Docs."},{"name":"secret","verdict":"delete","reason":"made up"}]}"#
+        let a = LocalAI.parseFolder(raw, question: q, source: "x")
+        XCTAssertEqual(a?.summary, "Rust project.")
+        XCTAssertEqual(a?.verdicts[home + "/p/target"]?.verdict, .delete)
+        XCTAssertEqual(a?.verdicts[home + "/p/target"]?.how, "cargo clean")
+        XCTAssertEqual(a?.verdicts[home + "/p/docs"]?.verdict, .keep)
+        XCTAssertNil(a?.verdicts[home + "/p/.git"])
+        XCTAssertEqual(a?.verdicts.count, 2)
+        XCTAssertNil(LocalAI.parseFolder("no json here", question: q, source: "x"))
+        XCTAssertNil(LocalAI.parseFolder(#"{"items":[{"name":"nope","verdict":"delete","reason":"?"}]}"#, question: q, source: "x"))
+    }
+
+    func testFolderQuestionListsTheBiggestAndCountsTheRest() {
+        let items = (0..<50).map { LocalAIFolderQuestion.Item(name: "f\($0)", path: "/h/f\($0)", isDir: false, bytes: Int64($0)) }
+        let q = LocalAIFolderQuestion(path: "/h", items: items, otherCount: 3, otherBytes: 100, home: "/h")
+        XCTAssertEqual(q.items.count, LocalAIFolderQuestion.limit)
+        XCTAssertEqual(q.items.first?.name, "f49")
+        XCTAssertEqual(q.otherCount, 13)
+        XCTAssertEqual(q.otherBytes, 100 + (0..<10).reduce(0) { $0 + Int64($1) })
+    }
 }
 
 /// magpie is not running; Ollama answers with one model.

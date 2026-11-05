@@ -4182,4 +4182,15 @@ let zhHans: [String: String] = [
     "This cannot be undone: nothing goes to the Trash and Thermo cannot put it back. Deletions are listed in ~/Library/Logs/Thermo/clean.log.": "无法撤销：不经过废纸篓，Thermo 也没法放回。删除记录在 ~/Library/Logs/Thermo/clean.log。",
     "Delete Permanently": "永久删除",
     "Delete permanently, skip the Trash": "直接删除，不放进废纸篓",
+    // Space Lens: tidy a folder with AI
+    "Tidy with AI": "AI 整理",
+    "Ask %1$@ which items in this folder can go": "问 %1$@ 这个文件夹里哪些可以删",
+    "Tidy this folder with AI": "让 AI 整理这个文件夹",
+    "No AI found on this Mac.": "这台 Mac 上没找到可用的 AI。",
+    "Asking %1$@ about %2$@…": "正在问 %1$@（%2$@）…",
+    "AI answer · %1$@. AI can be wrong: ticked items only join your picks, and nothing is removed until you review it.": "AI 回答 · %1$@。AI 可能判断错：勾上的只是加入待删清单，你在「检查」里确认之前什么都不会删。",
+    "Tick": "勾选",
+    "Tick %1$@ (%2$@)": "勾选 %1$@（%2$@）",
+    "Already picked": "已经选上了",
+    "The AI did not judge this item.": "AI 没有判断这一项。",
 ]
