@@ -516,7 +516,7 @@ struct MainSidebar: View {
                     row(.overview, tr("Overview"), "gauge.with.dots.needle.67percent", .orange,
                         trailing: monitor.snapshot.map { tempText($0.maximumKnownTemperature, fahrenheit: fahrenheit) },
                         trailingColor: monitor.snapshot.map { heatColor($0.maximumKnownTemperature) })
-                    row(.checkup, tr("AI Check-up"), "stethoscope", .mint, trailing: nil)
+                    row(.checkup, tr("AI Check-up"), "waveform.path.ecg", .mint, trailing: nil)
                     row(.sensors, tr("Sensors"), "thermometer.medium", .red, trailing: nil)
                     row(.fans, tr("Fans"), "fan", .blue,
                         trailing: monitor.snapshot.flatMap { FanControlPresentation.speedSummary($0.fans) })

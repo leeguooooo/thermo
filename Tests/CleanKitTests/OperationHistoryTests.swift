@@ -49,6 +49,19 @@ final class OperationHistoryTests: XCTestCase {
         XCTAssertEqual(byAction["clean/delete"]?.title, "清理时删除了文件")
     }
 
+    func testFailedDeleteDoesNotClaimItDeletedAndManualDeleteIsNotATrashMove() {
+        var failed = CleanResult(id: "npm-cache", trashed: false); failed.failed = ["/q": "outside your home folder"]
+        var picked = CleanResult(id: "manual", trashed: false); picked.removed = ["/p"]
+        for r in [failed, picked] { log(r) }
+        let byAction = Dictionary(OperationJournal.read(home: home).map { ($0.feature + "/" + $0.action, $0) }, uniquingKeysWith: { a, _ in a })
+        L10n.override = .english
+        defer { L10n.override = nil }
+        XCTAssertNil(byAction["clean/delete"]?.undoText, "nothing was deleted, so nothing is said to be gone for good")
+        XCTAssertEqual(byAction["space/delete"]?.title, "Deleted hand-picked files permanently")
+        XCTAssertEqual(byAction["space/delete"]?.undoText, "Deleted for good; nothing to restore.")
+        XCTAssertNil(byAction["space/trash"])
+    }
+
     func testNothingRemovedNothingFailedRecordsNothing() {
         log(CleanResult(id: "empty", trashed: true))
         XCTAssertTrue(OperationJournal.read(home: home).isEmpty)

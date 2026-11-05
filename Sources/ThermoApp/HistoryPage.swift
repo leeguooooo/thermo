@@ -141,6 +141,14 @@ struct HistoryPage: View {
     @State private var restoring: OperationRecord?
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
+    /// `--expand-rows N` (offscreen snapshots only): open the first N rows so their details can be reviewed.
+    func expandForSnapshot() {
+        let args = CommandLine.arguments
+        guard expanded.isEmpty, let i = args.firstIndex(of: "--expand-rows"), i + 1 < args.count, let n = Int(args[i + 1]) else { return }
+        let ids = model.records.prefix(n).map(\.id)
+        DispatchQueue.main.async { expanded.formUnion(ids) }
+    }
+
     var body: some View {
         WindowPage(title: tr("History"), subtitle: tr("Every change Thermo made, and where to undo it.")) {
             HStack(spacing: Theme.Space.s) {
@@ -165,6 +173,7 @@ struct HistoryPage: View {
                                title: tr(model.readIssue == nil ? "No operations recorded yet. Cleanups, uninstalls, agent fixes, Claude resets, privacy changes and tab batches will appear here." : "No verified history records are available."))
                 }
             } else {
+                let _ = expandForSnapshot()
                 ForEach(days, id: \.0) { day, records in
                     VStack(alignment: .leading, spacing: Theme.Space.s) {
                         SectionHeader(title: day) {
@@ -259,7 +268,8 @@ struct HistoryPage: View {
                             }
                         }
                         if let detail = item.detail, !detail.isEmpty {
-                            Text(tr(detail)).font(Theme.caption).foregroundStyle(Theme.textTertiary).padding(.leading, 18)
+                            // Tab batches store how many tabs went into a group as a bare number.
+                            Text(r.feature == "tabs" && Int(detail) != nil ? trCount(Int(detail)!, "%1$@ tab", "%1$@ tabs") : tr(detail)).font(Theme.caption).foregroundStyle(Theme.textTertiary).padding(.leading, 18)
                                 .fixedSize(horizontal: false, vertical: true).textSelection(.enabled)
                         }
                     }

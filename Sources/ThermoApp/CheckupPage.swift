@@ -136,7 +136,7 @@ struct CheckupPage: View {
             Button {
                 model.start(monitor: monitor)
             } label: {
-                Label(model.report == nil ? tr("Start check-up") : tr("Check again"), systemImage: "stethoscope")
+                Label(model.report == nil ? tr("Start check-up") : tr("Check again"), systemImage: "waveform.path.ecg")
             }
             .buttonStyle(PillButtonStyle(prominent: true)).disabled(model.busy || model.phase == .preview)
             switch model.phase {

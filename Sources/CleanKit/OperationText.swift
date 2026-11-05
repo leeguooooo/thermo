@@ -88,7 +88,9 @@ extension OperationRecord {
             case ("network", "awdlBegin"): return tr("Stop in Network low latency. A session started in Terminal ends with Ctrl-C.")
             case ("apps", "update"): return tr("Check the installed version in Software → Updates. Thermo cannot automatically roll updates back.")
             case ("privacy", "clearClaudeEnvironment"): return tr("Cannot be undone: the values were never read or saved.")
-            case ("clean", "delete"), ("clean", "emptyTrash"): return tr("Deleted for good; nothing to restore.")
+            // Only when something actually went: a cleanup that failed deleted nothing.
+            case ("clean", "delete"), ("clean", "emptyTrash"), ("space", "delete"):
+                return items.contains { $0.status == "done" || $0.status == "partial" } ? tr("Deleted for good; nothing to restore.") : nil
             default: return nil
             }
         }
