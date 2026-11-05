@@ -32,13 +32,24 @@ final class CleanupProtectionsModel: ObservableObject {
 struct CleanupProtectionsButton: View {
     @ObservedObject var disk: DiskModel
     var compact = false
+    /// A Settings row (symbol, name, chevron) instead of a pill.
+    var asRow = false
     @State private var showing = false
     var body: some View {
-        Button { showing = true } label: {
-            if compact { Image(systemName: "shield.checkered") }
-            else { Label(tr("Protected locations"), systemImage: "shield.checkered") }
+        Group {
+            if asRow {
+                Button { showing = true } label: {
+                    FeatureRow(title: tr("Disk Cleanup protected locations"), symbol: "shield.checkered")
+                }.buttonStyle(.plain)
+            } else {
+                Button { showing = true } label: {
+                    if compact { Image(systemName: "shield.checkered") }
+                    else { Label(tr("Protected locations"), systemImage: "shield.checkered") }
+                }
+                .buttonStyle(PillButtonStyle())
+            }
         }
-        .buttonStyle(PillButtonStyle()).help(tr("Protected locations"))
+        .help(tr("Protected locations"))
         .accessibilityLabel(tr("Protected locations"))
         .disabled(disk.cleaning || disk.scanning)
         .sheet(isPresented: $showing) {

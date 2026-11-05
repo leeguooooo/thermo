@@ -619,7 +619,7 @@ extension Cleaner {
         case let id where id.hasPrefix("app-data:"): (feature, action) = ("apps", "removeData")
         case let id where id.hasPrefix("app:"): (feature, action) = ("apps", "uninstall")
         case let id where id.hasPrefix("leftovers:"): (feature, action) = ("apps", "remove")
-        case "manual": (feature, action) = ("space", "trash")
+        case "manual": (feature, action) = ("space", r.trashed ? "trash" : "delete")
         case let id where id.hasPrefix("trash-batch/"): (feature, action) = ("clean", "emptyTrash")
         default: (feature, action) = ("clean", r.trashed ? "trash" : "delete")
         }

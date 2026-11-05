@@ -140,7 +140,7 @@ struct SlowdownCulpritsCard: View {
                     : tr("Ended %1$@ of %2$@ processes; about %3$@ freed.", String(results.filter { $0.outcome == .stopped || $0.outcome == .killed }.count),
                          String(results.count), MemoryFormat.string(kibibytes: results.reduce(0) { $0 + $1.freedKB }))
                 if let before = results.first?.swapBefore, let after = results.last?.swapAfter {
-                    text = MachinePulse.sentences(text, tr("Swap used: %1$@ → %2$@.", ByteFormat.string(Int64(before)), ByteFormat.string(Int64(after))))
+                    text = MachinePulse.sentences(text, tr("Swap used: %1$@ → %2$@.", MemoryFormat.string(bytes: before), MemoryFormat.string(bytes: after)))
                 }
             }
             DispatchQueue.main.async {

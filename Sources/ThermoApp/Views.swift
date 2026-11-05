@@ -519,7 +519,7 @@ struct FanRow: View {
     var body: some View {
         HStack {
             Image(systemName: "fan").foregroundStyle(fan.manual == true ? Theme.caution : Theme.textSecondary)
-            Text(fan.name).frame(width: 52, alignment: .leading)
+            Text(fan.displayName).frame(width: 52, alignment: .leading)
             FanLoadIndicator(fan: fan)
             Text(tr("%1$@ rpm", FanControlPresentation.rpm(fan.rpm))).monospacedDigit().frame(width: 76, alignment: .trailing)
         }
@@ -870,7 +870,7 @@ struct FanFigure: View {
         VStack(alignment: .leading, spacing: Theme.Space.s) {
             HStack(spacing: Theme.Space.xs) {
                 Image(systemName: "fan").font(.system(size: 11, weight: .medium)).accessibilityHidden(true)
-                Text(fan.name).font(Theme.label)
+                Text(fan.displayName).font(Theme.label)
                 if fan.manual == true { StatusTag(text: tr("manual"), color: Theme.caution) }
             }
             .foregroundStyle(Theme.textTertiary)
@@ -921,7 +921,7 @@ struct FanControlCard: View {
             VStack(alignment: .leading, spacing: Theme.Space.m) {
                 HStack(spacing: Theme.Space.m) {
                     if showName {
-                        Text(fan.name).font(Theme.rowTitle).foregroundStyle(Theme.textPrimary)
+                        Text(fan.displayName).font(Theme.rowTitle).foregroundStyle(Theme.textPrimary)
                     }
                     ThermoTabs(selection: $mode, options: FanMode.allCases.map { ($0, $0.title) }, label: tr("Mode"))
                         .disabled(!enabled)
@@ -995,7 +995,10 @@ struct FanControlCard: View {
     /// One line for what was asked of the fan; what the hardware check found is behind the (?).
     @ViewBuilder var status: some View {
         if checking {
-            SkeletonBar(width: 160, height: 8)
+            HStack(spacing: Theme.Space.xs) {
+                ProgressView().controlSize(.mini)
+                Text(tr("Checking…")).font(Theme.caption).foregroundStyle(Theme.textTertiary)
+            }
         } else {
             let checked = controlState?.observations[fan.id]?.checkedAt
             let detail = [FanControlPresentation.observation(controlState, fan: fan.id),
@@ -1049,7 +1052,8 @@ struct FanControlCard: View {
 struct FanChart: View {
     let history: [HistoryPoint]
     var body: some View {
-        let samples = FanChartSample.samples(history)
+        let end = history.last?.time ?? Date()
+        let samples = FanChartSample.samples(history.filter { $0.time >= end.addingTimeInterval(-600) })
         Chart {
             ForEach(samples) { p in
                 AreaMark(x: .value("Time", p.time), y: .value("RPM", p.rpm), series: .value("Segment", "\(p.fan):\(p.segment)"))
@@ -1061,6 +1065,8 @@ struct FanChart: View {
             }
         }
         .chartForegroundStyleScale(range: [Theme.accent, Color(red: 0.35, green: 0.80, blue: 0.78), Theme.caution])
+        // Always the full ten minutes the title promises; a few seconds of data no longer repeats one minute on the axis.
+        .chartXScale(domain: end.addingTimeInterval(-600)...end)
         .chartXAxis { AxisMarks(values: .automatic(desiredCount: 4)) { _ in
             AxisGridLine().foregroundStyle(Theme.hairline)
             AxisValueLabel(format: .dateTime.hour().minute()).foregroundStyle(Theme.textTertiary)
@@ -1117,12 +1123,14 @@ struct SettingsView: View {
         VStack(alignment: .leading, spacing: Theme.Space.xl) {
             // Features with their own panel: one group of rows, each opening its panel.
             section(tr("Tools")) {
-                row(tr("Manage menu bar"), labelControl: false) {
-                    Button(tr("Manage menu bar…")) { MenuBarManagerPanel.shared.show() }.controlSize(.small)
-                }
-                row(tr("Search apps and files"), labelControl: false) {
-                    Button(tr("Search settings…")) { LocalSearchPanel.shared.show(settings: true) }.controlSize(.small)
-                }
+                Button { MenuBarManagerPanel.shared.show() } label: {
+                    FeatureRow(title: tr("Manage menu bar"), symbol: "menubar.rectangle")
+                }.buttonStyle(.plain)
+                InspectorDivider(inset: 46)
+                Button { LocalSearchPanel.shared.show(settings: true) } label: {
+                    FeatureRow(title: tr("Search apps and files"), symbol: "magnifyingglass")
+                }.buttonStyle(.plain)
+                InspectorDivider(inset: 46)
                 CleanScreenButton()
                 InspectorDivider(inset: 46)
                 IdleAwakeButton()
@@ -1130,10 +1138,8 @@ struct SettingsView: View {
                 AWDLButton()
                 InspectorDivider(inset: 46)
                 BatteryCareButton()
-                InspectorDivider(inset: Theme.Space.l)
-                row(tr("Disk Cleanup"), last: true, labelControl: false) {
-                    CleanupProtectionsButton(disk: disk).controlSize(.small)
-                }
+                InspectorDivider(inset: 46)
+                CleanupProtectionsButton(disk: disk, asRow: true)
             }
             section(tr("General")) {
                 row(tr("Language")) {

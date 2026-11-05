@@ -75,7 +75,7 @@ extension PulseCommand {
         }
         if let first = results.first, let swapBefore = first.swapBefore, let last = results.last, let swapAfter = last.swapAfter, let loadAfter = last.loadAfter {
             actionOutput(app.style.dim(tr("Swap used: %1$@ → %2$@. One-minute load: %3$@ → %4$@ (load averages take a minute or two to follow).",
-                                          ByteFormat.string(Int64(swapBefore)), ByteFormat.string(Int64(swapAfter)),
+                                          MemoryFormat.string(bytes: UInt64(swapBefore)), MemoryFormat.string(bytes: UInt64(swapAfter)),
                                           String(format: "%.1f", first.loadBefore), String(format: "%.1f", loadAfter))))
         }
         if app.args.has("json") { print(Export.json(results)) }

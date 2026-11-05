@@ -556,7 +556,7 @@ public struct SlowdownDiagnosis: Codable, Sendable {
     }
 
     static func headline(_ s: SlowdownSystem, _ memory: SlowdownSystem.Strain, _ cpu: SlowdownSystem.Strain, _ culprits: [SlowdownCulprit], frees: Int) -> String {
-        let swap = tr("swap %1$@ of %2$@ used", ByteFormat.string(Int64(s.swapUsed)), ByteFormat.string(Int64(s.swapTotal)))
+        let swap = tr("swap %1$@ of %2$@ used", MemoryFormat.string(bytes: UInt64(s.swapUsed)), MemoryFormat.string(bytes: UInt64(s.swapTotal)))
         var first: String
         switch (memory, cpu) {
         case (.exhausted, _): first = tr("Memory is exhausted (%1$@).", swap)

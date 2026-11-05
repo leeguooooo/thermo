@@ -52,3 +52,12 @@ enum FanControlPresentation {
         }
     }
 }
+
+extension FanReading {
+    /// The SMC reports "Fan" / "Fan 2" in English when the hardware has no name of its own.
+    var displayName: String {
+        if name == "Fan" { return tr("Fan") }
+        if name.hasPrefix("Fan "), let n = Int(name.dropFirst(4)) { return tr("Fan %1$@", String(n)) }
+        return name
+    }
+}

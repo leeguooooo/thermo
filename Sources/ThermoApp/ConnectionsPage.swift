@@ -178,6 +178,9 @@ struct ConnectionsPage: View {
                 }
                 if model.scanning && model.nearby == nil {
                     SkeletonList(rows: 4)
+                } else if model.nearby == nil, model.scanError == nil {
+                    Text(tr("Scan lists the networks around you, with their signal and channel."))
+                        .font(Theme.caption).foregroundStyle(Theme.textTertiary)
                 } else if let nearby = model.nearby {
                     if nearby.isEmpty {
                         InspectorPanel { EmptyState(symbol: "wifi.exclamationmark", title: tr("No other networks heard")) }
