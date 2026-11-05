@@ -385,6 +385,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate, UNU
             try? NSBitmapImageRep(cgImage: img).representation(using: .png, properties: [:])?
                 .write(to: URL(fileURLWithPath: dir).appendingPathComponent("panel.png"))
         }
+        // The capture menu as a plain list (Buttons as rows, Dividers as rules), for reviewing its wording and groups.
+        let m = ImageRenderer(content: VStack(alignment: .leading, spacing: 6) { CaptureMenuItems() }
+            .buttonStyle(.plain).padding(16).frame(width: 300, alignment: .leading).background(Color(nsColor: .windowBackgroundColor)))
+        m.scale = 2
+        if let img = m.cgImage {
+            try? NSBitmapImageRep(cgImage: img).representation(using: .png, properties: [:])?
+                .write(to: URL(fileURLWithPath: dir).appendingPathComponent("panel-capture-menu.png"))
+        }
         exit(0)
     }
 }

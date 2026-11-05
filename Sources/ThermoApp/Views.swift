@@ -405,29 +405,7 @@ struct PopoverView: View {
             HStack(spacing: 6) {
                 PanelButton(title: tr("Open Console"), symbol: "macwindow", prominent: true) { MainWindow.show(.overview) }
                 Spacer(minLength: 0)
-                Menu {
-                    // Grouped: capture, pin from the clipboard, manage pins, then settings.
-                    Button(tr("Capture screen…") + CaptureWorkspace.shared.shortcutSuffix(for:.screenshot)) { CaptureWorkspace.shared.capture() }
-                    Button(tr("Scrolling capture…")) { CaptureWorkspace.shared.captureScrolling() }
-                    Button(tr("Record screen…")) { CaptureWorkspace.shared.recordScreen() }
-                    Button(tr("Recording drafts…")) { CaptureWorkspace.shared.recordScreen(draftsOnly:true) }
-                    Button(tr("Open image…")) { CaptureWorkspace.shared.importImage() }
-                    CaptureConfiguredActionsMenu(model:CaptureWorkspace.shared.shortcuts)
-                    Divider()
-                    Button(tr("Pin clipboard") + CaptureWorkspace.shared.shortcutSuffix(for:.pinClipboard)) { CaptureWorkspace.shared.pinClipboard() }
-                    Button(tr("Pin clipboard as text")) { CaptureWorkspace.shared.pinClipboard(asText:true) }
-                    Button(tr("Pin clipboard as LaTeX")) { CaptureWorkspace.shared.pinClipboard(asLaTeX:true) }
-                    Divider()
-                    Button(tr("Pin groups and history")) { CaptureWorkspace.shared.showPinLibrary() }
-                    Button(tr("Restore last closed pin")) { CaptureWorkspace.shared.restoreLastPin() }
-                    Button(tr("Restore pin mouse interaction")) {CaptureWorkspace.shared.pinSession.restoreMouseInteraction()}
-                    Button(tr("Show all pins")) { CaptureWorkspace.shared.showAll() }
-                    Button(tr("Hide all pins")) { CaptureWorkspace.shared.hideAll() }
-                    Button(tr("Close all pins")) { CaptureWorkspace.shared.closeAll() }
-                    Divider()
-                    Button(tr("Capture saving and after-actions")) { CaptureWorkspace.shared.showSavingSettings() }
-                    Button(tr("Capture shortcuts and actions")) { CaptureWorkspace.shared.showActionSettings() }
-                } label: { Image(systemName: "viewfinder").frame(width: 22) }
+                Menu { CaptureMenuItems() } label: { Image(systemName: "viewfinder").frame(width: 22) }
                 .menuStyle(.borderlessButton).fixedSize().help(tr("Screenshots and pins"))
                 shortcut("internaldrive", tr("Disk Cleanup"), .disk(.home))
                 shortcut("stethoscope", tr("AI Agent Diagnostics"), .agents(.home))
@@ -1379,5 +1357,34 @@ struct SettingsView: View {
         case .outdated: return tr("outdated")
         case .unknown: return "…"
         }
+    }
+}
+
+
+/// The panel's capture menu. Its own view so `--render-preview` can draw it as a list for review
+/// (a SwiftUI Menu cannot be rendered offscreen).
+struct CaptureMenuItems: View {
+    var body: some View {
+                // Grouped: capture, pin from the clipboard, manage pins, then settings.
+                Button(tr("Capture screen…") + CaptureWorkspace.shared.shortcutSuffix(for:.screenshot)) { CaptureWorkspace.shared.capture() }
+                Button(tr("Scrolling capture…")) { CaptureWorkspace.shared.captureScrolling() }
+                Button(tr("Record screen…")) { CaptureWorkspace.shared.recordScreen() }
+                Button(tr("Recording drafts…")) { CaptureWorkspace.shared.recordScreen(draftsOnly:true) }
+                Button(tr("Open image…")) { CaptureWorkspace.shared.importImage() }
+                CaptureConfiguredActionsMenu(model:CaptureWorkspace.shared.shortcuts)
+                Divider()
+                Button(tr("Pin clipboard") + CaptureWorkspace.shared.shortcutSuffix(for:.pinClipboard)) { CaptureWorkspace.shared.pinClipboard() }
+                Button(tr("Pin clipboard as text")) { CaptureWorkspace.shared.pinClipboard(asText:true) }
+                Button(tr("Pin clipboard as LaTeX")) { CaptureWorkspace.shared.pinClipboard(asLaTeX:true) }
+                Divider()
+                Button(tr("Pin groups and history")) { CaptureWorkspace.shared.showPinLibrary() }
+                Button(tr("Restore last closed pin")) { CaptureWorkspace.shared.restoreLastPin() }
+                Button(tr("Restore pin mouse interaction")) {CaptureWorkspace.shared.pinSession.restoreMouseInteraction()}
+                Button(tr("Show all pins")) { CaptureWorkspace.shared.showAll() }
+                Button(tr("Hide all pins")) { CaptureWorkspace.shared.hideAll() }
+                Button(tr("Close all pins")) { CaptureWorkspace.shared.closeAll() }
+                Divider()
+                Button(tr("Capture saving and after-actions")) { CaptureWorkspace.shared.showSavingSettings() }
+                Button(tr("Capture shortcuts and actions")) { CaptureWorkspace.shared.showActionSettings() }
     }
 }
