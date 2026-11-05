@@ -228,7 +228,7 @@ struct PluginsPage: View {
                         Text(verbatim: version).font(Theme.caption).foregroundStyle(Theme.textTertiary)
                     }
                     if let category = record.plugin.category {
-                        Text(verbatim: category).font(Theme.caption).foregroundStyle(Theme.textSecondary)
+                        Text(verbatim: AppStorePage.category(category)).font(Theme.caption).foregroundStyle(Theme.textSecondary)
                     }
                 }
                 if let description = record.plugin.description {

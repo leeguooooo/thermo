@@ -368,10 +368,12 @@ struct OverviewPage: View {
     func resource(_ title: String, _ value: String, _ note: String?, _ page: MainPage) -> some View {
         Button { open(page) } label: {
             HStack(alignment: .firstTextBaseline, spacing: Theme.Space.s) {
-                Text(title).font(Theme.caption).foregroundStyle(Theme.textTertiary)
-                Text(value).font(Theme.figure(.row)).foregroundStyle(Theme.textPrimary).contentTransition(.numericText())
+                Text(title).font(Theme.caption).foregroundStyle(Theme.textTertiary).fixedSize()
+                Text(value).font(Theme.figure(.row)).foregroundStyle(Theme.textPrimary).contentTransition(.numericText()).fixedSize()
                 Text(note?.isEmpty == false ? note! : "").font(Theme.caption).foregroundStyle(Theme.textTertiary)
-                    .lineLimit(1)
+                    // Never truncated: a long note ("tight · swap 18.0 GiB") takes width from the shorter
+                    // cells, and when the row cannot fit, ViewThatFits falls back to the two-column grid.
+                    .lineLimit(1).fixedSize()
                 Spacer(minLength: 0)
             }
             .frame(maxWidth: .infinity, alignment: .leading)

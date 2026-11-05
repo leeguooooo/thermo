@@ -17,6 +17,7 @@ struct YunXDownloadPage: View {
     @State private var settingsShown = false
 
     /// A column narrower than the page reads as one task, and keeps the size column near the name.
+    /// It starts where every other page starts, so switching pages does not shift the title.
     static let columnWidth: CGFloat = 760
 
     var body: some View {
@@ -32,6 +33,7 @@ struct YunXDownloadPage: View {
                 if !model.browsing, model.video == nil, model.jobs.isEmpty { emptyState }
             }
             .frame(maxWidth: Self.columnWidth, alignment: .leading)
+            .frame(maxWidth: Theme.pageWidth, alignment: .leading)
             .padding(.horizontal, Theme.pagePadding).padding(.top, Theme.pageTop).padding(.bottom, Theme.Space.xxl)
             .frame(maxWidth: .infinity)
         }

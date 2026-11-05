@@ -510,6 +510,7 @@ struct MainSidebar: View {
                 Text("Thermo").font(Theme.rowTitle.weight(.semibold)).foregroundStyle(Theme.textPrimary)
             }
             .padding(.horizontal, 18).padding(.top, 46).padding(.bottom, 10)
+            ScrollViewReader { scroller in
             ScrollView(showsIndicators: false) {
                 VStack(alignment: .leading, spacing: 1) {
                     row(.overview, tr("Overview"), "gauge.with.dots.needle.67percent", .orange,
@@ -572,6 +573,12 @@ struct MainSidebar: View {
                 Color.black
                 LinearGradient(colors: [.black, .clear], startPoint: .top, endPoint: .bottom).frame(height: 18)
             })
+            // The selected row is never left half-faded under the footer (Smart Check, sub-pages).
+            .onAppear { DispatchQueue.main.async { scroller.scrollTo(page) } }
+            .onChange(of: page) { p in
+                DispatchQueue.main.async { withAnimation(Theme.standard.unlessReduced(reduceMotion)) { scroller.scrollTo(p) } }
+            }
+            }
             Rectangle().fill(Theme.hairline).frame(height: 1).padding(.horizontal, 14)
             VStack(spacing: 1) {
                 row(.history, tr("History"), "clock.arrow.circlepath", .brown, trailing: nil)
@@ -635,6 +642,8 @@ struct MainSidebar: View {
         .help(title)
         .background(shortcut(target))
         .padding(.horizontal, 8)
+        // Scrolled to with room above and below, so the row clears the footer's fade.
+        .background(Color.clear.frame(height: (indent ? 26 : 30) + 40).id(target))
     }
     @ViewBuilder func shortcut(_ target: MainPage) -> some View {
         switch target {

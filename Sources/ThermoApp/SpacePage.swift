@@ -515,7 +515,7 @@ struct SpacePage: View {
         if model.stopping { return tr("Stopping…") }
         if model.scanning {
             guard let p = model.progress else { return model.root == "/" ? tr("Measuring the whole disk…") : tr("Measuring your home folder…") }
-            return tr("Measuring… %1$@ files, %2$@", String(p.files), ByteFormat.string(p.bytes))
+            return tr("Measuring… %1$@ files, %2$@", p.files.formatted(), ByteFormat.string(p.bytes))
         }
         guard let t = model.tree, let top = t.folder(t.root) else { return tr("Size unavailable") }
         return t.root == "/" ? tr("Whole disk %1$@ · measured %2$@", top.entry.sizeText, AgeFormat.string(t.scanned))
@@ -645,10 +645,15 @@ struct SpacePage: View {
             Image(nsImage: NSWorkspace.shared.icon(forFile: e.path)).resizable().frame(width: 22, height: 22).accessibilityHidden(true)
             VStack(alignment: .leading, spacing: 2) {
                 Text(e.name).font(Theme.rowTitle).foregroundStyle(Theme.textPrimary).lineLimit(1).truncationMode(.middle)
-                Text([e.isDir ? trCount(e.files, "%1$@ file", "%1$@ files") : nil, e.newest.map { tr("changed %1$@", AgeFormat.string($0)) }]
-                        .compactMap { $0 }.joined(separator: " · "))
-                    .font(Theme.caption).foregroundStyle(Theme.textTertiary).lineLimit(1)
+                // Grouped digits: "4,233,389 files" reads at a glance, "4233389" does not.
+                let detail = [e.isDir ? tr(e.files == 1 ? "%1$@ file" : "%1$@ files", e.files.formatted()) : nil, e.newest.map { tr("changed %1$@", AgeFormat.string($0)) }]
+                    .compactMap { $0 }.joined(separator: " · ")
+                // No empty second line: a row without details keeps its name centred like the others.
+                if !detail.isEmpty {
+                    Text(detail).font(Theme.caption).foregroundStyle(Theme.textTertiary).lineLimit(1)
+                }
             }
+            .frame(minHeight: 34)
             Spacer(minLength: Theme.Space.s)
             GeometryReader { g in
                 ZStack(alignment: .leading) {

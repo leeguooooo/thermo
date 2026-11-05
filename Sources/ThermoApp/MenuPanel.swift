@@ -276,8 +276,10 @@ struct PanelButton: View {
         Button(action: action) {
             HStack(spacing: 5) {
                 if let symbol { Image(systemName: symbol).font(.system(size: 11, weight: .semibold)) }
-                Text(title).font(Theme.caption.weight(on || prominent ? .semibold : .medium))
+                Text(title).font(Theme.caption.weight(on || prominent ? .semibold : .medium)).lineLimit(1)
             }
+            // A crowded row squeezes other things first; the label never breaks onto two lines.
+            .fixedSize()
             .padding(.horizontal, 10).frame(minHeight: 24)
             .foregroundStyle(on || prominent ? Color.white : Theme.textPrimary)
             .background(RoundedRectangle(cornerRadius: 6, style: .continuous)

@@ -233,7 +233,7 @@ extension ConfigChecks {
     }
 
     static func ago(_ s: TimeInterval) -> String {
-        s < 3600 ? tr("%1$@ min ago", String(Int(s / 60))) : s < 86400 * 2 ? tr("%1$@ h ago", String(Int(s / 3600)))
+        s < 60 ? tr("just now") : s < 3600 ? tr("%1$@ min ago", String(Int(s / 60))) : s < 86400 * 2 ? tr("%1$@ h ago", String(Int(s / 3600)))
             : tr("%1$@ days ago", String(Int(s / 86400)))
     }
 }

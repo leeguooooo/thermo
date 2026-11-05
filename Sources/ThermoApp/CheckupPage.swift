@@ -95,9 +95,40 @@ struct CheckupPage: View {
                     NoticeBanner(text: why, dismiss: { model.cancel() })
                 }
                 if let r = model.report { report(r) }
+                else if ai.backend != nil, model.phase == .idle { scope }
             }
         }
         .onAppear { ai.discover() }
+    }
+
+    /// Before the first run: what the AI will look at, so the button is not a leap in the dark.
+    var scope: some View {
+        let parts: [(String, String, String)] = [
+            ("memorychip", tr("Memory and swap"), tr("Pressure, swap in use, and what holds the most")),
+            ("cpu", tr("Processors"), tr("Load, and programs keeping the CPU busy")),
+            ("thermometer.medium", tr("Heat and fans"), tr("CPU and GPU temperature, fan speed")),
+            ("internaldrive", tr("Disk"), tr("Free space on the startup disk")),
+            ("battery.75percent", tr("Battery"), tr("Charge, health and cycle count")),
+            ("gearshape.2", tr("Flagged programs"), tr("Whether ending each one interrupts your work")),
+        ]
+        return VStack(alignment: .leading, spacing: Theme.Space.s) {
+            Text(tr("What it looks at")).font(Theme.sectionTitle).foregroundStyle(Theme.textSecondary)
+            LazyVGrid(columns: [GridItem(.flexible(), spacing: Theme.Space.m), GridItem(.flexible(), spacing: Theme.Space.m)],
+                      alignment: .leading, spacing: Theme.Space.m) {
+                ForEach(parts, id: \.1) { symbol, title, detail in
+                    HStack(alignment: .top, spacing: Theme.Space.m) {
+                        Image(systemName: symbol).font(.system(size: 14, weight: .medium)).foregroundStyle(Theme.textSecondary)
+                            .frame(width: 20).accessibilityHidden(true)
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text(title).font(Theme.rowTitle).foregroundStyle(Theme.textPrimary)
+                            Text(detail).font(Theme.caption).foregroundStyle(Theme.textTertiary).fixedSize(horizontal: false, vertical: true)
+                        }
+                        Spacer(minLength: 0)
+                    }
+                    .padding(Theme.Space.m).frame(maxWidth: .infinity, alignment: .leading).glass()
+                }
+            }
+        }
     }
 
     @ViewBuilder func controls(_ backend: LocalAIBackend) -> some View {

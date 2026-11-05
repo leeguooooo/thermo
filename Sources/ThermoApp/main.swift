@@ -535,6 +535,10 @@ if let i = CommandLine.arguments.firstIndex(of: "--render-preview"), i + 1 < Com
         CheckupModel.shared.loadFixture(answer: args[i + 1])
     }
     MainWindow.show(page)
+    // `--height N`: a taller window, so a snapshot can show what sits below the fold.
+    if let h = value(after: "--height").flatMap(Double.init), let w = MainWindow.window {
+        var frame = w.frame; frame.size.height = h; w.setFrame(frame, display: true)
+    }
     guard let path = value(after: "--snapshot") else { return }
     let started = Date()
     MainWindow.snapshot(to: path) {

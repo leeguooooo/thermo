@@ -201,6 +201,8 @@ struct ComputePage: View {
             }
         }
         .chartYScale(domain: 0...100)
+        // One GPU needs no legend; the name is already beside the gauge.
+        .chartLegend((model.current?.devices.count ?? 0) > 1 ? .visible : .hidden)
         .chartYAxis { AxisMarks(values: [0, 50, 100]) { v in
             AxisGridLine().foregroundStyle(Theme.hairline)
             AxisValueLabel { if let d = v.as(Double.self) { Text("\(Int(d))%").font(Theme.caption).foregroundStyle(Theme.textTertiary) } }

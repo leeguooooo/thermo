@@ -261,7 +261,7 @@ struct PopoverView: View {
                          badgeTint: pressure == .critical ? Theme.danger : pressure == .warning ? Theme.caution : Theme.textSecondary) {
             BigValue(value: m.map { String(format: "%.0f", Double($0.usedBytes) / Double(max(1, $0.totalBytes)) * 100) } ?? "—", unit: "%")
             Sparkline(values: panel.memory, top: 100)
-            Text([m.map { PanelFormat.gb($0.usedBytes) + " / " + PanelFormat.gb($0.totalBytes) + " GB" },
+            Text([m.map { PanelFormat.gb($0.usedBytes) + " / " + PanelFormat.gb($0.totalBytes) + " GiB" },
                   pulse.current.flatMap { $0.swapUsedMB > 0 ? tr("swap %1$@", MemoryFormat.string(mebibytes: $0.swapUsedMB)) : nil }]
                 .compactMap { $0 }.joined(separator: " · "))
                 .font(Theme.caption).foregroundStyle(Theme.textTertiary).lineLimit(1)
@@ -385,8 +385,16 @@ struct PopoverView: View {
 
     /// "thermo · Claude Code": the working folder and a currently observed ancestor.
     static func origin(_ h: MachinePulse.Hog) -> String? {
-        let folder = h.project.map { ($0 as NSString).lastPathComponent }.flatMap { $0.isEmpty || $0 == "~" ? nil : $0 }
-        let parts = [folder, h.owner].compactMap { $0 }
+        // Only a project in the home folder names something; a daemon's "/System/Volumes/Data" does not.
+        let home = NSHomeDirectory()
+        let folder = h.project.flatMap { p -> String? in
+            let full = p.hasPrefix("~") ? home + p.dropFirst() : p
+            guard full.hasPrefix(home + "/") else { return nil }
+            let name = (full as NSString).lastPathComponent
+            return name.isEmpty || name == "null" ? nil : name
+        }
+        let owner = h.owner.flatMap { $0.isEmpty || $0 == "null" ? nil : $0 }
+        let parts = [folder, owner].compactMap { $0 }
         return parts.isEmpty ? nil : parts.joined(separator: " · ")
     }
 
@@ -429,9 +437,9 @@ struct PopoverView: View {
                 Button { NSApp.terminate(nil) } label: { Image(systemName: "power").frame(width: 22) }
                     .buttonStyle(.plain).foregroundStyle(Theme.textSecondary).help(tr("Quit Thermo"))
             }
-            Text(tr("Left click: %1$@ · Right click: %2$@",
-                    (MenuClickAction(rawValue: menuLeftClick) ?? .panel).label,
-                    (MenuClickAction(rawValue: menuRightClick) ?? .menu).label))
+            let left = (MenuClickAction(rawValue: menuLeftClick) ?? .panel).label
+            let right = (MenuClickAction(rawValue: menuRightClick) ?? .menu).label
+            Text(left == right ? tr("Left or right click: %1$@", left) : tr("Left click: %1$@ · Right click: %2$@", left, right))
                 .font(Theme.caption).foregroundStyle(Theme.textTertiary)
                 .fixedSize(horizontal: false, vertical: true)
         }

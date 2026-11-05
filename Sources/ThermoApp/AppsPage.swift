@@ -460,7 +460,9 @@ struct AppsPage: View {
             return model.measuring ? base + " · " + tr("measuring %1$@ of %2$@", String(model.measured), String(model.apps.count)) : base
         case .leftovers:
             guard let o = model.orphans else { return tr("Looking for data of apps that are gone…") }
-            return model.orphanScanComplete ? tr("%1$@ in %2$@ apps that are gone", orphanSize(o), String(o.count)) : tr("Residual scan incomplete; showing known results")
+            if model.orphanScanComplete { return tr("%1$@ in %2$@ apps that are gone", orphanSize(o), String(o.count)) }
+            // The warning below says the scan is incomplete; the subtitle says what was found anyway.
+            return o.isEmpty ? tr("Data left behind by deleted apps") : tr("%1$@ in %2$@ apps that are gone", orphanSize(o), String(o.count)) + " · " + tr("so far")
         case .startup: return tr("Startup items")
         case .updates: return tr("Updates")
         case .store: return tr("Store")
@@ -576,6 +578,7 @@ struct AppsPage: View {
                 }
             }
             let pickable = orphanPickable
+            if !orphans.isEmpty {
             HStack(spacing: Theme.Space.xs) {
                 SelectAllButton(title: tr("Leftovers"), available: pickable.count,
                                 selected: pickable.filter { model.selectedOrphans.contains($0.id) }.count,
@@ -585,9 +588,12 @@ struct AppsPage: View {
                 Spacer()
             }
             .padding(.horizontal, Theme.Space.xs)
-            if !orphans.isEmpty { RowList(items: orphans, inset: 54) { orphanCard($0) } }
-            if orphans.isEmpty && model.orphanScanComplete {
+            RowList(items: orphans, inset: 54) { orphanCard($0) }
+            } else if model.orphanScanComplete {
                 EmptyState(symbol: "checkmark.circle", title: tr("No data left behind by deleted apps."))
+            } else if !model.scanningOrphans {
+                EmptyState(symbol: "questionmark.folder", title: tr("Nothing found so far"),
+                           detail: tr("Some places could not be read. Scan again to check them."))
             }
         } else {
             SkeletonList(rows: 5)
@@ -661,7 +667,7 @@ struct AppsPage: View {
                 if model.scanningOrphans || model.working || model.reviewingOrphans { ProgressView().controlSize(.small) }
                 Spacer()
                 Button(tr("Scan again")) { model.scanOrphans() }.buttonStyle(PillButtonStyle()).disabled(model.scanningOrphans || model.working || model.reviewingOrphans)
-                Button(model.reviewingOrphans ? tr("Reviewing selected residual data…") : tr("Move %1$@ to Trash", orphanSize(model.pickedOrphans))) { model.reviewPickedOrphans() }
+                Button(model.reviewingOrphans ? tr("Reviewing selected residual data…") : model.pickedOrphans.isEmpty ? tr("Move to Trash") : tr("Move %1$@ to Trash", orphanSize(model.pickedOrphans))) { model.reviewPickedOrphans() }
                     .buttonStyle(PillButtonStyle(prominent: true))
                     .disabled(model.pickedOrphans.isEmpty || model.working || model.scanningOrphans || model.reviewingOrphans)
             }
