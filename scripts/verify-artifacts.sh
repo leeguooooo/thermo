@@ -20,13 +20,13 @@ codesign --verify --deep --strict "$APP"
 for BIN in "$DIST/thermo" "$DIST/thermo-helper" "$APP/Contents/MacOS/Thermo" "$APP/Contents/Helpers/thermo" "$APP/Contents/Helpers/thermo-helper" "$APP/Contents/Helpers/thermo-capture-script"; do
     test -f "$BIN" || { echo "missing binary: $BIN" >&2; exit 1; }
     codesign --verify --strict "$BIN"
-    for ARCH in $ARCHS; do lipo -verify_arch "$ARCH" "$BIN"; done
+    for ARCH in $ARCHS; do lipo "$BIN" -verify_arch "$ARCH"; done
     TARGETS="$(xcrun vtool -show-build "$BIN" | awk '$1 == "minos" {print $2}')"
     test -n "$TARGETS" || { echo "missing deployment target: $BIN" >&2; exit 1; }
     for TARGET in $TARGETS; do
         test "$TARGET" = "$MINIMUM" || { echo "deployment target $TARGET differs from app minimum $MINIMUM: $BIN" >&2; exit 1; }
     done
 done
-for ARCH in $ARCHS; do lipo -verify_arch "$ARCH" "$APP/Contents/Frameworks/Sparkle.framework/Sparkle"; done
+for ARCH in $ARCHS; do lipo "$APP/Contents/Frameworks/Sparkle.framework/Sparkle" -verify_arch "$ARCH"; done
 echo "Verified signatures, deployment target $MINIMUM and required architectures: ${ARCHS:-not specified}"
 echo "App package source: ${SOURCE:-unknown}; working tree: ${TREE:-unknown}"
