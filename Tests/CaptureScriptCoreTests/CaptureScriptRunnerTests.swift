@@ -58,8 +58,9 @@ final class CaptureScriptRunnerTests:XCTestCase {
         };XCTFail("expected timeout")}catch{XCTAssertEqual(error as? CaptureScriptFailure,.timedOut)}
         XCTAssertLessThan(Date().timeIntervalSince(start),0.8)
     }
+    // The wall timeout only has to outlast allocation; on a Mac deep in swap, 96 MiB can take seconds.
     func testMemoryWatchdogAndOutputBoundsTerminateWorker() async throws {
-        do {_=try await CaptureScriptRunner.run(source:"const a=[];for(let i=0;i<100000;i++){a.push(new Array(32768).fill(i));thermo.perform('tick');}",worker:worker(),timeout:5,memoryBytes:96*1024*1024){_ in try await Task.sleep(nanoseconds:1_000_000);return .null};XCTFail("expected memory limit")}
+        do {_=try await CaptureScriptRunner.run(source:"const a=[];for(let i=0;i<100000;i++){a.push(new Array(32768).fill(i));thermo.perform('tick');}",worker:worker(),timeout:30,memoryBytes:96*1024*1024){_ in try await Task.sleep(nanoseconds:1_000_000);return .null};XCTFail("expected memory limit")}
         catch {XCTAssertEqual(error as? CaptureScriptFailure,.memoryLimit)}
         do {_=try await CaptureScriptRunner.run(source:"for(let i=0;i<300;i++)console.log('bounded log');",worker:worker()){_ in .null};XCTFail("expected log limit")}
         catch {XCTAssertEqual(error as? CaptureScriptFailure,.protocolError)}

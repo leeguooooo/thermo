@@ -409,8 +409,8 @@ struct ActionBar<Content: View>: View {
         HStack(spacing: 8) { content() }
             .padding(.horizontal, Theme.pagePadding).padding(.vertical, 12)
             .frame(maxWidth: .infinity)
-            // Blurred under the tint: rows scrolling beneath never show through as legible text.
-            .background { ZStack { Rectangle().fill(.ultraThinMaterial); Theme.canvasDeep.opacity(0.94) } }
+            // Opaque: rows scrolling beneath never show through the controls.
+            .background(Theme.canvasDeep)
             .overlay(alignment: .top) { Rectangle().fill(Theme.hairline).frame(height: 1) }
     }
 }

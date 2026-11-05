@@ -426,6 +426,8 @@ public enum AgeFormat {
     /// "5m ago", "3d ago", "2mo ago" (localized).
     public static func string(_ date: Date?, now: Date = Date()) -> String {
         guard let date else { return "" }
+        // Under a minute is "just now", not "1m ago".
+        if now.timeIntervalSince(date) < 60 { return tr("just now") }
         return tr("%1$@ ago", span(date, now: now))
     }
 

@@ -467,8 +467,11 @@ struct DiskCategoryPage: View {
     var header: some View {
         let selected = model.selectedItems.filter { $0.category == category }
         return PageHeader(title: category.title,
-                          subtitle: tr("%1$@ · %2$@ selected", model.report.map { DiskStyle.categoryStatus($0, category) } ?? ByteFormat.string(0),
-                                       ByteFormat.string(selected.reduce(0) { $0 + $1.bytes }))) {
+                          // "· 0 B selected" says nothing; the selection appears once there is one.
+                          subtitle: selected.isEmpty
+                            ? model.report.map { DiskStyle.categoryStatus($0, category) } ?? ByteFormat.string(0)
+                            : tr("%1$@ · %2$@ selected", model.report.map { DiskStyle.categoryStatus($0, category) } ?? ByteFormat.string(0),
+                                 ByteFormat.string(selected.reduce(0) { $0 + $1.bytes }))) {
             HStack(spacing: Theme.Space.s) {
                 CleanupProtectionsButton(disk: model, compact: true)
                 SearchField(text: $search, width: 200)
@@ -538,7 +541,7 @@ struct DiskCategoryPage: View {
                 Spacer()
                 Button(model.stopping ? tr("stopping…") : tr("Stop")) { model.stop() }
                     .buttonStyle(PillButtonStyle()).disabled(model.stopping)
-                Button(tr("Clean %1$@", ByteFormat.string(model.selectedBytes)), action: clean)
+                Button(model.selectedItems.isEmpty ? tr("Clean") : tr("Clean %1$@", ByteFormat.string(model.selectedBytes)), action: clean)
                     .buttonStyle(PillButtonStyle(prominent: true))
                     .disabled(model.selectedItems.isEmpty || model.cleaning)
             } else {
@@ -553,7 +556,7 @@ struct DiskCategoryPage: View {
                 Spacer()
                 Text(trCount(model.selectedItems.count, "%1$@ item selected", "%1$@ items selected"))
                     .font(Theme.caption.monospacedDigit()).foregroundStyle(Theme.textTertiary)
-                Button(tr("Clean %1$@", ByteFormat.string(model.selectedBytes)), action: clean)
+                Button(model.selectedItems.isEmpty ? tr("Clean") : tr("Clean %1$@", ByteFormat.string(model.selectedBytes)), action: clean)
                     .buttonStyle(PillButtonStyle(prominent: true))
                     .disabled(model.selectedItems.isEmpty || model.cleaning)
             }

@@ -1,3 +1,4 @@
+import AgentCore
 import AppKit
 import CleanKit
 import SwiftUI
@@ -72,6 +73,10 @@ final class DiskModel: ObservableObject {
         let saved=retentionPreferences.read()
         self.sessionRetentionDays=saved.flatMap { ConversationRetentionPreferences.choices.contains($0) ? $0 : nil }
     }
+
+    /// Where cleaning checks paths against and writes its log and operation history; tests point it
+    /// at a scratch home so they never add entries to the user's own history.
+    var cleanGuard = Guard()
 
     private let queue = DispatchQueue(label: "dev.thermo.app.disk", qos: .background)
     /// Scans hold `queue` for minutes; cleaning found items must not wait behind them.
@@ -310,6 +315,7 @@ final class DiskModel: ObservableObject {
         cleaning = true
         cleaningDone = 0
         cleaningTotal = items.count
+        let g = cleanGuard
         cleanQueue.async { [weak self] in
             do { _ = try Whitelist.loadForRemoval() } catch {
                 let why = Whitelist.unreadable(error)
@@ -327,7 +333,7 @@ final class DiskModel: ObservableObject {
             var remaining: [String: CleanItem] = [:]
             for (n, i) in items.enumerated() {
                 DispatchQueue.main.async { self?.cleaningStep = i.title; self?.cleaningDone = n }
-                let r = Cleaner.clean(i, scannedAt: scannedAt, batchID: batchID)
+                let r = Cleaner.clean(i, guard: g, scannedAt: scannedAt, batchID: batchID)
                 batchRecorded = batchRecorded || r.trashBatchID == batchID
                 partialCount += r.outcome == "partial" ? 1 : 0
                 estimateIncomplete = estimateIncomplete || r.bytesIncomplete == true

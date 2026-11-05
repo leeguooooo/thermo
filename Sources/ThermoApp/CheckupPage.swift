@@ -202,6 +202,10 @@ struct CheckupPage: View {
                         Text(tr("frees ~%1$@", MemoryFormat.string(kibibytes: c.freesKB))).font(Theme.caption).foregroundStyle(Theme.caution)
                     }
                     Spacer()
+                    // Beside the title, so a finding without a command does not grow a row just for it.
+                    if let (title, page) = Self.destination(f) {
+                        Button(title) { open(page) }.buttonStyle(PillButtonStyle()).controlSize(.small).fixedSize()
+                    }
                 }
                 if !f.detail.isEmpty {
                     Text(f.detail).font(Theme.secondary).foregroundStyle(Theme.textSecondary).textSelection(.enabled)
@@ -216,17 +220,14 @@ struct CheckupPage: View {
                             .fixedSize(horizontal: false, vertical: true)
                     }
                 }
-                HStack(alignment: .top, spacing: Theme.Space.s) {
-                    if let how = f.how {
+                if let how = f.how {
+                    HStack(alignment: .top, spacing: Theme.Space.s) {
                         Text(how).font(Theme.mono).foregroundStyle(Theme.textPrimary).textSelection(.enabled)
                             .fixedSize(horizontal: false, vertical: true)
                         Button { NSPasteboard.general.clearContents(); NSPasteboard.general.setString(how, forType: .string) } label: {
                             Image(systemName: "doc.on.doc")
                         }.buttonStyle(.borderless).help(tr("Copy"))
-                    }
-                    Spacer(minLength: Theme.Space.s)
-                    if let (title, page) = Self.destination(f) {
-                        Button(title) { open(page) }.buttonStyle(PillButtonStyle()).controlSize(.small).fixedSize()
+                        Spacer(minLength: 0)
                     }
                 }
             }

@@ -1,4 +1,5 @@
 import CleanKit
+import AgentCore
 import XCTest
 @testable import ThermoApp
 
@@ -65,6 +66,11 @@ final class CleanDuringScanTests: XCTestCase {
             return ScanReport(items: [a, b], denied: [], started: Date(), duration: 1)
         })
         let model = DiskModel(scanIO: io, requestNotifications: {})
+        // A scratch home: the failed cleanup is logged there, not in the user's operation history.
+        let home = FileManager.default.temporaryDirectory.appendingPathComponent("thermo-clean-\(UUID().uuidString)").path
+        try FileManager.default.createDirectory(atPath: home, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(atPath: home) }
+        model.cleanGuard = Guard(home: home)
         model.scan()
         await fulfillment(of: [streamed], timeout: 5)
         for _ in 0..<100 where model.report?.items.isEmpty != false { try await Task.sleep(nanoseconds: 10_000_000) }
