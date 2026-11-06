@@ -1956,6 +1956,8 @@ let zhHans: [String: String] = [
     "Sort programs": "程序排序方式",
     "Subdomains of one site share a group, so git.example.com and docs.example.com go together.": "同一网站的子域名归到一组，比如 git.example.com 和 docs.example.com 会放在一起。",
     "Nothing to group right now": "暂时没有要分组的标签",
+    "Open it on the Memory page, with each process and the project it belongs to": "在内存页打开它，查看每个进程和所属项目",
+    "Show processes": "查看进程",
     "Clear finished (frees %1$@)": "清除已结束（释放 %1$@）",
     "Remove and free %1$@": "删除，释放 %1$@",
     "The disk is full, so it could not be saved.": "磁盘空间不够，没能保存。",

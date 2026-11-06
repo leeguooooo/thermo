@@ -12,6 +12,8 @@ final class MemoryModel: ObservableObject {
 
     @Published private(set) var activity: MemoryActivity?
     @Published private(set) var breakdown: MemoryBreakdown?
+    /// A program another page asked to show: the page searches for it and opens it, then clears this.
+    @Published var inspect: String?
     @Published private(set) var programs: [MemoryProgram] = []
     @Published private(set) var unreadableCount = 0
     @Published private(set) var inventoryAvailable = false
@@ -179,6 +181,12 @@ struct MemoryPage: View {
             .frame(maxWidth: Theme.pageWidth, alignment: .leading)
             .padding(.horizontal, Theme.pagePadding).padding(.top, Theme.pageTop).padding(.bottom, 24)
             .frame(maxWidth: .infinity)
+        }
+        .onReceive(model.$inspect) { name in
+            guard let name else { return }
+            search = name
+            expanded.formUnion(["program:cmd:" + name.lowercased(), "program:app:" + name.lowercased()])
+            DispatchQueue.main.async { model.inspect = nil }
         }
         .samplingWhileVisible { owner, active in
             model.setVisible(active, owner: owner)

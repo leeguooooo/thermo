@@ -115,6 +115,13 @@ struct SlowdownCulpritsCard: View {
             Button(tr("Copy command")) {
                 NSPasteboard.general.clearContents(); NSPasteboard.general.setString(command, forType: .string)
             }.controlSize(.small).modifier(ActionButtonStyle(prominent: false))
+        } else if !renderingPreview {
+            // Thermo cannot safely stop it itself (who runs it is unknown, or it is shared); show its processes instead.
+            Button(tr("Show processes")) {
+                MemoryModel.shared.inspect = c.name.components(separatedBy: " ").first ?? c.name
+                MainWindow.show(.memory)
+            }.controlSize(.small).modifier(ActionButtonStyle(prominent: false))
+            .help(tr("Open it on the Memory page, with each process and the project it belongs to"))
         }
     }
 
