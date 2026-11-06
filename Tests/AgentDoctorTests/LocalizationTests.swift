@@ -58,8 +58,10 @@ final class LocalizationTests: XCTestCase {
         func placeholders(_ s: String) -> [String] {
             re.matches(in: s, range: NSRange(s.startIndex..., in: s)).map { String(s[Range($0.range, in: s)!]) }.sorted()
         }
-        for (en, zh) in try XCTUnwrap(Language.simplifiedChinese.table) {
-            XCTAssertEqual(placeholders(en), placeholders(zh), "placeholders differ for: \(en)")
+        for language in Language.allCases {
+            for (en, translated) in language.table ?? [:] {
+                XCTAssertEqual(placeholders(en), placeholders(translated), "\(language.rawValue) placeholders differ for: \(en)")
+            }
         }
     }
 

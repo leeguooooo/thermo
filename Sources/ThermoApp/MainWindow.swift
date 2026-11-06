@@ -278,6 +278,7 @@ enum MainWindow {
                     case .cleanScreen: CleanScreenSetupView(model: CleanScreenModel.shared)
                     case .lowLatency: AWDLPanel(model: AWDLModel.shared)
                     case .batteryCare: BatteryCarePanel(model: BatteryCareModel.shared)
+                    case .focus: FocusPanel(model: FocusTimerModel.shared)
                     }
                 }
                 .onAppear { installStandardMenus() }
