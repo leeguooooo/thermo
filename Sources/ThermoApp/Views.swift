@@ -128,7 +128,7 @@ struct PopoverView: View {
                 LazyVGrid(columns: [GridItem(.flexible(), spacing: Theme.Space.s), GridItem(.flexible(), spacing: Theme.Space.s)],
                           spacing: Theme.Space.s) {
                     Group {
-                        CleanScreenButton(); AWDLButton(); IdleAwakeButton()
+                        CleanScreenButton(); AWDLButton(); IdleAwakeButton(); FocusButton()
                         if monitor.snapshot?.battery != nil { BatteryCareButton() }
                     }
                     .background(RoundedRectangle(cornerRadius: Theme.radiusSmall, style: .continuous).fill(Theme.surface))
@@ -1126,6 +1126,8 @@ struct SettingsView: View {
                 CleanScreenButton()
                 InspectorDivider(inset: 46)
                 IdleAwakeButton()
+                InspectorDivider(inset: 46)
+                FocusButton()
                 InspectorDivider(inset: 46)
                 AWDLButton()
                 InspectorDivider(inset: 46)

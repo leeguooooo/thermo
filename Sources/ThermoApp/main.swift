@@ -74,6 +74,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate, UNU
             guard let self else { return }
             self.updateTitle(self.monitor.latest)
         }
+        FocusStatusItem.shared.start()
+        FocusTimerModel.shared.launch()
         // Hidden panel curves do not keep resource readers running.
         PanelModel.shared.setActive(false)
 
