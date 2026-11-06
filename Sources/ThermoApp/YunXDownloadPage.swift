@@ -92,8 +92,10 @@ struct YunXDownloadPage: View {
                     .font(Theme.caption).foregroundStyle(Theme.textSecondary).fixedSize(horizontal: false, vertical: true)
             }
             Spacer(minLength: 0)
-            Button(tr("Allow Keychain access")) { model.authorizeKeychain() }
+            if model.authorizingKeychain { ProgressView().controlSize(.small) }
+            Button(tr("Allow Keychain access")) { Task { await model.authorizeKeychain() } }
                 .buttonStyle(PillButtonStyle(prominent: true))
+                .disabled(model.authorizingKeychain)
         }
         .padding(Theme.Space.m)
         .background(RoundedRectangle(cornerRadius: Theme.radius).fill(Theme.surfaceRaised))

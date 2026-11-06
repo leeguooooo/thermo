@@ -39,7 +39,7 @@ enum YunXKeychainError: LocalizedError {
     }
 }
 
-/// All accounts as one generic-password item, so a change is atomic and macOS asks at most once.
+/// Persistent items behind a shared session; background access never presents authorization UI.
 struct YunXKeychainBackend: YunXSecretBackend {
     /// One item each: `vault`, plus the download list and tracker list, which can hold passcodes and passkeys.
     var account = "vault"
@@ -51,7 +51,16 @@ struct YunXKeychainBackend: YunXSecretBackend {
     }
 
     func read() throws -> Data? {
+        try YunXKeychainSession.shared.read(account)
+    }
+
+    func write(_ data: Data) throws {
+        try YunXKeychainSession.shared.write(data, account: account)
+    }
+
+    func readItem(interactive: Bool) throws -> Data? {
         var request = query
+        request[kSecUseAuthenticationUI as String] = interactive ? kSecUseAuthenticationUIAllow : kSecUseAuthenticationUIFail
         request[kSecReturnData as String] = true
         request[kSecMatchLimit as String] = kSecMatchLimitOne
         var result: CFTypeRef?
@@ -61,11 +70,13 @@ struct YunXKeychainBackend: YunXSecretBackend {
         return result as? Data
     }
 
-    func write(_ data: Data) throws {
-        let update = SecItemUpdate(query as CFDictionary, [kSecValueData as String: data] as CFDictionary)
+    func writeItem(_ data: Data) throws {
+        var request = query
+        request[kSecUseAuthenticationUI as String] = kSecUseAuthenticationUIFail
+        let update = SecItemUpdate(request as CFDictionary, [kSecValueData as String: data] as CFDictionary)
         if update == errSecSuccess { return }
         guard update == errSecItemNotFound else { throw YunXKeychainError.status(update) }
-        var item = query
+        var item = request
         item[kSecValueData as String] = data
         item[kSecAttrAccessible as String] = kSecAttrAccessibleWhenUnlocked
         let add = SecItemAdd(item as CFDictionary, nil)

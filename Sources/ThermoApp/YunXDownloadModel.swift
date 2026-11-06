@@ -236,6 +236,7 @@ final class YunXDownloadModel: ObservableObject {
     @Published private(set) var busy = false
     @Published var error: String?
     @Published private(set) var keychainAuthorizationRequired = false
+    @Published private(set) var authorizingKeychain = false
     @Published private(set) var files: [DriveFile] = []
     @Published private(set) var path: [(id: String, name: String)] = []
     @Published private(set) var browsing = false
@@ -330,17 +331,21 @@ final class YunXDownloadModel: ObservableObject {
         keychainAuthorizationRequired = YunXKeychainSession.shared.authorizationRequired
     }
 
-    func authorizeKeychain() {
+    func authorizeKeychain() async {
+        guard !authorizingKeychain else { return }
+        authorizingKeychain = true
+        defer { authorizingKeychain = false }
+        let result = await Task.detached { Result { try YunXKeychainSession.shared.authorize() } }.value
         do {
-            try YunXKeychainSession.shared.authorize()
+            try result.get()
             error = nil
-            settings = settingsStore.load()
-            reloadAccounts()
-            restored = false
-            restoreJobs()
         } catch {
             self.error = tr("Keychain access was not granted. Your saved data is unchanged.")
         }
+        settings = settingsStore.load()
+        reloadAccounts()
+        restored = false
+        restoreJobs()
         updateKeychainAuthorization()
     }
 
@@ -575,6 +580,7 @@ final class YunXDownloadModel: ObservableObject {
     /// Rotates sessions that are due on every account, not only the active one, and fills in missing
     /// names. A failure leaves the old credential and waits before asking that drive again.
     func refreshAccounts(now: Date = Date()) async {
+        guard !authorizingKeychain else { return }
         guard let all = try? vault.accounts() else { return }
         var changed = false
         for account in all {
