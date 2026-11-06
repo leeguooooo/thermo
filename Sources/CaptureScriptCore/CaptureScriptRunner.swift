@@ -19,8 +19,11 @@ public enum CaptureScriptRunner {
             timer.schedule(deadline:.now(),repeating:.milliseconds(50))
             timer.setEventHandler {
                 if Double(DispatchTime.now().uptimeNanoseconds-start)/1_000_000_000 > timeout {controller.stop(.timedOut);return}
-                var info=proc_taskinfo()
-                if proc_pidinfo(child.pid,PROC_PIDTASKINFO,0,&info,Int32(MemoryLayout<proc_taskinfo>.size)) == MemoryLayout<proc_taskinfo>.size,info.pti_resident_size > memoryBytes {controller.stop(.memoryLimit)}
+                // Physical footprint, not resident size: under memory pressure the system compresses or swaps
+                // the worker's pages, and resident size stays low while the script keeps allocating.
+                var usage=rusage_info_v2()
+                let read=withUnsafeMutablePointer(to:&usage){$0.withMemoryRebound(to:rusage_info_t?.self,capacity:1){proc_pid_rusage(child.pid,RUSAGE_INFO_V2,$0)}}
+                if read == 0,usage.ri_phys_footprint > memoryBytes {controller.stop(.memoryLimit)}
             };timer.resume();defer{timer.cancel()}
             _=fcntl(child.input,F_SETNOSIGPIPE,1)
             do {
