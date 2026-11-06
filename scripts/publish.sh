@@ -29,7 +29,11 @@ printf '/download /Thermo-%s.dmg 302\n/ https://app.leeguoo.com/thermo 301\n' "$
 
 # Pages refuses files over 25 MiB. Those installers are served from the GitHub Release of their
 # version (create it before publishing) and Pages only redirects to them; Sparkle follows redirects.
-STAGE="$(mktemp -d)/releases"
+# The stage holds clones of every installer (GBs of logical size); always remove it, on success or error.
+STAGE_ROOT="$(mktemp -d "${TMPDIR:-/tmp}/thermo-publish.XXXXXX")"
+trap 'rm -rf "$STAGE_ROOT"' EXIT
+trap 'exit 130' INT TERM
+STAGE="$STAGE_ROOT/releases"
 cp -cR "$R" "$STAGE"
 for f in $(find "$STAGE" -type f -size +25600k); do
     name="$(basename "$f")"
