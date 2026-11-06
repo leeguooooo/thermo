@@ -235,6 +235,7 @@ final class YunXDownloadModel: ObservableObject {
     @Published var passcodeAsked = false
     @Published private(set) var busy = false
     @Published var error: String?
+    @Published private(set) var keychainAuthorizationRequired = false
     @Published private(set) var files: [DriveFile] = []
     @Published private(set) var path: [(id: String, name: String)] = []
     @Published private(set) var browsing = false
@@ -319,7 +320,28 @@ final class YunXDownloadModel: ObservableObject {
     // MARK: Accounts
 
     func reloadAccounts() {
-        do { accounts = try vault.accounts() } catch { self.error = error.localizedDescription }
+        do { accounts = try vault.accounts() } catch {
+            if !YunXKeychainSession.shared.authorizationRequired { self.error = error.localizedDescription }
+        }
+        updateKeychainAuthorization()
+    }
+
+    func updateKeychainAuthorization() {
+        keychainAuthorizationRequired = YunXKeychainSession.shared.authorizationRequired
+    }
+
+    func authorizeKeychain() {
+        do {
+            try YunXKeychainSession.shared.authorize()
+            error = nil
+            settings = settingsStore.load()
+            reloadAccounts()
+            restored = false
+            restoreJobs()
+        } catch {
+            self.error = tr("Keychain access was not granted. Your saved data is unchanged.")
+        }
+        updateKeychainAuthorization()
     }
 
     func accounts(for platform: String) -> [YunXAccount] { accounts.filter { $0.platform == platform } }
@@ -1212,6 +1234,23 @@ final class YunXDownloadModel: ObservableObject {
             }
         }
         jobStore.remove(job.id)
+    }
+
+    /// Removes one ended download from the list and deletes what it left in Thermo's download store.
+    func discard(_ job: YunXJob) {
+        guard !job.state.isActive else { return }
+        forget(job)
+        jobs.removeAll { $0.id == job.id }
+    }
+
+    /// Unfinished parts that failed or cancelled downloads still keep on disk.
+    var leftoverBytes: Int64 {
+        jobs.reduce(0) { sum, job in
+            switch job.state {
+            case .failed, .cancelled: return sum + job.received
+            default: return sum
+            }
+        }
     }
 
     func clearFinished() {

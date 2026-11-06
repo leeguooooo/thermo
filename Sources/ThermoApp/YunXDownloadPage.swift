@@ -24,6 +24,7 @@ struct YunXDownloadPage: View {
         ScrollView {
             VStack(alignment: .leading, spacing: Theme.Space.xl) {
                 header
+                if model.keychainAuthorizationRequired { keychainAuthorization }
                 if setup.state == .missing || setup.state == .notConnected { YunXChromeUseCard(setup: setup) }
                 pasteField
                 messages
@@ -42,6 +43,7 @@ struct YunXDownloadPage: View {
         .onAppear {
             model.reloadAccounts()
             model.restoreJobs()
+            model.updateKeychainAuthorization()
             model.startBackgroundRefresh()
             Task { await setup.refresh() }
         }
@@ -79,6 +81,22 @@ struct YunXDownloadPage: View {
             YunXToolbarButton(symbol: "person.crop.circle", label: tr("Accounts")) { accountsShown = true }
             YunXToolbarButton(symbol: "gearshape", label: tr("Download settings")) { settingsShown = true }
         }
+    }
+
+    private var keychainAuthorization: some View {
+        HStack(spacing: Theme.Space.m) {
+            Image(systemName: "lock.shield").foregroundStyle(Theme.textSecondary).accessibilityHidden(true)
+            VStack(alignment: .leading, spacing: Theme.Space.xs) {
+                Text(tr("Saved logins are locked")).font(Theme.body).foregroundStyle(Theme.textPrimary)
+                Text(tr("Allow access to restore your accounts and downloads. Thermo will not ask automatically."))
+                    .font(Theme.caption).foregroundStyle(Theme.textSecondary).fixedSize(horizontal: false, vertical: true)
+            }
+            Spacer(minLength: 0)
+            Button(tr("Allow Keychain access")) { model.authorizeKeychain() }
+                .buttonStyle(PillButtonStyle(prominent: true))
+        }
+        .padding(Theme.Space.m)
+        .background(RoundedRectangle(cornerRadius: Theme.radius).fill(Theme.surfaceRaised))
     }
 
     private var pasteField: some View {
@@ -365,7 +383,7 @@ struct YunXJobList: View {
     var body: some View {
         VStack(alignment: .leading, spacing: Theme.Space.s) {
             SectionHeader(title: tr("Downloads")) {
-                Button(tr("Clear finished")) { model.clearFinished() }
+                Button(model.leftoverBytes > 0 ? tr("Clear finished (frees %1$@)", ByteFormat.string(model.leftoverBytes)) : tr("Clear finished")) { model.clearFinished() }
                     .buttonStyle(.plain).font(Theme.secondary).foregroundStyle(Theme.textSecondary)
                     .disabled(!model.jobs.contains { !$0.state.isActive })
             }
@@ -424,7 +442,7 @@ struct YunXJobRow: View {
                 Text(job.name).font(Theme.body).foregroundStyle(Theme.textPrimary).lineLimit(1).truncationMode(.middle)
                 if job.state.isActive { progress }
                 if let failure {
-                    Text(failure).font(Theme.caption).foregroundStyle(Theme.danger).lineLimit(2).textSelection(.enabled)
+                    Text(Self.explain(failure, held: job.received)).font(Theme.caption).foregroundStyle(Theme.danger).lineLimit(2).textSelection(.enabled)
                         .fixedSize(horizontal: false, vertical: true)
                 }
             }.frame(maxWidth: .infinity, alignment: .leading)
@@ -484,10 +502,18 @@ struct YunXJobRow: View {
 
     private var hasActions: Bool {
         switch job.state {
-        case let .failed(_) where job.canRetry: return true
-        case .failed, .cancelled: return false
+        case .failed: return true
+        case .cancelled: return false
         default: return true
         }
+    }
+
+    /// The disk-full error in plain words, with what the unfinished parts still occupy.
+    static func explain(_ failure: String, held: Int64) -> String {
+        let lower = failure.lowercased()
+        guard lower.contains("enough space") || lower.contains("no space left") else { return failure }
+        return held > 0 ? tr("The disk is full, so it could not be saved. The downloaded parts still take %1$@; remove them to get the space back.", ByteFormat.string(held))
+                        : tr("The disk is full, so it could not be saved.")
     }
 
     @ViewBuilder private var actions: some View {
@@ -503,10 +529,9 @@ struct YunXJobRow: View {
         case let .finished(url):
             YunXRowIcon(symbol: "magnifyingglass", label: tr("Show in Finder")) { model.reveal(url) }
         case .failed:
-            if job.canRetry {
-                YunXRowIcon(symbol: "arrow.clockwise", label: tr("Retry")) { model.resume(job) }
-                YunXRowIcon(symbol: "xmark", label: tr("Cancel")) { model.cancel(job) }
-            }
+            if job.canRetry { YunXRowIcon(symbol: "arrow.clockwise", label: tr("Retry")) { model.resume(job) } }
+            // A failed download keeps its parts on disk; removing the row deletes them.
+            YunXRowIcon(symbol: "trash", label: job.received > 0 ? tr("Remove and free %1$@", ByteFormat.string(job.received)) : tr("Remove")) { model.discard(job) }
         case .cancelled: EmptyView()
         }
     }
