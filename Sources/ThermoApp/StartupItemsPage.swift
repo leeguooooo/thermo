@@ -89,11 +89,12 @@ struct StartupItemsPage: View {
     @Binding var tab: AppsTab
     @State private var reviewed: StartupItem?
     @State private var backgroundReview = false
+    @State private var search = ""
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             PageHeader(title: tr("Software"), subtitle: tr("User and shared startup items, plus system services")) {
-                EmptyView()
+                SearchField(text: $search, width: 200)
             } below: {
                 SoftwareTabPicker(tab: $tab)
             }
@@ -143,12 +144,14 @@ struct StartupItemsPage: View {
 
     /// Launch agents and daemons Thermo can switch on or off, one row each.
     var launchServices: some View {
-        let items = model.report?.items ?? []
+        let all = model.report?.items ?? []
+        let q = search.trimmingCharacters(in: .whitespacesAndNewlines)
+        let items = q.isEmpty ? all : all.filter { ($0.label + " " + ($0.program ?? "") + " " + $0.path).localizedCaseInsensitiveContains(q) }
         return VStack(alignment: .leading, spacing: Theme.Space.s) {
             SectionHeader(title: tr("Startup items")) {
                 HStack(spacing: Theme.Space.xs) {
                     if model.report != nil {
-                        Text(String(items.count)).font(Theme.caption.monospacedDigit()).foregroundStyle(Theme.textTertiary)
+                        Text(q.isEmpty ? String(all.count) : "\(items.count) / \(all.count)").font(Theme.caption.monospacedDigit()).foregroundStyle(Theme.textTertiary)
                     }
                     InfoButton(text: tr("Changes background startup eligibility; does not stop or start a running program."))
                 }
@@ -167,6 +170,8 @@ struct StartupItemsPage: View {
             }
             if model.report == nil {
                 SkeletonList(rows: 4)
+            } else if items.isEmpty && !q.isEmpty {
+                InspectorPanel { EmptyState(symbol: "magnifyingglass", title: tr("No matching items")) }
             } else if items.isEmpty {
                 InspectorPanel { EmptyState(symbol: "power", title: tr("No launch services found. Other login items are managed in System Settings.")) }
             } else {

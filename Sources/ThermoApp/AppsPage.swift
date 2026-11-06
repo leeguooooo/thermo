@@ -675,9 +675,11 @@ struct AppsPage: View {
                 Button(tr("Scan again")) { model.load() }.buttonStyle(PillButtonStyle()).disabled(model.loading || model.working)
             } else {
                 let pickable = orphanPickable
-                SelectAllButton(available: pickable.count, selected: pickable.filter { model.selectedOrphans.contains($0.id) }.count,
-                                selectAll: { model.selectedOrphans.formUnion(pickable.map(\.id)) },
-                                clear: { model.selectedOrphans.subtract(pickable.map(\.id)) })
+                if !pickable.isEmpty {
+                    SelectAllButton(available: pickable.count, selected: pickable.filter { model.selectedOrphans.contains($0.id) }.count,
+                                    selectAll: { model.selectedOrphans.formUnion(pickable.map(\.id)) },
+                                    clear: { model.selectedOrphans.subtract(pickable.map(\.id)) })
+                }
                 if model.scanningOrphans || model.working || model.reviewingOrphans { ProgressView().controlSize(.small) }
                 Spacer()
                 Button(tr("Scan again")) { model.scanOrphans() }.buttonStyle(PillButtonStyle()).disabled(model.scanningOrphans || model.working || model.reviewingOrphans)

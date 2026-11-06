@@ -139,6 +139,8 @@ struct HistoryPage: View {
     let open: (MainPage) -> Void
     @State private var expanded: Set<String> = []
     @State private var restoring: OperationRecord?
+    /// Empty: every kind. Automatic tab grouping writes an entry every few minutes, so one kind can bury the rest.
+    @State private var feature = ""
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     /// `--expand-rows N` (offscreen snapshots only): open the first N rows so their details can be reviewed.
@@ -157,6 +159,13 @@ struct HistoryPage: View {
                     .lineLimit(1).truncationMode(.middle).textSelection(.enabled)
                 Spacer(minLength: Theme.Space.s)
                 if model.busy || model.reading { ProgressView().controlSize(.small) }
+                if Set(model.records.map(\.feature)).count > 1 {
+                    Picker(tr("Show"), selection: $feature) {
+                        Text(tr("All kinds")).tag("")
+                        ForEach(featureCounts, id: \.0) { f, n in Text(Self.featureName(f) + " (\(n))").tag(f) }
+                    }
+                    .pickerStyle(.menu).labelsHidden().fixedSize().controlSize(.small).help(tr("Show one kind of change"))
+                }
                 Button { model.load() } label: { Label(tr("Refresh"), systemImage: "arrow.clockwise") }
                     .buttonStyle(PillButtonStyle()).controlSize(.small)
                     .help(tr("Refresh"))
@@ -197,11 +206,34 @@ struct HistoryPage: View {
 
     var days: [(String, [OperationRecord])] {
         let calendar = Calendar.current
-        let groups = Dictionary(grouping: model.records) { calendar.startOfDay(for: $0.time) }
+        let shown = feature.isEmpty ? model.records : model.records.filter { $0.feature == feature }
+        let groups = Dictionary(grouping: shown) { calendar.startOfDay(for: $0.time) }
         return groups.keys.sorted(by: >).map { day in
             let title = calendar.isDateInToday(day) ? tr("Today") : calendar.isDateInYesterday(day) ? tr("Yesterday")
                 : day.formatted(date: .abbreviated, time: .omitted)
             return (title, groups[day]!.sorted { $0.time > $1.time })
+        }
+    }
+
+    var featureCounts: [(String, Int)] {
+        Dictionary(grouping: model.records, by: \.feature).map { ($0.key, $0.value.count) }
+            .sorted { $0.1 == $1.1 ? $0.0 < $1.0 : $0.1 > $1.1 }
+    }
+
+    static func featureName(_ f: String) -> String {
+        switch f {
+        case "clean": return tr("Disk Cleanup")
+        case "apps": return tr("Software")
+        case "space": return tr("Space Lens")
+        case "agents": return tr("AI Agent Diagnostics")
+        case "claudeReset": return tr("Claude reset")
+        case "privacy": return tr("Privacy")
+        case "tabs": return tr("Tab groups")
+        case "worktrees": return tr("Worktrees")
+        case "archive": return tr("Saved tabs")
+        case "pulse": return tr("Stopped programs")
+        case "history": return tr("Undo")
+        default: return f
         }
     }
 
