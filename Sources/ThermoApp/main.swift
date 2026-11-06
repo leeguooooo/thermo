@@ -481,6 +481,40 @@ if CommandLine.arguments.contains("--dump-status-menu") {
     }
     exit(0)
 }
+// `--show-status-menu` / `--show-panel`: put the menu bar item's menu, or the panel in a plain window,
+// on screen for a few seconds and quit, so they can be checked visually while another Thermo runs.
+if CommandLine.arguments.contains("--show-status-menu") || CommandLine.arguments.contains("--show-panel") {
+    app.setActivationPolicy(.accessory)
+    MainActor.assumeIsolated {
+        Settings.register()
+        let center = NSScreen.main.map { NSPoint(x: $0.frame.midX - 160, y: $0.frame.midY + 240) } ?? .zero
+        DispatchQueue.main.asyncAfter(deadline: .now() + 3) {
+            NSApp.activate(ignoringOtherApps: true)
+            if CommandLine.arguments.contains("--show-status-menu") {
+                let menu = StatusMenu.shared.make(battery: true)
+                let close = Timer(timeInterval: 6, repeats: false) { _ in menu.cancelTracking() }
+                RunLoop.main.add(close, forMode: .common)
+                print("shown"); fflush(stdout)
+                // Where the menu bar item would drop it: just under the menu bar.
+                let top = NSScreen.main.map { NSPoint(x: $0.frame.maxX - 560, y: $0.visibleFrame.maxY) } ?? center
+                menu.popUp(positioning: nil, at: top, in: nil)
+                exit(0)
+            }
+            let monitor = AppModels.shared.monitor
+            SystemPulse.shared.start()
+            PanelModel.shared.setActive(true)
+            monitor.popoverOpen = true
+            let w = NSWindow(contentRect: NSRect(x: center.x, y: center.y - 560, width: 360, height: 600),
+                             styleMask: [.titled], backing: .buffered, defer: false)
+            w.title = "Thermo panel check"
+            w.contentView = NSHostingView(rootView: PopoverView(monitor: monitor))
+            w.makeKeyAndOrderFront(nil)
+            print("shown"); fflush(stdout)
+            DispatchQueue.main.asyncAfter(deadline: .now() + 25) { exit(0) }
+        }
+    }
+    app.run()
+}
 // Snapshot/render jobs do not present interactive windows or create Dock items.
 if !CommandLine.arguments.contains("--offscreen"), !CommandLine.arguments.contains("--render-preview"), !CommandLine.arguments.contains("--verify-lifecycle") {
     do {
