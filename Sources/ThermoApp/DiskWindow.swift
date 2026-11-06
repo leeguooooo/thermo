@@ -315,8 +315,30 @@ struct DiskHome: View {
                            title: tr("Find space you can free"),
                            subtitle: model.loadingSaved ? tr("Loading saved results…") : tr("Old AI sessions, model downloads, agent leftovers, build output and caches. Nothing is removed until you choose."), spinning: model.loadingSaved)
                 BigRoundButton(title: tr("Scan"), color: Theme.accent) { model.scan() }
+                if let disk = Self.startupDisk() {
+                    VStack(spacing: Theme.Space.xs) {
+                        GeometryReader { g in
+                            ZStack(alignment: .leading) {
+                                Capsule().fill(Theme.surfaceRaised)
+                                Capsule().fill(disk.free < 20_000_000_000 ? Theme.caution : Theme.accent.opacity(0.8))
+                                    .frame(width: g.size.width * CGFloat(Double(disk.total - disk.free) / Double(max(disk.total, 1))))
+                            }
+                        }
+                        .frame(width: 280, height: 6).accessibilityHidden(true)
+                        Text(tr("%1$@ free of %2$@ on this Mac", ByteFormat.string(disk.free), ByteFormat.string(disk.total)))
+                            .font(Theme.caption.monospacedDigit()).foregroundStyle(disk.free < 20_000_000_000 ? Theme.caution : Theme.textTertiary)
+                    }
+                    .padding(.top, Theme.Space.s)
+                }
             }
         }
+    }
+
+    /// Free space as macOS counts it for new files (purgeable space included), and the disk's size.
+    static func startupDisk() -> (free: Int64, total: Int64)? {
+        guard let v = try? URL(fileURLWithPath: NSHomeDirectory()).resourceValues(forKeys: [.volumeTotalCapacityKey, .volumeAvailableCapacityForImportantUsageKey]),
+              let total = v.volumeTotalCapacity, total > 0, let free = v.volumeAvailableCapacityForImportantUsage else { return nil }
+        return (free, Int64(total))
     }
 }
 

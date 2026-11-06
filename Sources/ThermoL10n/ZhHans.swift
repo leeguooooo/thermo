@@ -1956,6 +1956,7 @@ let zhHans: [String: String] = [
     "Sort programs": "程序排序方式",
     "Subdomains of one site share a group, so git.example.com and docs.example.com go together.": "同一网站的子域名归到一组，比如 git.example.com 和 docs.example.com 会放在一起。",
     "Nothing to group right now": "暂时没有要分组的标签",
+    "%1$@ free of %2$@ on this Mac": "这台 Mac 还剩 %1$@ 可用，共 %2$@",
     "%1$@ projects": "%1$@ 个项目",
     "%1$@ tabs → join %2$@ existing groups": "%1$@ 个标签 → 加入 %2$@ 个已有分组",
     "%1$@ tabs → %2$@ new groups, %3$@ joined": "%1$@ 个标签 → 新建 %2$@ 个分组，并入 %3$@ 个",
