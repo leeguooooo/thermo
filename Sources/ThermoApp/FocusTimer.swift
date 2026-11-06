@@ -25,7 +25,7 @@ struct FocusSettings: Equatable {
     var longBreakMinutes = 15
     var longBreakEvery = 4
     var showProgressIcon = true
-    var startOnLaunch = true
+    var startOnLaunch = false
 
     static func read(_ d: UserDefaults = .standard) -> FocusSettings {
         var s = FocusSettings()

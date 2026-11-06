@@ -55,8 +55,10 @@ public enum L10n {
 
     public static var system: Language {
         if let env = ProcessInfo.processInfo.environment["THERMO_LANG"], let l = parse(env) { return l }
+        // Japanese only covers a few screens so far, so following the system skips it and falls
+        // through to the next preferred language; choosing 日本語 explicitly still applies it.
         for id in Locale.preferredLanguages {
-            if let l = parse(id) { return l }
+            if let l = parse(id), l != .japanese { return l }
         }
         return .english
     }

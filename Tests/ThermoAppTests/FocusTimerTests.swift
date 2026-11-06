@@ -115,11 +115,12 @@ import XCTest
         XCTAssertEqual(h.model.phase, .rest(.short))
     }
 
-    func testLaunchStartsFocusByDefaultUnlessTurnedOff() {
-        let on = Harness(); on.model.launch()
-        XCTAssertEqual(on.model.phase, .focus)
-        let off = Harness(); off.settings.startOnLaunch = false; off.model.launch()
+    func testLaunchStaysIdleByDefaultUnlessTurnedOn() {
+        XCTAssertFalse(FocusSettings().startOnLaunch)
+        let off = Harness(); off.model.launch()
         XCTAssertEqual(off.model.phase, .idle)
+        let on = Harness(); on.settings.startOnLaunch = true; on.model.launch()
+        XCTAssertEqual(on.model.phase, .focus)
     }
 
     func testSavedSettingsSurviveARestartAndOutOfRangeValuesAreClamped() throws {
@@ -128,11 +129,11 @@ import XCTest
         XCTAssertEqual(FocusSettings.read(defaults), FocusSettings())
         // 设置面板经 @AppStorage 按这些键写入。
         let values: [(String, Any)] = [(FocusSettings.focusKey, 50), (FocusSettings.shortBreakKey, 10), (FocusSettings.longBreakKey, 30),
-                                       (FocusSettings.longBreakEveryKey, 3), (FocusSettings.progressIconKey, false), (FocusSettings.startOnLaunchKey, false)]
+                                       (FocusSettings.longBreakEveryKey, 3), (FocusSettings.progressIconKey, false), (FocusSettings.startOnLaunchKey, true)]
         for (key, value) in values { defaults.set(value, forKey: key) }
         var saved = FocusSettings()
         saved.focusMinutes = 50; saved.shortBreakMinutes = 10; saved.longBreakMinutes = 30
-        saved.longBreakEvery = 3; saved.showProgressIcon = false; saved.startOnLaunch = false
+        saved.longBreakEvery = 3; saved.showProgressIcon = false; saved.startOnLaunch = true
         let reopened = try XCTUnwrap(UserDefaults(suiteName: suite))
         XCTAssertEqual(FocusSettings.read(reopened), saved)
         reopened.set(0, forKey: FocusSettings.focusKey); reopened.set(99, forKey: FocusSettings.longBreakEveryKey)
