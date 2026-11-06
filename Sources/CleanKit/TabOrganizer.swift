@@ -1,5 +1,6 @@
 import Foundation
 import AgentCore
+import ThermoL10n
 
 /// Plans website/rule groups without reading page contents, then asks the extension to perform
 /// guarded native Chrome grouping. No debugger attachment, account switch or URL adoption.
@@ -95,13 +96,17 @@ public enum TabOrganizer {
             let host = TabWorkspace.site(page.tab.url)
             let rule = rules.first { valid($0) && matching(host, $0) }
             var name = rule?.name ?? siteName(host)
-            // Groups made before site names existed are titled with the full host; keep joining those.
+            // A group Thermo made earlier for this site keeps receiving its tabs, whatever it was titled
+            // then (a full host, or the name in another language).
             let prefix = profile + ":" + String(page.tab.window) + ":"
-            if rule == nil, existing[prefix + name] == nil,
-               let old = existing.keys.filter({ $0.hasPrefix(prefix) }).map({ String($0.dropFirst(prefix.count)) })
-                   .sorted().first(where: { siteName($0) == name }) { name = old }
+            if rule == nil, existing[prefix + name] == nil {
+                let key = siteKey(host)
+                if let old = existing.keys.filter({ $0.hasPrefix(prefix) }).map({ String($0.dropFirst(prefix.count)) })
+                    .sorted().first(where: { titleKey($0) == key }) { name = old }
+            }
+            // Colored by the site, not the title, so a group keeps its color in every language.
             var hash: UInt64 = 14695981039346656037
-            for byte in name.utf8 { hash = (hash ^ UInt64(byte)) &* 1099511628211 }
+            for byte in (rule?.name ?? siteKey(host)).utf8 { hash = (hash ^ UInt64(byte)) &* 1099511628211 }
             var color = rule?.color ?? colors[Int(hash % UInt64(colors.count))]
             let key = profile + ":" + String(page.tab.window) + ":" + name
             var target: Int?
@@ -129,58 +134,140 @@ public enum TabOrganizer {
     }
 
     /// The group a website's tabs go into: one per site, not per subdomain (zentao.example.cc and
-    /// git.example.cc are one site), under the name people call it where that is well known.
-    /// Google's separate products keep their own groups.
-    public static func siteName(_ host: String) -> String {
+    /// git.example.cc are one site), named the way people call it, in the app's language
+    /// ("Lark" is 飞书 in Chinese). Google's separate products keep their own groups.
+    public static func siteName(_ host: String) -> String { tr(siteKey(host)) }
+
+    /// The language-neutral name behind `siteName`: a known product name, or the site's own name
+    /// without its suffix and capitalized (zegocloud.com → Zegocloud). Hosts that are not a site
+    /// (an address, localhost) and hosting subdomains (alice.github.io) stay as they are.
+    static func siteKey(_ host: String) -> String {
         var host = host.lowercased()
         if host.hasPrefix("www.") { host.removeFirst(4) }
         let labels = host.split(separator: ".").map(String.init)
         guard labels.count >= 2, Int(labels.last!) == nil else { return host }
-        let twoLevel: Set<String> = ["co.jp", "ne.jp", "or.jp", "ac.jp", "go.jp", "ed.jp", "lg.jp", "gr.jp",
+        let hosting: Set<String> = ["github.io", "pages.dev", "workers.dev", "vercel.app", "netlify.app", "herokuapp.com", "appspot.com", "cloudfront.net"]
+        let twoLevel: Set<String> = hosting.union(["co.jp", "ne.jp", "or.jp", "ac.jp", "go.jp", "ed.jp", "lg.jp", "gr.jp",
                                      "com.cn", "net.cn", "org.cn", "gov.cn", "edu.cn", "com.hk", "com.tw", "org.tw", "edu.tw",
                                      "co.uk", "org.uk", "ac.uk", "gov.uk", "com.au", "net.au", "org.au", "co.kr", "or.kr",
-                                     "com.sg", "edu.sg", "co.nz", "com.br", "co.in", "github.io", "pages.dev", "workers.dev",
-                                     "vercel.app", "netlify.app", "herokuapp.com", "appspot.com", "cloudfront.net"]
+                                     "com.sg", "edu.sg", "co.nz", "com.br", "co.in"])
         let suffix2 = labels.suffix(2).joined(separator: ".")
-        let site = twoLevel.contains(suffix2) && labels.count >= 3 ? labels.suffix(3).joined(separator: ".") : suffix2
-        // Hosting platforms give each customer a subdomain; those are separate sites.
-        if twoLevel.contains(suffix2), ["github.io", "pages.dev", "workers.dev", "vercel.app", "netlify.app", "herokuapp.com", "appspot.com", "cloudfront.net"].contains(suffix2) {
-            return site
-        }
+        let multi = twoLevel.contains(suffix2) && labels.count >= 3
+        let site = multi ? labels.suffix(3).joined(separator: ".") : suffix2
+        if hosting.contains(suffix2) { return site }
         if site == "google.com" {
             let product = labels.count > 2 ? labels[labels.count - 3] : ""
-            let products = ["docs": "Google Docs", "drive": "Google Drive", "mail": "Gmail", "calendar": "Google Calendar",
-                            "meet": "Google Meet", "console.cloud": "Google Cloud", "cloud": "Google Cloud", "translate": "Google Translate",
-                            "maps": "Google Maps", "sheets": "Google Docs", "slides": "Google Docs", "analytics": "Google Analytics"]
-            return products[product] ?? "Google"
+            return googleProducts[product] ?? "Google"
         }
-        let known = ["github.com": "GitHub", "githubusercontent.com": "GitHub", "gitlab.com": "GitLab", "youtube.com": "YouTube",
-                     "youtu.be": "YouTube", "x.com": "X", "twitter.com": "X", "larksuite.com": "Lark", "feishu.cn": "Lark",
-                     "notion.so": "Notion", "notion.site": "Notion", "figma.com": "Figma", "slack.com": "Slack",
-                     "stackoverflow.com": "Stack Overflow", "wikipedia.org": "Wikipedia", "reddit.com": "Reddit",
-                     "openai.com": "OpenAI", "chatgpt.com": "ChatGPT", "claude.ai": "Claude", "anthropic.com": "Anthropic",
-                     "apple.com": "Apple", "amazon.com": "Amazon", "amazon.co.jp": "Amazon", "zhihu.com": "知乎",
-                     "bilibili.com": "bilibili", "baidu.com": "百度", "weibo.com": "微博", "xiaohongshu.com": "小红书",
-                     "mercari.com": "Mercari", "cloudflare.com": "Cloudflare", "vercel.com": "Vercel", "linear.app": "Linear",
-                     "atlassian.net": "Jira", "medium.com": "Medium", "npmjs.com": "npm", "docker.com": "Docker"]
-        return known[site] ?? site
+        if let known = knownSites[site] { return known }
+        // The site's own name: the label before its suffix.
+        let name = multi ? labels[labels.count - 3] : labels[labels.count - 2]
+        guard name.count > 3 else { return site }  // "moj", "ntt": too short to read as a name
+        return name.prefix(1).uppercased() + name.dropFirst()
     }
 
-    /// Groups Thermo itself made (from its batch records, never from a title match: chrome-use
-    /// names agent session groups too), keyed like plan groups, that still exist in the same
-    /// window with the same title. Newest first wins.
+    static let googleProducts = ["docs": "Google Docs", "sheets": "Google Docs", "slides": "Google Docs", "drive": "Google Drive",
+                                 "mail": "Gmail", "calendar": "Google Calendar", "meet": "Google Meet", "cloud": "Google Cloud",
+                                 "translate": "Google Translate", "maps": "Google Maps", "analytics": "Google Analytics"]
+    static let knownSites = ["github.com": "GitHub", "githubusercontent.com": "GitHub", "gitlab.com": "GitLab", "youtube.com": "YouTube",
+                             "youtu.be": "YouTube", "x.com": "X", "twitter.com": "X", "larksuite.com": "Lark", "feishu.cn": "Lark",
+                             "notion.so": "Notion", "notion.site": "Notion", "figma.com": "Figma", "slack.com": "Slack",
+                             "stackoverflow.com": "Stack Overflow", "wikipedia.org": "Wikipedia", "reddit.com": "Reddit",
+                             "openai.com": "OpenAI", "chatgpt.com": "ChatGPT", "claude.ai": "Claude", "anthropic.com": "Anthropic",
+                             "apple.com": "Apple", "amazon.com": "Amazon", "amazon.co.jp": "Amazon", "zhihu.com": "Zhihu",
+                             "bilibili.com": "bilibili", "baidu.com": "Baidu", "weibo.com": "Weibo", "xiaohongshu.com": "Xiaohongshu",
+                             "mercari.com": "Mercari", "cloudflare.com": "Cloudflare", "vercel.com": "Vercel", "linear.app": "Linear",
+                             "atlassian.net": "Jira", "medium.com": "Medium", "npmjs.com": "npm", "docker.com": "Docker",
+                             "zegocloud.com": "ZEGOCLOUD"]
+
+    /// The language-neutral name an existing group title stands for, whether the title is a host
+    /// (groups named before site names existed) or a name in any language Thermo has used.
+    static func titleKey(_ title: String) -> String {
+        if title.contains("."), !title.contains(" ") { return siteKey(title) }
+        let names = Set(googleProducts.values).union(knownSites.values)
+        if let key = names.first(where: { $0 == title || tr($0) == title }) { return key }
+        return title
+    }
+
+    /// A group Thermo made under a name that is not the site's name in the current language
+    /// (a bare host, or the name in another language), and what it should be called.
+    public struct Rename: Codable, Sendable, Identifiable, Equatable {
+        public var id: String { profileID + ":" + String(groupId) }
+        public var profileID: String
+        public var groupId: Int
+        public var from: String
+        public var to: String
+    }
+
+    /// Groups Thermo made whose title should become the site's name. Groups named by a website rule
+    /// or by the user are never listed: their titles are not a host or a known site name.
+    public static func renames(_ inventory: TabWorkspace.Inventory, batches: [Batch]) -> [Rename] {
+        let profiles = Set(inventory.renameProfiles ?? [])
+        guard !profiles.isEmpty else { return [] }
+        return madeByThermo(batches, current: inventory.nativeGroups ?? []).values.compactMap { group in
+            guard profiles.contains(group.profileID) else { return nil }
+            let key = titleKey(group.title)
+            // Only titles that name a site: a bare host, or a known site's name in some language.
+            // A name from a website rule or the user ("Work") is theirs and stays.
+            let known = Set(googleProducts.values).union(knownSites.values)
+            let isSiteTitle = (group.title.contains(".") && !group.title.contains(" ")) || known.contains(key)
+            let name = tr(key)
+            guard isSiteTitle, name != group.title, !name.isEmpty else { return nil }
+            return Rename(profileID: group.profileID, groupId: group.id, from: group.title, to: name)
+        }.sorted { $0.from < $1.from }
+    }
+
+    /// Renames through chrome-use, which re-checks each group is Thermo's and still titled `from`.
+    public static func rename(_ renames: [Rename], app: String, home: String = NSHomeDirectory(), execute: Execute? = nil) async throws -> Int {
+        let lock = try TabWorkspace.Lock(home: home); defer { lock.release() }
+        let endpoints = TabWorkspace.connections(app: app, home: home)
+        var renamed: [Rename] = [], failures: [String] = []
+        for profile in Set(renames.map(\.profileID)).sorted() {
+            let rows = renames.filter { $0.profileID == profile }
+            let payload: [String: Any] = ["version": 1, "id": UUID().uuidString, "reviewed": true,
+                                          "groups": rows.map { ["groupId": $0.groupId, "from": $0.from, "to": $0.to] as [String: Any] }]
+            do {
+                let results: [[String: Any]]
+                if let execute {
+                    _ = try await execute("ABExt.renameUserTabGroups", payload, profile); results = rows.map { ["groupId": $0.groupId, "status": "renamed"] }
+                } else {
+                    guard let endpoint = endpoints[profile] else { throw TabWorkspace.WorkspaceError("Browser profile disconnected. Nothing renamed.") }
+                    let client = ChromeInspector.CDP(endpoint, diagnostic: true); defer { client.close() }
+                    guard let reply = await client.send("ABExt.renameUserTabGroups", payload), let r = reply["results"] as? [[String: Any]] else {
+                        throw TabWorkspace.WorkspaceError("chrome-use did not answer the rename request.")
+                    }
+                    results = r
+                }
+                let done = Set(results.filter { $0["status"] as? String == "renamed" }.compactMap { $0["groupId"] as? Int })
+                renamed += rows.filter { done.contains($0.groupId) }
+            } catch { failures.append(error.localizedDescription) }
+        }
+        if !renamed.isEmpty {
+            OperationJournal.record(OperationRecord(feature: "tabs", action: "rename", subject: app,
+                                                    items: renamed.map { OperationRecord.Item(target: $0.from + " → " + $0.to, status: "done") }), home: home)
+        }
+        if renamed.isEmpty, let first = failures.first { throw TabWorkspace.WorkspaceError(first) }
+        return renamed.count
+    }
+
+    /// Groups Thermo itself made (from its batch records, never from a title match alone: chrome-use
+    /// names agent session groups too), keyed like plan groups by their current title, that still
+    /// exist in the same window under a title for the same site. Newest first wins.
     static func madeByThermo(_ batches: [Batch], current: [TabWorkspace.NativeGroup]) -> [String: TabWorkspace.NativeGroup] {
         var result: [String: TabWorkspace.NativeGroup] = [:]
         for batch in batches.sorted(by: { $0.created > $1.created }) {
             for group in batch.plan.groups {
-                let key = group.profileID + ":" + String(group.window) + ":" + group.name
-                guard result[key] == nil else { continue }
                 let tabs = Set(group.pages.compactMap { Int($0.tab.browserID ?? "") })
                 let ids = Set((batch.replies[group.profileID]?.results ?? [])
                     .filter { $0.status == "grouped" && tabs.contains($0.tabId) }.compactMap(\.groupId))
-                if let live = current.first(where: { ids.contains($0.id) && $0.profileID == group.profileID
-                                                    && $0.window == group.window && $0.title == group.name }) {
-                    result[key] = live
+                // Matched by id, keyed by the title it has now: a group Thermo renamed to the site's name
+                // is still Thermo's, and new tabs must join it under that name.
+                // The title must still stand for the same site, so a group id Chrome reused after a restart
+                // for one of the user's own groups is never taken for Thermo's.
+                if let live = current.first(where: { ids.contains($0.id) && $0.profileID == group.profileID && $0.window == group.window
+                                                    && titleKey($0.title) == titleKey(group.name) }) {
+                    let key = group.profileID + ":" + String(group.window) + ":" + live.title
+                    if result[key] == nil { result[key] = live }
                 }
             }
         }

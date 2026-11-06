@@ -40,6 +40,7 @@ extension OperationRecord {
         case ("tabs", "archive"): return tr("Saved and closed tabs")
         case ("tabs", "restore"): return tr("Reopened saved tabs")
         case ("tabs", "organize"): return tr("Grouped tabs")
+        case ("tabs", "rename"): return tr("Renamed tab groups")
         case ("tabs", "undoOrganize"): return tr("Undid tab grouping")
         case ("worktrees", "repair"): return tr("Repaired worktree registrations")
         case ("archive", "archive"): return tr("Archived to another machine")

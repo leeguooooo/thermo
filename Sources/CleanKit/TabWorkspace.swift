@@ -46,6 +46,8 @@ public enum TabWorkspace {
         public var pages: [Page]
         public var hint: String?
         public var nativeGroups: [NativeGroup]? = nil
+        /// Profiles whose chrome-use can rename the groups Thermo made.
+        public var renameProfiles: [String]? = nil
         public init(app: String, generated: Date, pages: [Page], nativeGroups: [NativeGroup]? = nil, hint: String? = nil) {
             self.app = app; self.generated = generated; self.pages = pages; self.hint = hint; self.nativeGroups = nativeGroups
         }
@@ -102,6 +104,7 @@ public enum TabWorkspace {
         var metadata = false
         var organizerVersions: [String: Int] = [:]
         var canJoin = Set<String>()
+        var canRename = Set<String>()
         for (profile, endpoint) in connections(app: app, home: home).sorted(by: { $0.key < $1.key }) {
             let cdp = ChromeInspector.CDP(endpoint, diagnostic: true)
             defer { cdp.close() }
@@ -113,6 +116,7 @@ public enum TabWorkspace {
                 metadata = true
                 organizerVersions[profile] = state["userTabGroupsVersion"] as? Int ?? 0
                 if state["userTabGroupsJoin"] as? Bool == true { canJoin.insert(profile) }
+                if state["userTabGroupsRename"] as? Bool == true { canRename.insert(profile) }
                 if let window = state["agentWindowId"] as? Int { agentWindows.insert(window) }
                 owned.formUnion(held.map(String.init))
                 for row in attached where row["attached"] as? Bool != false {
@@ -143,8 +147,10 @@ public enum TabWorkspace {
                   let id = row["id"] as? Int, let window = row["windowId"] as? Int else { return nil }
             return NativeGroup(profileID: profile, id: id, window: window, title: row["title"] as? String ?? "", color: row["color"] as? String)
         }
-        return Inventory(app: app, generated: Date(), pages: pages, nativeGroups: current,
+        var inventory = Inventory(app: app, generated: Date(), pages: pages, nativeGroups: current,
                          hint: pages.contains(where: { $0.protectedReason == "Protection status unavailable" }) || !metadata ? "Connect chrome-use to read pinned, audio and agent protection status. Quick archive is disabled until those flags are known." : nil)
+        inventory.renameProfiles = canRename.sorted()
+        return inventory
     }
 
     static func connections(app: String, home: String, env: [String: String] = ProcessInfo.processInfo.environment) -> [String: URL] {

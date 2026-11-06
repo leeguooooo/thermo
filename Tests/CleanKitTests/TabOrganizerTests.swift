@@ -127,23 +127,59 @@ final class TabOrganizerTests: XCTestCase {
     }
 
     func testSubdomainsOfOneSiteShareAGroupUnderAFriendlyName() {
-        XCTAssertEqual(TabOrganizer.siteName("zentao.pwtk.cc"), "pwtk.cc")
-        XCTAssertEqual(TabOrganizer.siteName("sg-git-src.pwtk.cc"), "pwtk.cc")
-        XCTAssertEqual(TabOrganizer.siteName("portwind.jp.larksuite.com"), "Lark")
-        XCTAssertEqual(TabOrganizer.siteName("www.github.com"), "GitHub")
-        XCTAssertEqual(TabOrganizer.siteName("docs.google.com"), "Google Docs")
-        XCTAssertEqual(TabOrganizer.siteName("mail.google.com"), "Gmail")
-        XCTAssertEqual(TabOrganizer.siteName("www.rasens-immi.moj.go.jp"), "moj.go.jp")
-        XCTAssertEqual(TabOrganizer.siteName("alice.github.io"), "alice.github.io", "each hosted site is its own")
-        XCTAssertEqual(TabOrganizer.siteName("127.0.0.1"), "127.0.0.1")
-        XCTAssertEqual(TabOrganizer.siteName("localhost"), "localhost")
+        XCTAssertEqual(TabOrganizer.siteKey("zentao.pwtk.cc"), "Pwtk")
+        XCTAssertEqual(TabOrganizer.siteKey("sg-git-src.pwtk.cc"), "Pwtk")
+        XCTAssertEqual(TabOrganizer.siteKey("aeroplane-admin.pwtk-dev.work"), "Pwtk-dev")
+        XCTAssertEqual(TabOrganizer.siteKey("console.zegocloud.com"), "ZEGOCLOUD")
+        XCTAssertEqual(TabOrganizer.siteKey("portwind.jp.larksuite.com"), "Lark")
+        XCTAssertEqual(TabOrganizer.siteKey("www.github.com"), "GitHub")
+        XCTAssertEqual(TabOrganizer.siteKey("docs.google.com"), "Google Docs")
+        XCTAssertEqual(TabOrganizer.siteKey("mail.google.com"), "Gmail")
+        XCTAssertEqual(TabOrganizer.siteKey("www.rasens-immi.moj.go.jp"), "moj.go.jp", "too short to read as a name")
+        XCTAssertEqual(TabOrganizer.siteKey("alice.github.io"), "alice.github.io", "each hosted site is its own")
+        XCTAssertEqual(TabOrganizer.siteKey("127.0.0.1"), "127.0.0.1")
+        XCTAssertEqual(TabOrganizer.siteKey("localhost"), "localhost")
         let plan = TabOrganizer.plan(inventory([page(1, url: "https://zentao.pwtk.cc/a"), page(2, url: "https://git.pwtk.cc/b")]))
-        XCTAssertEqual(plan.groups.map(\.name), ["pwtk.cc"])
+        XCTAssertEqual(plan.groups.map(\.name), [TabOrganizer.siteName("zentao.pwtk.cc")])
+    }
+    func testOldGroupTitlesStillMatchTheirSite() {
+        XCTAssertEqual(TabOrganizer.titleKey("portwind.jp.larksuite.com"), "Lark")
+        XCTAssertEqual(TabOrganizer.titleKey("Lark"), "Lark")
+        XCTAssertEqual(TabOrganizer.titleKey("github.com"), "GitHub")
+        XCTAssertEqual(TabOrganizer.titleKey("My own group"), "My own group")
     }
     func testNewTabsOfTheSameSiteJoinAGroupTitledWithAnOlderHostName() {
         let live = [TabWorkspace.NativeGroup(profileID: "first", id: 900, window: 1, title: "example.test", color: "green")]
         var tab = joinable(7); tab.tab.url = "https://other.example.test/new"
         let plan = TabOrganizer.plan(.init(app: "Google Chrome", generated: Date(), pages: [tab], nativeGroups: live), batches: [earlier()], auto: true)
         XCTAssertEqual(plan.groups.first?.groupId, 900)
+    }
+    func testHostTitledGroupsAreRenamedAndStillJoinedAfterwards() {
+        // A group Thermo made as "example.test" (a host title), renamed to the site's name.
+        let hostTitled = [TabWorkspace.NativeGroup(profileID: "first", id: 900, window: 1, title: "example.test", color: "green")]
+        var inv = TabWorkspace.Inventory(app: "Google Chrome", generated: Date(), pages: [], nativeGroups: hostTitled)
+        XCTAssertTrue(TabOrganizer.renames(inv, batches: [earlier()]).isEmpty, "no rename without chrome-use support")
+        inv.renameProfiles = ["first"]
+        let plan = TabOrganizer.renames(inv, batches: [earlier()])
+        XCTAssertEqual(plan.map(\.to), [TabOrganizer.siteName("example.test")])
+        XCTAssertEqual(plan.first?.groupId, 900)
+        let renamed = [TabWorkspace.NativeGroup(profileID: "first", id: 900, window: 1, title: TabOrganizer.siteName("example.test"), color: "green")]
+        let join = TabOrganizer.plan(.init(app: "Google Chrome", generated: Date(), pages: [joinable(7)], nativeGroups: renamed), batches: [earlier()], auto: true)
+        XCTAssertEqual(join.groups.first?.groupId, 900, "new tabs join the renamed group")
+        XCTAssertEqual(join.groups.first?.name, TabOrganizer.siteName("example.test"))
+    }
+    func testAReusedGroupIdUnderAnotherTitleIsNotThermos() {
+        let reused = [TabWorkspace.NativeGroup(profileID: "first", id: 900, window: 1, title: "Taxes", color: "red")]
+        var inv = TabWorkspace.Inventory(app: "Google Chrome", generated: Date(), pages: [], nativeGroups: reused)
+        inv.renameProfiles = ["first"]
+        XCTAssertTrue(TabOrganizer.renames(inv, batches: [earlier()]).isEmpty)
+        XCTAssertTrue(TabOrganizer.madeByThermo([earlier()], current: reused).isEmpty)
+    }
+    func testRuleNamedGroupsAreNeverRenamed() {
+        var batch = earlier(); batch.plan.groups[0].name = "Work"
+        let live = [TabWorkspace.NativeGroup(profileID: "first", id: 900, window: 1, title: "Work", color: "blue")]
+        var inv = TabWorkspace.Inventory(app: "Google Chrome", generated: Date(), pages: [], nativeGroups: live)
+        inv.renameProfiles = ["first"]
+        XCTAssertTrue(TabOrganizer.renames(inv, batches: [batch]).isEmpty)
     }
 }

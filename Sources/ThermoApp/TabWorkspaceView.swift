@@ -173,6 +173,7 @@ struct TabWorkspaceView: View {
             case .organize:
                 ScrollView {
                     NativeTabOrganizerView(app: model.app, pages: model.pages, nativeGroups: model.inventory?.nativeGroups ?? [],
+                                           renameProfiles: model.inventory?.renameProfiles ?? [],
                                            working: $model.busy,
                                            previewOnly: model.isPreview, refresh: model.refresh)
                         .padding(.horizontal, Theme.pagePadding).padding(.bottom, Theme.Space.xl)
