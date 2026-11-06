@@ -6,6 +6,7 @@ import Foundation
 public enum Language: String, CaseIterable, Identifiable, Sendable {
     case english = "en"
     case simplifiedChinese = "zh-Hans"
+    case japanese = "ja"
 
     public var id: String { rawValue }
 
@@ -14,6 +15,7 @@ public enum Language: String, CaseIterable, Identifiable, Sendable {
         switch self {
         case .english: return "English"
         case .simplifiedChinese: return "简体中文"
+        case .japanese: return "日本語"
         }
     }
 
@@ -21,12 +23,13 @@ public enum Language: String, CaseIterable, Identifiable, Sendable {
         switch self {
         case .english: return nil
         case .simplifiedChinese: return zhHansWithMenuBar
+        case .japanese: return ja
         }
     }
 }
 
 public enum L10n {
-    /// UserDefaults key (app) holding "system", "en" or "zh-Hans".
+    /// UserDefaults key (app) holding "system", "en", "zh-Hans" or "ja".
     public static let defaultsKey = "language"
 
     private static let lock = NSLock()
@@ -52,8 +55,10 @@ public enum L10n {
 
     public static var system: Language {
         if let env = ProcessInfo.processInfo.environment["THERMO_LANG"], let l = parse(env) { return l }
+        // Japanese only covers a few screens so far, so following the system skips it and falls
+        // through to the next preferred language; choosing 日本語 explicitly still applies it.
         for id in Locale.preferredLanguages {
-            if let l = parse(id) { return l }
+            if let l = parse(id), l != .japanese { return l }
         }
         return .english
     }
@@ -63,6 +68,7 @@ public enum L10n {
         let l = id.lowercased().replacingOccurrences(of: "_", with: "-")
         if l.hasPrefix("zh") { return .simplifiedChinese }
         if l.hasPrefix("en") { return .english }
+        if l.hasPrefix("ja") { return .japanese }
         return nil
     }
 

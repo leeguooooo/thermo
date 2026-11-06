@@ -4,7 +4,7 @@ import ThermoL10n
 
 /// The tools in the menu bar panel that open a panel of their own.
 enum ToolSheet: String, Identifiable {
-    case keepAwake, cleanScreen, lowLatency, batteryCare
+    case keepAwake, cleanScreen, lowLatency, batteryCare, focus
     var id: String { rawValue }
 }
 
@@ -69,6 +69,11 @@ final class StatusMenu: NSObject, NSMenuDelegate {
         menu.addItem(.separator())
 
         menu.addItem(keepAwake())
+        let focus = NSMenuItem(title: tr("Focus timer"), action: nil, keyEquivalent: "")
+        focus.image = symbol("timer")
+        if FocusTimerModel.shared.phase.isActive { focus.state = .on }
+        focus.submenu = focusMenu()
+        menu.addItem(focus)
         menu.addItem(item(tr("Clean Screen"), "sparkles.tv") { MainWindow.show(tool: .cleanScreen) })
         menu.addItem(item(tr("Network low latency"), "network") { MainWindow.show(tool: .lowLatency) })
         if battery {
@@ -114,6 +119,19 @@ final class StatusMenu: NSObject, NSMenuDelegate {
         sub.addItem(item(tr("Options…"), "slider.horizontal.3") { MainWindow.show(tool: .keepAwake) })
         parent.submenu = sub
         return parent
+    }
+
+    /// 主菜单的子菜单和计时状态项的菜单共用，按当前阶段列出可做的操作。
+    func focusMenu() -> NSMenu {
+        let model = FocusTimerModel.shared
+        let sub = NSMenu()
+        sub.autoenablesItems = false
+        for action in FocusAction.available(in: model.phase) {
+            sub.addItem(item(action.title, nil) { action.run(model) })
+        }
+        sub.addItem(.separator())
+        sub.addItem(item(tr("Focus timer options…"), "slider.horizontal.3") { MainWindow.show(tool: .focus) })
+        return sub
     }
 
     private func page(_ title: String, _ symbolName: String, _ target: MainPage) -> NSMenuItem {
