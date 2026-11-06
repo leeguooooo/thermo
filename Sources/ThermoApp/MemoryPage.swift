@@ -492,7 +492,7 @@ struct MemoryPage: View {
                         Text(program.name).font(Theme.rowTitle).foregroundStyle(Theme.textPrimary).lineLimit(1)
                         Text("×\(program.processCount)").font(Theme.caption.monospacedDigit()).foregroundStyle(Theme.textTertiary)
                     }
-                    Text(program.contexts.first?.app != nil ? tr("App · expand for processes") : tr("%1$@ projects · expand for processes", String(program.projects.count)))
+                    Text(programSubtitle(program, open: isOpen))
                         .font(Theme.caption).foregroundStyle(Theme.textTertiary)
                 }.frame(maxWidth: .infinity, alignment: .leading)
                 GeometryReader { g in
@@ -520,7 +520,7 @@ struct MemoryPage: View {
                     }
                     HStack {
                         VStack(alignment: .leading, spacing: 2) {
-                            Text(program.contexts.first?.app != nil ? tr("App · expand for processes") : tr("%1$@ projects · expand for processes", String(program.projects.count)))
+                            Text(programSubtitle(program, open: isOpen))
                                 .lineLimit(1)
                             Text(tr("Resident memory") + ": " + (program.residentKB.map { MemoryFormat.string(kibibytes: $0) } ?? "—"))
                         }.font(Theme.caption).foregroundStyle(Theme.textSecondary)
@@ -623,6 +623,13 @@ struct MemoryPage: View {
                 }
             }
         }.font(Theme.caption.monospacedDigit()).padding(.leading, 32)
+    }
+
+    /// "Expand for processes" only while there is something to expand to.
+    func programSubtitle(_ program: MemoryProgram, open: Bool) -> String {
+        let app = program.contexts.first?.app != nil
+        if open { return app ? tr("Application") : tr("%1$@ projects", String(program.projects.count)) }
+        return app ? tr("App · expand for processes") : tr("%1$@ projects · expand for processes", String(program.projects.count))
     }
 
     func detail(_ h: MachinePulse.Hog) -> String {

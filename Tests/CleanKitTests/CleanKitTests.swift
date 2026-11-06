@@ -1075,4 +1075,11 @@ extension CleanKitTests {
         XCTAssertEqual(item.paths,[home+"/"+base+"old"])
         XCTAssertEqual(item.safety,.review)
     }
+
+    func testNpxVersionSuffixDoesNotSplitAProgram() {
+        XCTAssertEqual(MachinePulse.unversioned("desktop-commander@latest"), "desktop-commander")
+        XCTAssertEqual(MachinePulse.unversioned("@scope/tool@1.2.3"), "@scope/tool")
+        XCTAssertEqual(MachinePulse.unversioned("@scope/tool"), "@scope/tool")
+        XCTAssertEqual(MachinePulse.unversioned("node"), "node")
+    }
 }

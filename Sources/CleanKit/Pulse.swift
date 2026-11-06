@@ -410,7 +410,7 @@ public struct MachinePulse: Codable, Sendable, Equatable {
             let appPath = String(exe[..<r.lowerBound]) + ".app"
             return (appPath, ((appPath as NSString).lastPathComponent as NSString).deletingPathExtension, appPath)
         }
-        let name = programName(d, fallback: fallback)
+        let name = unversioned(programName(d, fallback: fallback))
         if isInlineEvaluation(d) {
             // The visible runtime name is shared, but different inline invocations are not
             // the same program. Keep their rows distinct without putting source into the ID.
@@ -592,6 +592,13 @@ public struct MachinePulse: Codable, Sendable, Equatable {
         }
         if let m = d.argv.firstIndex(of: "-m"), m + 1 < d.argv.count { return d.argv[m + 1] }
         return first
+    }
+
+    /// `npx desktop-commander@latest` and `desktop-commander` are one program; `@scope/pkg@1.2` → `@scope/pkg`.
+    static func unversioned(_ name: String) -> String {
+        guard let at = name.lastIndex(of: "@"), at != name.startIndex else { return name }
+        let base = String(name[..<at])
+        return base.isEmpty || base == "@" ? name : base
     }
 
     private static let home = NSHomeDirectory()
