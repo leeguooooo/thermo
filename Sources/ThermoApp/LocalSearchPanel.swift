@@ -8,15 +8,20 @@ import ThermoL10n
     static let shared = LocalSearchPanel()
     private var previousApplication: NSRunningApplication?
     private var preview: NSWindow?
-    private let model = LocalSearchModel.shared
+    private var presentingPreview = false
+    private let model: LocalSearchModel
     private final class Panel: NSPanel {
         override var canBecomeKey: Bool { true }
         override var canBecomeMain: Bool { false }
     }
+    private final class Host<Content: View>: NSHostingView<Content> {
+        override func acceptsFirstMouse(for event: NSEvent?) -> Bool { true }
+    }
     private final class PreviewWindow: NSWindow {
         override func cancelOperation(_ sender: Any?) { close() }
     }
-    init() {
+    init(model: LocalSearchModel = .shared) {
+        self.model = model
         let panel = Panel(contentRect: NSRect(x: 0, y: 0, width: 680, height: 520),
                           styleMask: [.titled, .fullSizeContentView, .nonactivatingPanel], backing: .buffered, defer: false)
         panel.title = tr("Search apps and files"); panel.titleVisibility = .hidden
@@ -26,7 +31,7 @@ import ThermoL10n
         panel.level = .floating; panel.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary, .transient]
         panel.becomesKeyOnlyIfNeeded = false; panel.hidesOnDeactivate = false
         super.init(window: panel); panel.delegate = self
-        panel.contentView = NSHostingView(rootView: LocalSearchView(model: model).ignoresSafeArea().preferredColorScheme(.dark))
+        panel.contentView = Host(rootView: LocalSearchView(model: model).ignoresSafeArea().preferredColorScheme(.dark))
     }
     required init?(coder: NSCoder) { fatalError("init(coder:) is not used") }
     func toggle() { window?.isVisible == true ? hide() : show() }
@@ -53,7 +58,8 @@ import ThermoL10n
         previousApplication = nil
     }
     func windowDidResignKey(_ notification: Notification) {
-        guard !model.presentingDialog, !model.showSettings, model.aliasTarget == nil, preview?.isVisible != true else { return }
+        guard let search = window, (notification.object as? NSWindow) === search else { return }
+        guard !presentingPreview, !model.presentingDialog, !model.showSettings, model.aliasTarget == nil, preview?.isVisible != true else { return }
         hide(restoreFocus: false)
     }
     func windowWillClose(_ notification: Notification) {
@@ -74,7 +80,13 @@ import ThermoL10n
         }, reveal: { [weak self] in
             self?.model.selection = item.id; self?.model.revealSelected()
         }))
-        preview = panel; panel.center(); NSApp.activate(ignoringOtherApps: true); panel.makeKeyAndOrderFront(nil)
+        presentPreview(panel)
+    }
+    func presentPreview(_ panel: NSWindow, activateApplication: () -> Void = { NSApp.activate(ignoringOtherApps: true) }) {
+        // Activating the app can resign the nonactivating search before the document is visible.
+        presentingPreview = true
+        defer { presentingPreview = false }
+        preview = panel; panel.center(); activateApplication(); panel.makeKeyAndOrderFront(nil)
     }
 }
 
