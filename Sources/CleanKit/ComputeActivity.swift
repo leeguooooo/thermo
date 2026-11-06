@@ -21,6 +21,14 @@ public struct ComputeProcess: Codable, Identifiable, Sendable {
     public var name: String
     public var cpu: Double?
     public var gpu: Double?
+    /// The kernel truncates process names (16 characters); the executable's own name is complete.
+    public var displayName: String? = nil
+    /// Owned by this user, not a system binary, an AI agent session or Thermo; same rule as the memory page.
+    public var quittable: Bool? = nil
+    public var started: Date? = nil
+    /// The working directory (`~/…`) of a command-line process: which project or session it belongs to.
+    public var folder: String? = nil
+    public var label: String { displayName ?? name }
 }
 
 public struct ComputeProgram: Codable, Identifiable, Sendable {
@@ -28,7 +36,10 @@ public struct ComputeProgram: Codable, Identifiable, Sendable {
     public var name: String
     public var processes: [ComputeProcess]
     public var contexts: [String]
+    /// The .app for GUI programs; quitting goes through the app so it can save its work.
+    public var app: String? = nil
     public var cpu: Double? { Self.total(processes.map(\.cpu)) }
+    public var quittable: Bool { !processes.isEmpty && processes.allSatisfy { $0.quittable == true } }
     public var gpu: Double? { Self.total(processes.map(\.gpu)) }
     // A partial sum must not masquerade as a complete program reading.
     static func total(_ values: [Double?]) -> Double? {
@@ -122,16 +133,34 @@ public final class ComputeSampler {
                Self.sameProcess(u, old) {
                 cpu = Self.rate(u.cpuNanos, old.cpuNanos, elapsed: elapsed)
             }
-            readings[u.pid] = ComputeProcess(pid: u.pid, name: u.name, cpu: cpu, gpu: gpuByPID[u.pid].flatMap(ComputeProgram.total))
+            let details = ProcessTable.details(u.pid)
+            var reading = ComputeProcess(pid: u.pid, name: u.name, cpu: cpu, gpu: gpuByPID[u.pid].flatMap(ComputeProgram.total))
+            if let exe = details.executable {
+                let base = (exe as NSString).lastPathComponent
+                if base.count > u.name.count, base.hasPrefix(u.name) { reading.displayName = base }
+            }
+            reading.started = u.started
+            if let cwd = details.cwd, cwd != "/", details.executable.map({ !$0.contains(".app/") }) ?? true {
+                reading.folder = MachinePulse.tilde(cwd)
+            }
+            readings[u.pid] = reading
             candidates.append(.init(pid: u.pid, uid: u.uid, name: u.name, cpu: cpu ?? 0, memoryKB: u.footprintKB,
-                                    details: ProcessTable.details(u.pid), uptime: u.started.map { Date().timeIntervalSince($0) }))
+                                    details: details, uptime: u.started.map { Date().timeIntervalSince($0) }))
         }
         guard !cancelled() else { return cancelledReading() }
         let contexts = MachinePulse.group(candidates, byMemory: false, me: getpid(), limit: nil)
         guard !cancelled() else { return cancelledReading() }
         let programs = MemoryInventory.group(contexts).map { group in
-            ComputeProgram(id: group.id, name: group.name, processes: group.contexts.flatMap(\.pids).compactMap { readings[$0] },
-                           contexts: group.contexts.compactMap { $0.project ?? $0.app })
+            let processes = group.contexts.flatMap { context in
+                context.pids.compactMap { pid -> ComputeProcess? in
+                    guard var reading = readings[pid] else { return nil }
+                    reading.quittable = context.quittable
+                    return reading
+                }
+            }
+            return ComputeProgram(id: group.id, name: group.name, processes: processes,
+                                  contexts: group.contexts.compactMap { $0.project ?? $0.app },
+                                  app: group.contexts.compactMap(\.app).first)
         }
         let cpu = valid ? host.flatMap { current in baseline?.host.flatMap { Self.hostRate(current, $0) } } : nil
         guard !cancelled() else { return cancelledReading() }

@@ -1,4 +1,6 @@
 import Charts
+import AgentCore
+import AppKit
 import CleanKit
 import SwiftUI
 import ThermoL10n
@@ -113,6 +115,11 @@ struct ComputePage: View {
     @State private var search = ""
     @State private var expanded = Set<String>()
     @State private var showAll = false
+    @AppStorage("computePage.sort") private var sort = ComputeSort.usage
+    @State private var hovered: String?
+    @State private var allProcesses = Set<String>()
+    @State private var stopping: ComputeStopTarget?
+    @State private var stopProblem: String?
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     var title: String { gpu ? tr("GPU usage") : tr("CPU usage") }
     func value(_ p: ComputeProgram) -> Double? { gpu ? p.observedGPU : p.cpu }
@@ -120,8 +127,16 @@ struct ComputePage: View {
         (model.current?.programs ?? []).filter { p in
             (search.isEmpty || (p.name + " " + p.contexts.joined(separator: " ") + " " + p.processes.map { String($0.pid) + " " + $0.name }.joined(separator: " ")).localizedCaseInsensitiveContains(search))
         }.sorted { a, b in
-            let x = value(a) ?? -1, y = value(b) ?? -1
-            return x == y ? a.id < b.id : x > y
+            switch sort {
+            case .name:
+                let order = a.name.localizedStandardCompare(b.name)
+                return order == .orderedSame ? a.id < b.id : order == .orderedAscending
+            case .processes where a.processes.count != b.processes.count:
+                return a.processes.count > b.processes.count
+            default:
+                let x = value(a) ?? -1, y = value(b) ?? -1
+                return x == y ? a.id < b.id : x > y
+            }
         }
     }
     func percent(_ value: Double?) -> String { value.map { String(format: "%.1f%%", $0) } ?? "—" }
@@ -134,6 +149,13 @@ struct ComputePage: View {
             }
             hero
             programsSection
+        }
+        .sheet(item: $stopping) { target in
+            ConfirmSheet(title: target.title, summary: target.summary, destructive: target.app == nil,
+                         heading: tr("What will run"), lines: target.lines,
+                         footnote: tr("Thermo never stops system processes, AI agent sessions or itself."),
+                         confirmTitle: target.app != nil ? tr("Quit") : tr("End"),
+                         confirm: { stopping = nil; stop(target) }, cancel: { stopping = nil })
         }
         .samplingWhileVisible { owner, active in model.setVisible(active, owner: owner) }
         .onDisappear { DispatchQueue.main.async { model.releaseReadingsIfIdle() } }
@@ -221,6 +243,11 @@ struct ComputePage: View {
         return VStack(alignment: .leading, spacing: Theme.Space.s) {
             SectionHeader(title: tr("Usage by program")) {
                 HStack(spacing: Theme.Space.s) {
+                    Picker(tr("Sort"), selection: $sort) {
+                        ForEach(ComputeSort.allCases) { Text($0.title).tag($0) }
+                    }
+                    .pickerStyle(.segmented).labelsHidden().fixedSize().controlSize(.small)
+                    .help(tr("Sort programs"))
                     if let date = model.current?.sampled {
                         Text(date, style: .time).font(Theme.caption.monospacedDigit()).foregroundStyle(Theme.textTertiary)
                     }
@@ -229,6 +256,7 @@ struct ComputePage: View {
                 }
             }
             SearchField(text: $search, prompt: tr("Search program, project or PID"))
+            if let stopProblem { NoticeBanner(text: stopProblem, dismiss: { self.stopProblem = nil }) }
             if gpu, !programs.isEmpty, programs.allSatisfy({ $0.observedGPU == nil }) {
                 NoticeBanner(text: tr("No program GPU rates available yet. New clients need two samples; this driver may not expose program counters."))
             }
@@ -264,7 +292,7 @@ struct ComputePage: View {
     }
 
     func programRow(_ program: ComputeProgram, top: Double) -> some View {
-        let open = expanded.contains(program.id)
+        let open = expanded.contains(program.id) || snapshotOpen.contains(program.id)
         let v = value(program)
         return VStack(alignment: .leading, spacing: Theme.Space.s) {
             HStack(spacing: Theme.Space.m) {
@@ -287,22 +315,58 @@ struct ComputePage: View {
                 .frame(width: 64, height: 4).accessibilityHidden(true)
                 Text(percent(v)).font(Theme.figure(.row)).foregroundStyle(v == nil ? Theme.textTertiary : Theme.textPrimary)
                     .frame(width: 64, alignment: .trailing)
+                stopButton(program.quittable ? ComputeStopTarget(program) : nil, visible: hovered == program.id || snapshotOpen.first == program.id)
             }
             .contentShape(Rectangle())
             .onTapGesture { toggle(program.id) }
+            .onHover { inside in if inside { hovered = program.id } else if hovered == program.id { hovered = nil } }
             .accessibilityElement(children: .combine)
             .accessibilityAddTraits(.isButton)
             .accessibilityValue(open ? tr("Expanded") : tr("Collapsed"))
+            .contextMenu {
+                if program.quittable { Button(program.app != nil ? tr("Quit %1$@…", program.name) : tr("End %1$@…", program.name)) { stopping = ComputeStopTarget(program) } }
+                Button(tr("Copy PIDs")) { copy(program.processes.map { String($0.pid) }.joined(separator: " ")) }
+            }
             if open {
                 VStack(alignment: .leading, spacing: Theme.Space.xs) {
-                    ForEach(program.processes.sorted { ((gpu ? $0.gpu : $0.cpu) ?? -1) > ((gpu ? $1.gpu : $1.cpu) ?? -1) }) { process in
-                        HStack {
-                            Text("PID \(process.pid) · \(process.name)").font(Theme.caption).foregroundStyle(Theme.textSecondary).textSelection(.enabled)
-                            Spacer()
+                    if !program.quittable {
+                        Label(tr("System processes, AI agent sessions and Thermo itself cannot be stopped here."), systemImage: "lock")
+                            .font(Theme.caption).foregroundStyle(Theme.textTertiary).padding(.bottom, 2)
+                    }
+                    let sortedProcesses = program.processes.sorted { ((gpu ? $0.gpu : $0.cpu) ?? -1) > ((gpu ? $1.gpu : $1.cpu) ?? -1) }
+                    let shown = allProcesses.contains(program.id) || sortedProcesses.count <= 10 ? sortedProcesses : Array(sortedProcesses.prefix(8))
+                    ForEach(shown) { process in
+                        let key = program.id + "#" + String(process.pid)
+                        HStack(spacing: Theme.Space.m) {
+                            // Verbatim: a PID is an identifier, not a quantity, so no thousands separator.
+                            Text(verbatim: "PID \(process.pid) · \(process.label)").font(Theme.caption).foregroundStyle(Theme.textSecondary)
+                                .lineLimit(1).textSelection(.enabled).layoutPriority(1)
+                            if let folder = process.folder, !program.contexts.isEmpty || program.processes.count > 1 {
+                                Text(folder).font(Theme.mono).foregroundStyle(Theme.textTertiary)
+                                    .lineLimit(1).truncationMode(.middle).textSelection(.enabled)
+                            }
+                            Spacer(minLength: Theme.Space.s)
                             Text(percent(gpu ? process.gpu : process.cpu)).font(Theme.caption.monospacedDigit()).foregroundStyle(Theme.textSecondary)
+                            stopButton(program.processes.count > 1 && process.quittable == true ? ComputeStopTarget(process, in: program) : nil,
+                                       visible: hovered == key || snapshotOpen.first == program.id, small: true)
+                        }
+                        .frame(minHeight: 20)
+                        .contentShape(Rectangle())
+                        .onHover { inside in if inside { hovered = key } else if hovered == key { hovered = nil } }
+                        .contextMenu {
+                            if process.quittable == true { Button(tr("End %1$@…", process.label)) { stopping = ComputeStopTarget(process, in: program) } }
+                            Button(tr("Copy PID")) { copy(String(process.pid)) }
                         }
                     }
-                    ForEach(Array(Set(program.contexts)).sorted(), id: \.self) { context in
+
+                    if shown.count < sortedProcesses.count {
+                        Button(tr("Show the other %1$@", String(sortedProcesses.count - shown.count))) {
+                            withAnimation(Theme.standard.unlessReduced(reduceMotion)) { _ = allProcesses.insert(program.id) }
+                        }
+                        .buttonStyle(.borderless).font(Theme.caption.weight(.medium)).foregroundStyle(Theme.accent)
+                    }
+                    // Folders already shown beside their processes are not listed again.
+                    ForEach(Array(Set(program.contexts).subtracting(program.processes.compactMap(\.folder))).sorted(), id: \.self) { context in
                         Text(context).font(Theme.mono).foregroundStyle(Theme.textTertiary).textSelection(.enabled)
                     }
                 }
@@ -313,4 +377,86 @@ struct ComputePage: View {
         .padding(.horizontal, Theme.Space.l).padding(.vertical, Theme.Space.s)
         .hoverHighlight()
     }
+
+
+    /// Fixed width either way, so percentages stay aligned whether or not a row can be stopped.
+    func stopButton(_ target: ComputeStopTarget?, visible: Bool, small: Bool = false) -> some View {
+        Group {
+            if let target {
+                Button(target.app != nil ? tr("Quit") : tr("End")) { stopping = target }
+                    .buttonStyle(.borderless).font((small ? Theme.caption : Theme.secondary).weight(.medium))
+                    .foregroundStyle(target.app != nil ? Theme.accent : Theme.danger)
+                    .opacity(visible ? 1 : 0).allowsHitTesting(visible)
+                    .accessibilityHidden(!visible)
+            } else { Color.clear }
+        }
+        .frame(width: 40, alignment: .trailing)
+    }
+
+    /// `--expand-rows N` (offscreen snapshots only): open the first N multi-process programs and show the
+    /// first one's stop buttons as if hovered. Computed, because snapshots render without lifecycle events.
+    var snapshotOpen: [String] {
+        let args = CommandLine.arguments
+        guard let i = args.firstIndex(of: "--expand-rows"), i + 1 < args.count, let n = Int(args[i + 1]) else { return [] }
+        return programs.filter { $0.processes.count > 1 }.prefix(n).map(\.id)
+    }
+
+    func copy(_ text: String) {
+        NSPasteboard.general.clearContents()
+        NSPasteboard.general.setString(text, forType: .string)
+    }
+
+    /// Re-checks each process is the one that was read (same PID, owner and start time) before signalling it.
+    func stop(_ target: ComputeStopTarget) {
+        stopProblem = nil
+        if let path = target.app {
+            guard let app = NSWorkspace.shared.runningApplications.first(where: {
+                $0.bundleURL?.standardizedFileURL.path == path && target.pids.contains($0.processIdentifier)
+            }) else { stopProblem = tr("%1$@ changed or exited since the reading. Check again before stopping it.", target.name); return }
+            if !app.terminate() { stopProblem = tr("%1$@ did not accept the quit request. Check its dialogs.", target.name) }
+            return
+        }
+        var skipped = false
+        for (pid, started) in target.processes {
+            guard pid > 1, pid != getpid(), let now = ProcessTable.identity(pid), now.uid == getuid(),
+                  started == nil || now.started == started else { skipped = true; continue }
+            if kill(pid, SIGTERM) != 0 { skipped = true }
+        }
+        if skipped { stopProblem = tr("%1$@ changed or exited since the reading. Check again before stopping it.", target.name) }
+    }
+}
+
+enum ComputeSort: String, CaseIterable, Identifiable {
+    case usage, name, processes
+    var id: String { rawValue }
+    var title: String {
+        switch self {
+        case .usage: tr("Usage")
+        case .name: tr("Name")
+        case .processes: tr("Processes")
+        }
+    }
+}
+
+/// What a Quit/End confirmation is about: a whole program or one of its processes.
+struct ComputeStopTarget: Identifiable {
+    let id: String
+    let name: String
+    let app: String?
+    let processes: [(pid: pid_t, started: Date?)]
+    var pids: [pid_t] { processes.map(\.pid) }
+    init(_ program: ComputeProgram) {
+        id = program.id; name = program.name; app = program.app
+        processes = program.processes.map { ($0.pid, $0.started) }
+    }
+    init(_ process: ComputeProcess, in program: ComputeProgram) {
+        id = program.id + "#" + String(process.pid); name = process.label; app = nil
+        processes = [(process.pid, process.started)]
+    }
+    var title: String { app != nil ? tr("Quit %1$@?", name) : tr("End %1$@?", name) }
+    var summary: String {
+        app != nil ? tr("The app is asked to quit, the same as ⌘Q; it can save your work first.")
+                   : tr("The process is asked to stop (SIGTERM). Unsaved work in it may be lost.")
+    }
+    var lines: [String] { app != nil ? [tr("quit %1$@", app!)] : pids.map { "kill -TERM \($0)" } }
 }
