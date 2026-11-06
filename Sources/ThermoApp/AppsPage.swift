@@ -334,6 +334,7 @@ struct AppsPage: View {
     let store: AppStoreModel
     @Binding var tab: AppsTab
     @State private var search = ""
+    @AppStorage("apps.sort") private var sort = AppSort.size
     @State private var open: Set<String> = []
 
     var body: some View {
@@ -446,7 +447,13 @@ struct AppsPage: View {
 
     var header: some View {
         PageHeader(title: tr("Software"), subtitle: subtitle) {
-            if tab == .installed { SearchField(text: $search, width: 200) }
+            if tab == .installed {
+                HStack(spacing: Theme.Space.s) {
+                    Picker(tr("Sort"), selection: $sort) { ForEach(AppSort.allCases) { Text($0.title).tag($0) } }
+                        .pickerStyle(.segmented).labelsHidden().fixedSize().controlSize(.small).help(tr("Sort apps"))
+                    SearchField(text: $search, width: 200)
+                }
+            }
         } below: {
             SoftwareTabPicker(tab: $tab)
         }
@@ -472,7 +479,13 @@ struct AppsPage: View {
     var filtered: [InstalledApp] {
         let q = search.trimmingCharacters(in: .whitespacesAndNewlines)
         let list = q.isEmpty ? model.apps : model.apps.filter { ($0.name + " " + ($0.bundleID ?? "")).localizedCaseInsensitiveContains(q) }
-        return list.sorted { $0.totalBytes > $1.totalBytes }
+        switch sort {
+        case .size: return list.sorted { $0.totalBytes > $1.totalBytes }
+        case .name: return list.sorted { $0.name.localizedStandardCompare($1.name) == .orderedAscending }
+        case .lastUsed:
+            // Never-opened apps go last, which is where the ones worth removing usually are found.
+            return list.sorted { (AppLastUsed.date($0.path) ?? .distantPast) > (AppLastUsed.date($1.path) ?? .distantPast) }
+        }
     }
 
     func orphanSize(_ items: [OrphanData]) -> String {
@@ -553,7 +566,8 @@ struct AppsPage: View {
     }
 
     func detail(_ a: InstalledApp) -> String {
-        [a.bundleID, FSPath.tilde((a.path as NSString).deletingLastPathComponent)].compactMap { $0 }.joined(separator: " · ")
+        let used = AppLastUsed.date(a.path).map { tr("opened %1$@", AgeFormat.string($0)) } ?? tr("never opened")
+        return [used, a.bundleID, FSPath.tilde((a.path as NSString).deletingLastPathComponent)].compactMap { $0 }.joined(separator: " · ")
     }
 
     func toggle(_ id: String) { if open.contains(id) { open.remove(id) } else { open.insert(id) } }
@@ -672,5 +686,31 @@ struct AppsPage: View {
                     .disabled(model.pickedOrphans.isEmpty || model.working || model.scanningOrphans || model.reviewingOrphans)
             }
         }
+    }
+}
+
+enum AppSort: String, CaseIterable, Identifiable {
+    case size, name, lastUsed
+    var id: String { rawValue }
+    var title: String {
+        switch self {
+        case .size: tr("Size")
+        case .name: tr("Name")
+        case .lastUsed: tr("Last opened")
+        }
+    }
+}
+
+/// When Spotlight last saw each app opened; read once per app and kept for the session.
+@MainActor enum AppLastUsed {
+    private static var cache: [String: Date?] = [:]
+    static func date(_ path: String) -> Date? {
+        if let hit = cache[path] { return hit }
+        var value: Date?
+        if let item = MDItemCreate(nil, path as CFString) {
+            value = MDItemCopyAttribute(item, kMDItemLastUsedDate) as? Date
+        }
+        cache[path] = value
+        return value
     }
 }
