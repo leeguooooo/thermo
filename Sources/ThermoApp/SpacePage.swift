@@ -576,7 +576,9 @@ struct SpacePage: View {
                             HStack {
                                 Text(trCount(f.otherCount, "%1$@ smaller item", "%1$@ smaller items")).font(Theme.caption).foregroundStyle(Theme.textTertiary)
                                 Spacer()
-                                Text(ByteFormat.string(f.otherBytes)).font(Theme.caption.monospacedDigit()).foregroundStyle(Theme.textTertiary)
+                                // Ten tiny items reading "0 B" looks like a measuring error; say how small they are.
+                                Text(f.otherBytes < 1_000_000 ? tr("under 1 MB in all") : ByteFormat.string(f.otherBytes))
+                                    .font(Theme.caption.monospacedDigit()).foregroundStyle(Theme.textTertiary)
                             }
                             .padding(.horizontal, Theme.Space.m + 2).padding(.vertical, Theme.Space.s)
                         }

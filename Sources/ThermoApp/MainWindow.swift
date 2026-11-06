@@ -674,6 +674,7 @@ struct SensorsPage: View {
     @AppStorage(Settings.fahrenheit) private var fahrenheit = false
 
     @AppStorage(Settings.unnamedSensors) private var includeUnnamed = false
+    @AppStorage("sensors.hottestFirst") private var hottestFirst = false
     @State private var search = ""
 
     var body: some View {
@@ -687,7 +688,9 @@ struct SensorsPage: View {
                 LazyVGrid(columns: [GridItem(.adaptive(minimum: 320), spacing: Theme.Space.l, alignment: .top)], alignment: .leading,
                           spacing: Theme.Space.l) {
                     ForEach(SensorGroup.allCases, id: \.self) { g in
-                        let rows = s.temperatures.filter { $0.group == g && matches($0) }
+                        let matched = s.temperatures.filter { $0.group == g && matches($0) }
+                        // Hottest first while looking for what runs hot; the hardware order otherwise.
+                        let rows = hottestFirst ? matched.sorted { $0.value > $1.value } : matched
                         if !rows.isEmpty {
                             let hot = rows.map(\.value).max()
                             section(groupName(g), headline: tempText(hot, fahrenheit: fahrenheit), color: heatColor(hot),
@@ -758,6 +761,11 @@ struct SensorsPage: View {
     var controls: some View {
         HStack(spacing: Theme.Space.m) {
             SearchField(text: $search, prompt: tr("Search sensors by name or key"))
+            Picker(tr("Sort"), selection: $hottestFirst) {
+                Text(tr("Name")).tag(false)
+                Text(tr("Hottest first")).tag(true)
+            }
+            .pickerStyle(.segmented).labelsHidden().fixedSize().controlSize(.small).help(tr("Sort sensors"))
             Toggle(tr("Include unnamed sensors"), isOn: $includeUnnamed).toggleStyle(.switch).controlSize(.mini)
                 .font(Theme.secondary).foregroundStyle(Theme.textSecondary).fixedSize()
             Text(tr("Refresh: %1$@ s", String(format: "%g", monitor.interval)))

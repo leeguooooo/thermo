@@ -926,7 +926,8 @@ struct FanControlCard: View {
                 Spacer(minLength: Theme.Space.s)
                 Button(applying ? tr("Sending…") : tr("Apply")) { applyCurrent() }
                     .buttonStyle(PillButtonStyle(prominent: true)).controlSize(.small)
-                    .disabled(!enabled || (mode != .auto && fan.validRange == nil))
+                    // Nothing to send while it is already automatic (unless restoring after a failure), or while the helper is being checked.
+                    .disabled(!enabled || checking || applying || (mode != .auto && fan.validRange == nil) || (mode == .auto && isAuto(policy) && controlState?.failure == nil && controlState?.suspended != true))
             }
             .padding(.horizontal, Theme.Space.l).padding(.vertical, Theme.Space.s)
         }
@@ -1020,6 +1021,8 @@ struct FanControlCard: View {
             if preset == .custom { customCurve = c.pointsText }
         }
     }
+
+    func isAuto(_ p: FanPolicy) -> Bool { if case .auto = p { return true } else { return false } }
 
     func applyCurrent() {
         curveError = nil
