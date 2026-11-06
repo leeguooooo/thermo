@@ -1365,26 +1365,26 @@ struct SettingsView: View {
 /// (a SwiftUI Menu cannot be rendered offscreen).
 struct CaptureMenuItems: View {
     var body: some View {
-                // Grouped: capture, pin from the clipboard, manage pins, then settings.
-                Button(tr("Capture screen…") + CaptureWorkspace.shared.shortcutSuffix(for:.screenshot)) { CaptureWorkspace.shared.capture() }
-                Button(tr("Scrolling capture…")) { CaptureWorkspace.shared.captureScrolling() }
-                Button(tr("Record screen…")) { CaptureWorkspace.shared.recordScreen() }
-                Button(tr("Recording drafts…")) { CaptureWorkspace.shared.recordScreen(draftsOnly:true) }
-                Button(tr("Open image…")) { CaptureWorkspace.shared.importImage() }
+                // Grouped: capture, pin from the clipboard, manage pins, then settings; same symbols as the status menu.
+                Button {CaptureWorkspace.shared.capture()} label: { Label(tr("Capture screen…") + CaptureWorkspace.shared.shortcutSuffix(for:.screenshot), systemImage: "viewfinder") }
+                Button {CaptureWorkspace.shared.captureScrolling()} label: { Label(tr("Scrolling capture…"), systemImage: "arrow.down.right.and.arrow.up.left") }
+                Button {CaptureWorkspace.shared.recordScreen()} label: { Label(tr("Record screen…"), systemImage: "record.circle") }
+                Button {CaptureWorkspace.shared.recordScreen(draftsOnly:true)} label: { Label(tr("Recording drafts…"), systemImage: "film.stack") }
+                Button {CaptureWorkspace.shared.importImage()} label: { Label(tr("Open image…"), systemImage: "photo") }
                 CaptureConfiguredActionsMenu(model:CaptureWorkspace.shared.shortcuts)
                 Divider()
-                Button(tr("Pin clipboard") + CaptureWorkspace.shared.shortcutSuffix(for:.pinClipboard)) { CaptureWorkspace.shared.pinClipboard() }
-                Button(tr("Pin clipboard as text")) { CaptureWorkspace.shared.pinClipboard(asText:true) }
-                Button(tr("Pin clipboard as LaTeX")) { CaptureWorkspace.shared.pinClipboard(asLaTeX:true) }
+                Button {CaptureWorkspace.shared.pinClipboard()} label: { Label(tr("Pin clipboard") + CaptureWorkspace.shared.shortcutSuffix(for:.pinClipboard), systemImage: "pin") }
+                Button {CaptureWorkspace.shared.pinClipboard(asText:true)} label: { Label(tr("Pin clipboard as text"), systemImage: "text.quote") }
+                Button {CaptureWorkspace.shared.pinClipboard(asLaTeX:true)} label: { Label(tr("Pin clipboard as LaTeX"), systemImage: "function") }
                 Divider()
-                Button(tr("Pin groups and history")) { CaptureWorkspace.shared.showPinLibrary() }
-                Button(tr("Restore last closed pin")) { CaptureWorkspace.shared.restoreLastPin() }
-                Button(tr("Restore pin mouse interaction")) {CaptureWorkspace.shared.pinSession.restoreMouseInteraction()}
-                Button(tr("Show all pins")) { CaptureWorkspace.shared.showAll() }
-                Button(tr("Hide all pins")) { CaptureWorkspace.shared.hideAll() }
-                Button(tr("Close all pins")) { CaptureWorkspace.shared.closeAll() }
+                Button {CaptureWorkspace.shared.showPinLibrary()} label: { Label(tr("Pin groups and history"), systemImage: "square.stack") }
+                Button {CaptureWorkspace.shared.restoreLastPin()} label: { Label(tr("Restore last closed pin"), systemImage: "arrow.uturn.backward") }
+                Button {CaptureWorkspace.shared.pinSession.restoreMouseInteraction()} label: { Label(tr("Restore pin mouse interaction"), systemImage: "cursorarrow") }
+                Button {CaptureWorkspace.shared.showAll()} label: { Label(tr("Show all pins"), systemImage: "eye") }
+                Button {CaptureWorkspace.shared.hideAll()} label: { Label(tr("Hide all pins"), systemImage: "eye.slash") }
+                Button {CaptureWorkspace.shared.closeAll()} label: { Label(tr("Close all pins"), systemImage: "xmark.circle") }
                 Divider()
-                Button(tr("Capture saving and after-actions")) { CaptureWorkspace.shared.showSavingSettings() }
-                Button(tr("Capture shortcuts and actions")) { CaptureWorkspace.shared.showActionSettings() }
+                Button {CaptureWorkspace.shared.showSavingSettings()} label: { Label(tr("Capture saving and after-actions"), systemImage: "square.and.arrow.down") }
+                Button {CaptureWorkspace.shared.showActionSettings()} label: { Label(tr("Capture shortcuts and actions"), systemImage: "keyboard") }
     }
 }

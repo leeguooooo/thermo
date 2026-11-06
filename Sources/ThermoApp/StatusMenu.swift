@@ -41,6 +41,7 @@ final class StatusMenu: NSObject, NSMenuDelegate {
         menu.addItem(item(tr("Pin clipboard") + CaptureWorkspace.shared.shortcutSuffix(for:.pinClipboard), "pin") { CaptureWorkspace.shared.pinClipboard() })
         menu.addItem(item(tr("Pin clipboard as text"), "text.quote") { CaptureWorkspace.shared.pinClipboard(asText:true) })
         menu.addItem(item(tr("Pin clipboard as LaTeX"), "function") { CaptureWorkspace.shared.pinClipboard(asLaTeX:true) })
+        menu.addItem(.separator())
         menu.addItem(item(tr("Pin groups and history"), "square.stack") { CaptureWorkspace.shared.showPinLibrary() })
         menu.addItem(item(tr("Restore last closed pin"), "arrow.uturn.backward") { CaptureWorkspace.shared.restoreLastPin() })
         menu.addItem(item(tr("Restore pin mouse interaction"),"cursorarrow") {CaptureWorkspace.shared.pinSession.restoreMouseInteraction()})
