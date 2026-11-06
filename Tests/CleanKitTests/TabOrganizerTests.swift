@@ -125,4 +125,25 @@ final class TabOrganizerTests: XCTestCase {
         XCTAssertEqual(undone.restored,2)
         _=try await TabOrganizer.undo(batch.id,home:root,execute:{ _,_,_ in XCTFail("do not replay undo");throw TabWorkspace.WorkspaceError("No") })
     }
+
+    func testSubdomainsOfOneSiteShareAGroupUnderAFriendlyName() {
+        XCTAssertEqual(TabOrganizer.siteName("zentao.pwtk.cc"), "pwtk.cc")
+        XCTAssertEqual(TabOrganizer.siteName("sg-git-src.pwtk.cc"), "pwtk.cc")
+        XCTAssertEqual(TabOrganizer.siteName("portwind.jp.larksuite.com"), "Lark")
+        XCTAssertEqual(TabOrganizer.siteName("www.github.com"), "GitHub")
+        XCTAssertEqual(TabOrganizer.siteName("docs.google.com"), "Google Docs")
+        XCTAssertEqual(TabOrganizer.siteName("mail.google.com"), "Gmail")
+        XCTAssertEqual(TabOrganizer.siteName("www.rasens-immi.moj.go.jp"), "moj.go.jp")
+        XCTAssertEqual(TabOrganizer.siteName("alice.github.io"), "alice.github.io", "each hosted site is its own")
+        XCTAssertEqual(TabOrganizer.siteName("127.0.0.1"), "127.0.0.1")
+        XCTAssertEqual(TabOrganizer.siteName("localhost"), "localhost")
+        let plan = TabOrganizer.plan(inventory([page(1, url: "https://zentao.pwtk.cc/a"), page(2, url: "https://git.pwtk.cc/b")]))
+        XCTAssertEqual(plan.groups.map(\.name), ["pwtk.cc"])
+    }
+    func testNewTabsOfTheSameSiteJoinAGroupTitledWithAnOlderHostName() {
+        let live = [TabWorkspace.NativeGroup(profileID: "first", id: 900, window: 1, title: "example.test", color: "green")]
+        var tab = joinable(7); tab.tab.url = "https://other.example.test/new"
+        let plan = TabOrganizer.plan(.init(app: "Google Chrome", generated: Date(), pages: [tab], nativeGroups: live), batches: [earlier()], auto: true)
+        XCTAssertEqual(plan.groups.first?.groupId, 900)
+    }
 }

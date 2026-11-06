@@ -94,7 +94,12 @@ public enum TabOrganizer {
             guard page.organizerVersion == 1, let profile = page.profileID else { unsupported += 1; continue }
             let host = TabWorkspace.site(page.tab.url)
             let rule = rules.first { valid($0) && matching(host, $0) }
-            let name = rule?.name ?? host
+            var name = rule?.name ?? siteName(host)
+            // Groups made before site names existed are titled with the full host; keep joining those.
+            let prefix = profile + ":" + String(page.tab.window) + ":"
+            if rule == nil, existing[prefix + name] == nil,
+               let old = existing.keys.filter({ $0.hasPrefix(prefix) }).map({ String($0.dropFirst(prefix.count)) })
+                   .sorted().first(where: { siteName($0) == name }) { name = old }
             var hash: UInt64 = 14695981039346656037
             for byte in name.utf8 { hash = (hash ^ UInt64(byte)) &* 1099511628211 }
             var color = rule?.color ?? colors[Int(hash % UInt64(colors.count))]
@@ -121,6 +126,44 @@ public enum TabOrganizer {
             .sorted { ($0.window, $0.name) < ($1.window, $1.name) }
         return Plan(app: inventory.app, groups: groups, unsupported: unsupported,
                     count: groups.reduce(0) { $0 + $1.pages.count }, waitingForJoin: skipped.count)
+    }
+
+    /// The group a website's tabs go into: one per site, not per subdomain (zentao.example.cc and
+    /// git.example.cc are one site), under the name people call it where that is well known.
+    /// Google's separate products keep their own groups.
+    public static func siteName(_ host: String) -> String {
+        var host = host.lowercased()
+        if host.hasPrefix("www.") { host.removeFirst(4) }
+        let labels = host.split(separator: ".").map(String.init)
+        guard labels.count >= 2, Int(labels.last!) == nil else { return host }
+        let twoLevel: Set<String> = ["co.jp", "ne.jp", "or.jp", "ac.jp", "go.jp", "ed.jp", "lg.jp", "gr.jp",
+                                     "com.cn", "net.cn", "org.cn", "gov.cn", "edu.cn", "com.hk", "com.tw", "org.tw", "edu.tw",
+                                     "co.uk", "org.uk", "ac.uk", "gov.uk", "com.au", "net.au", "org.au", "co.kr", "or.kr",
+                                     "com.sg", "edu.sg", "co.nz", "com.br", "co.in", "github.io", "pages.dev", "workers.dev",
+                                     "vercel.app", "netlify.app", "herokuapp.com", "appspot.com", "cloudfront.net"]
+        let suffix2 = labels.suffix(2).joined(separator: ".")
+        let site = twoLevel.contains(suffix2) && labels.count >= 3 ? labels.suffix(3).joined(separator: ".") : suffix2
+        // Hosting platforms give each customer a subdomain; those are separate sites.
+        if twoLevel.contains(suffix2), ["github.io", "pages.dev", "workers.dev", "vercel.app", "netlify.app", "herokuapp.com", "appspot.com", "cloudfront.net"].contains(suffix2) {
+            return site
+        }
+        if site == "google.com" {
+            let product = labels.count > 2 ? labels[labels.count - 3] : ""
+            let products = ["docs": "Google Docs", "drive": "Google Drive", "mail": "Gmail", "calendar": "Google Calendar",
+                            "meet": "Google Meet", "console.cloud": "Google Cloud", "cloud": "Google Cloud", "translate": "Google Translate",
+                            "maps": "Google Maps", "sheets": "Google Docs", "slides": "Google Docs", "analytics": "Google Analytics"]
+            return products[product] ?? "Google"
+        }
+        let known = ["github.com": "GitHub", "githubusercontent.com": "GitHub", "gitlab.com": "GitLab", "youtube.com": "YouTube",
+                     "youtu.be": "YouTube", "x.com": "X", "twitter.com": "X", "larksuite.com": "Lark", "feishu.cn": "Lark",
+                     "notion.so": "Notion", "notion.site": "Notion", "figma.com": "Figma", "slack.com": "Slack",
+                     "stackoverflow.com": "Stack Overflow", "wikipedia.org": "Wikipedia", "reddit.com": "Reddit",
+                     "openai.com": "OpenAI", "chatgpt.com": "ChatGPT", "claude.ai": "Claude", "anthropic.com": "Anthropic",
+                     "apple.com": "Apple", "amazon.com": "Amazon", "amazon.co.jp": "Amazon", "zhihu.com": "知乎",
+                     "bilibili.com": "bilibili", "baidu.com": "百度", "weibo.com": "微博", "xiaohongshu.com": "小红书",
+                     "mercari.com": "Mercari", "cloudflare.com": "Cloudflare", "vercel.com": "Vercel", "linear.app": "Linear",
+                     "atlassian.net": "Jira", "medium.com": "Medium", "npmjs.com": "npm", "docker.com": "Docker"]
+        return known[site] ?? site
     }
 
     /// Groups Thermo itself made (from its batch records, never from a title match: chrome-use

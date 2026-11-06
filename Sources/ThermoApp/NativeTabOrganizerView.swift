@@ -24,41 +24,53 @@ struct NativeTabOrganizerView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: Theme.Space.l) {
             // The one figure of the page: what grouping would do, and the button that previews it.
+            // With nothing to do, it says how the tabs already stand instead of "0 tabs → 0 groups".
             HStack(alignment: .center, spacing: Theme.Space.l) {
                 VStack(alignment: .leading, spacing: Theme.Space.xs) {
                     HStack(spacing: Theme.Space.xs) {
                         Text(tr("Group tabs where you use them")).font(Theme.label).foregroundStyle(Theme.textTertiary)
                         InfoButton(text: tr("Tabs from the same website become a named, colored group in Chrome's tab bar. Nothing is closed.")
-                                   + "\n\n" + tr("Preview first. Existing groups and protected tabs stay as they are."))
+                                   + "\n\n" + tr("Subdomains of one site share a group, so git.example.com and docs.example.com go together."))
                     }
-                    Text(tr("%1$@ tabs → %2$@ Chrome groups", String(plan.count), String(plan.groups.count)))
-                        .font(Theme.figure(.metric)).foregroundStyle(Theme.textPrimary)
-                        .contentTransition(.numericText())
-                    if plan.count == 0 && !working {
-                        Text(plan.unsupported > 0 ? tr("Browser grouping support is unavailable. Update the browser extension, then refresh tabs.")
-                             : (plan.waitingForJoin ?? 0) > 0 ? tr("%1$@ websites already have a Thermo group. Update chrome-use so new tabs can join those groups instead of starting another.", String(plan.waitingForJoin ?? 0))
-                             : tr("No new groups in this scope. A website needs at least two ungrouped background tabs; existing groups are kept."))
-                            .font(Theme.caption).foregroundStyle(plan.unsupported > 0 ? Theme.caution : Theme.textTertiary)
-                            .fixedSize(horizontal: false, vertical: true)
+                    if plan.count > 0 || working {
+                        Text(headline)
+                            .font(Theme.figure(.metric)).foregroundStyle(Theme.textPrimary)
+                            .contentTransition(.numericText())
+                    } else if plan.unsupported > 0 {
+                        Text(tr("Browser grouping support is unavailable. Update the browser extension, then refresh tabs."))
+                            .font(Theme.secondary).foregroundStyle(Theme.caution).fixedSize(horizontal: false, vertical: true)
+                    } else if (plan.waitingForJoin ?? 0) > 0 {
+                        Text(tr("%1$@ websites already have a Thermo group. Update chrome-use so new tabs can join those groups instead of starting another.", String(plan.waitingForJoin ?? 0)))
+                            .font(Theme.secondary).foregroundStyle(Theme.caution).fixedSize(horizontal: false, vertical: true)
+                    } else {
+                        Label(tr("Nothing to group right now"), systemImage: "checkmark.circle")
+                            .font(Theme.rowTitle).foregroundStyle(Theme.textPrimary)
+                        Text(standing).font(Theme.caption).foregroundStyle(Theme.textTertiary).fixedSize(horizontal: false, vertical: true)
                     }
                 }
                 Spacer(minLength: Theme.Space.s)
-                Button { review = plan } label: { Label(tr("Review groups"), systemImage: "eye") }
-                    .buttonStyle(PillButtonStyle(prominent: true)).disabled(working || plan.count == 0)
+                if plan.count > 0 || working {
+                    Button { review = plan } label: { Label(tr("Review groups"), systemImage: "eye") }
+                        .buttonStyle(PillButtonStyle(prominent: true)).disabled(working || plan.count == 0)
+                }
             }
             .padding(Theme.Space.l).glass()
+            if plan.groups.isEmpty, !currentGroups.isEmpty {
+                SectionHeader(title: tr("Groups in Chrome now"))
+                TabGroupChips(groups: currentGroups, color: groupColor)
+            }
             if !plan.groups.isEmpty {
                 SectionHeader(title: tr("What you will see in Chrome"))
-                LazyVGrid(columns: [GridItem(.adaptive(minimum: 220), spacing: Theme.Space.m, alignment: .top)], alignment: .leading, spacing: Theme.Space.m) {
+                LazyVGrid(columns: [GridItem(.adaptive(minimum: 280), spacing: Theme.Space.m, alignment: .top)], alignment: .leading, spacing: Theme.Space.m) {
                     ForEach(plan.groups) { group in
                         VStack(alignment: .leading, spacing: 6) {
                             HStack(spacing: Theme.Space.s) {
-                                Text(group.name).font(Theme.secondary.weight(.semibold)).foregroundStyle(.white).lineLimit(1)
+                                Text(group.name).font(Theme.secondary.weight(.semibold)).foregroundStyle(.white).lineLimit(1).layoutPriority(1)
                                     .padding(.horizontal, Theme.Space.s).padding(.vertical, 2)
                                     .background(RoundedRectangle(cornerRadius: 5, style: .continuous).fill(groupColor(group.color).opacity(0.85)))
                                 Spacer()
-                                Text(group.groupId != nil ? tr("+%1$@ tabs to the existing group", String(group.pages.count)) : tr("%1$@ tabs", String(group.pages.count)))
-                                    .font(Theme.caption.monospacedDigit()).foregroundStyle(Theme.textTertiary)
+                                Text(group.groupId != nil ? tr("+%1$@ to this group", String(group.pages.count)) : tr("%1$@ tabs", String(group.pages.count)))
+                                    .font(Theme.caption.monospacedDigit()).foregroundStyle(Theme.textTertiary).lineLimit(1)
                             }
                             ForEach(Array(group.pages.prefix(3))) { page in
                                 Text(page.tab.title.isEmpty ? TabWorkspace.site(page.tab.url) : page.tab.title)
@@ -122,6 +134,31 @@ struct NativeTabOrganizerView: View {
             }
         }
         .sheet(isPresented: $editingRules) { ruleEditor }
+    }
+    /// New groups and joins counted apart: two tabs joining two existing groups is not "2 new groups".
+    var headline: String {
+        let joining = plan.groups.filter { $0.groupId != nil }.count, new = plan.groups.count - joining
+        if joining == 0 { return tr("%1$@ tabs → %2$@ Chrome groups", String(plan.count), String(new)) }
+        if new == 0 { return tr("%1$@ tabs → join %2$@ existing groups", String(plan.count), String(joining)) }
+        return tr("%1$@ tabs → %2$@ new groups, %3$@ joined", String(plan.count), String(new), String(joining))
+    }
+    /// The groups Chrome shows for the tabs in scope, largest first.
+    var currentGroups: [(name: String, color: String, count: Int)] {
+        let counts = Dictionary(grouping: pages.filter { $0.nativeGroupID != nil && $0.nativeGroupID != -1 }, by: { $0.nativeGroupID! })
+        return nativeGroups.compactMap { g in
+            counts[g.id].map { (g.title.isEmpty ? tr("Untitled group") : g.title, g.color ?? "grey", $0.count) }
+        }.sorted { $0.count == $1.count ? $0.name < $1.name : $0.count > $1.count }
+    }
+    /// Why nothing is planned: how many tabs are grouped, kept, or the only tab of their site.
+    var standing: String {
+        let grouped = pages.filter { $0.nativeGroupID != nil && $0.nativeGroupID != -1 }.count
+        let kept = pages.filter { ($0.nativeGroupID ?? -1) == -1 && !$0.canArchive }.count
+        let single = pages.count - grouped - kept
+        var parts: [String] = []
+        if grouped > 0 { parts.append(tr("%1$@ tabs are already in groups", String(grouped))) }
+        if single > 0 { parts.append(tr("%1$@ are the only tab of their site and stay as they are", String(single))) }
+        if kept > 0 { parts.append(tr("%1$@ are kept: the current tab, browser pages, pinned or playing tabs, or tabs an agent is using", String(kept))) }
+        return parts.isEmpty ? tr("No tabs in this scope.") : parts.joined(separator: tr("; ")) + tr(".")
     }
     func load() {
         if previewOnly { return }
@@ -194,5 +231,26 @@ struct NativeTabOrganizerView: View {
             if let error { Text(error).font(.caption).foregroundStyle(.orange) }
             HStack { Spacer(); Button(tr("Done")) { editingRules = false } }
         }.padding(22).frame(width: 680)
+    }
+}
+
+/// Chrome-style group labels with their tab counts, wrapping to the width.
+struct TabGroupChips: View {
+    let groups: [(name: String, color: String, count: Int)]
+    let color: (String) -> Color
+    var body: some View {
+        LazyVGrid(columns: [GridItem(.adaptive(minimum: 280), spacing: Theme.Space.s, alignment: .leading)], alignment: .leading, spacing: Theme.Space.s) {
+            ForEach(Array(groups.enumerated()), id: \.offset) { _, g in
+                HStack(spacing: Theme.Space.s) {
+                    Text(g.name).font(Theme.secondary.weight(.semibold)).foregroundStyle(.white).lineLimit(1).layoutPriority(1)
+                        .padding(.horizontal, Theme.Space.s).padding(.vertical, 2)
+                        .background(RoundedRectangle(cornerRadius: 5, style: .continuous).fill(color(g.color).opacity(0.85)))
+                    Text(tr("%1$@ tabs", String(g.count))).font(Theme.caption.monospacedDigit()).foregroundStyle(Theme.textTertiary)
+                    Spacer(minLength: 0)
+                }
+                .padding(.horizontal, Theme.Space.m).padding(.vertical, Theme.Space.s)
+                .frame(maxWidth: .infinity, alignment: .leading).glass()
+            }
+        }
     }
 }
