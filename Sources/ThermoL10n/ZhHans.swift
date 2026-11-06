@@ -1956,6 +1956,8 @@ let zhHans: [String: String] = [
     "Sort programs": "程序排序方式",
     "Subdomains of one site share a group, so git.example.com and docs.example.com go together.": "同一网站的子域名归到一组，比如 git.example.com 和 docs.example.com 会放在一起。",
     "Nothing to group right now": "暂时没有要分组的标签",
+    "Move the secret into the keychain or an environment variable, then rotate it.": "把密钥移到钥匙串或环境变量里，然后更换这个密钥。",
+    "Show config file": "在访达中显示配置",
     "In use": "正在使用",
     "Command-line tool update: %1$@ → %2$@": "命令行工具可更新：%1$@ → %2$@",
     "Stopped programs": "结束的程序",

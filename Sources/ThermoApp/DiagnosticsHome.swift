@@ -391,6 +391,14 @@ private struct ProblemCard: View {
     @State private var confirming: Action?
 
     var findings: [Finding] { scanner.report?.findings(for: item) ?? [] }
+    /// The config file holding a plain-text credential, when it exists on disk.
+    var configFile: URL? {
+        let fix = tr("move it to the keychain or an environment variable the agent inherits, then rotate it")
+        guard let f = findings.first(where: { $0.fix == fix }),
+              let source = f.source else { return nil }
+        let path = (source.components(separatedBy: " ").first.map { NSString(string: $0).expandingTildeInPath }) ?? source
+        return FileManager.default.fileExists(atPath: path) ? URL(fileURLWithPath: path) : nil
+    }
 
     var body: some View {
         VStack(alignment: .leading, spacing: Theme.Space.s) {
@@ -473,6 +481,12 @@ private struct ProblemCard: View {
         let primary = item.primaryDiagnosticAction
         let others = item.actions.filter { $0.id != primary?.id }
         HStack(spacing: Theme.Space.s) {
+            // A secret written into the config is fixed by editing that file; show it rather than only offering removal.
+            if item.area == .mcp, let config = configFile {
+                Button(tr("Show config file")) { NSWorkspace.shared.activateFileViewerSelecting([config]) }
+                    .buttonStyle(PillButtonStyle()).controlSize(.small)
+                    .help(tr("Move the secret into the keychain or an environment variable, then rotate it."))
+            }
             if item.area == .mcp { MCPInspectButton(item: item, busy: scanner.busy, encoding: scanner.tokenEncoding, store: scanner.mcpDefinitions) }
             if let p = primary {
                 Button { confirming = p } label: {
