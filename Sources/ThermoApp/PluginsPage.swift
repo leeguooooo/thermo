@@ -267,7 +267,12 @@ struct PluginsPage: View {
         switch record.state {
         case .notInstalled: return tr("Not installed")
         case .installed: return tr("Installed %1$@", current) + scope
-        case let .updateAvailable(latest): return tr("Update available: %1$@ → %2$@", current, latest) + scope
+        case let .updateAvailable(latest):
+            // The plugin can be current while its command-line tool lags; say which one the update is for.
+            if let cli = record.cliVersion, let plugin = record.install?.version, !StoreVersion.isNewer(latest, than: plugin) {
+                return tr("Command-line tool update: %1$@ → %2$@", cli, latest)
+            }
+            return tr("Update available: %1$@ → %2$@", current, latest) + scope
         }
     }
 

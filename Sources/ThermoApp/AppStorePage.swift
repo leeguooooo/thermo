@@ -121,7 +121,9 @@ struct AppStorePage: View {
                 }
             }
             Spacer(minLength: 8)
-            if let installed = AppStoreModel.installedURL(app) {
+            if app.bundleID != nil, app.bundleID == Bundle.main.bundleIdentifier {
+                StatusTag(text: tr("In use"), color: Theme.good)
+            } else if let installed = AppStoreModel.installedURL(app) {
                 Button(tr("Open")) { NSWorkspace.shared.openApplication(at: installed, configuration: .init()) }
                     .buttonStyle(PillButtonStyle(prominent: true)).controlSize(.small).fixedSize()
             } else {
