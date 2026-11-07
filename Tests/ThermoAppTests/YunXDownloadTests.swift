@@ -131,8 +131,8 @@ private final class FakeDrive: CloudDriveProvider, @unchecked Sendable {
         return "new"
     }
     func resolveShareFile(session: ShareSession, file: DriveFile, credential: DriveCredential?, options: ShareResolveOptions) async throws -> ResolvedLink {
-        resolvedTokens.append(file.fileToken)
-        lock.withLock { resolves += 1; resolveCredentials.append(credential?.value) }
+        // Concurrent downloads resolve at the same time; every mutation stays under the lock.
+        lock.withLock { resolvedTokens.append(file.fileToken); resolves += 1; resolveCredentials.append(credential?.value) }
         return ResolvedLink(url: URL(string: "https://\(host)/\(file.id)?sign=SECRETSIGN")!, headers: ["Cookie": "SECRETCOOKIE"], fileId: file.id, filename: file.name, size: 4)
     }
 }
