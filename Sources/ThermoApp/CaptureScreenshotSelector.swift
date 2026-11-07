@@ -136,6 +136,15 @@ private final class SelectorView: NSView {
     private var drawing = false
     private var pointer: CGPoint?
     private let toolbar = NSStackView()
+    /// Marks drawn on the selection before confirming, in view coordinates (display points).
+    private struct Mark { let tool: CaptureTool; var points: [CGPoint] }
+    private var tool: CaptureTool?
+    private var marks: [Mark] = []
+    private var draft: Mark?
+    private var toolButtons: [CaptureTool: NSButton] = [:]
+    static let markTools: [(CaptureTool, String, String, String)] = [
+        (.rectangle, "rectangle", "Rectangle", "r"), (.arrow, "arrow.up.right", "Arrow", "a"),
+        (.pencil, "pencil.tip", "Pencil", "p"), (.mosaic, "checkerboard.rectangle", "Mosaic", "m")]
 
     init(frame: NSRect, frozen: CaptureScreenshotSelector.Frozen, purpose: CaptureScreenshotSelector.Purpose) {
         self.frozen = frozen; self.purpose = purpose
@@ -144,6 +153,17 @@ private final class SelectorView: NSView {
         setAccessibilityLabel(tr("Select a screenshot region") + " · " + frozen.screen.localizedName)
         toolbar.orientation = .horizontal; toolbar.spacing = 6; toolbar.edgeInsets = NSEdgeInsets(top: 4, left: 6, bottom: 4, right: 6)
         toolbar.wantsLayer = true; toolbar.layer?.cornerRadius = 7; toolbar.layer?.backgroundColor = NSColor.windowBackgroundColor.withAlphaComponent(0.95).cgColor
+        if case .screenshot = purpose {
+            for (tool, symbol, title, key) in Self.markTools {
+                let button = NSButton(image: NSImage(systemSymbolName: symbol, accessibilityDescription: tr(title)) ?? NSImage(), target: self, action: #selector(pickTool(_:)))
+                button.setButtonType(.pushOnPushOff); button.bezelStyle = .texturedRounded; button.toolTip = tr(title) + " (" + key.uppercased() + ")"
+                button.identifier = NSUserInterfaceItemIdentifier(tool.rawValue)
+                toolButtons[tool] = button; toolbar.addArrangedSubview(button)
+            }
+            let undo = NSButton(image: NSImage(systemSymbolName: "arrow.uturn.backward", accessibilityDescription: tr("Undo")) ?? NSImage(), target: self, action: #selector(undoMark))
+            undo.bezelStyle = .texturedRounded; undo.toolTip = tr("Undo") + " (⌘Z)"
+            toolbar.addArrangedSubview(undo)
+        }
         var buttons = [(tr("Cancel"), #selector(cancelSelection))]
         switch purpose {
         case .screenshot: buttons += [(tr("Copy"), #selector(copySelection)), (tr("Done"), #selector(confirmSelection))]
@@ -168,8 +188,21 @@ private final class SelectorView: NSView {
     // MARK: State
 
     func clearSelection() {
-        selection = nil; drag = .none; toolbar.isHidden = true; needsDisplay = true
+        selection = nil; drag = .none; toolbar.isHidden = true
+        marks.removeAll(); draft = nil; setTool(nil); needsDisplay = true
     }
+
+    private func setTool(_ next: CaptureTool?) {
+        tool = next
+        for (key, button) in toolButtons { button.state = key == next ? .on : .off }
+        needsDisplay = true
+    }
+    @objc private func pickTool(_ sender: NSButton) {
+        let picked = sender.identifier.flatMap { CaptureTool(rawValue: $0.rawValue) }
+        setTool(picked == tool ? nil : picked)
+        window?.makeFirstResponder(self)
+    }
+    @objc private func undoMark() { if !marks.isEmpty { marks.removeLast(); needsDisplay = true } }
 
     func refreshHover() {
         guard let window else { return }
@@ -199,6 +232,11 @@ private final class SelectorView: NSView {
     override func mouseDown(with event: NSEvent) {
         let point = convert(event.locationInWindow, from: nil)
         pointer = point; mouseDownPoint = point
+        if let tool, let selection {
+            // With a tool picked, drags inside the selection draw; the selection itself stays put.
+            if selection.contains(point) { draft = Mark(tool: tool, points: [point]) }
+            return
+        }
         if event.clickCount == 2, let selection, selection.contains(point) { finish(after: nil); return }
         if let selection {
             if let handle = G.handle(at: point, of: selection) { drag = .resizing(handle); return }
@@ -210,6 +248,11 @@ private final class SelectorView: NSView {
     override func mouseDragged(with event: NSEvent) {
         let point = convert(event.locationInWindow, from: nil)
         pointer = point
+        if var mark = draft, let selection {
+            let clamped = CGPoint(x: min(max(point.x, selection.minX), selection.maxX), y: min(max(point.y, selection.minY), selection.maxY))
+            if mark.tool == .pencil { mark.points.append(clamped) } else { mark.points = [mark.points[0], clamped] }
+            draft = mark; needsDisplay = true; return
+        }
         switch drag {
         case .drawing(let start):
             if !drawing {
@@ -229,6 +272,12 @@ private final class SelectorView: NSView {
 
     override func mouseUp(with event: NSEvent) {
         let point = convert(event.locationInWindow, from: nil)
+        if let mark = draft {
+            draft = nil
+            let a = mark.points.first!, b = mark.points.last!
+            if mark.tool == .pencil ? mark.points.count > 1 : hypot(b.x - a.x, b.y - a.y) >= 3 { marks.append(mark) }
+            needsDisplay = true; return
+        }
         defer { drag = .none; drawing = false; mouseDownPoint = nil; layoutToolbar(); needsDisplay = true }
         if case .drawing = drag {
             if !drawing {
@@ -243,11 +292,12 @@ private final class SelectorView: NSView {
     }
 
     override func rightMouseDown(with event: NSEvent) {
+        if tool != nil { setTool(nil); return }
         if selection != nil { clearSelection(); updateHover(convert(event.locationInWindow, from: nil)) } else { onFinish?(.cancelled) }
     }
 
     private func updateCursor() {
-        guard let pointer, let selection, case .none = drag else { NSCursor.crosshair.set(); return }
+        guard let pointer, let selection, case .none = drag, tool == nil else { NSCursor.crosshair.set(); return }
         if let handle = G.handle(at: pointer, of: selection) {
             switch handle {
             case .left, .right: NSCursor.resizeLeftRight.set()
@@ -266,7 +316,7 @@ private final class SelectorView: NSView {
         case 53: onFinish?(.cancelled)                                   // Esc
         case 36, 76: finish(after: nil)                                  // Return, Enter
         case 123, 124, 125, 126:                                         // arrows
-            guard var rect = selection else { return }
+            guard var rect = selection, marks.isEmpty, tool == nil else { return }
             let dx: CGFloat = event.keyCode == 123 ? -step : event.keyCode == 124 ? step : 0
             let dy: CGFloat = event.keyCode == 126 ? -step : event.keyCode == 125 ? step : 0
             if flags.contains(.option) {
@@ -277,7 +327,9 @@ private final class SelectorView: NSView {
             selection = rect; layoutToolbar(); needsDisplay = true
         default:
             let key = event.charactersIgnoringModifiers?.lowercased()
-            if flags.contains(.command), key == "c", case .screenshot = purpose { finish(after: [.copyImage]) }
+            if flags.contains(.command), key == "z" { undoMark() }
+            else if flags.isEmpty, selection != nil, case .screenshot = purpose, let pick = Self.markTools.first(where: { $0.3 == key }) { setTool(tool == pick.0 ? nil : pick.0) }
+            else if flags.contains(.command), key == "c", case .screenshot = purpose { finish(after: [.copyImage]) }
             else if flags.contains(.command), key == "a" { onBeginSelection?(); selection = bounds; hovered = nil; layoutToolbar(); needsDisplay = true }
             else if flags.isEmpty, key == "c", let pointer, let hex = color(at: pointer)?.hex {
                 // Copy the color under the pointer, as a colour picker would, then close.
@@ -301,7 +353,14 @@ private final class SelectorView: NSView {
         }
         guard let rect = target, let pixels = G.pixelRect(rect, scale: scale, imageSize: CGSize(width: frozen.image.width, height: frozen.image.height)),
               let cropped = frozen.image.cropping(to: pixels) else { return }
-        onFinish?(.captured(cropped, after: after))
+        guard !marks.isEmpty else { onFinish?(.captured(cropped, after: after)); return }
+        var document = CaptureDocument(image: cropped)
+        for mark in marks {
+            let points = mark.points.map { G.imagePoint($0, scale: scale, crop: pixels) }
+            document.append(CaptureAnnotation(tool: mark.tool, points: points, color: .systemRed, width: max(2, (2 * scale).rounded())))
+        }
+        guard let image = try? document.rendered() else { NSSound.beep(); return }
+        onFinish?(.captured(image, after: after))
     }
 
     // MARK: Drawing
@@ -343,10 +402,51 @@ private final class SelectorView: NSView {
                 }
             }
         }
+        for mark in marks + (draft.map { [$0] } ?? []) { drawMark(mark, in: context) }
         if let pointer, showsMagnifier { drawMagnifier(at: pointer, in: context) }
     }
 
+    /// On-screen preview of a mark; the saved image is rendered by CaptureDocument from the same points.
+    private func drawMark(_ mark: Mark, in context: CGContext) {
+        guard let a = mark.points.first, let b = mark.points.last else { return }
+        let rect = CGRect(x: min(a.x, b.x), y: min(a.y, b.y), width: abs(a.x - b.x), height: abs(a.y - b.y))
+        NSColor.systemRed.setStroke()
+        switch mark.tool {
+        case .rectangle:
+            let path = NSBezierPath(rect: rect); path.lineWidth = 2; path.stroke()
+        case .arrow:
+            let path = NSBezierPath(); path.lineWidth = 2; path.lineCapStyle = .round
+            path.move(to: a); path.line(to: b)
+            let angle = atan2(b.y - a.y, b.x - a.x), head: CGFloat = 12
+            for side in [-0.45, 0.45] {
+                path.move(to: b); path.line(to: CGPoint(x: b.x - head * cos(angle + side), y: b.y - head * sin(angle + side)))
+            }
+            path.stroke()
+        case .pencil:
+            let path = NSBezierPath(); path.lineWidth = 2; path.lineCapStyle = .round; path.lineJoinStyle = .round
+            path.move(to: a); for point in mark.points.dropFirst() { path.line(to: point) }; path.stroke()
+        case .mosaic:
+            // Pixelate the frozen frame: draw a tiny copy back at full size without smoothing.
+            guard rect.width >= 2, rect.height >= 2,
+                  let pixels = G.pixelRect(rect, scale: scale, imageSize: CGSize(width: frozen.image.width, height: frozen.image.height)),
+                  let crop = frozen.image.cropping(to: pixels) else { return }
+            let cells = CGSize(width: max(1, (rect.width / 8).rounded()), height: max(1, (rect.height / 8).rounded()))
+            guard let small = CGContext(data: nil, width: Int(cells.width), height: Int(cells.height), bitsPerComponent: 8, bytesPerRow: 0,
+                                        space: CGColorSpaceCreateDeviceRGB(), bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue) else { return }
+            small.interpolationQuality = .medium
+            small.draw(crop, in: CGRect(origin: .zero, size: cells))
+            guard let tiny = small.makeImage() else { return }
+            context.saveGState()
+            context.interpolationQuality = .none
+            context.translateBy(x: 0, y: rect.maxY + rect.minY); context.scaleBy(x: 1, y: -1)
+            context.draw(tiny, in: rect)
+            context.restoreGState()
+        default: break
+        }
+    }
+
     private var showsMagnifier: Bool {
+        if tool != nil { return false }
         switch drag {
         case .moving: return false
         case .none: return selection == nil

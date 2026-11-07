@@ -55,4 +55,11 @@ final class CaptureSelectionGeometryTests: XCTestCase {
     func testHexIsZeroPaddedUppercase() {
         XCTAssertEqual(G.hex(red: 0, green: 10, blue: 255), "#000AFF")
     }
+
+    func testDrawnPointsMapIntoTheCroppedImageWithABottomLeftOrigin() {
+        let crop = CGRect(x: 200, y: 100, width: 400, height: 300)       // pixels, from rect (100,50,200,150) at 2x
+        XCTAssertEqual(G.imagePoint(CGPoint(x: 100, y: 50), scale: 2, crop: crop), CGPoint(x: 0, y: 300))   // top-left
+        XCTAssertEqual(G.imagePoint(CGPoint(x: 300, y: 200), scale: 2, crop: crop), CGPoint(x: 400, y: 0))  // bottom-right
+    }
+
 }

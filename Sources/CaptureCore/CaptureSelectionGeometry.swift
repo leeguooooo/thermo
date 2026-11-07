@@ -93,6 +93,12 @@ public enum CaptureSelectionGeometry {
         return pixels
     }
 
+    /// A point drawn on the selector (display points, top-left origin) in the cropped screenshot's
+    /// pixel space, which CaptureAnnotation uses with a bottom-left origin.
+    public static func imagePoint(_ point: CGPoint, scale: CGFloat, crop: CGRect) -> CGPoint {
+        CGPoint(x: point.x * scale - crop.minX, y: crop.height - (point.y * scale - crop.minY))
+    }
+
     /// Pixel size shown next to the selection.
     public static func pixelSize(_ rect: CGRect, scale: CGFloat) -> (width: Int, height: Int) {
         (Int((rect.width * scale).rounded()), Int((rect.height * scale).rounded()))
