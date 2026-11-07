@@ -32,3 +32,10 @@
 正式候选检查包含 macOS 13 部署目标、arm64/x86_64 切片、Developer ID 签名、Apple 公证、App/DMG 装订、挂载 DMG 和解压 App ZIP 后的签名与票据、CLI 归档一致性和公开校验清单。Sparkle 更新包须用已发版本的公钥验证；读取钥匙串的方式改变时不重新生成更新密钥。
 
 研究依据及原生逆向边界见 [Raycast 搜索研究](raycast-search-study.md)。
+
+## 1.5.12 修正
+
+- 应用名称按用户首选语言直接读取 `InfoPlist.loctable`（macOS 13 起系统应用把各语言放在这一个文件里）和 `<lang>.lproj/InfoPlist.strings`。此前 `Bundle.object(forInfoDictionaryKey:)` 跟随调用进程自身的本地化，在中文系统上也只拿到英文名，导致「终端」「系统设置」「计算器」「访达」及其拼音首字母搜不到。实测 M5（首选语言 zh-Hans、en、zh-Hant）上述查询均命中，结果显示中文名。
+- Safari 位于 App cryptex，`/Applications/Safari.app` 链接带隐藏标记被扫描跳过；应用目录加入 `/System/Cryptexes/App/System/Applications`，`safari`、`safri`、「浏览器」、`sfllq` 均命中。
+- 打开搜索窗口会刷新应用元数据，升级后首次打开即更新名称。
+
