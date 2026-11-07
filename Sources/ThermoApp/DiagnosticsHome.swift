@@ -89,7 +89,7 @@ struct DiagnosticsHome: View {
     }
 
     func checkAgain(prominent: Bool) -> some View {
-        Button { scanner.scan() } label: { Label(tr("Check Again"), systemImage: "arrow.clockwise") }
+        Button { scanner.scan() } label: { Label(tr("Check again"), systemImage: "arrow.clockwise") }
             .buttonStyle(PillButtonStyle(prominent: prominent)).disabled(scanner.busy)
     }
 
@@ -376,7 +376,7 @@ struct DiagnosticScanControl: View {
                 Text(tr(scanner.report == nil ? "No complete results were produced. Check again when ready." : "Previous complete results are kept. Check again to refresh them."))
                     .font(Theme.secondary).foregroundStyle(Theme.textSecondary)
                 Spacer()
-                Button(tr("Check Again")) { scanner.scan() }.buttonStyle(PillButtonStyle()).controlSize(.small).disabled(scanner.busy)
+                Button(tr("Check again")) { scanner.scan() }.buttonStyle(PillButtonStyle()).controlSize(.small).disabled(scanner.busy)
             }
         }
     }

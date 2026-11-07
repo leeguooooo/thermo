@@ -23,12 +23,12 @@ enum AgentStyle {
     static func title(_ area: Area) -> String {
         switch area {
         case .hooks: return tr("Hooks")
-        case .mcp: return tr("MCP Servers")
+        case .mcp: return tr("MCP servers")
         case .plugins: return tr("Plugins")
         case .skills: return tr("Skills")
-        case .statusline: return tr("Status Line")
-        case .launchd: return tr("Launch Agents")
-        case .processes: return tr("Agent Processes")
+        case .statusline: return tr("Status line")
+        case .launchd: return tr("Launch agents")
+        case .processes: return tr("Agent processes")
         case .worktrees: return tr("Worktrees")
         }
     }
@@ -296,7 +296,7 @@ struct PressableStyle: ButtonStyle {
     }
 }
 
-/// The main call to action on a landing page ("Fix 9", "Check Again").
+/// The main call to action on a landing page ("Fix 9", "Check again").
 struct BigRoundButton: View {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     let title: String

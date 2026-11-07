@@ -101,7 +101,7 @@ struct NativeTabOrganizerView: View {
                 if let latest = records.first(where: { $0.grouped > 0 }) {
                     InspectorDivider(inset: 0)
                     HStack {
-                        Text(tr("Last batch: %1$@ tabs grouped", String(latest.grouped))).font(Theme.secondary).foregroundStyle(Theme.textSecondary)
+                        Text(trCount(latest.grouped, "Last batch: %1$@ tab grouped", "Last batch: %1$@ tabs grouped")).font(Theme.secondary).foregroundStyle(Theme.textSecondary)
                         Spacer()
                         Button(tr("Undo the last grouping")) { undo(latest) }.buttonStyle(PillButtonStyle()).controlSize(.small)
                             .disabled(working || previewOnly || Set(latest.requests.keys).isSubset(of: latest.undoAttempted))

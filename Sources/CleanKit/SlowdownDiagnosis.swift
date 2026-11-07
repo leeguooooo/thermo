@@ -395,8 +395,9 @@ public struct SlowdownDiagnosis: Codable, Sendable {
                         ?? tr("%1$@ copies are held by %2$@ (PID %3$@) from sessions that already ended: restart it; its current tasks are interrupted.", String(n), friendlyName(host), String(h)))
                 }
                 if !endable.isEmpty {
-                    guidance.insert(tr("Without stopping your work: end the %1$@ copies whose session lost it or has been idle for over 2 hours (frees %2$@); a session whose copy was ended loses that tool until it is restarted.",
-                                       String(endable.count), MemoryFormat.string(kibibytes: endableKB))
+                    guidance.insert(trCount(endable.count, "Without stopping your work: end the %1$@ copy whose session lost it or has been idle for over 2 hours (frees %2$@); its session loses that tool until it is restarted.",
+                                       "Without stopping your work: end the %1$@ copies whose session lost it or has been idle for over 2 hours (frees %2$@); a session whose copy was ended loses that tool until it is restarted.",
+                                       MemoryFormat.string(kibibytes: endableKB))
                                     + (activeDirs.isEmpty ? "" : " " + tr("Copies in active sessions are kept: %1$@.", activeDirs.prefix(5).joined(separator: ", "))), at: 0)
                 }
                 var cost = tr("%1$@ costs about %2$@ per session × %3$@ copies. Consider turning it off globally and enabling it only in the projects that use it.",

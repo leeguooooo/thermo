@@ -71,7 +71,7 @@ struct MCPInspectButton: View {
                             .buttonStyle(PillButtonStyle())
                         Spacer()
                         if model.running { Button(tr("Stop checking")) { model.cancel() }.buttonStyle(PillButtonStyle()) }
-                        Button(tr("Check Again")) { start() }.buttonStyle(PillButtonStyle(prominent: true)).disabled(model.running)
+                        Button(tr("Check again")) { start() }.buttonStyle(PillButtonStyle(prominent: true)).disabled(model.running)
                     }
                 }
                 .padding(Theme.Space.xl).frame(width: 640)
