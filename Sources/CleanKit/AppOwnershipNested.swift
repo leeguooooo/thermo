@@ -31,6 +31,9 @@ extension AppOwnershipSnapshot {
                 let directory = bundle + "/" + relative
                 var link = stat(), actual = stat()
                 guard lstat(directory, &link) == 0 else { if errno != ENOENT { issues.append(directory) }; continue }
+                // A link to nothing holds no code (Sparkle ships XPCServices -> Versions/Current/XPCServices
+                // without the target); it is not an unreadable place.
+                if link.st_mode & S_IFMT == S_IFLNK, stat(directory, &actual) != 0, errno == ENOENT { continue }
                 guard URL(fileURLWithPath: directory).resolvingSymlinksInPath().path.hasPrefix(boundary),
                       stat(directory, &actual) == 0, actual.st_mode & S_IFMT == S_IFDIR else { issues.append(directory); continue }
                 var unreadable = false

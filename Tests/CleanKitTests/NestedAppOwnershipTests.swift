@@ -30,6 +30,14 @@ final class NestedAppOwnershipTests: XCTestCase {
             processes: .init(entries: []), directories: roots)
     }
 
+    func testDanglingBundleLocationLinkIsNotAnUnreadablePlace() throws {
+        let framework = app + "/Contents/Frameworks/Sparkle.framework"
+        try bundle(framework, id: "org.sparkle-project.Sparkle", relative: "Versions/B/Resources/Info.plist")
+        try FileManager.default.createSymbolicLink(atPath: framework + "/Versions/Current", withDestinationPath: "B")
+        try FileManager.default.createSymbolicLink(atPath: framework + "/XPCServices", withDestinationPath: "Versions/Current/XPCServices")
+        XCTAssertTrue(snapshot().issues.isEmpty, "\(snapshot().issues)")
+        XCTAssertTrue(report().complete)
+    }
     func testDeepNestedXPCIdentityKeepsItsIndependentDataOutOfOrphans() throws {
         try bundle(app + "/Contents/Library/LoginItems/Login.app", id: "org.vendor.login")
         try bundle(app + "/Contents/Library/LoginItems/Login.app/Contents/XPCServices/Worker.xpc", id: "net.independent.worker")
