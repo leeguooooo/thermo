@@ -247,8 +247,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate, UNU
         let hidden = statusItemHidden()
         monitor.iconHidden = hidden
         if popover.isShown {
-            popover.contentViewController?.view.window?.makeKeyAndOrderFront(nil)
-            return
+            if panelVisible { popover.contentViewController?.view.window?.makeKeyAndOrderFront(nil); return }
+            // Marked shown but its window is gone (closed behind our back when another app took
+            // focus): reset it so this click actually brings the panel up.
+            popover.close()
         }
         monitor.popoverOpen = true
         PanelModel.shared.setActive(true)
@@ -301,7 +303,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate, UNU
             statusItem.menu = nil
             return
         }
-        if popover.isShown { popover.performClose(nil) } else { showPanel() }
+        // Only a panel the user can see counts as open; a stale "shown" state would turn this click
+        // into a close of an invisible panel, so nothing appears.
+        if panelVisible { popover.performClose(nil) } else { showPanel() }
+    }
+
+    private var panelVisible: Bool {
+        guard popover.isShown, let window = popover.contentViewController?.view.window else { return false }
+        return window.isVisible && window.occlusionState.contains(.visible)
     }
 
     func closeMenuPanel() {
