@@ -2309,7 +2309,7 @@ let zhHans: [String: String] = [
     "%1$@ more pages were not measured (asleep, browser pages, or they refused)": "另有 %1$@ 个页面没测（已休眠、浏览器自带页面，或拒绝测量）",
     // MARK: Uninstall apps
     "part of macOS": "macOS 自带",
-    "this is Thermo": "这是 Thermo 自己",
+    "This is Thermo": "这是 Thermo 自己",
     "protected: password manager, VPN, input method or security software": "受保护：密码管理器、VPN、输入法或安全软件",
     "%1$@ is running; quit it first": "%1$@ 正在运行，请先退出",
     "no longer looks left behind: an app uses it again, or it changed": "已不像遗留数据：有 App 重新用到它，或它刚被改动过",

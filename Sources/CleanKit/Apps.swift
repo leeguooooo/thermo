@@ -273,7 +273,7 @@ public enum AppUninstaller {
         if location.hasPrefix("/System/") { return tr("part of macOS") }
         if let id = app.bundleID {
             if id.hasPrefix("com.apple."), !appleRemovable.contains(where: { id.hasPrefix($0) }) { return tr("part of macOS") }
-            if id.lowercased().hasPrefix("dev.thermo") { return tr("this is Thermo") }
+            if id.lowercased().hasPrefix("dev.thermo") { return tr("This is Thermo") }
             if protectedPatterns.contains(where: { matches(id.lowercased(), $0) }) { return tr("protected: password manager, VPN, input method or security software") }
         }
         let n = app.name.lowercased()
