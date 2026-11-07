@@ -1247,6 +1247,7 @@ let zhHans: [String: String] = [
     "Hooks": "Hooks",
     "MCP servers": "MCP 服务器",
     "Plugins": "插件",
+    "Plugin marketplace": "插件市场",
     "Skills": "Skills",
     "Status line": "状态栏",
     "Launch agents": "后台任务",

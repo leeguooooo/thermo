@@ -557,7 +557,7 @@ struct MainSidebar: View {
                     row(.apps(page.appsTab ?? .installed), tr("Software"), "square.grid.2x2", .indigo, trailing: nil,
                         selected: page.appsTab != nil)
                     row(.yunx, tr("YunX Download"), "arrow.down.circle", .blue, trailing: nil)
-                    row(.plugins, tr("Plugins"), "puzzlepiece.extension", .orange, trailing: nil)
+                    row(.plugins, tr("Plugin marketplace"), "puzzlepiece.extension", .orange, trailing: nil)
 
                     header(tr("AI Agent Diagnostics"))
                     row(.claude(page.claudeTab ?? .accounts), tr("Claude tools"), "person.2", .orange, trailing: nil,
