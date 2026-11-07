@@ -118,6 +118,25 @@ import UniformTypeIdentifiers
         let index = response.items.firstIndex { $0.id == selection } ?? 0
         selection = response.items[min(response.items.count - 1, max(0, index + delta))].id
     }
+    static let defaultFoldersKey = "dev.thermo.search.defaultFoldersApplied"
+    /// Once per user: someone who has never added a folder gets Desktop, Documents and Downloads, so
+    /// search finds their files out of the box. Runs when the panel is first opened (not at launch),
+    /// because reading these folders can bring up macOS's folder-access prompts. Folders the user
+    /// removes later stay removed.
+    func applyDefaultFoldersOnce(defaults: UserDefaults = .standard, home: String = NSHomeDirectory()) {
+        guard !defaults.bool(forKey: Self.defaultFoldersKey) else { return }
+        defaults.set(true, forKey: Self.defaultFoldersKey)
+        guard preferences.roots.isEmpty else { return }
+        let roots = ["Desktop", "Documents", "Downloads"].compactMap { name -> String? in
+            var isDirectory: ObjCBool = false
+            let path = (home as NSString).appendingPathComponent(name)
+            guard FileManager.default.fileExists(atPath: path, isDirectory: &isDirectory), isDirectory.boolValue else { return nil }
+            return SearchPaths.canonical(path)
+        }
+        guard !roots.isEmpty else { return }
+        var next = preferences; next.roots = roots
+        configure(next)
+    }
     func configure(_ preferences: SearchPreferences) {
         self.preferences = preferences; error = nil
         indexer?.configure(preferences)

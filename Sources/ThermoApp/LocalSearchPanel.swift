@@ -37,6 +37,7 @@ import ThermoL10n
     func toggle() { window?.isVisible == true ? hide() : show() }
     func show(settings: Bool = false) {
         model.start()
+        model.applyDefaultFoldersOnce()
         model.refreshApplications()
         if window?.isVisible != true {
             SearchInputSource.shared.panelWillShow()

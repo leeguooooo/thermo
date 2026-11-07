@@ -111,4 +111,26 @@ import SearchCore
             callback = event; return lease
         }
     }
+    func testDefaultFoldersAreAddedOnceAndOnlyForUsersWithoutFolders() throws {
+        let root = FileManager.default.temporaryDirectory.appendingPathComponent("search-defaults-" + UUID().uuidString)
+        defer { try? FileManager.default.removeItem(at: root) }
+        let home = root.appendingPathComponent("home")
+        for name in ["Desktop", "Documents"] { try FileManager.default.createDirectory(at: home.appendingPathComponent(name), withIntermediateDirectories: true) }
+        let defaults = try XCTUnwrap(UserDefaults(suiteName: "search-defaults-" + UUID().uuidString))
+        let model = LocalSearchModel(directory: root.appendingPathComponent("db"))
+        model.applyDefaultFoldersOnce(defaults: defaults, home: home.path)
+        // Downloads does not exist here, so only the two real folders are added.
+        XCTAssertEqual(model.preferences.roots.map { ($0 as NSString).lastPathComponent }, ["Desktop", "Documents"])
+        // Removed later: never re-added.
+        var none = model.preferences; none.roots = []; model.configure(none)
+        model.applyDefaultFoldersOnce(defaults: defaults, home: home.path)
+        XCTAssertTrue(model.preferences.roots.isEmpty)
+        // Someone who already chose folders keeps exactly those.
+        let chosen = LocalSearchModel(directory: root.appendingPathComponent("db2"))
+        var mine = chosen.preferences; mine.roots = [home.appendingPathComponent("Documents").path]; chosen.configure(mine)
+        let fresh = try XCTUnwrap(UserDefaults(suiteName: "search-defaults-" + UUID().uuidString))
+        chosen.applyDefaultFoldersOnce(defaults: fresh, home: home.path)
+        XCTAssertEqual(chosen.preferences.roots, mine.roots)
+    }
+
 }

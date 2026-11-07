@@ -54,10 +54,10 @@ import ThermoL10n
     static func freezeDisplays() async throws -> [Frozen] {
         let content = try await SCShareableContent.excludingDesktopWindows(false, onScreenWindowsOnly: true)
         let info = (CGWindowListCopyWindowInfo([.optionOnScreenOnly, .excludeDesktopElements], kCGNullWindowID) as? [[String: Any]]) ?? []
-        let own = ProcessInfo.processInfo.processIdentifier
+        // Thermo's own windows (pins, the console) are fair targets too; the selector's panels do
+        // not exist yet when this list is taken.
         let windowBounds: [CGRect] = info.compactMap { entry in
-            guard (entry[kCGWindowLayer as String] as? Int) == 0,
-                  (entry[kCGWindowOwnerPID as String] as? pid_t) != own,
+            guard (entry[kCGWindowLayer as String] as? Int) == 0 || isPinLevel(entry),
                   (entry[kCGWindowAlpha as String] as? Double ?? 1) > 0.01,
                   let dict = entry[kCGWindowBounds as String] as? NSDictionary,
                   let rect = CGRect(dictionaryRepresentation: dict), rect.width >= 40, rect.height >= 40 else { return nil }
@@ -78,6 +78,12 @@ import ThermoL10n
         }
         guard !result.isEmpty else { throw CaptureFailure.captureFailed }
         return result
+    }
+
+    /// Pins float above normal windows (non-zero layer) but are still windows a user would pick.
+    private static func isPinLevel(_ entry: [String: Any]) -> Bool {
+        (entry[kCGWindowOwnerPID as String] as? pid_t) == ProcessInfo.processInfo.processIdentifier
+            && (entry[kCGWindowLayer as String] as? Int).map { $0 > 0 && $0 < Int(CGWindowLevelForKey(.mainMenuWindow)) } == true
     }
 
     private func present(_ frozen: [Frozen]) {

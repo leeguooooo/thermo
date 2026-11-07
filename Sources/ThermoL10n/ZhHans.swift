@@ -1755,6 +1755,7 @@ let zhHans: [String: String] = [
     "Cleaning %1$@ of %2$@: %3$@": "正在清理第 %1$@ / %2$@ 项：%3$@",
     // MARK: Disk scan control
     "stopping…": "正在停止…",
+    "Start": "开始",
     "Stop": "停止",
     "Start scan": "开始扫描",
     "Disk scan finished": "磁盘扫描完成",
