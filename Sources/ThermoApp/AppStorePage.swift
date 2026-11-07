@@ -109,7 +109,13 @@ struct AppStorePage: View {
         HStack(alignment: .top, spacing: 12) {
             Group {
                 if let icon = app.icon { Text(verbatim: icon).font(.system(size: 22)) }
-                else { Image(systemName: "app").font(.system(size: 20)).foregroundStyle(Theme.textTertiary) }
+                // No emoji in the catalog: a monogram tile. A bare "app" outline read as an unticked checkbox.
+                else {
+                    Text(verbatim: String(app.title.prefix(1)).uppercased())
+                        .font(.system(size: 14, weight: .semibold)).foregroundStyle(.white)
+                        .frame(width: 26, height: 26)
+                        .background(RoundedRectangle(cornerRadius: 7, style: .continuous).fill(Theme.accent.gradient))
+                }
             }.frame(width: 30, height: 30)
             VStack(alignment: .leading, spacing: 3) {
                 HStack(spacing: 6) {

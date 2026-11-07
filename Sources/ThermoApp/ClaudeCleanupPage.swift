@@ -227,7 +227,7 @@ struct ClaudeCleanupPage: View {
 
     var body: some View {
         WindowPage(title: tab == .privacy ? tr("Privacy & network") : tr("Claude reset"),
-                   subtitle: tr("Review local Claude data, browser privacy and network settings.")) {
+                   subtitle: tab == .privacy ? tr("Browser location, WebRTC and cookies, plus the system settings Claude reads.") : tr("Claude Code and desktop data on this Mac. Reset moves it aside so you can restore it.")) {
             if tab == .privacy { PrivacyToolsView(model: model.privacy) } else { resetContent }
         }
         .safeAreaInset(edge: .bottom, spacing: 0) { if tab != .privacy { actionBar } }

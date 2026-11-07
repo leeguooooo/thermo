@@ -1059,7 +1059,8 @@ struct FanChart: View {
         .chartForegroundStyleScale(range: [Theme.accent, Color(red: 0.35, green: 0.80, blue: 0.78), Theme.caution])
         // Always the full ten minutes the title promises; a few seconds of data no longer repeats one minute on the axis.
         .chartXScale(domain: end.addingTimeInterval(-600)...end)
-        .chartXAxis { AxisMarks(values: .automatic(desiredCount: 4)) { _ in
+        // Marks inside the window: one at "now" or ten minutes back sits on an edge and gets clipped to "1…".
+        .chartXAxis { AxisMarks(values: [9, 6, 3].map { end.addingTimeInterval(-Double($0) * 60) }) { _ in
             AxisGridLine().foregroundStyle(Theme.hairline)
             AxisValueLabel(format: .dateTime.hour().minute()).foregroundStyle(Theme.textTertiary)
         } }

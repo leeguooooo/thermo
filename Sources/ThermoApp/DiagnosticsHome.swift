@@ -478,7 +478,9 @@ private struct ProblemCard: View {
     }
 
     @ViewBuilder var actions: some View {
-        let primary = item.primaryDiagnosticAction
+        // When the fix is editing the config, removing the server is the fallback, not a third button beside it.
+        let demote = item.area == .mcp && configFile != nil && item.primaryDiagnosticAction?.kind == .uninstall
+        let primary = demote ? nil : item.primaryDiagnosticAction
         let others = item.actions.filter { $0.id != primary?.id }
         HStack(spacing: Theme.Space.s) {
             // A secret written into the config is fixed by editing that file; show it rather than only offering removal.

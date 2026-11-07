@@ -154,19 +154,18 @@ struct PluginsPage: View {
     @State private var confirmUse = false
 
     var body: some View {
-        WindowPage(title: tr("Plugins"), subtitle: tr("Plugins from the leeguooooo marketplace for Claude Code")) {
+        WindowPage(title: tr("Plugins"), subtitle: tr("Plugins from the leeguooooo marketplace for Claude Code"), trailing: {
             HStack(spacing: 8) {
                 if model.checkingUpdates {
-                    ProgressView().controlSize(.small)
-                    Text(tr("Checking for updates…")).font(Theme.caption).foregroundStyle(Theme.textSecondary)
+                    ProgressView().controlSize(.small).help(tr("Checking for updates…"))
                 }
-                Spacer()
                 Button(tr("Installed plugin diagnostics")) { open(.agents(.area(.plugins))) }
                     .buttonStyle(PillButtonStyle()).controlSize(.small).fixedSize()
                 Button(tr("Refresh")) { model.refresh() }
                     .buttonStyle(PillButtonStyle()).controlSize(.small).fixedSize()
                     .disabled(model.loading || model.working != nil)
             }
+        }) {
             if let message = model.message { NoticeBanner(text: message, dismiss: { model.message = nil }) }
             if let working = model.working { NoticeBanner(text: tr("Working on %1$@…", working), busy: true) }
             if model.usingCachedCopy { NoticeBanner(text: tr("Could not reach the marketplace. Showing the last saved copy.")) }

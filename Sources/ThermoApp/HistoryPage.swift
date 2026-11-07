@@ -164,7 +164,7 @@ struct HistoryPage: View {
                         Text(tr("All kinds")).tag("")
                         ForEach(featureCounts, id: \.0) { f, n in Text(Self.featureName(f) + " (\(n))").tag(f) }
                     }
-                    .pickerStyle(.menu).labelsHidden().fixedSize().controlSize(.small).help(tr("Show one kind of change"))
+                    .pickerStyle(.menu).menuStyle(.borderlessButton).labelsHidden().fixedSize().help(tr("Show one kind of change"))
                 }
                 Button { model.load() } label: { Label(tr("Refresh"), systemImage: "arrow.clockwise") }
                     .buttonStyle(PillButtonStyle()).controlSize(.small)
@@ -233,6 +233,9 @@ struct HistoryPage: View {
         case "archive": return tr("Saved tabs")
         case "pulse": return tr("Stopped programs")
         case "history": return tr("Undo")
+        case "power": return tr("Keep awake")
+        case "battery": return tr("Battery charging protection")
+        case "search": return tr("Search apps and files")
         default: return f
         }
     }
@@ -250,7 +253,10 @@ struct HistoryPage: View {
         case "archive": return "externaldrive.connected.to.line.below"
         case "pulse": return "stop.circle"
         case "history": return "arrow.uturn.backward"
-        default: return "circle"
+        case "power": return "cup.and.saucer"
+        case "battery": return "battery.75percent"
+        case "search": return "magnifyingglass"
+        default: return "clock"
         }
     }
 
