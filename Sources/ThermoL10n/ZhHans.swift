@@ -1302,7 +1302,7 @@ let zhHans: [String: String] = [
     "refusing to touch protected path %1$@": "拒绝修改受保护的路径 %1$@",
     "refusing to remove %1$@: %2$@": "拒绝删除 %1$@：%2$@",
     "%1$@ is not a symlink": "%1$@ 不是符号链接",
-    "pid %1$@ is now a different process; not killed": "pid %1$@ 现在是另一个进程，未结束",
+    "PID %1$@ is now a different process; not killed": "PID %1$@ 现在是另一个进程，未结束",
     "could not signal pid %1$@": "无法向 pid %1$@ 发送信号",
     "the hook changed since the scan; rescan and try again": "检查之后这个 hook 已经变了，请重新检查后再试",
     "%1$@ is not a property list": "%1$@ 不是有效的 plist",
@@ -1351,8 +1351,8 @@ let zhHans: [String: String] = [
     "End outdated copies": "结束旧版本进程",
     "Sends SIGTERM to %1$@ (pid %2$@). They are still connected to running sessions (parent pid %3$@), which lose this server until you reconnect it with /mcp or restart them.":
         "向 %1$@（pid %2$@）发送 SIGTERM。它们仍连着正在运行的会话（父进程 pid %3$@），这些会话会失去这个服务器，直到你用 /mcp 重新连接或重启会话。",
-    "End pid %1$@": "结束 pid %1$@",
-    "Sends SIGTERM to pid %1$@.": "向 pid %1$@ 发送 SIGTERM。",
+    "End PID %1$@": "结束 PID %1$@",
+    "Sends SIGTERM to PID %1$@.": "向 PID %1$@ 发送 SIGTERM。",
 
     // MARK: Agent diagnostics — findings
     "settings file is not valid JSON; Claude Code ignores all of it": "设置文件不是有效的 JSON，Claude Code 会忽略整个文件",
@@ -1440,13 +1440,13 @@ let zhHans: [String: String] = [
     "%1$@ process(es) still running a binary that was deleted or upgraded (%2$@); they hold %3$@ and will never pick up fixes":
         "%1$@ 个进程还在运行已被删除或升级的程序（%2$@），占用 %3$@，永远用不上新版本的修复",
     "end them; the agent starts a fresh copy when it needs one": "结束它们，agent 需要时会重新启动一份",
-    "%1$@ detached process(es) (parent exited; not managed by launchd), oldest started %2$@, %3$@ total — likely leaked by sessions that ended":
-        "%1$@ 个脱离进程（父进程已退出，也不归 launchd 管），最早的启动于 %2$@，共占 %3$@：多半是已结束的会话遗留的",
-    "%1$@ detached process(es) (parent exited; not managed by launchd), oldest started %2$@, %3$@ total":
-        "%1$@ 个脱离进程（父进程已退出，也不归 launchd 管），最早的启动于 %2$@，共占 %3$@",
+    "%1$@ detached processes (parent exited; not managed by launchd), oldest started %2$@, %3$@ total — likely leaked by sessions that ended": "%1$@ 个脱离进程（父进程已退出，也不归 launchd 管），最早的启动于 %2$@，共占 %3$@：多半是已结束的会话遗留的",
+    "%1$@ detached processes (parent exited; not managed by launchd), oldest started %2$@, %3$@ total": "%1$@ 个脱离进程（父进程已退出，也不归 launchd 管），最早的启动于 %2$@，共占 %3$@",
+    "%1$@ detached process (parent exited; not managed by launchd), started %2$@, %3$@ — likely leaked by a session that ended": "%1$@ 个脱离进程（父进程已退出，也不归 launchd 管），最早的启动于 %2$@，共占 %3$@：多半是已结束的会话遗留的",
+    "%1$@ detached process (parent exited; not managed by launchd), started %2$@, %3$@": "%1$@ 个脱离进程（父进程已退出，也不归 launchd 管），最早的启动于 %2$@，共占 %3$@",
     "end them if no agent is using them": "没有 agent 在用的话就结束它们",
-    "pid %1$@ is using %2$@%% CPU — a busy loop in a helper heats the Mac and drains battery":
-        "pid %1$@ 占用 %2$@%% CPU：辅助进程空转会让 Mac 发热、耗电",
+    "PID %1$@ is using %2$@%% CPU — a busy loop in a helper heats the Mac and drains battery":
+        "PID %1$@ 占用 %2$@%% CPU：辅助进程空转会让 Mac 发热、耗电",
     "sample %1$@ 5   # see what it is doing; end it if it is stuck": "sample %1$@ 5   # 看看它在做什么；卡住了就结束它",
     "%1$@ copies running (each agent session starts its own), %2$@ total": "同时运行 %1$@ 份（每个 agent 会话各启动一份），共占 %2$@",
     "%1$@ Claude sessions are open; closing idle ones frees their servers. A server that supports HTTP can be shared instead.":

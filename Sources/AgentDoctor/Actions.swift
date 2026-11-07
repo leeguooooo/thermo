@@ -172,7 +172,7 @@ public enum ActionRunner {
             // The pid may have been reused since the scan.
             let now = env.run("/bin/ps", ["-o", "args=", "-p", String(pid)])?.trimmingCharacters(in: .whitespacesAndNewlines)
             guard let now, !now.isEmpty else { return }  // already gone
-            guard now == args else { throw Failure(tr("pid %1$@ is now a different process; not killed", String(pid))) }
+            guard now == args else { throw Failure(tr("PID %1$@ is now a different process; not killed", String(pid))) }
             guard env.signal(pid, SIGTERM) else { throw Failure(tr("could not signal pid %1$@", String(pid))) }
 
         case let .removeJSONKey(file, path):

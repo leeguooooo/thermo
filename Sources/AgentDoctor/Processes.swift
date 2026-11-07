@@ -155,9 +155,9 @@ extension ConfigChecks {
                 let many = loose.count >= 3 || oldest > 86400
                 leaked = many
                 add(Finding(many ? .warning : .info, .processes, agent: "system", subject: name,
-                            many ? tr("%1$@ detached process(es) (parent exited; not managed by launchd), oldest started %2$@, %3$@ total — likely leaked by sessions that ended",
+                            many ? tr(loose.count == 1 ? "%1$@ detached process (parent exited; not managed by launchd), started %2$@, %3$@ — likely leaked by a session that ended" : "%1$@ detached processes (parent exited; not managed by launchd), oldest started %2$@, %3$@ total — likely leaked by sessions that ended",
                                       String(loose.count), Self.ago(oldest), Self.mb(loose.reduce(0) { $0 + $1.row.rssKB }))
-                                 : tr("%1$@ detached process(es) (parent exited; not managed by launchd), oldest started %2$@, %3$@ total",
+                                 : tr(loose.count == 1 ? "%1$@ detached process (parent exited; not managed by launchd), started %2$@, %3$@" : "%1$@ detached processes (parent exited; not managed by launchd), oldest started %2$@, %3$@ total",
                                       String(loose.count), Self.ago(oldest), Self.mb(loose.reduce(0) { $0 + $1.row.rssKB })),
                             fix: tr("end them if no agent is using them")))
             }
@@ -183,10 +183,10 @@ extension ConfigChecks {
             }
             for m in members where m.row.cpu >= 90 && !agentSession {
                 add(Finding(.warning, .processes, agent: "system", subject: name,
-                            tr("pid %1$@ is using %2$@%% CPU — a busy loop in a helper heats the Mac and drains battery", String(m.row.pid), String(Int(m.row.cpu))),
+                            tr("PID %1$@ is using %2$@%% CPU — a busy loop in a helper heats the Mac and drains battery", String(m.row.pid), String(Int(m.row.cpu))),
                             fix: tr("sample %1$@ 5   # see what it is doing; end it if it is stuck", String(m.row.pid))))
                 if killable {
-                    offer(.fix, tr("End pid %1$@", String(m.row.pid)), tr("Sends SIGTERM to pid %1$@.", String(m.row.pid)), end([m]), destructive: true)
+                    offer(.fix, tr("End PID %1$@", String(m.row.pid)), tr("Sends SIGTERM to PID %1$@.", String(m.row.pid)), end([m]), destructive: true)
                 }
             }
             // One stdio MCP server per session adds up.

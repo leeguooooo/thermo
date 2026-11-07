@@ -216,7 +216,7 @@ struct AreaPage: View {
                             .font(.system(size: 14)).foregroundStyle(severityColor(finding.severity)).frame(width: 18)
                         VStack(alignment: .leading, spacing: Theme.Space.xs) {
                             Text(finding.subject).font(Theme.rowTitle).foregroundStyle(Theme.textPrimary)
-                            Text(finding.message).font(Theme.secondary).foregroundStyle(Theme.textSecondary).textSelection(.enabled)
+                            Text(findingSentence(finding.message)).font(Theme.secondary).foregroundStyle(Theme.textSecondary).textSelection(.enabled)
                                 .fixedSize(horizontal: false, vertical: true)
                             if let fix = finding.fix { Text(fix).font(Theme.secondary).foregroundStyle(Theme.textTertiary).textSelection(.enabled) }
                             if let source = finding.source { Text(source).font(Theme.mono).foregroundStyle(Theme.textTertiary).textSelection(.enabled) }
@@ -415,7 +415,7 @@ private struct ProblemCard: View {
                         if item.agent != "system" { StatusTag(text: item.agent) }
                     }
                     if let f = findings.first {
-                        Text(f.message).font(Theme.secondary).foregroundStyle(Theme.textSecondary).fixedSize(horizontal: false, vertical: true)
+                        Text(findingSentence(f.message)).font(Theme.secondary).foregroundStyle(Theme.textSecondary).fixedSize(horizontal: false, vertical: true)
                     }
                 }
                 Spacer(minLength: Theme.Space.s)
@@ -437,7 +437,7 @@ private struct ProblemCard: View {
             if details {
                 VStack(alignment: .leading, spacing: Theme.Space.s) {
                     ForEach(Array(findings.enumerated()), id: \.offset) { i, f in
-                        if i > 0 { Text(f.message).font(Theme.secondary).foregroundStyle(Theme.textSecondary).fixedSize(horizontal: false, vertical: true) }
+                        if i > 0 { Text(findingSentence(f.message)).font(Theme.secondary).foregroundStyle(Theme.textSecondary).fixedSize(horizontal: false, vertical: true) }
                         if let fix = f.fix {
                             Text(tr("Suggestion: %1$@", fix)).font(Theme.secondary).foregroundStyle(Theme.textTertiary).fixedSize(horizontal: false, vertical: true)
                         }
@@ -548,7 +548,7 @@ private struct HealthyRow: View {
                 if !evidence.isEmpty {
                     DisclosureGroup(tr("Details")) {
                         ForEach(Array(evidence.enumerated()), id: \.offset) { _, finding in
-                            Text(finding.message).font(Theme.caption).foregroundStyle(Theme.textSecondary).textSelection(.enabled)
+                            Text(findingSentence(finding.message)).font(Theme.caption).foregroundStyle(Theme.textSecondary).textSelection(.enabled)
                             if let source = finding.source { Text(source).font(Theme.mono).foregroundStyle(Theme.textTertiary).textSelection(.enabled) }
                         }
                     }.font(Theme.caption).foregroundStyle(Theme.textTertiary)
@@ -644,4 +644,13 @@ struct BatchResult: View {
         .frame(width: 560, height: 520)
         .preferredColorScheme(.dark)
     }
+}
+
+/// Findings are written as clauses ("credential stored in plain text…") so they can be joined; shown on
+/// their own they start a sentence. Only a plain first word is capitalized: "hooks/hooks.json" or
+/// "plugin.json" stay as written, and scripts without case are unchanged.
+func findingSentence(_ text: String) -> String {
+    let word = text.prefix { $0 != " " }
+    guard let first = word.first, first.isLowercase, word.allSatisfy({ $0.isLetter }) else { return text }
+    return first.uppercased() + text.dropFirst()
 }
