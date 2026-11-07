@@ -80,6 +80,38 @@ final class SearchCoreTests: XCTestCase {
         XCTAssertEqual(SearchRanking.sorted(report.items, query: "toolbox").first?.path, bundle.path)
         XCTAssertEqual(SearchRanking.sorted(report.items, query: "工具").count, 1)
     }
+    func testApplicationCatalogReadsLocalizedNamesForThePreferredLanguagesNotTheProcess() throws {
+        let root = try directory()
+        func app(_ name: String, info: [String: String]) throws -> URL {
+            let bundle = root.appendingPathComponent(name + ".app"), resources = bundle.appendingPathComponent("Contents/Resources")
+            try FileManager.default.createDirectory(at: resources, withIntermediateDirectories: true)
+            try PropertyListSerialization.data(fromPropertyList: info, format: .xml, options: 0).write(to: bundle.appendingPathComponent("Contents/Info.plist"))
+            return bundle
+        }
+        // System apps since macOS 13: every language in one InfoPlist.loctable.
+        let calculator = try app("Calculator", info: ["CFBundleIdentifier": "test.calc", "CFBundleName": "Calculator", "CFBundleDevelopmentRegion": "en"])
+        let table: [String: [String: String]] = ["en": ["CFBundleDisplayName": "Calculator"], "zh_CN": ["CFBundleDisplayName": "计算器", "CFBundleName": "计算器"],
+                                                 "zh_TW": ["CFBundleDisplayName": "計算機"], "ja": ["CFBundleDisplayName": "計算機"]]
+        try PropertyListSerialization.data(fromPropertyList: table, format: .binary, options: 0).write(to: calculator.appendingPathComponent("Contents/Resources/InfoPlist.loctable"))
+        // Third-party apps: classic per-language strings files.
+        let terminal = try app("Terminal", info: ["CFBundleIdentifier": "test.term", "CFBundleName": "Terminal", "CFBundleDevelopmentRegion": "en"])
+        let zh = terminal.appendingPathComponent("Contents/Resources/zh-Hans.lproj")
+        try FileManager.default.createDirectory(at: zh, withIntermediateDirectories: true)
+        try Data("\"CFBundleDisplayName\" = \"终端\";\n".utf8).write(to: zh.appendingPathComponent("InfoPlist.strings"))
+
+        let zhUser = ["zh-Hans-JP", "en-JP", "zh-Hant-HK"]
+        let calc = try XCTUnwrap(ApplicationCatalog.item(at: calculator, languages: zhUser))
+        XCTAssertEqual(calc.name, "计算器")
+        XCTAssertTrue(calc.alternateNames.contains("计算器") && calc.alternateNames.contains("計算機") && calc.alternateNames.contains("Calculator"))
+        XCTAssertEqual(SearchRanking.sorted([calc], query: "jsq").first?.path, calc.path)
+        let term = try XCTUnwrap(ApplicationCatalog.item(at: terminal, languages: zhUser))
+        XCTAssertEqual(term.name, "终端")
+        XCTAssertEqual(SearchRanking.sorted([term], query: "终端").first?.path, term.path)
+        // An English-only user keeps English names and is not matched by unrelated languages.
+        let english = try XCTUnwrap(ApplicationCatalog.item(at: calculator, languages: ["en-US"]))
+        XCTAssertEqual(english.name, "Calculator")
+        XCTAssertFalse(english.alternateNames.contains("计算器"))
+    }
     func testApplicationCatalogFindsDeepGroupsWithoutIndexingPackageInternalsOrDirectoryLinks() throws {
         let root = try directory(), outside = try directory()
         func app(_ relative: String, in base: URL) throws -> URL {

@@ -10,15 +10,48 @@ public enum ApplicationCatalog {
         ["/Applications", "/System/Applications", "/System/Library/CoreServices",
          NSHomeDirectory() + "/Applications"].map { URL(fileURLWithPath: $0, isDirectory: true) }
     }
-    static func item(at url: URL) -> SearchItem? {
+    static func item(at url: URL, languages: [String] = Locale.preferredLanguages) -> SearchItem? {
         guard let bundle = Bundle(url: url), let info = bundle.infoDictionary else { return nil }
         let fileName = url.deletingPathExtension().lastPathComponent
-        let display = bundle.object(forInfoDictionaryKey: "CFBundleDisplayName") as? String ?? bundle.object(forInfoDictionaryKey: "CFBundleName") as? String ?? fileName
-        var names = [fileName]
+        let localized = localizedNames(of: bundle, languages: languages)
+        let display = localized.first ?? bundle.object(forInfoDictionaryKey: "CFBundleDisplayName") as? String ?? bundle.object(forInfoDictionaryKey: "CFBundleName") as? String ?? fileName
+        var names = [fileName] + localized
         for key in ["CFBundleName", "CFBundleDisplayName", "CFBundleExecutable", "CFBundleIdentifier"] {
             if let value = info[key] as? String, !value.isEmpty { names.append(value) }
         }
         return SearchItem(path: SearchPaths.entry(url.path), name: display, kind: .application, alternateNames: Array(Set(names)).sorted())
+    }
+
+    /// Display names in the user's preferred languages, most preferred first.
+    ///
+    /// Foundation localizes another bundle's Info.plist for the *calling process's* localizations,
+    /// so a helper or CLI without Chinese resources reads "Calculator" even on a Chinese system.
+    /// Read the tables directly instead: `InfoPlist.loctable` (one plist holding every language,
+    /// used by system apps since macOS 13) and the classic `<lang>.lproj/InfoPlist.strings`.
+    static func localizedNames(of bundle: Bundle, languages: [String]) -> [String] {
+        var tables: [String: [String: Any]] = [:]
+        if let url = bundle.url(forResource: "InfoPlist", withExtension: "loctable"),
+           let all = NSDictionary(contentsOf: url) as? [String: Any] {
+            for (language, value) in all { if let table = value as? [String: Any] { tables[language] = table } }
+        }
+        for language in bundle.localizations where tables[language] == nil {
+            if let url = bundle.url(forResource: "InfoPlist", withExtension: "strings", subdirectory: nil, localization: language),
+               let table = NSDictionary(contentsOf: url) as? [String: Any] { tables[language] = table }
+        }
+        guard !tables.isEmpty else { return [] }
+        var names: [String] = []
+        for language in languages {
+            // Match each preferred language on its own so zh-Hans and zh-Hant both contribute.
+            guard let match = Bundle.preferredLocalizations(from: Array(tables.keys), forPreferences: [language]).first,
+                  let table = tables[match] else { continue }
+            for key in ["CFBundleDisplayName", "CFBundleName"] {
+                if let name = table[key] as? String {
+                    let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
+                    if !trimmed.isEmpty, !names.contains(trimmed) { names.append(trimmed) }
+                }
+            }
+        }
+        return names
     }
     public static func scan(roots: [URL] = defaultRoots, cancellation: SearchCancellation? = nil) -> Report {
         var items: [SearchItem] = [], issues: [String] = [], seen = Set<String>()
