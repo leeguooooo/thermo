@@ -39,6 +39,7 @@ import ThermoL10n
         model.start()
         model.refreshApplications()
         if window?.isVisible != true {
+            SearchInputSource.shared.panelWillShow()
             let front = NSWorkspace.shared.frontmostApplication
             previousApplication = front?.processIdentifier == ProcessInfo.processInfo.processIdentifier ? nil : front
             if let screen = NSScreen.screens.first(where: { NSMouseInRect(NSEvent.mouseLocation, $0.frame, false) }) ?? NSScreen.main, let window {
@@ -54,6 +55,7 @@ import ThermoL10n
     func hide(restoreFocus: Bool = true) {
         preview?.close(); preview = nil
         window?.orderOut(nil)
+        SearchInputSource.shared.panelDidHide()
         if restoreFocus, let previousApplication, !previousApplication.isTerminated { previousApplication.activate(options: []) }
         previousApplication = nil
     }
@@ -313,6 +315,7 @@ private struct LocalSearchSettings: View {
     @ObservedObject var model: LocalSearchModel
     @ObservedObject private var shortcut = LocalSearchShortcut.shared
     @State private var hidden = false
+    @AppStorage(SearchInputSource.preferenceKey) private var asciiInput = true
     @State private var ignores = true
     @State private var patterns = ""
     @State private var confirmingSpotlight = false
@@ -349,6 +352,12 @@ private struct LocalSearchSettings: View {
                 next.excludedPatterns = patterns.components(separatedBy: .newlines).filter { !$0.isEmpty }; model.configure(next)
             } }
             Divider()
+            Toggle(isOn: $asciiInput) {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(tr("Switch to English input while searching"))
+                    Text(tr("Letters such as xtsz go straight to search instead of the input method. The previous input method comes back when search closes.")).font(Theme.caption).foregroundStyle(Theme.textSecondary)
+                }
+            }
             HStack { Text(tr("Global search shortcut")).font(Theme.rowTitle); Spacer(); SearchShortcutRecorder(model: shortcut).frame(width: 220, height: 28); Button(tr("Remove")) { shortcut.apply(nil) } }
             if let issue = shortcut.issue { Text(issue).font(Theme.caption).foregroundStyle(Theme.caution) }
             if shortcut.spotlightReleased || shortcut.binding?.sameGesture(LocalSearchShortcut.commandSpace) != true { HStack {

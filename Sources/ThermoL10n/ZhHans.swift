@@ -4058,6 +4058,8 @@ let zhHans: [String: String] = [
     "Hover or click to sample. C copies; Shift changes format; Option temporarily picks; Esc exits.": "悬停或点击取色；C 复制，Shift 切换格式，Option 临时取色，Esc 退出。",
     "Select a screenshot region": "选择截图区域",
     "C copies": "C 复制",
+    "Switch to English input while searching": "搜索时切换到英文输入",
+    "Letters such as xtsz go straight to search instead of the input method. The previous input method comes back when search closes.": "直接敲 xtsz 这样的字母就能搜，不会先进输入法；关闭搜索后恢复原来的输入法。",
     "Select capture display": "选择采集屏幕",
     "Select entire display": "选择整块显示器",
     "Next display": "下一块显示器",
