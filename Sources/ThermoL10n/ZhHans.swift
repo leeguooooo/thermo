@@ -1218,6 +1218,12 @@ let zhHans: [String: String] = [
     "Alert when hot": "过热提醒",
     "Threshold: %1$@ °C": "阈值：%1$@ °C",
     "Threshold": "阈值",
+    "%1$@ °C": "%1$@ °C",
+    "%1$@ °F": "%1$@ °F",
+    // Debug preview samples (--render-preview confirm sheets)
+    "Runs launchctl bootout, then moves the plist to the Trash.": "先执行 launchctl bootout，再把 plist 移到废纸篓。",
+    "Ending it frees about %1$@.": "结束后约释放 %1$@。",
+    "Thermo checks the process is still the same one before it stops it.": "结束前 Thermo 会确认它仍是同一个进程。",
     "Launch at login": "登录时启动",
     "Fan helper: %1$@": "风扇辅助服务：%1$@",
     "Uninstall": "卸载",
