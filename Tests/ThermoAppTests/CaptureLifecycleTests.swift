@@ -1,5 +1,6 @@
 import AppKit
 import CaptureCore
+import ThermoL10n
 import XCTest
 @testable import ThermoApp
 
@@ -28,6 +29,17 @@ import XCTest
         defer {workspace.shutdown();try? FileManager.default.removeItem(at:root)}
         do {_=try await workspace.captureAndWait();XCTFail("Permission denied")} catch {XCTAssertTrue(error is CaptureFailure)}
         XCTAssertEqual(checks,1);XCTAssertEqual(launches,0);XCTAssertFalse(workspace.captureBusy);XCTAssertEqual(workspace.pinSession.count,0)
+    }
+    /// The default path (Thermo's own selector on macOS 14+, no process factory) must also stop at
+    /// a missing Screen Recording permission: no overlay, no after-capture steps, nothing pinned.
+    func testPermissionDenialStopsTheBuiltInSelectorBeforeItOpens() async throws {
+        let root=try root();var checks=0
+        let workspace=CaptureWorkspace(pinSession:.init(store:.init(root:root)),screenCaptureAccess:{checks+=1;return false})
+        workspace.saving=CaptureSaveModel(read:{nil},write:{_ in})
+        defer {workspace.shutdown();try? FileManager.default.removeItem(at:root)}
+        do {_=try await workspace.captureAndWait();XCTFail("Permission denied")} catch {XCTAssertTrue(error is CaptureFailure)}
+        XCTAssertEqual(checks,1);XCTAssertFalse(workspace.captureBusy);XCTAssertEqual(workspace.pinSession.count,0)
+        XCTAssertFalse(NSApplication.shared.windows.contains { $0.title == tr("Select a screenshot region") && $0.isVisible })
     }
     func testCancelledSelectorKeepsItsSlotUntilActualProcessExit() async throws {
         let root=try root(),ready=root.appendingPathComponent("ready"),release=root.appendingPathComponent("release")
