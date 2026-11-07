@@ -55,13 +55,18 @@ final class StatusMenu: NSObject, NSMenuDelegate {
         menu.addItem(page(tr("Sensors"), "thermometer.medium", .sensors))
         menu.addItem(page(tr("Fans"), "fan", .fans))
         menu.addItem(page(tr("Connections"), "wifi", .connections))
+        menu.addItem(.separator())
+
+        // The same groups, in the same order, as the window's sidebar.
+        menu.addItem(page(tr("CPU usage"), "cpu", .compute(false)))
+        menu.addItem(page(tr("GPU usage"), "square.stack.3d.up", .compute(true)))
         menu.addItem(page(tr("Memory usage"), "memorychip", .memory))
+        menu.addItem(page(tr("Tab organizer"), "rectangle.stack", .browser("Google Chrome")))
         menu.addItem(.separator())
 
         menu.addItem(page(tr("Smart Scan"), "sparkles", .disk(.home)))
         menu.addItem(page(tr("Space Lens"), "square.grid.3x3.topleft.filled", .space(.browse)))
         menu.addItem(page(tr("Software"), "square.grid.2x2", .apps(.installed)))
-        menu.addItem(page(tr("Tab organizer"), "rectangle.stack", .browser("Google Chrome")))
         menu.addItem(.separator())
 
         menu.addItem(page(tr("Claude tools"), "person.2", .claude(.accounts)))
