@@ -3072,6 +3072,7 @@ let zhHans: [String: String] = [
     "Could not read residual data directory": "无法读取残留数据目录",
     "Spotlight could not verify whether the app is installed": "Spotlight 无法核实此应用是否已安装",
     "Residual data measurement was incomplete": "残留数据未测量完整",
+    "macOS protects this app's data; give Thermo Full Disk Access to measure it": "macOS 保护着这个应用的数据；给 Thermo「完全磁盘访问权限」后才能测量",
     "This scan was incomplete; scan again before removing this data": "本次扫描不完整，请重新扫描后再移除此数据",
     "Residual scan incomplete; showing known results": "残留扫描不完整，当前显示已知结果",
     "Residual scan incomplete; refresh before selecting missing items": "残留扫描不完整，请刷新后再选择未找到的项目",

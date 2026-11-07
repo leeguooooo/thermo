@@ -853,6 +853,14 @@ public enum AppUninstaller {
                              processes: ProcessTable.current(.init(cpu: false)), directories: appDirs(home: home))
     }
 
+    /// A sandbox container whose data folder the system refuses to list (EPERM), as opposed to one that failed.
+    static func isProtectedContainer(_ path: String) -> Bool {
+        guard path.contains("/Library/Containers/") || path.contains("/Library/Group Containers/") else { return false }
+        let data = path.contains("/Library/Containers/") ? path + "/Data" : path
+        if let dir = opendir(data) { closedir(dir); return false }
+        return errno == EPERM || errno == EACCES
+    }
+
     static func reviewedOrphanReport(home: String, known: Set<String>, now: Date, spotlight: (String) -> OrphanAppPresence,
                                      minimumBytes: Int64 = 0, cancellation: ScanCancellation? = nil,
                                      processes: ProcessTable, directories: [String], onlyIDs: Set<String>? = nil) -> OrphanScanReport {
@@ -903,7 +911,10 @@ public enum AppUninstaller {
             data.dataIdentities = identities
             data.ownership = ownership
             for item in items where item.effectiveSizeState != .complete {
-                issues.append(.init("Residual data measurement was incomplete", path: item.path))
+                // macOS keeps another app's container closed to Thermo; scanning again cannot change that.
+                issues.append(.init(Self.isProtectedContainer(item.path)
+                    ? "macOS protects this app's data; give Thermo Full Disk Access to measure it"
+                    : "Residual data measurement was incomplete", path: item.path))
             }
             if changed { issues.append(.init("Associated data changed after review; review it again", path: paths.first)) }
             guard data.bytes >= minimumBytes || data.sizeState != .complete else { continue }
