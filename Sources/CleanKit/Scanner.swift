@@ -243,7 +243,7 @@ public final class DiskScanner: @unchecked Sendable {
             }
         }
         guard size.bytes > 0, ScanCancellation.current?.isCancelled != true else { return nil }
-        let detail = roots.count == 1 ? ctx.tilde(roots[0]) : "\(ctx.tilde(roots[0])) and \(roots.count - 1) more"
+        let detail = roots.count == 1 ? ctx.tilde(roots[0]) : tr("%1$@ and %2$@ more", ctx.tilde(roots[0]), String(roots.count - 1))
         var note = rule.note.map { tr($0) }
         if rule.scope == .staleContents {
             note = [note, tr("only items untouched for %1$@ days", String(ctx.options.olderThanDays))].compactMap { $0 }.joined(separator: tr("; "))

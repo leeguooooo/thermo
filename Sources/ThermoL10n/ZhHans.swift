@@ -2050,6 +2050,7 @@ let zhHans: [String: String] = [
     "the simulator is running": "模拟器正在运行",
     "%1$@ data": "%1$@ 数据",
     "%1$@ and %2$@ more": "%1$@ 等 %2$@ 处",
+    "%1$@ in %2$@": "%2$@ 里的 %1$@",
     "chat history and media; Thermo does not delete it": "聊天记录和媒体文件；Thermo 不会删除",
     "in %1$@: %2$@": "在 %1$@ 里：%2$@",
     "Extra WeChat sandbox · %1$@": "多出来的微信沙盒 · %1$@",
