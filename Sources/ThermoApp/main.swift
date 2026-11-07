@@ -403,6 +403,21 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate, UNU
             ("tool-battery-care", AnyView(BatteryCarePanel(model: BatteryCareModel.shared))),
             ("tool-focus", AnyView(FocusPanel(model: FocusTimerModel.shared))),
             ("tool-menu-bar", AnyView(MenuBarManagerView(model: .shared).frame(width: 940, height: 740))),
+            // The shared confirmation, as three pages fill it.
+            ("confirm-uninstall", AnyView(ConfirmSheet(title: tr("Uninstall %1$@?", "Example"),
+                summary: tr("%1$@ and %2$@ of its files go to the Trash: %3$@ in all.", "Example", "3", "1.2 GB"), destructive: false,
+                heading: tr("What will be moved to the Trash"),
+                lines: ["/Applications/Example.app", "~/Library/Application Support/Example", "~/Library/Caches/com.example.app", "~/Library/Preferences/com.example.app.plist"],
+                footnote: tr("You can put them back from the Trash. Moves are listed in ~/Library/Logs/Thermo/clean.log."),
+                confirmTitle: tr("Move to Trash"), confirm: {}, cancel: {}))),
+            ("confirm-agent-fix", AnyView(ConfirmSheet(title: tr("%1$@ — %2$@", tr("Remove job"), "com.example.agent"),
+                summary: tr("Runs launchctl bootout, then moves the plist to the Trash."), destructive: true,
+                heading: tr("What will run"), lines: ["launchctl bootout gui/501/com.example.agent", "mv ~/Library/LaunchAgents/com.example.agent.plist ~/.Trash/"],
+                footnote: tr("Config files are copied to ~/Library/Application Support/Thermo/Backups before they change. Each step is logged to ~/Library/Logs/Thermo/fix.log."),
+                confirmTitle: tr("Remove job"), confirm: {}, cancel: {}))),
+            ("confirm-end-process", AnyView(ConfirmSheet(title: tr("End %1$@?", "node"), summary: tr("Ending it frees about %1$@.", "512 MB"), destructive: true,
+                heading: tr("What will run"), lines: ["kill -TERM 41234  node dist/bin/codegraph.js"],
+                footnote: tr("Thermo checks the process is still the same one before it stops it."), confirmTitle: tr("End"), confirm: {}, cancel: {}))),
         ]
         // ImageRenderer draws AppKit controls as placeholders; host each one in an offscreen window instead.
         var windows: [NSWindow] = []
