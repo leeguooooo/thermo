@@ -2108,6 +2108,7 @@ let zhHans: [String: String] = [
     "Fix %1$@": "修复 %1$@ 项",
     "%1$@ checked, all fine": "已检查 %1$@ 项，全部正常",
     "%1$@ problems · %2$@ fixable in one click": "%1$@ 个问题 · %2$@ 个可一键修复",
+    "%1$@ problem": "%1$@ 个问题",
     "%1$@ problems": "%1$@ 个问题",
     "Nothing to fix here.": "这里没有要修的。",
     "%1$@ more are fine": "其余 %1$@ 项正常",
