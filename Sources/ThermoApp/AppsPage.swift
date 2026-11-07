@@ -592,8 +592,16 @@ struct AppsPage: View {
     @ViewBuilder var leftoverList: some View {
         if let orphans = model.orphans {
             if !model.orphanScanComplete {
-                Label(tr("Residual scan incomplete; showing known results"), systemImage: "exclamationmark.triangle")
-                    .font(Theme.body).foregroundStyle(Theme.caution)
+                HStack(spacing: Theme.Space.s) {
+                    Label(tr("Residual scan incomplete; showing known results"), systemImage: "exclamationmark.triangle")
+                        .font(Theme.body).foregroundStyle(Theme.caution)
+                    Spacer(minLength: Theme.Space.s)
+                    // A protected container never reads without the permission; scanning again would not help.
+                    if model.orphanIssues.contains(where: { $0.message.contains("Full Disk Access") }) {
+                        Button(tr("Open Full Disk Access")) { AppModels.shared.disk.openFullDiskAccess() }
+                            .buttonStyle(PillButtonStyle()).controlSize(.small)
+                    }
+                }
                 ForEach(model.orphanIssues, id: \.self) { issue in
                     Text(tr(issue.message) + (issue.path.map { " · " + FSPath.tilde($0) } ?? ""))
                         .font(Theme.caption).foregroundStyle(Theme.textTertiary).textSelection(.enabled)
