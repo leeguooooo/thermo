@@ -272,7 +272,7 @@ struct PopoverView: View {
         let d = panel.diskStats
         let used = d.map { 1 - Double($0.freeBytes) / Double(max(1, $0.totalBytes)) } ?? 0
         return PanelCard(title: tr("Free space"), symbol: "internaldrive",
-                         badge: d.map { ByteFormat.string($0.totalBytes) }) {
+                         badge: d.map { tr("%1$@ total", ByteFormat.string($0.totalBytes)) }) {
             BigValue(value: d.map { ByteFormat.string($0.freeBytes) } ?? "—")
             UsageBar(fraction: used, color: used > 0.9 ? Theme.caution : Theme.accent)
             Text(d.map { tr("%1$@ used · %2$@", ByteFormat.string($0.totalBytes - $0.freeBytes), String(format: "%.0f%%", used * 100)) } ?? "")
@@ -295,7 +295,7 @@ struct PopoverView: View {
         let top = fans.filter { $0.rpm != nil }.max { $0.rpm! < $1.rpm! }
         return PanelCard(title: tr("Fans"), symbol: "fan",
                          badge: top?.load.map { String(format: "%.0f%%", $0 * 100) }) {
-            BigValue(value: top.map { (fans.contains { $0.rpm == nil } ? "≥ " : "") + FanControlPresentation.rpm($0.rpm) } ?? "—", unit: top == nil ? nil : "RPM")
+            BigValue(value: top.map { (fans.contains { $0.rpm == nil } ? "≥ " : "") + FanControlPresentation.rpm($0.rpm) } ?? "—", unit: top == nil ? nil : tr("RPM"))
             if fans.isEmpty {
                 Text(monitor.sampledFans == nil ? monitor.fanEmptyMessage : tr("No fans")).font(Theme.caption).foregroundStyle(Theme.textTertiary)
             } else if monitor.policiesAvailable {
@@ -420,9 +420,12 @@ struct PopoverView: View {
             }
             let left = (MenuClickAction(rawValue: menuLeftClick) ?? .panel).label
             let right = (MenuClickAction(rawValue: menuRightClick) ?? .menu).label
-            Text(left == right ? tr("Left or right click: %1$@", left) : tr("Left click: %1$@ · Right click: %2$@", left, right))
-                .font(Theme.caption).foregroundStyle(Theme.textTertiary)
-                .fixedSize(horizontal: false, vertical: true)
+            // When both clicks open this panel the hint says nothing the person does not already see.
+            if left != right {
+                Text(tr("Left click: %1$@ · Right click: %2$@", left, right))
+                    .font(Theme.caption).foregroundStyle(Theme.textTertiary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
         }
         .padding(.top, 2)
     }
