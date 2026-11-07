@@ -191,10 +191,12 @@ struct PanelCard<Content: View>: View {
         VStack(alignment: .leading, spacing: 6) {
             HStack(spacing: 5) {
                 Image(systemName: symbol).font(.system(size: 10, weight: .semibold)).foregroundStyle(tint).accessibilityHidden(true)
-                Text(title).font(Theme.label).foregroundStyle(Theme.textTertiary)
+                // One line each: in English "Free space · 995 GB total" is a hair too wide for a half-width card.
+                Text(title).font(Theme.label).foregroundStyle(Theme.textTertiary).lineLimit(1).minimumScaleFactor(0.85)
                 Spacer(minLength: 4)
                 if let badge {
                     Text(badge).font(Theme.label.monospacedDigit()).foregroundStyle(badgeTint)
+                        .lineLimit(1).minimumScaleFactor(0.85)
                         .contentTransition(.numericText())
                 }
             }
