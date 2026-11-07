@@ -94,6 +94,8 @@ import ThermoL10n
     @Published var frames = 0
     @Published var horizontal = false
     @Published var detectFixedEdges=true
+    /// Thermo scrolls the selected content itself (needs Accessibility to post scroll events).
+    @Published var autoScroll=false
     @Published var leadingInset=0
     @Published var trailingInset=0
     @Published private(set) var fixedLeading=0
@@ -120,10 +122,22 @@ import ThermoL10n
                 config.width = Int(self.region.rect.width*self.region.scale); config.height = Int(self.region.rect.height*self.region.scale)
                 config.showsCursor = false
                 var session=initial
+                var pacing=CaptureAutoScroll()
+                let automatic=self.autoScroll
+                if automatic {
+                    guard AXIsProcessTrusted() else {
+                        _ = AXIsProcessTrustedWithOptions([kAXTrustedCheckOptionPrompt.takeUnretainedValue() as String: true] as CFDictionary)
+                        throw ScrollCaptureFailure.accessibility
+                    }
+                }
+                // Scroll events go to the window under the pointer: keep it in the middle of the region.
+                let origin=CGDisplayBounds(self.region.displayID).origin
+                let center=CGPoint(x:origin.x+self.region.rect.midX,y:origin.y+self.region.rect.midY)
                 while !Task.isCancelled {
                     try self.region.validateCurrentDisplay()
                     let frame = try await SCScreenshotManager.captureImage(contentFilter: filter, configuration: config)
                     guard !Task.isCancelled else { break }
+                    var duplicate=false,failed=false
                     do {
                         let snapshot=session
                         let (next,result)=try await Task.detached(priority:.userInitiated) {var next=snapshot;let result=try next.append(frame);return (next,result)}.value
@@ -131,8 +145,23 @@ import ThermoL10n
                         session=next;self.stitcher=next;self.image=result.image
                         self.fixedLeading=result.fixedLeading;self.fixedTrailing=result.fixedTrailing
                         if !result.duplicate {self.frames+=1}
+                        duplicate=result.duplicate
                         self.issue=nil
-                    } catch {self.issue=tr(error.localizedDescription)}
+                    } catch {self.issue=tr(error.localizedDescription);failed=true}
+                    if automatic {
+                        switch pacing.record(duplicate:duplicate,failed:failed) {
+                        case .finished: break
+                        case .gaveUp: self.issue=tr("Stopped scrolling: the new content could not be matched. Scroll back a little and try again, or scroll by hand.")
+                        case .scroll:
+                            let length=self.horizontal ? self.region.rect.width : self.region.rect.height
+                            CGWarpMouseCursorPosition(center)
+                            Self.postScroll(points:CaptureAutoScroll.step(viewport:length),horizontal:self.horizontal)
+                            // Give the page time to repaint (and smooth scrolling to settle) before the next frame.
+                            try await Task.sleep(nanoseconds: 450_000_000)
+                            continue
+                        }
+                        break
+                    }
                     try await Task.sleep(nanoseconds: 700_000_000)
                 }
             } catch is CancellationError { }
@@ -141,6 +170,12 @@ import ThermoL10n
         }
     }
     func stop() { captureTask?.cancel(); running = false }
+    /// Negative deltas move the content towards its end (down, or right for horizontal pages).
+    private static func postScroll(points:CGFloat,horizontal:Bool) {
+        let delta=Int32(-points)
+        let event=CGEvent(scrollWheelEvent2Source:nil,units:.pixel,wheelCount:2,wheel1:horizontal ? 0 : delta,wheel2:horizontal ? delta : 0,wheel3:0)
+        event?.post(tap:.cghidEventTap)
+    }
 }
 
 @available(macOS 14, *)
@@ -164,6 +199,8 @@ private struct ScrollCaptureView: View {
         VStack(spacing: 12) {
             Text(tr("Scroll the selected content slowly. Thermo windows are excluded.")).font(.callout)
             Toggle(tr("Horizontal scrolling"), isOn: $model.horizontal).disabled(model.running || model.image != nil)
+            Toggle(tr("Scroll automatically"), isOn: $model.autoScroll).disabled(model.running || model.image != nil)
+                .help(tr("Thermo scrolls the selected area and stops at the end of the page. Requires Accessibility permission."))
             Toggle(tr("Detect fixed edges"),isOn:$model.detectFixedEdges).disabled(model.running || model.image != nil)
                 .help(tr("Use manual edge pixels for changing headers or footers."))
             if !model.detectFixedEdges {
@@ -186,5 +223,12 @@ private struct ScrollCaptureView: View {
                 Button(tr("Edit / pin result")) { if let image = model.image { CaptureWorkspace.shared.open(image) } }.disabled(model.running || model.image == nil)
             }
         }.padding(16).frame(minWidth: 260,minHeight: 320)
+    }
+}
+
+enum ScrollCaptureFailure: LocalizedError {
+    case accessibility
+    var errorDescription: String? {
+        "Automatic scrolling needs Accessibility permission. Allow Thermo in System Settings › Privacy & Security › Accessibility, then start again."
     }
 }
