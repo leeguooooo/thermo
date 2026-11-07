@@ -518,7 +518,7 @@ struct MainSidebar: View {
                     .foregroundStyle(LinearGradient(colors: [Theme.caution, Theme.danger], startPoint: .top, endPoint: .bottom))
                 Text("Thermo").font(Theme.rowTitle.weight(.semibold)).foregroundStyle(Theme.textPrimary)
             }
-            .padding(.horizontal, 18).padding(.top, 46).padding(.bottom, 10)
+            .padding(.horizontal, 18).padding(.top, 42).padding(.bottom, 8)
             ScrollViewReader { scroller in
             ScrollView(showsIndicators: false) {
                 VStack(alignment: .leading, spacing: 1) {
@@ -575,7 +575,7 @@ struct MainSidebar: View {
                         }
                     }
                 }
-                .padding(.bottom, 16)
+                .padding(.bottom, 8)
             }
             // Rows scrolling under the footer fade out instead of being cut in half.
             .mask(VStack(spacing: 0) {
@@ -602,7 +602,7 @@ struct MainSidebar: View {
         // Upper case only reads well in Latin script ("AI AGENT 诊断" does not).
         Text(L10n.current == .english ? title.uppercased() : title).font(Theme.label.weight(.semibold))
             .tracking(L10n.current == .english ? 0.6 : 0)
-            .foregroundStyle(Theme.textTertiary).padding(.horizontal, 18).padding(.top, 16).padding(.bottom, 4)
+            .foregroundStyle(Theme.textTertiary).padding(.horizontal, 18).padding(.top, 12).padding(.bottom, 3)
             .accessibilityAddTraits(.isHeader)
     }
 
@@ -634,7 +634,7 @@ struct MainSidebar: View {
                         .contentTransition(.numericText())
                 }
             }
-            .padding(.horizontal, 10).frame(height: indent ? 26 : 30)
+            .padding(.horizontal, 10).frame(height: indent ? 25 : 28)
             .padding(.leading, indent ? 14 : 0)
             .background {
                 if on {

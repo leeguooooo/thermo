@@ -206,8 +206,9 @@ struct ComputePage: View {
     }
 
     var chart: some View {
-        Chart(model.history) { p in
-            if gpu {
+        let singleGPU = (model.current?.devices.count ?? 0) <= 1
+        return Chart(model.history) { p in
+            if gpu && !singleGPU {
                 ForEach(p.devices) { d in
                     if let v = d.percent {
                         LineMark(x: .value("Time", p.time), y: .value("Usage", v))
@@ -215,7 +216,8 @@ struct ComputePage: View {
                             .interpolationMethod(.monotone)
                     }
                 }
-            } else if let v = p.cpu {
+            } else if let v = gpu ? p.devices.first?.percent : p.cpu {
+                // One CPU and one GPU draw the same way, so the two pages read alike.
                 AreaMark(x: .value("Time", p.time), y: .value("Usage", v))
                     .foregroundStyle(LinearGradient(colors: [accent.opacity(0.30), accent.opacity(0.02)], startPoint: .top, endPoint: .bottom))
                     .interpolationMethod(.monotone)
@@ -223,6 +225,9 @@ struct ComputePage: View {
             }
         }
         .chartYScale(domain: 0...100)
+        // The first minute keeps a one-minute axis, so a freshly opened page has no per-second
+        // ticks and the newest label is not clipped at the right edge.
+        .chartXScale(domain: chartDomain)
         // One GPU needs no legend; the name is already beside the gauge.
         .chartLegend((model.current?.devices.count ?? 0) > 1 ? .visible : .hidden)
         .chartYAxis { AxisMarks(values: [0, 50, 100]) { v in
@@ -233,6 +238,12 @@ struct ComputePage: View {
             AxisValueLabel(format: .dateTime.hour().minute().second()).font(Theme.caption).foregroundStyle(Theme.textTertiary)
         } }
         .frame(height: 120)
+    }
+
+    var chartDomain: ClosedRange<Date> {
+        let last = model.history.last?.time ?? Date()
+        let first = model.history.first?.time ?? last
+        return min(first, last.addingTimeInterval(-60))...last
     }
 
     // MARK: Programs
@@ -318,7 +329,8 @@ struct ComputePage: View {
                     }
                 }
                 .frame(width: 64, height: 4).accessibilityHidden(true)
-                Text(percent(v)).font(Theme.figure(.row)).foregroundStyle(v == nil ? Theme.textTertiary : Theme.textPrimary)
+                // Idle programs (0.0%) step back, so the ones doing work stand out in a long list.
+                Text(percent(v)).font(Theme.figure(.row)).foregroundStyle(v == nil || v == 0 ? Theme.textTertiary : Theme.textPrimary)
                     // Which processes the figure covers is a detail; on every row it was noise.
                     .help(gpu ? tr("%1$@ reporting processes", String(program.gpuReportingProcesses)) : "")
                     .frame(width: 64, alignment: .trailing)
