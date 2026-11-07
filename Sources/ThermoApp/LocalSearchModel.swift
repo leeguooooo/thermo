@@ -68,7 +68,13 @@ import UniformTypeIdentifiers
         appObservers.removeAll()
     }
     func refresh() { error = nil; indexer?.refresh() }
-    func refreshApplications() { indexer?.refreshApplications() }
+    private var applicationsRefreshed: Date?
+    /// Called each time the panel opens. Installs and removals are already caught by the app-folder
+    /// watcher, so this safety-net rescan runs at most every five minutes.
+    func refreshApplications(now: Date = Date()) {
+        if let last = applicationsRefreshed, now.timeIntervalSince(last) < 300 { return }
+        applicationsRefreshed = now; indexer?.refreshApplications()
+    }
     var canOpenInPreview: Bool {
         guard let selected else { return false }
         return canOpenInPreview(selected)

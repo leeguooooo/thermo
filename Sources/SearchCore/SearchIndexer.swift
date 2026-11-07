@@ -83,7 +83,9 @@ public final class SearchIndexer: @unchecked Sendable {
                     guard let self else { return }
                     self.stateLock.lock(); let stopped = self.stopped; self.stateLock.unlock()
                     guard !stopped else { return }
-                    self.onChange(true, nil)
+                    // Apps are already in the index; refreshing their metadata is not "indexing" the
+                    // user waits for, so the panel's indicator stays off. The queue is serial, so no
+                    // folder reconcile is running while this reports idle.
                     do {
                         let report = ApplicationCatalog.scan()
                         try self.store.replaceApplications(report.items, complete: report.complete)
