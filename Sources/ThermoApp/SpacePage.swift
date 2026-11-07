@@ -527,7 +527,7 @@ struct SpacePage: View {
             if model.scanning || model.working {
                 ProgressView().controlSize(.small)
                 if model.scanning {
-                    Button(tr("Stop")) { model.stop() }.buttonStyle(PillButtonStyle()).disabled(model.stopping)
+                    Button(tr("Stop measuring")) { model.stop() }.buttonStyle(PillButtonStyle()).disabled(model.stopping)
                 }
             } else {
                 Button(tr("Measure again")) { model.scan() }.buttonStyle(PillButtonStyle()).disabled(model.working)

@@ -2076,6 +2076,7 @@ let zhHans: [String: String] = [
     "Measuring where your disk space is…": "正在测量磁盘空间的去向…",
     "Where your disk space is": "磁盘空间都去哪了",
     "Measure again": "重新测量",
+    "Stop measuring": "停止测量",
     "measuring… %1$@ places so far": "测量中… 已完成 %1$@ 处",
     "measured %1$@": "测于 %1$@",
     "%1$@ used of %2$@ · %3$@ free": "已用 %1$@ / 共 %2$@ · 可用 %3$@",
