@@ -109,6 +109,20 @@ final class SearchCoreTests: XCTestCase {
         let paths = ApplicationCatalog.scan(roots: [URL(fileURLWithPath: "/System/Library/CoreServices")]).items.map(\.path)
         XCTAssertTrue(paths.contains(agent))
     }
+    func testWordInitialsIncludingPinyinRankAboveLooseLetterMatches() {
+        let settings = SearchItem(path: "/System/Applications/System Settings.app", name: "系统设置", kind: .application)
+        let info = SearchItem(path: "/System/Applications/Utilities/System Information.app", name: "系统信息", kind: .application)
+        let rex = SearchItem(path: "/Applications/Rex Beta.app", name: "Rex Beta", kind: .application)
+        let chrome = SearchItem(path: "/Applications/Google Chrome.app", name: "Google Chrome", kind: .application)
+        XCTAssertEqual(SearchText.initials("系统设置"), "xtsz")
+        XCTAssertEqual(SearchText.initials("Google Chrome"), "gc")
+        XCTAssertEqual(SearchRanking.sorted([rex, settings, info], query: "xt").last?.name, "Rex Beta")
+        XCTAssertEqual(SearchRanking.sorted([rex, info, settings], query: "xtsz").first?.name, "系统设置")
+        XCTAssertEqual(SearchRanking.sorted([rex, chrome], query: "gc").first?.name, "Google Chrome")
+        // A typed name still beats initials.
+        let gc = SearchItem(path: "/Applications/GC.app", name: "GC", kind: .application)
+        XCTAssertEqual(SearchRanking.sorted([chrome, gc], query: "gc").first?.name, "GC")
+    }
     func testRecentUseLiftsALooserMatchButNeverAboveAnExactName() {
         let now = Date().timeIntervalSince1970
         let settings = SearchItem(path: "/System/Applications/System Settings.app", name: "系统设置", kind: .application, visits: 10, lastOpened: now)

@@ -96,8 +96,34 @@ public enum SearchText {
     }
     public static func latin(_ text: String) -> String {
         if text.unicodeScalars.allSatisfy({ $0.value < 128 }) { return normalized(text) }
-        return normalized(text.applyingTransform(.toLatin, reverse: false) ?? text)
+        cacheLock.lock()
+        if let cached = latinCache[text] { cacheLock.unlock(); return cached }
+        cacheLock.unlock()
+        let value = normalized(text.applyingTransform(.toLatin, reverse: false) ?? text)
+        cacheLock.lock()
+        if latinCache.count > 50_000 { latinCache.removeAll(keepingCapacity: true) }
+        latinCache[text] = value
+        cacheLock.unlock()
+        return value
     }
+    private static let cacheLock = NSLock()
+    nonisolated(unsafe) private static var latinCache: [String: String] = [:]
+    /// First letter of each word; CJK text is transliterated first so each character is a word.
+    /// Cached: ranking asks for every candidate's names on each keystroke, and transliterating CJK
+    /// text costs far more than the comparison.
+    public static func initials(_ text: String) -> String {
+        cacheLock.lock()
+        if let cached = initialsCache[text] { cacheLock.unlock(); return cached }
+        cacheLock.unlock()
+        let words = latin(text).split(whereSeparator: { !$0.isLetter && !$0.isNumber })
+        let value = String(words.compactMap(\.first))
+        cacheLock.lock()
+        if initialsCache.count > 50_000 { initialsCache.removeAll(keepingCapacity: true) }
+        initialsCache[text] = value
+        cacheLock.unlock()
+        return value
+    }
+    nonisolated(unsafe) private static var initialsCache: [String: String] = [:]
     /// Inverted character/three-character keys admit subsequences and typo candidates without walking the filesystem.
     static func grams(_ text: String) -> String {
         let chars = Array(normalized(text).unicodeScalars.filter { CharacterSet.alphanumerics.contains($0) })
@@ -145,6 +171,16 @@ public enum SearchRanking {
                 candidate = terms.count > 1 && terms.allSatisfy { n.contains($0) } ? Match(tier: 60, quality: -n.count) : nil
             }
             if let candidate, best == nil || (candidate.tier, candidate.quality) > (best!.tier, best!.quality) { best = candidate }
+        }
+        // Word initials, with Chinese names read as pinyin: 系统设置 → xtsz, Google Chrome → gc.
+        // Typing initials is deliberate, so it ranks above loose letter-by-letter matches.
+        if q.count >= 2, !q.contains(" ") {
+            for name in [item.name] + item.alternateNames {
+                let initials = SearchText.initials(name)
+                guard initials.count >= 2 else { continue }
+                let candidate: Match? = initials == q ? Match(tier: 85, quality: 0) : initials.hasPrefix(q) ? Match(tier: 72, quality: -initials.count) : nil
+                if let candidate, best == nil || (candidate.tier, candidate.quality) > (best!.tier, best!.quality) { best = candidate }
+            }
         }
         if let alias = item.alias, SearchText.normalized(alias).hasPrefix(q), best == nil || best!.tier < 75 { best = Match(tier: 75, quality: 0) }
         if best == nil, q.count >= 3, SearchText.normalized((item.path as NSString).deletingLastPathComponent).contains(q) { return Match(tier: 20, quality: 0) }
