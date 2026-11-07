@@ -19,15 +19,17 @@ func captureFailureMessage(_ error:Error) -> String {
     @Published var pinCount = 0
     let pinSession:CapturePinSession
     private let screenCaptureAccess:()->Bool
-    private let makeCaptureProcess:(URL)->Process
+    /// nil uses Thermo's own selector on macOS 14+, and the system `screencapture -i` before that.
+    private let makeCaptureProcess:((URL)->Process)?
+    static func systemCaptureProcess(_ output:URL) -> Process {
+        let task=Process();task.executableURL=URL(fileURLWithPath:"/usr/sbin/screencapture")
+        task.arguments=["-i","-x","-t","png",output.path]
+        task.standardOutput=FileHandle.nullDevice;task.standardError=FileHandle.nullDevice
+        return task
+    }
     init(pinSession:CapturePinSession? = nil,
          screenCaptureAccess:@escaping()->Bool={CGPreflightScreenCaptureAccess() || CGRequestScreenCaptureAccess()},
-         makeCaptureProcess:@escaping(URL)->Process={output in
-             let task=Process();task.executableURL=URL(fileURLWithPath:"/usr/sbin/screencapture")
-             task.arguments=["-i","-x","-t","png",output.path]
-             task.standardOutput=FileHandle.nullDevice;task.standardError=FileHandle.nullDevice
-             return task
-         }) {
+         makeCaptureProcess:((URL)->Process)? = nil) {
         self.screenCaptureAccess=screenCaptureAccess;self.makeCaptureProcess=makeCaptureProcess
         self.pinSession=pinSession ?? CapturePinSession();self.pinSession.onCountChange={ [weak self] in self?.pinCount=$0 }
         self.pinSession.configureEditor={ [weak self] model in
@@ -46,7 +48,8 @@ func captureFailureMessage(_ error:Error) -> String {
     private var process: Process?
     private var captureDirectory: URL?
     private var captureID:UUID?
-    var captureBusy:Bool {capturing || process != nil || afterTask != nil || saving.running}
+    private var screenshotSelector:AnyObject?
+    var captureBusy:Bool {capturing || process != nil || screenshotSelector != nil || afterTask != nil || saving.running}
     private var captureCompletion:((Result<Bool,Error>)->Void)?
     @Published var scriptRunning=false
     var scriptWorker:URL?
@@ -80,6 +83,7 @@ func captureFailureMessage(_ error:Error) -> String {
         pinSession.batchExport.cancel()
         shuttingDown=true;if let id=captureID{cancelCapture(id:id)};afterTask?.cancel();afterTask=nil
         if process?.isRunning == true {process?.terminate()}
+        cancelScreenshotSelector()
         if let captureDirectory { try? FileManager.default.removeItem(at:captureDirectory) }; captureDirectory = nil
         regionSelector?.cancel(); regionSelector = nil
         scrollWindow?.close()
@@ -92,14 +96,15 @@ func captureFailureMessage(_ error:Error) -> String {
         catch { if let completion{completion(.failure(error))} else {saving.issue=captureFailureMessage(error);showSavingSettings()};return }
         guard screenCaptureAccess() else {if let completion{completion(.failure(CaptureFailure.captureFailed))} else {report(CaptureFailure.captureFailed)};return}
         issue = nil; capturing = true;captureID=id;captureCompletion=completion
-        // The native selector supports region, Space for window, and Escape to cancel.
+        if makeCaptureProcess == nil, #available(macOS 14, *) { selectScreenshot(id:id,options:options);return }
+        // The system selector supports region, Space for window, and Escape to cancel.
         // A unique private directory prevents cancelled captures from reusing old pixels.
         let directory = FileManager.default.temporaryDirectory.appendingPathComponent("thermo-capture-" + UUID().uuidString, isDirectory: true)
         do { try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: false, attributes: [.posixPermissions: 0o700]) }
         catch { failCapture(error);return }
         let output = directory.appendingPathComponent("capture.png")
         captureDirectory = directory
-        let task=makeCaptureProcess(output)
+        let task=(makeCaptureProcess ?? Self.systemCaptureProcess)(output)
         let pipelineOptions=options
         task.terminationHandler = { [weak self] task in
             Task { @MainActor in
@@ -115,22 +120,43 @@ func captureFailureMessage(_ error:Error) -> String {
                 // Escape produces no file; leave clipboard and existing pins alone.
                 guard FileManager.default.fileExists(atPath: output.path) else { self.finishCapture(.success(false));return }
                 guard task.terminationStatus == 0 else { self.failCapture(CaptureFailure.captureFailed);return }
-                do {
-                    let image=try CaptureDocument.load(output)
-                    self.afterTask=Task { @MainActor [weak self] in
-                        guard let self else{return};defer{if self.captureID == nil || self.captureID == id{self.afterTask=nil}}
-                        let success=await self.processCaptured(image,options:pipelineOptions)
-                        guard self.captureID == id else{return}
-                        let scripted=self.captureCompletion != nil
-                        if Task.isCancelled {self.finishCapture(.failure(CaptureScriptFailure.cancelled))}
-                        else if success {self.finishCapture(.success(true))}
-                        else {self.finishCapture(.failure(CaptureScriptFailure.execution(self.saving.issue ?? "Capture failed.")));if !scripted{self.showSavingSettings()}}
-                    }
-                } catch {self.failCapture(error)}
+                do { self.runCaptured(try CaptureDocument.load(output),options:pipelineOptions,id:id) } catch {self.failCapture(error)}
             }
         }
         do { process = task; try task.run() }
         catch {process=nil;captureDirectory=nil;try? FileManager.default.removeItem(at:directory);failCapture(error)}
+    }
+    @available(macOS 14, *)
+    private func selectScreenshot(id:UUID,options:CaptureSaveSettings) {
+        let selector=CaptureScreenshotSelector();screenshotSelector=selector
+        selector.start { [weak self] result in
+            guard let self else{return}
+            if self.screenshotSelector === selector {self.screenshotSelector=nil}
+            guard self.captureID == id else {return}
+            guard !self.shuttingDown else {self.finishCapture(.failure(CaptureScriptFailure.cancelled));return}
+            switch result {
+            case .failure(let error): self.failCapture(error)
+            case .success(.cancelled): self.finishCapture(.success(false))
+            case .success(.captured(let image,let after)):
+                var stepOptions=options;if let after {stepOptions.after=after}
+                self.runCaptured(image,options:stepOptions,id:id)
+            }
+        }
+    }
+    /// Runs the configured after-capture steps for a freshly selected image.
+    private func runCaptured(_ image:CGImage,options:CaptureSaveSettings,id:UUID) {
+        afterTask=Task { @MainActor [weak self] in
+            guard let self else{return};defer{if self.captureID == nil || self.captureID == id{self.afterTask=nil}}
+            let success=await self.processCaptured(image,options:options)
+            guard self.captureID == id else{return}
+            let scripted=self.captureCompletion != nil
+            if Task.isCancelled {self.finishCapture(.failure(CaptureScriptFailure.cancelled))}
+            else if success {self.finishCapture(.success(true))}
+            else {self.finishCapture(.failure(CaptureScriptFailure.execution(self.saving.issue ?? "Capture failed.")));if !scripted{self.showSavingSettings()}}
+        }
+    }
+    private func cancelScreenshotSelector() {
+        if #available(macOS 14, *), let selector=screenshotSelector as? CaptureScreenshotSelector {screenshotSelector=nil;selector.cancel()}
     }
     private func finishCapture(_ result:Result<Bool,Error>) {
         let completion=captureCompletion;captureCompletion=nil;captureID=nil;capturing=false;completion?(result)
@@ -151,6 +177,7 @@ func captureFailureMessage(_ error:Error) -> String {
         if process?.isRunning == true{process?.terminate()}
         afterTask?.cancel()
         finishCapture(.failure(CaptureScriptFailure.cancelled))
+        cancelScreenshotSelector()
     }
     @discardableResult func processCaptured(_ image:CGImage,options:CaptureSaveSettings,pasteboard:NSPasteboard = .general) async -> Bool {
         await saving.run(image,settings:options,pin:{ [weak self] in guard let self else {throw CaptureFailure.captureFailed};try self.pinSession.open($0) },copyImage:{ data in
