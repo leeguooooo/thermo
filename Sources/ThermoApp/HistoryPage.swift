@@ -160,11 +160,16 @@ struct HistoryPage: View {
                 Spacer(minLength: Theme.Space.s)
                 if model.busy || model.reading { ProgressView().controlSize(.small) }
                 if Set(model.records.map(\.feature)).count > 1 {
-                    Picker(tr("Show"), selection: $feature) {
-                        Text(tr("All kinds")).tag("")
-                        ForEach(featureCounts, id: \.0) { f, n in Text(Self.featureName(f) + " (\(n))").tag(f) }
+                    // A pill like Refresh beside it; a pop-up button sized to its longest entry looked out of place.
+                    Menu {
+                        Button(tr("All kinds")) { feature = "" }
+                        Divider()
+                        ForEach(featureCounts, id: \.0) { f, n in Button(Self.featureName(f) + " (\(n))") { feature = f } }
+                    } label: {
+                        Label(feature.isEmpty ? tr("All kinds") : Self.featureName(feature), systemImage: "line.3.horizontal.decrease")
                     }
-                    .pickerStyle(.menu).menuStyle(.borderlessButton).labelsHidden().fixedSize().help(tr("Show one kind of change"))
+                    .menuStyle(.button).buttonStyle(PillButtonStyle()).controlSize(.small).fixedSize()
+                    .help(tr("Show one kind of change"))
                 }
                 Button { model.load() } label: { Label(tr("Refresh"), systemImage: "arrow.clockwise") }
                     .buttonStyle(PillButtonStyle()).controlSize(.small)
