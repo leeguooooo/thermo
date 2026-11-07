@@ -154,7 +154,7 @@ struct PluginsPage: View {
     @State private var confirmUse = false
 
     var body: some View {
-        WindowPage(title: tr("Plugins"), subtitle: tr("Plugins from the leeguooooo marketplace for Claude Code"), trailing: {
+        WindowPage(title: tr("Plugin marketplace"), subtitle: tr("Plugins from the leeguooooo marketplace for Claude Code"), trailing: {
             HStack(spacing: 8) {
                 if model.checkingUpdates {
                     ProgressView().controlSize(.small).help(tr("Checking for updates…"))
