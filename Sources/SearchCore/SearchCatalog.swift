@@ -55,35 +55,40 @@ public enum ApplicationCatalog {
         }
         return names
     }
+    /// Grouping folders deeper than this are not searched for apps (Unity Hub's editors sit at depth 5).
+    static let maximumDepth = 6
     public static func scan(roots: [URL] = defaultRoots, cancellation: SearchCancellation? = nil) -> Report {
         var items: [SearchItem] = [], issues: [String] = [], seen = Set<String>()
         let fm = FileManager.default
-        func list(_ url: URL) -> [URL] {
-            do { return try fm.contentsOfDirectory(at: url, includingPropertiesForKeys: [.isDirectoryKey, .isSymbolicLinkKey], options: [.skipsHiddenFiles]) }
-            catch {
-                if fm.fileExists(atPath: url.path) { issues.append("Could not read applications in " + url.path) }
-                return []
-            }
-        }
-        // Walk ordinary grouping folders at any depth, but never application/package
-        // internals or directory symlinks (which may point outside the catalog or loop).
-        var visited = Set<String>()
-        func visit(_ url: URL) {
-            guard cancellation?.isCancelled != true else { return }
-            let path = SearchPaths.entry(url.path)
-            guard visited.insert(path).inserted else { return }
-            if url.pathExtension.lowercased() == "app" {
-                guard seen.insert(path).inserted else { return }
-                guard let item = item(at: url) else { issues.append("Could not read application metadata: " + url.path); return }
-                items.append(item)
-                return
-            }
-            guard let values = try? url.resourceValues(forKeys: [.isDirectoryKey, .isSymbolicLinkKey, .isPackageKey]),
-                  values.isDirectory == true, values.isSymbolicLink != true, values.isPackage != true else { return }
-            for child in list(url) { visit(child) }
-        }
+        let keys: [URLResourceKey] = [.isDirectoryKey, .isSymbolicLinkKey, .isPackageKey]
+        // The enumerator reads entries in bulk, never descends into packages (.app internals) or
+        // through symlinks, so a big grouping folder such as /Applications/Unity costs one pass of
+        // directory listings instead of a stat and a realpath per file.
         for root in roots {
-            for child in list(root) { visit(child) }
+            guard cancellation?.isCancelled != true else { break }
+            var isDirectory: ObjCBool = false
+            guard fm.fileExists(atPath: root.path, isDirectory: &isDirectory), isDirectory.boolValue else { continue }
+            var unreadable = false
+            guard let walk = fm.enumerator(at: root, includingPropertiesForKeys: keys, options: [.skipsHiddenFiles, .skipsPackageDescendants],
+                                           errorHandler: { url, _ in if url == root { unreadable = true }; return true }) else {
+                issues.append("Could not read applications in " + root.path); continue
+            }
+            while let url = walk.nextObject() as? URL {
+                if cancellation?.isCancelled == true { break }
+                // Only call skipDescendants() for a directory the enumerator would enter: on a
+                // package or file it carries over and skips the next folder instead.
+                if url.pathExtension.lowercased() == "app" {
+                    let path = SearchPaths.entry(url.path)
+                    guard seen.insert(path).inserted else { continue }
+                    guard let item = item(at: url) else { issues.append("Could not read application metadata: " + url.path); continue }
+                    items.append(item)
+                    continue
+                }
+                guard walk.level >= maximumDepth, let values = try? url.resourceValues(forKeys: Set(keys)),
+                      values.isDirectory == true, values.isSymbolicLink != true, values.isPackage != true else { continue }
+                walk.skipDescendants()
+            }
+            if unreadable { issues.append("Could not read applications in " + root.path) }
         }
         if cancellation?.isCancelled == true { issues.append("Application scan cancelled.") }
         return Report(items: items, issues: issues)

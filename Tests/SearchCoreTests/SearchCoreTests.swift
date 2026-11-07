@@ -80,6 +80,35 @@ final class SearchCoreTests: XCTestCase {
         XCTAssertEqual(SearchRanking.sorted(report.items, query: "toolbox").first?.path, bundle.path)
         XCTAssertEqual(SearchRanking.sorted(report.items, query: "工具").count, 1)
     }
+    func testApplicationScanKeepsFoldersNextToPackagesAndStopsAtTheDepthLimit() throws {
+        let root = try directory()
+        func app(_ relative: String) throws {
+            let contents = root.appendingPathComponent(relative).appendingPathComponent("Contents")
+            try FileManager.default.createDirectory(at: contents, withIntermediateDirectories: true)
+            let name = (relative as NSString).lastPathComponent.replacingOccurrences(of: ".app", with: "")
+            try PropertyListSerialization.data(fromPropertyList: ["CFBundleIdentifier": "test." + name, "CFBundleName": name], format: .xml, options: 0)
+                .write(to: contents.appendingPathComponent("Info.plist"))
+        }
+        for i in 0..<10 {
+            try app("A\(i).app"); try app("Folder\(i)/Inner\(i).app")
+            try Data().write(to: root.appendingPathComponent("tool\(i)"))
+        }
+        try app("B.bundle/Hidden.app")
+        try app("1/2/3/4/5/Deep.app")            // depth 6: kept (Unity Hub editors live here)
+        try app("1/2/3/4/5/6/7/Template.app")    // deeper: build templates, not launchable apps
+        let names = Set(ApplicationCatalog.scan(roots: [root]).items.map(\.name))
+        XCTAssertTrue(names.isSuperset(of: Set((0..<10).flatMap { ["A\($0)", "Inner\($0)"] } + ["Deep"])), "\(names.sorted())")
+        XCTAssertFalse(names.contains("Template"))
+        XCTAssertFalse(names.contains("Hidden"))
+    }
+    func testApplicationScanOfTheRealSystemKeepsNestedCoreServicesApps() {
+        // A stray skipDescendants() on a package or file once made the enumerator skip the next
+        // folder on the sealed system volume, dropping CoreServices/RemoteManagement's apps.
+        let agent = "/System/Library/CoreServices/RemoteManagement/ARDAgent.app"
+        guard FileManager.default.fileExists(atPath: agent) else { return }
+        let paths = ApplicationCatalog.scan(roots: [URL(fileURLWithPath: "/System/Library/CoreServices")]).items.map(\.path)
+        XCTAssertTrue(paths.contains(agent))
+    }
     func testRecentUseLiftsALooserMatchButNeverAboveAnExactName() {
         let now = Date().timeIntervalSince1970
         let settings = SearchItem(path: "/System/Applications/System Settings.app", name: "系统设置", kind: .application, visits: 10, lastOpened: now)
