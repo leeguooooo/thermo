@@ -412,9 +412,8 @@ struct PopoverView: View {
                 Button { TabQuickAction.request() } label: { Image(systemName: "archivebox").frame(width: 22) }
                     .buttonStyle(.plain).foregroundStyle(Theme.textSecondary).help(tr("Save and close background tabs"))
                 shortcut("clock.arrow.circlepath", tr("History"), .history)
-                PanelButton(title: tr("Menu bar…")) { MainWindow.show(.settings) }
-                    .accessibilityLabel(tr("Customize menu bar…"))
-                    .help(tr("Choose metrics, layout and left/right click actions."))
+                // An icon like its neighbours: with a text button the English row overflowed the 372 pt panel.
+                shortcut("slider.horizontal.3", tr("Customize menu bar…"), .settings)
                 Button { NSApp.terminate(nil) } label: { Image(systemName: "power").frame(width: 22) }
                     .buttonStyle(.plain).foregroundStyle(Theme.textSecondary).help(tr("Quit Thermo"))
             }
