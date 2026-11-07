@@ -503,8 +503,16 @@ struct AppsPage: View {
         }
     }
 
+    /// `--expand-rows N` (offscreen snapshots only): open the first N apps so their details can be reviewed.
+    func snapshotOpen(_ a: InstalledApp) -> Bool {
+        let args = CommandLine.arguments
+        guard args.contains("--offscreen"), let i = args.firstIndex(of: "--expand-rows"), i + 1 < args.count,
+              let n = Int(args[i + 1]) else { return false }
+        return filtered.prefix(n).contains { $0.path == a.path }
+    }
+
     func appCard(_ a: InstalledApp) -> some View {
-        let expanded = open.contains(a.path)
+        let expanded = open.contains(a.path) || snapshotOpen(a)
         let running = model.running.contains(a.path)
         return VStack(alignment: .leading, spacing: 10) {
             HStack(spacing: 12) {
