@@ -29,7 +29,7 @@ final class FanControlPresentationTests: XCTestCase {
         let unknown = FanReading(id: 0, name: "Missing", rpm: nil, min: nil, max: nil, target: nil, manual: nil)
         let known = FanReading(id: 1, name: "Known", rpm: 2000, min: 1200, max: 6000, target: nil, manual: false)
         XCTAssertNil(FanControlPresentation.speedSummary([]))
-        XCTAssertEqual(FanControlPresentation.speedSummary([unknown]), tr("%1$@ rpm", tr("unknown")))
+        XCTAssertNil(FanControlPresentation.speedSummary([unknown]), "an unreadable fan shows nothing in the sidebar")
         XCTAssertEqual(FanControlPresentation.speedSummary([known]), tr("%1$@ rpm", "2000"))
         XCTAssertEqual(FanControlPresentation.speedSummary([unknown, known]), "≥ " + tr("%1$@ rpm", "2000"))
     }
@@ -37,7 +37,7 @@ final class FanControlPresentationTests: XCTestCase {
         // The SMC answers 0 rpm until its first real poll; a fan with a 1200 rpm floor cannot be at 0.
         let unread = FanReading(id: 0, name: "Left", rpm: 0, min: 1200, max: 6000, target: nil, manual: false)
         XCTAssertNil(unread.reportedRPM)
-        XCTAssertEqual(FanControlPresentation.speedSummary([unread]), tr("%1$@ rpm", tr("unknown")))
+        XCTAssertNil(FanControlPresentation.speedSummary([unread]))
         // A fan that can legitimately stop (minimum 0) keeps its 0.
         let stopped = FanReading(id: 1, name: "Idle", rpm: 0, min: 0, max: 5000, target: nil, manual: false)
         XCTAssertEqual(stopped.reportedRPM, 0)

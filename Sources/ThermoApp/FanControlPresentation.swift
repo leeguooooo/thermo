@@ -27,8 +27,10 @@ enum FanControlPresentation {
     /// `speedSummary` and the cards use the reported speed, not the raw one: see `FanReading.reportedRPM`.
     static func speedSummary(_ fans: [FanReading]) -> String? {
         guard !fans.isEmpty else { return nil }
-        let speed = fans.compactMap(\.reportedRPM).max()
-        let prefix = speed != nil && fans.contains { $0.reportedRPM == nil } ? "≥ " : ""
+        // No fan has a usable speed (the SMC's momentary 0, or an unreadable fan): the sidebar and
+        // status menu show nothing rather than "unknown rpm"; the Fans page still says unknown.
+        guard let speed = fans.compactMap(\.reportedRPM).max() else { return nil }
+        let prefix = fans.contains { $0.reportedRPM == nil } ? "≥ " : ""
         return prefix + tr("%1$@ rpm", rpm(speed))
     }
     static func errorText(_ error: String) -> String {
