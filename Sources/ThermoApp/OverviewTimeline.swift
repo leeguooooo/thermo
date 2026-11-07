@@ -28,6 +28,9 @@ final class TimelineEvents: ObservableObject {
 
     @Published private(set) var events: [Event] = []
     private var busy: [String: Date] = [:]
+    /// The name a program had when it got busy; once it has calmed down it may be gone from the hogs,
+    /// and rebuilding a name from its id gives a path ("/Applications/LarkSuite.app").
+    private var busyNames: [String: String] = [:]
     private var lastJournal = Date.distantPast
     private var journal: [Event] = []
 
@@ -40,11 +43,12 @@ final class TimelineEvents: ObservableObject {
         let byID = Dictionary(pulse.hogs.map { ($0.id, $0) }, uniquingKeysWith: { a, _ in a })
         for hog in pulse.hogs where hog.cpu >= Self.busyCPU && busy[hog.id] == nil {
             busy[hog.id] = now
+            busyNames[hog.id] = Self.label(hog)
             live.append(Event(time: now, kind: .busy, text: tr("%1$@ became busy", Self.label(hog))))
         }
         for (id, since) in busy where (byID[id]?.cpu ?? 0) < Self.calmCPU {
             busy[id] = nil
-            let name = byID[id].map(Self.label) ?? Self.name(fromID: id)
+            let name = busyNames.removeValue(forKey: id) ?? byID[id].map(Self.label) ?? Self.name(fromID: id)
             live.append(Event(time: now, kind: .calm, text: tr("%1$@ calmed down after %2$@", name, Self.duration(now.timeIntervalSince(since)))))
         }
         publish(live, now: now)
@@ -153,7 +157,8 @@ struct HeatTimeline: View {
             }
             .chartXScale(domain: domain)
             .chartYScale(domain: 0...loadTop)
-            .chartYAxis { AxisMarks(values: Array(Set([0, 1, max(2, (loadTop * 0.9).rounded(.down))])).sorted()) { v in AxisGridLine().foregroundStyle(Theme.hairline); AxisValueLabel { axisLabel(v.as(Double.self)) } } }
+            // 80 pt tall: at 8× load a "1" mark sits on the "0"; the dashed line already marks 1.
+            .chartYAxis { AxisMarks(values: loadTop > 4 ? [0, (loadTop * 0.9).rounded(.down)] : [0, 1, 2]) { v in AxisGridLine().foregroundStyle(Theme.hairline); AxisValueLabel { axisLabel(v.as(Double.self)) } } }
             .chartYAxisLabel(tr("load per core"))
             // Every 5 minutes back from now; "now" itself would sit on the edge and be clipped.
             .chartXAxis { AxisMarks(values: [15, 10, 5].map { now.addingTimeInterval(-Double($0) * 60) }) { _ in

@@ -86,10 +86,14 @@ struct SlowdownCulpritsCard: View {
                     Spacer(minLength: Theme.Space.s)
                     action(c)
                 }
-                Text(c.guidance).font(Theme.secondary).foregroundStyle(Theme.textSecondary)
+                // The first sentence says what to do; the rest (which copies stay, who holds the others) is detail,
+                // and three clipped lines cut it off mid-path.
+                let (lead, rest) = Self.split(c.guidance)
+                Text(lead).font(Theme.secondary).foregroundStyle(Theme.textSecondary)
                     .lineLimit(3).fixedSize(horizontal: false, vertical: true)
                 DisclosureGroup {
                     VStack(alignment: .leading, spacing: Theme.Space.xs) {
+                        if !rest.isEmpty { Text(rest).font(Theme.caption).foregroundStyle(Theme.textSecondary).fixedSize(horizontal: false, vertical: true) }
                         if let l = c.launcher { Text(l).font(Theme.caption).foregroundStyle(Theme.textTertiary) }
                         Text(c.evidence).font(Theme.caption).foregroundStyle(Theme.textTertiary).fixedSize(horizontal: false, vertical: true)
                         if let sessions = c.sessions, !sessions.isEmpty {
@@ -104,6 +108,17 @@ struct SlowdownCulpritsCard: View {
             }
         }
         .padding(.horizontal, Theme.Space.l).padding(.vertical, Theme.Space.m)
+    }
+
+    /// The first sentence, and everything after it.
+    static func split(_ text: String) -> (String, String) {
+        for mark in ["。", ". "] {
+            if let r = text.range(of: mark), r.upperBound < text.endIndex {
+                let lead = String(text[..<r.upperBound]).trimmingCharacters(in: .whitespaces)
+                return (lead, String(text[r.upperBound...]).trimmingCharacters(in: .whitespaces))
+            }
+        }
+        return (text, "")
     }
 
     @ViewBuilder func action(_ c: SlowdownCulprit) -> some View {

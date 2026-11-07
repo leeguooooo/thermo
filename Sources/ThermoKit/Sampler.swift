@@ -1,5 +1,6 @@
 import CSMC
 import Foundation
+import IOKit
 
 /// A sensor discovered on this machine.
 public struct SensorDescriptor: Codable, Hashable, Sendable {
@@ -207,6 +208,17 @@ public final class Sampler {
         sysctlbyname("hw.model", &buf, &size, nil, 0)
         return String(cString: buf)
     }
+
+    /// "MacBook Pro (14-inch, M5)" from the device tree, the name About This Mac shows; the model identifier
+    /// ("Mac17,2") when the tree has none (older Intel Macs).
+    public static let machineName: String = {
+        let entry = IORegistryEntryFromPath(kIOMainPortDefault, "IODeviceTree:/product")
+        defer { if entry != 0 { IOObjectRelease(entry) } }
+        if entry != 0, let data = IORegistryEntryCreateCFProperty(entry, "product-name" as CFString, kCFAllocatorDefault, 0)?
+            .takeRetainedValue() as? Data,
+           let name = String(data: data.prefix { $0 != 0 }, encoding: .utf8), !name.isEmpty { return name }
+        return machineModel
+    }()
 
     /// ~/Library/Caches/dev.thermo/… resolved without FileManager (its first use costs ~5 ms).
     static var cachePath: String {

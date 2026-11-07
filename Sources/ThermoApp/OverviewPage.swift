@@ -18,7 +18,7 @@ struct OverviewPage: View {
     @Environment(\.windowSamplingActive) private var visible
 
     var body: some View {
-        WindowPage(title: tr("Overview"), subtitle: monitor.model) {
+        WindowPage(title: tr("Overview"), subtitle: Sampler.machineName) {
             VStack(alignment: .leading, spacing: Theme.Space.m) {
                 hero(now: monitor.snapshot?.timestamp ?? Date())
                 // One answer: when the diagnosis names culprits, its card replaces the older one-line verdict.

@@ -297,15 +297,20 @@ struct ComputePage: View {
         return VStack(alignment: .leading, spacing: Theme.Space.s) {
             HStack(spacing: Theme.Space.m) {
                 DisclosureChevron(expanded: open)
+                // The same icon the Memory page shows, so one program looks the same on both pages.
+                if let app = program.app {
+                    Image(nsImage: NSWorkspace.shared.icon(forFile: app)).resizable().frame(width: 20, height: 20).accessibilityHidden(true)
+                } else {
+                    Image(systemName: "terminal").font(.system(size: 10, weight: .medium)).foregroundStyle(Theme.textSecondary)
+                        .frame(width: 20, height: 20)
+                        .background(RoundedRectangle(cornerRadius: 5, style: .continuous).fill(Color.white.opacity(0.07)))
+                        .accessibilityHidden(true)
+                }
                 HStack(spacing: Theme.Space.xs) {
                     Text(program.name).font(Theme.rowTitle).foregroundStyle(Theme.textPrimary).lineLimit(1)
                     Text("×\(program.processes.count)").font(Theme.caption.monospacedDigit()).foregroundStyle(Theme.textTertiary)
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
-                if gpu {
-                    Text(tr("%1$@ reporting processes", String(program.gpuReportingProcesses)))
-                        .font(Theme.caption).foregroundStyle(Theme.textTertiary)
-                }
                 GeometryReader { g in
                     ZStack(alignment: .leading) {
                         Capsule().fill(Theme.surfaceRaised)
@@ -314,6 +319,8 @@ struct ComputePage: View {
                 }
                 .frame(width: 64, height: 4).accessibilityHidden(true)
                 Text(percent(v)).font(Theme.figure(.row)).foregroundStyle(v == nil ? Theme.textTertiary : Theme.textPrimary)
+                    // Which processes the figure covers is a detail; on every row it was noise.
+                    .help(gpu ? tr("%1$@ reporting processes", String(program.gpuReportingProcesses)) : "")
                     .frame(width: 64, alignment: .trailing)
                 stopButton(program.quittable ? ComputeStopTarget(program) : nil, visible: hovered == program.id || snapshotOpen.first == program.id)
             }

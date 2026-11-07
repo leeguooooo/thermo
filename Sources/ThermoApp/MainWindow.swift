@@ -687,7 +687,7 @@ struct SensorsPage: View {
     @State private var search = ""
 
     var body: some View {
-        WindowPage(title: tr("Sensors"), subtitle: monitor.model) {
+        WindowPage(title: tr("Sensors"), subtitle: Sampler.machineName) {
             if let s = monitor.snapshot {
                 hero(s)
                 controls
