@@ -98,7 +98,7 @@ final class PulseDiskTests: XCTestCase {
         p.memory = .unknown
         XCTAssertTrue(p.culpritText?.contains("unavailable") == true)
         p.memory = .normal
-        XCTAssertTrue(p.culpritText?.contains("normal memory pressure") == true)
+        XCTAssertTrue(p.culpritText?.contains("pressure is normal") == true)
     }
 
     func testUnavailableMemoryMeasurementCannotSelectAnAppToQuit() {
