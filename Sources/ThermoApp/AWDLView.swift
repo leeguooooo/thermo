@@ -35,7 +35,11 @@ struct AWDLBackend: Sendable {
     private var poll: Task<Void,Never>?
     private let backend: AWDLBackend
     private let exit: @MainActor () -> Void
-    private func failure(_ error: Error) -> String { (error as? FanControlError)?.description ?? error.localizedDescription }
+    // The CLI wording ("helper unavailable: …  Install it with: thermo helper install") is not for this window.
+    private func failure(_ error: Error) -> String {
+        if case .helperUnavailable? = error as? FanControlError { return tr("Could not connect to the system helper") }
+        return (error as? FanControlError)?.description ?? error.localizedDescription
+    }
     init(backend: AWDLBackend = .live(),exit: @escaping @MainActor () -> Void = { NSApp.terminate(nil) }) {
         self.backend=backend;self.exit=exit
     }

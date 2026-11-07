@@ -395,7 +395,34 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate, UNU
             try? NSBitmapImageRep(cgImage: img).representation(using: .png, properties: [:])?
                 .write(to: URL(fileURLWithPath: dir).appendingPathComponent("panel-capture-menu.png"))
         }
-        exit(0)
+        // Each tool sheet the settings page opens, for reviewing them without opening windows on screen.
+        let tools: [(String, AnyView)] = [
+            ("tool-keep-awake", AnyView(IdleAwakePanel(model: IdleAwakeModel.shared))),
+            ("tool-clean-screen", AnyView(CleanScreenSetupView(model: CleanScreenModel.shared))),
+            ("tool-low-latency", AnyView(AWDLPanel(model: AWDLModel.shared))),
+            ("tool-battery-care", AnyView(BatteryCarePanel(model: BatteryCareModel.shared))),
+            ("tool-focus", AnyView(FocusPanel(model: FocusTimerModel.shared))),
+            ("tool-menu-bar", AnyView(MenuBarManagerView(model: .shared).frame(width: 940, height: 740))),
+        ]
+        // ImageRenderer draws AppKit controls as placeholders; host each one in an offscreen window instead.
+        var windows: [NSWindow] = []
+        for (name, view) in tools {
+            let host = NSHostingView(rootView: view.preferredColorScheme(.dark).background(Theme.canvas))
+            let size = host.fittingSize
+            let w = NSWindow(contentRect: NSRect(x: -20000, y: -20000, width: max(size.width, 420), height: max(size.height, 200)),
+                             styleMask: [.borderless], backing: .buffered, defer: false)
+            w.contentView = host
+            w.appearance = NSAppearance(named: .darkAqua)
+            w.orderBack(nil)
+            windows.append(w)
+            DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
+                if let rep = host.bitmapImageRepForCachingDisplay(in: host.bounds) {
+                    host.cacheDisplay(in: host.bounds, to: rep)
+                    try? rep.representation(using: .png, properties: [:])?.write(to: URL(fileURLWithPath: dir).appendingPathComponent(name + ".png"))
+                }
+            }
+        }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 3) { withExtendedLifetime(windows) {}; exit(0) }
     }
 }
 

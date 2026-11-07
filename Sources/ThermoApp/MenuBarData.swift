@@ -154,8 +154,8 @@ struct MenuDisplay {
         let stacked = p.layout == .stacked && metrics.count == 2 && p.presentation != .icon
         let data = p.presentation == .icon ? "" : values.joined(separator: stacked ? "\n" : " · ")
         let text = [data, marker].filter { !$0.isEmpty }.joined(separator: " ")
-        let tip = zip(metrics, values).map { $0.label + ": " + $1 }.joined(separator: " · ")
-        let awake = marker.isEmpty ? "" : tr("Keep awake") + ": " + marker
+        let tip = zip(metrics, values).map { tr("%1$@: %2$@", $0.label, $1) }.joined(separator: " · ")
+        let awake = marker.isEmpty ? "" : tr("%1$@: %2$@", tr("Keep awake"), marker)
         return MenuDisplay(text: text, tooltip: ["Thermo", tip, awake].filter { !$0.isEmpty }.joined(separator: " · "),
                            showIcon: p.presentation != .data, stacked: stacked)
     }

@@ -530,7 +530,7 @@ struct MemoryPage: View {
                         VStack(alignment: .leading, spacing: 2) {
                             Text(programSubtitle(program, open: isOpen))
                                 .lineLimit(1)
-                            Text(tr("Resident memory") + ": " + (program.residentKB.map { MemoryFormat.string(kibibytes: $0) } ?? "—"))
+                            Text(tr("%1$@: %2$@", tr("Resident memory"), program.residentKB.map { MemoryFormat.string(kibibytes: $0) } ?? "—"))
                         }.font(Theme.caption).foregroundStyle(Theme.textSecondary)
                         Spacer(minLength: 4)
                         if let target = program.actionTarget { actions(target, emphasizeRestart: false) }

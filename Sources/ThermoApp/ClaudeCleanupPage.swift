@@ -76,7 +76,7 @@ final class ClaudeCleanupModel: ObservableObject {
         if let batch = result.batch { lines.append(tr("Recovery record: %1$@", batch.id)) }
         lines += result.failed.sorted { $0.key < $1.key }.map { entry in
             let title = ClaudeResetTarget(rawValue: entry.key)?.title ?? tr("Claude reset")
-            return title + ": " + tr(entry.value)
+            return tr("%1$@: %2$@", title, tr(entry.value))
         }
         return lines.joined(separator: "\n")
     }

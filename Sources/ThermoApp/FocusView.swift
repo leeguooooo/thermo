@@ -23,7 +23,7 @@ struct FocusPanel: View {
 
     private func minutes(_ label: String, _ value: Binding<Int>) -> some View {
         Stepper(value: value, in: FocusSettings.minuteRange) {
-            Text(label + ": " + tr("%1$@ min", String(value.wrappedValue))).monospacedDigit()
+            Text(tr("%1$@: %2$@", label, tr("%1$@ min", String(value.wrappedValue)))).monospacedDigit()
         }
     }
 
@@ -42,7 +42,7 @@ struct FocusPanel: View {
             minutes(tr("Short break length"), $shortBreak)
             minutes(tr("Long break length"), $longBreak)
             Stepper(value: $every, in: FocusSettings.longBreakEveryRange) {
-                Text(tr("Long break after") + ": " + tr("%1$@ short breaks", String(every))).monospacedDigit()
+                Text(tr("%1$@: %2$@", tr("Long break after"), tr("%1$@ short breaks", String(every)))).monospacedDigit()
             }
             Toggle(tr("Show progress icon in the menu bar"), isOn: $progressIcon)
             Toggle(tr("Start focus when Thermo opens"), isOn: $startOnLaunch)

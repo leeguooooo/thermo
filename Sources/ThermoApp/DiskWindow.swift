@@ -32,12 +32,12 @@ extension DiskModel {
             var lines=["\(how) · \(ByteFormat.string(i.bytes)) · \(i.title)" + (!deleted.isEmpty ? " (\(paths))" : "")]
             if let native {
                 for run in native.runs {
-                    lines.append("    " + tr("Tool-managed locations") + ": " + FSPath.tilde(run.folder))
+                    lines.append("    " + tr("%1$@: %2$@", tr("Tool-managed locations"), FSPath.tilde(run.folder)))
                     lines.append("    " + tr("runs `%1$@`", run.commandLine))
                 }
             } else if let fallback=i.native?.fallback { lines.append("    " + fallback) }
             lines += deleted.map { "    " + FSPath.tilde($0) }
-            lines += (i.commandScope ?? []).map { "    " + tr("Tool-managed locations") + ": " + FSPath.tilde($0) }
+            lines += (i.commandScope ?? []).map { "    " + tr("%1$@: %2$@", tr("Tool-managed locations"), FSPath.tilde($0)) }
             lines += (i.commands ?? []).map { "    " + $0.joined(separator: " ") }
             return lines
         }
