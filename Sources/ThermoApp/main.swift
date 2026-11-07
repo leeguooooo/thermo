@@ -469,14 +469,16 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate, UNU
             w.appearance = NSAppearance(named: .darkAqua)
             w.orderBack(nil)
             windows.append(w)
-            DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
+            // 2.6 s, not 2: the monitor samples every 2 s, and a capture on that tick catches the
+            // numeric transitions mid-animation (ghosted digits in the picture).
+            DispatchQueue.main.asyncAfter(deadline: .now() + 2.6) {
                 if let rep = host.bitmapImageRepForCachingDisplay(in: host.bounds) {
                     host.cacheDisplay(in: host.bounds, to: rep)
                     try? rep.representation(using: .png, properties: [:])?.write(to: URL(fileURLWithPath: dir).appendingPathComponent(name + ".png"))
                 }
             }
         }
-        DispatchQueue.main.asyncAfter(deadline: .now() + 3) { withExtendedLifetime(windows) {}; exit(0) }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 3.6) { withExtendedLifetime(windows) {}; exit(0) }
     }
 }
 

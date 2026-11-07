@@ -24,10 +24,11 @@ enum FanControlPresentation {
         }
     }
     static func rpm(_ value: Double?) -> String { value.map { String(format: "%.0f", $0) } ?? tr("unknown") }
+    /// `speedSummary` and the cards use the reported speed, not the raw one: see `FanReading.reportedRPM`.
     static func speedSummary(_ fans: [FanReading]) -> String? {
         guard !fans.isEmpty else { return nil }
-        let speed = fans.compactMap(\.rpm).max()
-        let prefix = speed != nil && fans.contains { $0.rpm == nil } ? "≥ " : ""
+        let speed = fans.compactMap(\.reportedRPM).max()
+        let prefix = speed != nil && fans.contains { $0.reportedRPM == nil } ? "≥ " : ""
         return prefix + tr("%1$@ rpm", rpm(speed))
     }
     static func errorText(_ error: String) -> String {
@@ -59,5 +60,15 @@ extension FanReading {
         if name == "Fan" { return tr("Fan") }
         if name.hasPrefix("Fan "), let n = Int(name.dropFirst(4)) { return tr("Fan %1$@", String(n)) }
         return name
+    }
+}
+
+extension FanReading {
+    /// The speed worth showing. The SMC reports 0 rpm until its first real poll after launch, and a
+    /// fan cannot run below its own minimum, so a 0 under that minimum is "not read yet", not a speed.
+    var reportedRPM: Double? {
+        guard let rpm else { return nil }
+        if rpm == 0, let min, min > 0 { return nil }
+        return rpm
     }
 }

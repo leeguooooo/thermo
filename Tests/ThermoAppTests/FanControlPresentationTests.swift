@@ -33,6 +33,18 @@ final class FanControlPresentationTests: XCTestCase {
         XCTAssertEqual(FanControlPresentation.speedSummary([known]), tr("%1$@ rpm", "2000"))
         XCTAssertEqual(FanControlPresentation.speedSummary([unknown, known]), "≥ " + tr("%1$@ rpm", "2000"))
     }
+    func testZeroBelowTheFanMinimumIsNotAReadingYet() {
+        // The SMC answers 0 rpm until its first real poll; a fan with a 1200 rpm floor cannot be at 0.
+        let unread = FanReading(id: 0, name: "Left", rpm: 0, min: 1200, max: 6000, target: nil, manual: false)
+        XCTAssertNil(unread.reportedRPM)
+        XCTAssertEqual(FanControlPresentation.speedSummary([unread]), tr("%1$@ rpm", tr("unknown")))
+        // A fan that can legitimately stop (minimum 0) keeps its 0.
+        let stopped = FanReading(id: 1, name: "Idle", rpm: 0, min: 0, max: 5000, target: nil, manual: false)
+        XCTAssertEqual(stopped.reportedRPM, 0)
+        let spinning = FanReading(id: 2, name: "Right", rpm: 2400, min: 1200, max: 6000, target: nil, manual: false)
+        XCTAssertEqual(spinning.reportedRPM, 2400)
+    }
+
     func testPendingAndLegacyHelpersNeverRenderManualConfirmation() {
         let pending = FanControlState(policies: [0: .fixed(rpm: 3000)])
         XCTAssertEqual(FanControlPresentation.observation(pending, fan: 0), tr("Waiting for hardware verification"))

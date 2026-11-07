@@ -240,7 +240,7 @@ struct OverviewPage: View {
     var fanLink: some View {
         let s = monitor.snapshot
         let fans = monitor.sampledFans ?? []
-        let top = fans.filter { $0.rpm != nil }.max { ($0.rpm ?? 0) < ($1.rpm ?? 0) }
+        let top = fans.filter { $0.reportedRPM != nil }.max { ($0.reportedRPM ?? 0) < ($1.reportedRPM ?? 0) }
         let hot = (s?.hottest ?? 0) >= 85
         let lagging = hot && fans.contains { $0.manual == false } && (fans.compactMap(\.load).max() ?? 1) < 0.6
         let state: LinkState = monitor.sampledFans == nil ? .unknown : fans.isEmpty || fans.contains { $0.manual == nil || $0.rpm == nil || $0.validRange == nil } ? .unknown : lagging ? .alert : .normal

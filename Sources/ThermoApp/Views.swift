@@ -292,10 +292,10 @@ struct PopoverView: View {
 
     var fanCard: some View {
         let fans = monitor.sampledFans ?? []
-        let top = fans.filter { $0.rpm != nil }.max { $0.rpm! < $1.rpm! }
+        let top = fans.filter { $0.reportedRPM != nil }.max { $0.reportedRPM! < $1.reportedRPM! }
         return PanelCard(title: tr("Fans"), symbol: "fan",
                          badge: top?.load.map { String(format: "%.0f%%", $0 * 100) }) {
-            BigValue(value: top.map { (fans.contains { $0.rpm == nil } ? "≥ " : "") + FanControlPresentation.rpm($0.rpm) } ?? "—", unit: top == nil ? nil : tr("RPM"))
+            BigValue(value: top.map { (fans.contains { $0.reportedRPM == nil } ? "≥ " : "") + FanControlPresentation.rpm($0.reportedRPM) } ?? "—", unit: top == nil ? nil : tr("RPM"))
             if fans.isEmpty {
                 Text(monitor.sampledFans == nil ? monitor.fanEmptyMessage : tr("No fans")).font(Theme.caption).foregroundStyle(Theme.textTertiary)
             } else if monitor.policiesAvailable {
@@ -512,7 +512,7 @@ struct FanRow: View {
             Image(systemName: "fan").foregroundStyle(fan.manual == true ? Theme.caution : Theme.textSecondary)
             Text(fan.displayName).frame(width: 52, alignment: .leading)
             FanLoadIndicator(fan: fan)
-            Text(tr("%1$@ rpm", FanControlPresentation.rpm(fan.rpm))).monospacedDigit().frame(width: 76, alignment: .trailing)
+            Text(tr("%1$@ rpm", FanControlPresentation.rpm(fan.reportedRPM))).monospacedDigit().frame(width: 76, alignment: .trailing)
         }
         .font(Theme.body)
         .help(tr("%1$@–%2$@ rpm · %3$@", FanControlPresentation.rpm(fan.min), FanControlPresentation.rpm(fan.max), tr(fan.controlMode)))
@@ -870,7 +870,7 @@ struct FanFigure: View {
                     // A zero while the helper is still being read says nothing yet.
                     Text("—").font(Theme.figure(.hero)).foregroundStyle(Theme.textTertiary)
                 } else {
-                    Text(FanControlPresentation.rpm(fan.rpm)).font(Theme.figure(.hero)).foregroundStyle(Theme.textPrimary)
+                    Text(FanControlPresentation.rpm(fan.reportedRPM)).font(Theme.figure(.hero)).foregroundStyle(Theme.textPrimary)
                         .contentTransition(.numericText())
                         .animation(Theme.standard.unlessReduced(reduceMotion), value: fan.rpm)
                 }
