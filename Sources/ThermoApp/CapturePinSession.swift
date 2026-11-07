@@ -136,7 +136,8 @@ import ThermoL10n
     }
     func editorUnderMouse(at point:CGPoint?=nil) -> CaptureEditor? {
         let location=point ?? NSEvent.mouseLocation
-        for window in NSApp.orderedWindows where window.isVisible && window.frame.contains(location) {
+        // NSApplication.shared, not NSApp: NSApp is nil until something touches the shared app (tests, early launch).
+        for window in NSApplication.shared.orderedWindows where window.isVisible && window.frame.contains(location) {
             if let editor=windows.values.first(where:{$0.window === window}) {return editor}
         }
         return nil
