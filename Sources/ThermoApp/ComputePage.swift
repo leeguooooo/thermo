@@ -234,10 +234,17 @@ struct ComputePage: View {
             AxisGridLine().foregroundStyle(Theme.hairline)
             AxisValueLabel { if let d = v.as(Double.self) { Text("\(Int(d))%").font(Theme.caption).foregroundStyle(Theme.textTertiary) } }
         } }
-        .chartXAxis { AxisMarks(values: .automatic(desiredCount: 3)) { _ in
+        // Three marks inside the span, never at its end, so the newest label is not clipped by the frame.
+        .chartXAxis { AxisMarks(values: chartAxisDates) { _ in
             AxisValueLabel(format: .dateTime.hour().minute().second()).font(Theme.caption).foregroundStyle(Theme.textTertiary)
         } }
         .frame(height: 120)
+    }
+
+    var chartAxisDates: [Date] {
+        let domain = chartDomain
+        let span = domain.upperBound.timeIntervalSince(domain.lowerBound)
+        return [0.75, 0.5, 0.25].map { domain.upperBound.addingTimeInterval(-span * $0) }
     }
 
     var chartDomain: ClosedRange<Date> {
