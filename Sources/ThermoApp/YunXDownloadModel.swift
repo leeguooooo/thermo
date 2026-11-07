@@ -331,6 +331,29 @@ final class YunXDownloadModel: ObservableObject {
         keychainAuthorizationRequired = YunXKeychainSession.shared.authorizationRequired
     }
 
+    /// The page's first read, off the main thread: macOS may put up a keychain authorization
+    /// dialog for the saved accounts, and the window must stay responsive behind it. Later reads
+    /// hit the session cache, so the synchronous `reloadAccounts()` stays right for actions.
+    func reloadAccountsInBackground() {
+        let vault = self.vault, jobStore = self.jobStore
+        Task.detached(priority: .userInitiated) { [weak self] in
+            let result = Result { try vault.accounts() }
+            // Saved jobs live in the same keychain; reading them here fills the session cache, so
+            // restoreJobs() on the main thread below no longer waits on the keychain.
+            _ = try? jobStore.load()
+            await MainActor.run {
+                guard let self else { return }
+                switch result {
+                case let .success(list): self.accounts = list
+                case let .failure(error):
+                    if !YunXKeychainSession.shared.authorizationRequired { self.error = error.localizedDescription }
+                }
+                self.restoreJobs()
+                self.updateKeychainAuthorization()
+            }
+        }
+    }
+
     func authorizeKeychain() async {
         guard !authorizingKeychain else { return }
         authorizingKeychain = true
@@ -581,7 +604,9 @@ final class YunXDownloadModel: ObservableObject {
     /// names. A failure leaves the old credential and waits before asking that drive again.
     func refreshAccounts(now: Date = Date()) async {
         guard !authorizingKeychain else { return }
-        guard let all = try? vault.accounts() else { return }
+        // Read off the main actor: the first keychain read can wait on a system authorization dialog.
+        let vault = self.vault
+        guard let all = await Task.detached(priority: .utility) { try? vault.accounts() }.value else { return }
         var changed = false
         for account in all {
             guard let platform = account.drivePlatform, let provider = provider(platform) else { continue }

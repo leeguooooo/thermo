@@ -41,9 +41,8 @@ struct YunXDownloadPage: View {
         // The Theme is drawn for the dark window; a light system must not recolor fields on it.
         .environment(\.colorScheme, .dark)
         .onAppear {
-            model.reloadAccounts()
-            model.restoreJobs()
-            model.updateKeychainAuthorization()
+            // Keychain first, in the background; the authorization state follows once it has answered.
+            model.reloadAccountsInBackground()
             model.startBackgroundRefresh()
             Task { await setup.refresh() }
         }
