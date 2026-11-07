@@ -1,4 +1,5 @@
 import AgentDoctor
+import CleanKit
 import AppKit
 import SwiftUI
 import ThermoL10n
@@ -225,7 +226,7 @@ struct AreaPage: View {
                     .frame(maxWidth: .infinity, alignment: .leading).padding(Theme.Space.l).glass()
                 }
                 if !problems.isEmpty {
-                    SectionHeader(title: problems.count == 1 ? tr("1 problem found") : tr("%1$@ problems", String(problems.count)))
+                    SectionHeader(title: trCount(problems.count, "%1$@ problem", "%1$@ problems", String(problems.count)))
                     VStack(spacing: Theme.Space.s) { ForEach(problems) { ProblemCard(scanner: scanner, item: $0) } }
                 }
                 if !rest.isEmpty { healthy(rest) }

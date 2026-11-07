@@ -201,7 +201,9 @@ extension ConfigChecks {
     }
 
     static func mb(_ kb: Int) -> String {
-        kb >= 1024 * 1024 ? String(format: "%.1f GB", Double(kb) / 1_048_576) : "\(kb / 1024) MB"
+        if kb >= 1024 * 1024 { return String(format: "%.1f GB", Double(kb) / 1_048_576) }
+        // A process under a megabyte reads as "0 MB" otherwise, which looks like a missing reading.
+        return kb < 1024 ? "<1 MB" : "\(kb / 1024) MB"
     }
 }
 
