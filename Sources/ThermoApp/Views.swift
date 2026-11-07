@@ -1183,7 +1183,7 @@ struct SettingsView: View {
                 }
                 row(tr("Update every")) {
                     Picker("", selection: $interval) {
-                        Text("0.5 s").tag(0.5); Text("1 s").tag(1.0); Text("2 s").tag(2.0); Text("5 s").tag(5.0)
+                        Text(tr("%1$@ s", "0.5")).tag(0.5); Text(tr("%1$@ s", "1")).tag(1.0); Text(tr("%1$@ s", "2")).tag(2.0); Text(tr("%1$@ s", "5")).tag(5.0)
                     }
                     .onChange(of: interval) { _ in monitor.reschedule() }
                 }
@@ -1221,7 +1221,10 @@ struct SettingsView: View {
                         .onChange(of: alertsEnabled) { on in if on { Monitor.requestNotificationPermission() } }
                 }
                 if alertsEnabled {
-                    row(fahrenheit ? tr("Threshold: %1$@ °F", Settings.thresholdText(alertThreshold, fahrenheit: true)) : tr("Threshold: %1$@ °C", Settings.thresholdText(alertThreshold, fahrenheit: false)), last: true) {
+                    // Label on the left, value and stepper on the right, like every other row.
+                    row(tr("Threshold"), last: true) {
+                        Text(fahrenheit ? tr("%1$@ °F", Settings.thresholdText(alertThreshold, fahrenheit: true)) : tr("%1$@ °C", Settings.thresholdText(alertThreshold, fahrenheit: false)))
+                            .font(Theme.figure(.row)).foregroundStyle(Theme.textPrimary).contentTransition(.numericText())
                         Stepper("", value: Binding(
                             get: {
                                 let value = Settings.thresholdValue(alertThreshold)
