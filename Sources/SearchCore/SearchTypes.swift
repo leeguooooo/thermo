@@ -158,11 +158,21 @@ public enum SearchRanking {
             if cancellation?.isCancelled == true { return [] }
             if let result = match(item, query: query) { matches.append((item, result)) }
         }
+        func usage(_ item: SearchItem) -> Double {
+            min(18, log2(Double(item.visits) + 1) * 5) * pow(0.5, max(0, now - item.lastOpened) / (14 * 86400))
+        }
+        // Recent use may lift a looser match over a tighter one nobody opens ("设置" → 系统设置 over
+        // 设置助理), but by at most 18 points, so exact names (90) and aliases (100) always stay on top.
+        func rank(_ match: Match, _ item: SearchItem) -> Double {
+            empty || match.tier >= 90 ? Double(match.tier) : Double(match.tier) + usage(item)
+        }
         return matches.sorted { a, b in
-            if a.1.tier != b.1.tier { return a.1.tier > b.1.tier }
+            if a.1.tier != b.1.tier {
+                let ar = rank(a.1, a.0), br = rank(b.1, b.0)
+                return ar != br ? ar > br : a.1.tier > b.1.tier
+            }
             if a.0.favorite != b.0.favorite { return a.0.favorite }
-            let av = min(18, log2(Double(a.0.visits) + 1) * 3) * pow(0.5, max(0, now - a.0.lastOpened) / (14 * 86400))
-            let bv = min(18, log2(Double(b.0.visits) + 1) * 3) * pow(0.5, max(0, now - b.0.lastOpened) / (14 * 86400))
+            let av = usage(a.0), bv = usage(b.0)
             if !empty {
                 let aq = Double(a.1.quality) + av, bq = Double(b.1.quality) + bv
                 if aq != bq { return aq > bq }

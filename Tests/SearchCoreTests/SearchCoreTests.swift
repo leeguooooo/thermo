@@ -80,6 +80,18 @@ final class SearchCoreTests: XCTestCase {
         XCTAssertEqual(SearchRanking.sorted(report.items, query: "toolbox").first?.path, bundle.path)
         XCTAssertEqual(SearchRanking.sorted(report.items, query: "工具").count, 1)
     }
+    func testRecentUseLiftsALooserMatchButNeverAboveAnExactName() {
+        let now = Date().timeIntervalSince1970
+        let settings = SearchItem(path: "/System/Applications/System Settings.app", name: "系统设置", kind: .application, visits: 10, lastOpened: now)
+        let assistant = SearchItem(path: "/System/Library/CoreServices/Setup Assistant.app", name: "设置助理", kind: .application)
+        XCTAssertEqual(SearchRanking.sorted([assistant, settings], query: "设置").map(\.name), ["系统设置", "设置助理"])
+        // Unused: the prefix match still wins.
+        let unused = SearchItem(path: settings.path, name: "系统设置", kind: .application)
+        XCTAssertEqual(SearchRanking.sorted([unused, assistant], query: "设置").map(\.name), ["设置助理", "系统设置"])
+        // An exact name beats any amount of use elsewhere.
+        let exact = SearchItem(path: "/Applications/设置.app", name: "设置", kind: .application)
+        XCTAssertEqual(SearchRanking.sorted([settings, exact], query: "设置").first?.name, "设置")
+    }
     func testApplicationCatalogReadsLocalizedNamesForThePreferredLanguagesNotTheProcess() throws {
         let root = try directory()
         func app(_ name: String, info: [String: String]) throws -> URL {
