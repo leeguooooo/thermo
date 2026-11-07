@@ -685,7 +685,7 @@ final class CleanKitTests: XCTestCase {
         p.load1 = 107; p.memory = .warning; p.swapUsedMB = 22 * 1024
         XCTAssertEqual(p.verdict, .overloaded)
         XCTAssertTrue(p.culpritText?.contains(MemoryFormat.string(mebibytes: 22 * 1024)) == true)
-        XCTAssertTrue(p.culpritText?.contains("high memory pressure") == true)
+        XCTAssertTrue(p.culpritText?.contains("pressure is high") == true)
         p.thermal = .serious
         XCTAssertEqual(p.verdict, .hot, "throttling outranks load")
     }
