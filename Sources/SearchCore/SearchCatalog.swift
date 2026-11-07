@@ -7,7 +7,9 @@ public enum ApplicationCatalog {
         public var complete: Bool { issues.isEmpty }
     }
     public static var defaultRoots: [URL] {
-        ["/Applications", "/System/Applications", "/System/Library/CoreServices",
+        // Safari lives in the App cryptex; its /Applications link carries the hidden flag, so the
+        // scan (which skips hidden items) only finds it through the cryptex directory.
+        ["/Applications", "/System/Applications", "/System/Cryptexes/App/System/Applications", "/System/Library/CoreServices",
          NSHomeDirectory() + "/Applications"].map { URL(fileURLWithPath: $0, isDirectory: true) }
     }
     static func item(at url: URL, languages: [String] = Locale.preferredLanguages) -> SearchItem? {
