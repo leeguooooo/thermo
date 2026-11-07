@@ -405,6 +405,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate, UNU
 
 /// Debug aid: `Thermo --render-preview DIR` writes the menu bar panel as a PNG and exits.
 /// (The main window's pages: `Thermo --main --offscreen --page PAGE --snapshot PATH`.)
+/// The shared search model, started and given a query, for the preview render.
+@MainActor private func searchPreviewModel() -> LocalSearchModel {
+    let model = LocalSearchModel.shared
+    model.start()
+    model.query = "th"
+    return model
+}
+
 @MainActor func renderPreviews(to dir: String) {
     Settings.register()
     renderingPreview = true
@@ -436,6 +444,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate, UNU
             ("tool-battery-care", AnyView(BatteryCarePanel(model: BatteryCareModel.shared))),
             ("tool-focus", AnyView(FocusPanel(model: FocusTimerModel.shared))),
             ("tool-menu-bar", AnyView(MenuBarManagerView(model: .shared).frame(width: 940, height: 740))),
+            // The search panel at its window size, with a query so the result rows and footer show.
+            ("tool-search", AnyView(LocalSearchView(model: searchPreviewModel()).frame(width: 680, height: 520))),
             // The shared confirmation, as three pages fill it.
             ("confirm-uninstall", AnyView(ConfirmSheet(title: tr("Uninstall %1$@?", "Example"),
                 summary: tr("%1$@ and %2$@ of its files go to the Trash: %3$@ in all.", "Example", "3", "1.2 GB"), destructive: false,
