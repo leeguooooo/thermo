@@ -15,7 +15,7 @@ enum AIModels {
         if let used, used < ctx.staleBefore { stale = " · " + tr("unused %1$@", AgeFormat.span(used, now: ctx.now)) }
         return CleanItem(id: id, category: .aiModels, title: title + stale, detail: detail, safety: .review,
                          bytes: s.bytes, files: s.files, lastUsed: used, paths: paths, note: note,
-                         blocked: app.flatMap { ctx.processes.running([$0]) }.map { "\($0) is running" })
+                         blocked: app.flatMap { ctx.processes.running([$0]) }.map { tr("%1$@ is running", $0) })
     }
 
     // MARK: Ollama

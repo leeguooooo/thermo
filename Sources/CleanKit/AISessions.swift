@@ -372,7 +372,7 @@ enum AISessions {
             for (ext, extName) in extensions {
                 let tasks = ctx.path("~/Library/Application Support/\(app)/User/globalStorage/\(ext)/tasks")
                 guard FS.isDirectory(tasks) else { continue }
-                var g = SessionGroup(cwd: nil, label: "\(extName) in \(appName)")
+                var g = SessionGroup(cwd: nil, label: tr("%1$@ in %2$@", extName, appName))
                 for t in FS.children(tasks) where FS.isDirectory(t) {
                     let s = FS.size(t, trackNewest: true)
                     g.sessions.append(SessionFile(id: t, paths: [t], size: s, modified: s.newest ?? ctx.now))
