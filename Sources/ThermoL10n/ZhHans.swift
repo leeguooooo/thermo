@@ -1502,6 +1502,7 @@ let zhHans: [String: String] = [
     "Not measured": "未测量",
     "Refresh tabs": "刷新标签页",
     "%1$@ tabs": "%1$@ 个标签页",
+    "Local pages": "本机页面",
     "%1$@ tab": "%1$@ 个标签页",
     "timeout": "超时",
     "Select page: %1$@": "选择页面：%1$@",

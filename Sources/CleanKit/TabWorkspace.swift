@@ -84,6 +84,13 @@ public enum TabWorkspace {
     public static func site(_ url: String) -> String {
         URL(string: url)?.host?.lowercased() ?? "Other"
     }
+    /// The heading an ungrouped page is listed under: the site's name as the organizer writes it, and one
+    /// "Local pages" heading for dev servers on this Mac rather than "127.0.0.1".
+    static func listName(_ url: String) -> String {
+        let host = site(url)
+        if ["localhost", "127.0.0.1", "::1", "[::1]"].contains(host) { return tr("Local pages") }
+        return host == "Other" ? host : TabOrganizer.siteName(host)
+    }
     static func isWeb(_ url: String) -> Bool {
         guard let u = URL(string: url), ["http", "https"].contains(u.scheme?.lowercased() ?? ""), u.host != nil else { return false }
         return true
@@ -137,7 +144,7 @@ public enum TabWorkspace {
             let groupID = row?["groupId"] as? Int ?? -1
             let profile = recordProfiles[tab.browserID ?? ""]
             let native = nativeGroups[(profile ?? "") + ":" + String(groupID)]
-            let group = assignments[tab.selectionID] ?? (matches ? native?["title"] as? String : nil) ?? site(tab.url)
+            let group = assignments[tab.selectionID] ?? (matches ? native?["title"] as? String : nil) ?? Self.listName(tab.url)
             let reason = protection(tab, row: matches ? row : nil, owned: owned, metadata: metadata, agentWindows: agentWindows)
             return Page(tab: tab, group: group.isEmpty ? site(tab.url) : group, color: native?["color"] as? String, protectedReason: reason, profileID: matches ? profile : nil, nativeGroupID: matches ? groupID : nil, organizerVersion: profile.flatMap { organizerVersions[$0] },
                         organizerCanJoin: profile.map { canJoin.contains($0) })
@@ -225,7 +232,7 @@ public enum TabWorkspace {
         var value = try groups(home: home)
         if let name, name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty { throw WorkspaceError("Group name is empty.") }
         for page in pages {
-            if let name { value.assignments[page.id] = name } else { value.assignments[page.id] = site(page.tab.url) }
+            if let name { value.assignments[page.id] = name } else { value.assignments[page.id] = listName(page.tab.url) }
         }
         try write(value, to: directory(home: home).appendingPathComponent("groups.json"))
     }

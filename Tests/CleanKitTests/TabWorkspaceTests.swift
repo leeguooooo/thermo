@@ -125,7 +125,7 @@ final class TabWorkspaceTests: XCTestCase {
         try TabWorkspace.assign([p], name: "Custom", home: root)
         XCTAssertEqual(try TabWorkspace.groups(home: root).assignments[p.id], "Custom")
         try TabWorkspace.assign([p], name: nil, home: root)
-        XCTAssertEqual(try TabWorkspace.groups(home: root).assignments[p.id], "example.test")
+        XCTAssertEqual(try TabWorkspace.groups(home: root).assignments[p.id], "Example")  // the site name the organizer uses
         let url = TabWorkspace.directory(home: root).appendingPathComponent("groups.json")
         try Data("broken".utf8).write(to: url)
         XCTAssertThrowsError(try TabWorkspace.assign([p], name: "Overwrite", home: root))

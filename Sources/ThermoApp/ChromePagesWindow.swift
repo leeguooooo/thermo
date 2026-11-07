@@ -495,10 +495,13 @@ struct ChromePagesView: View {
                         .font(Theme.caption).foregroundStyle(Theme.caution).fixedSize(horizontal: false, vertical: true)
                 }
             }.frame(maxWidth: .infinity, alignment: .leading)
-            Text(choice.measured.map { mb($0.heapMB) } ?? tr("No matched reading"))
-                .font(choice.measured == nil ? Theme.caption : Theme.figure(.row, weight: .medium))
-                .foregroundStyle(choice.measured == nil ? Theme.textTertiary : Theme.textPrimary).fixedSize()
-                .help(choice.measured == nil ? tr("No unique memory reading matches this tab; identical titles and addresses cannot be paired reliably.") : "")
+            // Before "Measure memory" there are no readings at all; "No matched reading" on every row was noise.
+            if model.diagnosis?.mode == .devtools {
+                Text(choice.measured.map { mb($0.heapMB) } ?? tr("No matched reading"))
+                    .font(choice.measured == nil ? Theme.caption : Theme.figure(.row, weight: .medium))
+                    .foregroundStyle(choice.measured == nil ? Theme.textTertiary : Theme.textPrimary).fixedSize()
+                    .help(choice.measured == nil ? tr("No unique memory reading matches this tab; identical titles and addresses cannot be paired reliably.") : "")
+            }
         }
         .padding(.horizontal, Theme.Space.m).padding(.vertical, 10)
         .background(on ? Theme.accent.opacity(0.07) : .clear)
