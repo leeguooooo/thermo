@@ -355,7 +355,7 @@ private final class SelectorView: NSView {
               let cropped = frozen.image.cropping(to: pixels) else { return }
         guard !marks.isEmpty else { onFinish?(.captured(cropped, after: after)); return }
         var document = CaptureDocument(image: cropped)
-        for mark in marks {
+        for mark in layered(marks) {
             let points = mark.points.map { G.imagePoint($0, scale: scale, crop: pixels) }
             document.append(CaptureAnnotation(tool: mark.tool, points: points, color: .systemRed, width: max(2, (2 * scale).rounded())))
         }
@@ -402,8 +402,14 @@ private final class SelectorView: NSView {
                 }
             }
         }
-        for mark in marks + (draft.map { [$0] } ?? []) { drawMark(mark, in: context) }
+        for mark in layered(marks + (draft.map { [$0] } ?? [])) { drawMark(mark, in: context) }
         if let pointer, showsMagnifier { drawMagnifier(at: pointer, in: context) }
+    }
+
+    /// Mosaic hides the screenshot underneath, never the user's own boxes and arrows: effects go
+    /// first, then the drawn marks on top, in the preview and the saved image alike.
+    private func layered(_ list: [Mark]) -> [Mark] {
+        list.filter { $0.tool == .mosaic } + list.filter { $0.tool != .mosaic }
     }
 
     /// On-screen preview of a mark; the saved image is rendered by CaptureDocument from the same points.
