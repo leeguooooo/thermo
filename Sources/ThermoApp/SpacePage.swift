@@ -741,7 +741,7 @@ struct SpacePage: View {
                     Spacer()
                     if model.loadingLastOpened { ProgressView().controlSize(.small).accessibilityLabel(tr("Checking last opened dates")) }
                     Picker(tr("Not opened for"), selection: $olderThan) {
-                        Text(tr("Any age")).tag(0)
+                        Text(tr("Any last-opened date")).tag(0)
                         Text(tr("Not opened for 3 months")).tag(90)
                         Text(tr("Not opened for a year")).tag(365)
                     }

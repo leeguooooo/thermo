@@ -2432,7 +2432,7 @@ let zhHans: [String: String] = [
     "Copy path": "复制路径",
     "Files of 100 MB or more in your home folder.": "个人文件夹里 100 MB 及以上的文件。",
     "Not opened for": "多久没打开",
-    "Any age": "不限",
+    "Any last-opened date": "不限打开时间",
     "Not opened for 3 months": "3 个月没打开",
     "Not opened for a year": "1 年没打开",
     "opened %1$@": "%1$@打开",

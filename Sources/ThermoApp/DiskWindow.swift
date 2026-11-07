@@ -493,7 +493,7 @@ struct DiskCategoryPage: View {
         return PageHeader(title: category.title,
                           // "· 0 B selected" says nothing; the selection appears once there is one.
                           subtitle: selected.isEmpty
-                            ? model.report.map { DiskStyle.categoryStatus($0, category) } ?? ByteFormat.string(0)
+                            ? model.report.map { DiskStyle.categoryStatus($0, category) } ?? tr("Not scanned yet")
                             : tr("%1$@ · %2$@ selected", model.report.map { DiskStyle.categoryStatus($0, category) } ?? ByteFormat.string(0),
                                  ByteFormat.string(selected.reduce(0) { $0 + $1.bytes }))) {
             HStack(spacing: Theme.Space.s) {
