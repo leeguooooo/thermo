@@ -66,7 +66,7 @@ struct ProcessInspectionTarget: Identifiable {
             ScrollView {
                 if let report = model.report {
                     VStack(alignment: .leading, spacing: Theme.Space.s) {
-                        Text(tr("Observed at %1$@", report.sampled.formatted(date: .omitted, time: .standard))).font(Theme.caption).foregroundStyle(Theme.textTertiary)
+                        Text(tr("Observed at %1$@", report.sampled.text(date: .omitted, time: .standard))).font(Theme.caption).foregroundStyle(Theme.textTertiary)
                         if let application = report.application {
                             Text(tr(report.attribution == .executableLocation ? "Executable located inside: %1$@" : "Observed ancestor application: %1$@", application)).font(Theme.body)
                         } else { Text(tr("No application attribution was established")).font(Theme.body) }
@@ -77,7 +77,7 @@ struct ProcessInspectionTarget: Identifiable {
                             VStack(alignment: .leading, spacing: 3) {
                                 Text("\(node.name) · PID \(String(node.pid)) → \(String(node.parentPID)) · UID \(String(node.uid))").font(Theme.rowTitle)
                                 Text(node.executable).font(Theme.mono)
-                                Text(tr("Started at %1$@", node.started.formatted(date: .abbreviated, time: .standard))).font(Theme.caption).foregroundStyle(Theme.textTertiary)
+                                Text(tr("Started at %1$@", node.started.text(date: .abbreviated, time: .standard))).font(Theme.caption).foregroundStyle(Theme.textTertiary)
                                 if let cwd = node.workingDirectory { Text(tr("Working directory: %1$@", cwd)).font(Theme.caption) }
                                 if !node.args.isEmpty { Text(node.args.map { String(reflecting: $0) }.joined(separator: " ")).font(Theme.mono) }
                             }.textSelection(.enabled)

@@ -474,7 +474,7 @@ struct ClaudeCleanupPage: View {
                 .foregroundStyle(done ? Theme.good : Theme.textTertiary).frame(width: 18).accessibilityHidden(true)
             VStack(alignment: .leading, spacing: 2) {
                 HStack(spacing: Theme.Space.s) {
-                    Text(batch.created.formatted(date: .abbreviated, time: .shortened))
+                    Text(batch.created.text(date: .abbreviated, time: .shortened))
                         .font(Theme.rowTitle).foregroundStyle(Theme.textPrimary)
                     Text(batchStatus(restored: restored, total: total, bytes: bytes))
                         .font(Theme.caption.monospacedDigit()).foregroundStyle(Theme.textTertiary)
@@ -627,7 +627,7 @@ struct ClaudeRestoreConfirmation: View {
                     .accessibilityHidden(true)
                 VStack(alignment: .leading, spacing: 3) {
                     Text(tr("Restore Claude data?")).font(.system(size: 17, weight: .bold))
-                    Text(batch.created.formatted(date: .abbreviated, time: .shortened)).font(.system(size: 12)).foregroundStyle(.secondary)
+                    Text(batch.created.text(date: .abbreviated, time: .shortened)).font(.system(size: 12)).foregroundStyle(.secondary)
                 }
             }
             InspectorPanel {

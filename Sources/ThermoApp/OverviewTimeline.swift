@@ -175,7 +175,7 @@ struct HeatTimeline: View {
                 VStack(alignment: .leading, spacing: 4) {
                     ForEach(events.suffix(5).reversed()) { e in
                         HStack(alignment: .firstTextBaseline, spacing: 8) {
-                            Text(e.time.formatted(date: .omitted, time: .shortened)).font(Theme.caption.monospacedDigit())
+                            Text(e.time.text(date: .omitted, time: .shortened)).font(Theme.caption.monospacedDigit())
                                 .foregroundStyle(Theme.textTertiary).frame(width: 44, alignment: .leading)
                             Image(systemName: e.symbol).font(.system(size: 10)).foregroundStyle(color(e.kind)).frame(width: 14)
                                 .accessibilityHidden(true)

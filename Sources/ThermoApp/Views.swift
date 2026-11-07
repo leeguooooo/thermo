@@ -711,7 +711,7 @@ struct FansView: View {
         let checked = monitor.fanControlState?.observations[id]?.checkedAt
         let detail = [tr("No current reading for this fan. Saved settings and last checks are shown below."),
                       FanControlPresentation.observation(monitor.fanControlState, fan: id),
-                      checked.flatMap { $0.timeIntervalSince1970.isFinite ? tr("Checked at %1$@", $0.formatted(date: .numeric, time: .standard)) : nil }]
+                      checked.flatMap { $0.timeIntervalSince1970.isFinite ? tr("Checked at %1$@", $0.text(date: .numeric, time: .standard)) : nil }]
             .compactMap { $0 }.joined(separator: "\n")
         return InspectorPanel {
             HStack(spacing: Theme.Space.s) {
@@ -995,7 +995,7 @@ struct FanControlCard: View {
         } else {
             let checked = controlState?.observations[fan.id]?.checkedAt
             let detail = [FanControlPresentation.observation(controlState, fan: fan.id),
-                          checked.flatMap { $0.timeIntervalSince1970.isFinite ? tr("Checked at %1$@", $0.formatted(date: .numeric, time: .standard)) : nil }]
+                          checked.flatMap { $0.timeIntervalSince1970.isFinite ? tr("Checked at %1$@", $0.text(date: .numeric, time: .standard)) : nil }]
                 .compactMap { $0 }.joined(separator: "\n")
             HStack(spacing: Theme.Space.xs) {
                 Circle().fill(pending ? Theme.caution : policyAvailable ? Theme.good : Theme.textTertiary).frame(width: 6, height: 6)

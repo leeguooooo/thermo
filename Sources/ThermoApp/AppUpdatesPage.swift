@@ -106,7 +106,7 @@ struct AppUpdatesPage: View {
                         HStack(spacing: Theme.Space.xs) {
                             if let report = model.report {
                                 Text((report.catalogRefreshed ? tr("Homebrew catalog refreshed") : tr("Using Homebrew's current metadata; refresh the catalog to check for newer releases"))
-                                     + " · " + report.checked.formatted(date: .omitted, time: .shortened))
+                                     + " · " + report.checked.text(date: .omitted, time: .shortened))
                                     .font(Theme.caption).foregroundStyle(Theme.textTertiary).lineLimit(1)
                             }
                             InfoButton(text: tr("Homebrew apps only. App Store and other app updaters are managed separately."))

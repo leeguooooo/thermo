@@ -83,7 +83,7 @@ import ThermoL10n
         if let mode = configuration.mode {
             details.append(tr(mode == .tasks ? "Keep tasks running" : mode == .display ? "Keep display on" : "Keep display and tasks awake"))
         }
-        details.append(configuration.expiresAt.map { tr("Ends at %1$@", $0.formatted(date: .omitted, time: .standard)) } ?? tr("Until I stop it"))
+        details.append(configuration.expiresAt.map { tr("Ends at %1$@", $0.text(date: .omitted, time: .standard)) } ?? tr("Until I stop it"))
         if let issue = controller.state.issue ?? issue { details.append(tr(issue)) }
         if controller.state.lastEndReason == "expired" { details.append(tr("The timer ended this session.")) }
         record(OperationRecord(feature: "power", action: action, outcome: outcome,
@@ -177,7 +177,7 @@ struct IdleAwakePanel: View {
                 Text(tr("Idle awake needs known power status and more than 20% battery, or external power.")).font(Theme.secondary).foregroundStyle(Theme.caution)
             }
             if let end = model.state.expiresAt {
-                Text(tr("Ends at %1$@", end.formatted(date: .omitted, time: .standard))).monospacedDigit()
+                Text(tr("Ends at %1$@", end.text(date: .omitted, time: .standard))).monospacedDigit()
             }
             if model.state.phase == .idle, let reason = model.state.lastEndReason {
                 Text(tr(reason == "expired" ? "The timer ended this session." : ["requestLost", "renewFailed"].contains(reason) ? "macOS ended this awake session. Start a new session if needed." : "This session has ended.")).font(Theme.caption).foregroundStyle(Theme.textTertiary)

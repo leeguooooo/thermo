@@ -86,3 +86,22 @@ public func tr(_ key: String, _ args: String...) -> String {
     guard !args.isEmpty else { return format }
     return String(format: format, locale: nil, arguments: args.map { $0 as NSString })
 }
+
+public extension Language {
+    /// The locale for dates and numbers shown in this language, so an English UI never shows
+    /// Chinese-format dates just because the Mac's region is China (and the other way round).
+    var locale: Locale {
+        switch self {
+        case .english:
+            // Keep the user's own English region (en_GB dates differ from en_US) when they have one.
+            return Locale.current.language.languageCode?.identifier == "en" ? Locale.current : Locale(identifier: "en_US")
+        case .simplifiedChinese: return Locale(identifier: "zh_CN")
+        case .japanese: return Locale(identifier: "ja_JP")
+        }
+    }
+}
+
+public extension L10n {
+    /// Locale for the language the UI is showing right now.
+    static var locale: Locale { current.locale }
+}

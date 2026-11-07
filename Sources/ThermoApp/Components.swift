@@ -515,3 +515,10 @@ struct RingGauge: View {
         .accessibilityValue(normalizedValue == nil ? tr("No reading available") : text)
     }
 }
+
+extension Date {
+    /// `formatted(date:time:)` in the UI language's locale rather than the Mac's region.
+    func text(date: Date.FormatStyle.DateStyle, time: Date.FormatStyle.TimeStyle) -> String {
+        formatted(Date.FormatStyle(date: date, time: time, locale: L10n.locale))
+    }
+}

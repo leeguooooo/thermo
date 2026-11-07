@@ -209,7 +209,7 @@ struct StartupItemsPage: View {
             SectionHeader(title: tr("Login and background registrations")) {
                 HStack(spacing: Theme.Space.s) {
                     if let date = model.background.observedAt {
-                        Text(tr("Checked at %1$@", date.formatted(date: .numeric, time: .standard)))
+                        Text(tr("Checked at %1$@", date.text(date: .numeric, time: .standard)))
                             .font(Theme.caption.monospacedDigit()).foregroundStyle(Theme.textTertiary)
                     }
                     InfoButton(text: tr("Registration data is not a running-process status. Use System Settings to manage these entries."))

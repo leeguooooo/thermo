@@ -162,7 +162,7 @@ struct PulseHistoryChart: View {
     }
 
     func caption(_ r: PulseRecord) -> String {
-        let time = r.t.formatted(date: .omitted, time: .shortened)
+        let time = r.t.text(date: .omitted, time: .shortened)
         let who = r.top.map { p in
             p.cpu >= 50 ? "\(p.name) \(Int(p.cpu))%" : "\(p.name) \(MemoryFormat.string(kibibytes: p.memoryKB))"
         }.joined(separator: " · ")

@@ -215,7 +215,7 @@ struct HistoryPage: View {
         let groups = Dictionary(grouping: shown) { calendar.startOfDay(for: $0.time) }
         return groups.keys.sorted(by: >).map { day in
             let title = calendar.isDateInToday(day) ? tr("Today") : calendar.isDateInYesterday(day) ? tr("Yesterday")
-                : day.formatted(date: .abbreviated, time: .omitted)
+                : day.text(date: .abbreviated, time: .omitted)
             return (title, groups[day]!.sorted { $0.time > $1.time })
         }
     }
@@ -280,7 +280,7 @@ struct HistoryPage: View {
                         Text(r.title).font(Theme.rowTitle).foregroundStyle(Theme.textPrimary)
                         if failed { StatusTag(text: r.outcomeText, color: Theme.caution) }
                     }
-                    Text(([r.time.formatted(date: .omitted, time: .shortened), r.subject, r.items.count > 1 ? tr("%1$@ items", String(r.items.count)) : nil, r.sizeText]
+                    Text(([r.time.text(date: .omitted, time: .shortened), r.subject, r.items.count > 1 ? tr("%1$@ items", String(r.items.count)) : nil, r.sizeText]
                         .compactMap { $0 }).joined(separator: " · "))
                         .font(Theme.caption.monospacedDigit()).foregroundStyle(Theme.textTertiary).lineLimit(1).truncationMode(.middle)
                 }

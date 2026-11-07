@@ -269,7 +269,7 @@ struct DiskOverviewView: View {
     var subtitle: String {
         if model.measuring { return tr("measuring… %1$@ places so far", String(model.partial.reduce(0) { $0 + ($1.measuredLocations ?? 1) })) }
         guard let at = model.measuredAt else { return "" }
-        return tr("measured %1$@", at.formatted(date: .abbreviated, time: .shortened))
+        return tr("measured %1$@", at.text(date: .abbreviated, time: .shortened))
     }
 
     /// The page's hero: how full the disk is, and what fills it, as one figure and one bar.
