@@ -43,17 +43,30 @@ private final class FocusBreakWindow: NSWindow {
 @MainActor final class NativeFocusBreakScreen: FocusBreakScreen {
     private var windows: [NSWindow] = []
     private var screenObserver: NSObjectProtocol?
+    private var workspaceObservers: [NSObjectProtocol] = []
     private var previousOptions: NSApplication.PresentationOptions = []
+    private var previousPolicy: NSApplication.ActivationPolicy?
     private weak var model: FocusTimerModel?
 
     func show(_ model: FocusTimerModel) {
         self.model = model
         guard windows.isEmpty else { return }
         previousOptions = NSApp.presentationOptions
+        // 有 Dock 图标（.regular）时，窗口进不了其他应用的全屏空间；休息期间临时切成 .accessory，结束后还原。
+        if NSApp.activationPolicy() == .regular { previousPolicy = .regular; NSApp.setActivationPolicy(.accessory) }
         present()
         screenObserver = NotificationCenter.default.addObserver(forName: NSApplication.didChangeScreenParametersNotification, object: nil, queue: .main) { [weak self] _ in
             // 接上或拔掉显示器时重铺，保证每块当前连接的屏幕都被覆盖。
             MainActor.assumeIsolated { self?.closeWindows(); self?.present() }
+        }
+        // 禁止切换应用并不总能挡住 Cmd+Tab、调度中心或切换空间；一旦别的应用被激活或空间变了，就把休息画面拉回最前。
+        let center = NSWorkspace.shared.notificationCenter
+        for name in [NSWorkspace.didActivateApplicationNotification, NSWorkspace.activeSpaceDidChangeNotification] {
+            workspaceObservers.append(center.addObserver(forName: name, object: nil, queue: .main) { [weak self] note in
+                let app = note.userInfo?[NSWorkspace.applicationUserInfoKey] as? NSRunningApplication
+                if app?.processIdentifier == ProcessInfo.processInfo.processIdentifier { return }
+                MainActor.assumeIsolated { self?.bringToFront() }
+            })
         }
     }
 
@@ -61,8 +74,19 @@ private final class FocusBreakWindow: NSWindow {
         guard !windows.isEmpty else { return }
         if let screenObserver { NotificationCenter.default.removeObserver(screenObserver) }
         screenObserver = nil
+        for observer in workspaceObservers { NSWorkspace.shared.notificationCenter.removeObserver(observer) }
+        workspaceObservers = []
         closeWindows()
         NSApp.presentationOptions = previousOptions
+        if let previousPolicy { NSApp.setActivationPolicy(previousPolicy) }
+        previousPolicy = nil
+    }
+
+    private func bringToFront() {
+        guard !windows.isEmpty else { return }
+        for window in windows { window.orderFrontRegardless() }
+        NSApp.activate(ignoringOtherApps: true)
+        windows.first?.makeKeyAndOrderFront(nil)
     }
 
     private func present() {
