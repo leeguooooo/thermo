@@ -2120,6 +2120,7 @@ let zhHans: [String: String] = [
     "Programs macOS starts in the background for your tools.": "macOS 在后台为你的工具启动的程序。",
     "Helper programs your agents start; leftovers keep using memory.": "agent 启动的辅助程序；残留的会一直占内存。",
     "Checking…": "检查中…",
+    "Status: %1$@": "状态：%1$@",
     "%1$@ fixable in one click": "%1$@ 个可一键修复",
     "needs your decision": "需要你来决定",
     // Disk window (redesign)
@@ -3628,7 +3629,6 @@ let zhHans: [String: String] = [
     "This HTTP inspection uses a separate connection and configured credentials; it does not automatically load host-managed OAuth. Authentication here does not establish the host connection state. No login or business tool calls were attempted.": "此 HTTP 检查使用独立连接和配置中的凭据，不会自动读取宿主管理的 OAuth。这里的鉴权结果不能代表宿主连接状态。未尝试登录或调用业务工具。",
     "Cleanup: %1$@ · HTTP %2$@ · observed %3$@ s · budget %4$@ s": "会话清理：%1$@ · HTTP %2$@ · 已观察 %3$@ 秒 · 等待预算 %4$@ 秒",
     "System helper": "系统辅助服务",
-    "System helper: %1$@": "系统辅助服务：%1$@",
     "Uninstalling the system helper…": "正在卸载系统辅助服务…",
     "Fan, sleep, network and charging controls are being restored before removal. Read-only sensor viewing remains available.": "移除前正在恢复风扇、休眠、网络和充电控制。仍可查看只读传感器数据。",
     "Updating the system helper…": "正在更新系统辅助服务…",

@@ -1240,7 +1240,7 @@ struct SettingsView: View {
                 AgentAccessRow().padding(Theme.Space.l)
             }
             section(tr("System helper")) {
-                row(tr("System helper: %1$@", helperText), last: true, labelControl: false) {
+                row(tr("Status: %1$@", helperText), last: true, labelControl: false) {  // the section title already names it
                     if [.running, .notRunning, .needsApproval, .outdated].contains(monitor.helperState) {
                         HStack(spacing: 8) {
                             if monitor.uninstallingHelper || monitor.settingUp {
@@ -1364,7 +1364,7 @@ struct SettingsView: View {
         case .notInstalled: return tr("not installed")
         case .needsApproval: return tr("waiting for approval")
         case .outdated: return tr("outdated")
-        case .unknown: return "…"
+        case .unknown: return tr("Checking…")
         }
     }
 }
