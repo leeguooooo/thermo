@@ -4053,8 +4053,6 @@ let zhHans: [String: String] = [
     "Copy pixel color": "复制像素颜色",
     "Choose a pixel inside the image.": "请选择图像内的像素。",
     "Hover or click to sample. C copies; Shift changes format; Option temporarily picks; Esc exits.": "悬停或点击取色；C 复制，Shift 切换格式，Option 临时取色，Esc 退出。",
-    "Select a screenshot region": "选择截图区域",
-    "C copies": "C 复制",
     "Select capture display": "选择采集屏幕",
     "Select entire display": "选择整块显示器",
     "Next display": "下一块显示器",
