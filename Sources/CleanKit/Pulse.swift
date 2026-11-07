@@ -206,10 +206,10 @@ public struct MachinePulse: Codable, Sendable, Equatable {
         if memory.isHigh {
             let swap = MemoryFormat.string(mebibytes: swapUsedMB)
             if let big = hogs.filter({ $0.memoryMetric != .unavailable && $0.memoryKB > 0 }).max(by: { $0.memoryKB < $1.memoryKB }) {
-                return tr("macOS reports high memory pressure; %1$@ of swap is in use. %2$@ has the largest reported memory use in this sample (%3$@).",
+                return tr("Memory pressure is high; %1$@ of swap is in use. %2$@ uses the most memory in this sample (%3$@).",
                           swap, big.name, MemoryFormat.string(kibibytes: big.memoryKB))
             }
-            return tr("macOS reports high memory pressure; %1$@ of swap is in use.", swap)
+            return tr("Memory pressure is high; %1$@ of swap is in use.", swap)
         }
         // The list can be ordered by memory. Report the highest observed CPU use,
         // rather than calling the first row the cause of a one-minute load average.
@@ -219,10 +219,10 @@ public struct MachinePulse: Codable, Sendable, Equatable {
         }
         if busy >= 1 && swapUsedMB >= 4096 {
             if memory == .normal {
-                return tr("macOS reports normal memory pressure; %1$@ of swap is in use. Swap size alone does not establish current swap activity or the cause of high load.",
+                return tr("Memory pressure is normal; %1$@ of swap is in use — size alone does not mean it is swapping now.",
                           MemoryFormat.string(mebibytes: swapUsedMB))
             }
-            return tr("Memory pressure is unavailable; %1$@ of swap is in use. Swap size alone does not establish current swap activity or the cause of high load.",
+            return tr("Memory pressure is unavailable; %1$@ of swap is in use — size alone does not mean it is swapping now.",
                       MemoryFormat.string(mebibytes: swapUsedMB))
         }
         if busy >= 1 { return tr("Load is high, but no single program stands out.") }

@@ -422,12 +422,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate, UNU
     PanelModel.shared.setActive(true)
     monitor.popoverOpen = true
     DispatchQueue.main.asyncAfter(deadline: .now() + 4) {
-        let r = ImageRenderer(content: PopoverView(monitor: monitor).background(Color(nsColor: .windowBackgroundColor)))
-        r.scale = 2
-        if let img = r.cgImage {
-            try? NSBitmapImageRep(cgImage: img).representation(using: .png, properties: [:])?
-                .write(to: URL(fileURLWithPath: dir).appendingPathComponent("panel.png"))
-        }
         // The capture menu as a plain list (Buttons as rows, Dividers as rules), for reviewing its wording and groups.
         let m = ImageRenderer(content: VStack(alignment: .leading, spacing: 6) { CaptureMenuItems() }
             .buttonStyle(.plain).padding(16).frame(width: 300, alignment: .leading).background(Color(nsColor: .windowBackgroundColor)))
@@ -438,6 +432,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate, UNU
         }
         // Each tool sheet the settings page opens, for reviewing them without opening windows on screen.
         let tools: [(String, AnyView)] = [
+            // The panel itself, hosted like the sheets so its capture Menu draws as a real control.
+            ("panel", AnyView(PopoverView(monitor: monitor).frame(width: 372))),
             ("tool-keep-awake", AnyView(IdleAwakePanel(model: IdleAwakeModel.shared))),
             ("tool-clean-screen", AnyView(CleanScreenSetupView(model: CleanScreenModel.shared))),
             ("tool-low-latency", AnyView(AWDLPanel(model: AWDLModel.shared))),
