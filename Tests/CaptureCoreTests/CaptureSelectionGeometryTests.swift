@@ -62,4 +62,31 @@ final class CaptureSelectionGeometryTests: XCTestCase {
         XCTAssertEqual(G.imagePoint(CGPoint(x: 300, y: 200), scale: 2, crop: crop), CGPoint(x: 400, y: 0))  // bottom-right
     }
 
+
+    /// End-to-end through the real renderer: a box drawn near the top-left of the selection must
+    /// come out near the top-left of the saved image (catches a flipped y axis).
+    func testMarksDrawnOnTheSelectorLandWhereTheyWereDrawnInTheSavedImage() throws {
+        let width = 400, height = 300
+        let ctx = try XCTUnwrap(CGContext(data: nil, width: width, height: height, bitsPerComponent: 8, bytesPerRow: 0,
+                                          space: CGColorSpaceCreateDeviceRGB(), bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue))
+        ctx.setFillColor(CGColor(gray: 1, alpha: 1)); ctx.fill(CGRect(x: 0, y: 0, width: width, height: height))
+        let crop = CGRect(x: 200, y: 100, width: width, height: height)   // selection (100,50,200,150) at 2x
+        var document = CaptureDocument(image: try XCTUnwrap(ctx.makeImage()))
+        // Box from (110,60) to (150,90) in selector points: 20–100 px right, 20–80 px down from the top.
+        let points = [CGPoint(x: 110, y: 60), CGPoint(x: 150, y: 90)].map { G.imagePoint($0, scale: 2, crop: crop) }
+        document.append(CaptureAnnotation(tool: .rectangle, points: points, color: .systemRed, width: 4))
+        let image = try document.rendered()
+        func isRed(x: Int, yFromTop: Int) throws -> Bool {
+            var px = [UInt8](repeating: 0, count: 4)
+            let one = try XCTUnwrap(CGContext(data: &px, width: 1, height: 1, bitsPerComponent: 8, bytesPerRow: 4,
+                                              space: CGColorSpaceCreateDeviceRGB(), bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue))
+            one.draw(try XCTUnwrap(image.cropping(to: CGRect(x: x, y: yFromTop, width: 1, height: 1))), in: CGRect(x: 0, y: 0, width: 1, height: 1))
+            return px[0] > 180 && px[1] < 120 && px[2] < 120
+        }
+        XCTAssertTrue(try isRed(x: 60, yFromTop: 20), "top edge near the top of the image")
+        XCTAssertTrue(try isRed(x: 20, yFromTop: 50), "left edge")
+        XCTAssertFalse(try isRed(x: 60, yFromTop: 280), "nothing mirrored to the bottom")
+        XCTAssertFalse(try isRed(x: 60, yFromTop: 50), "inside of the box stays clear")
+    }
+
 }
