@@ -9,7 +9,11 @@ import ThermoL10n
 /// be moved, resized from eight handles or nudged with the arrow keys before confirming.
 @available(macOS 14, *)
 @MainActor final class CaptureScreenshotSelector {
-    enum Outcome { case cancelled, captured(CGImage, after: [CaptureAfterStep]?) }
+    enum Outcome { case cancelled, captured(CGImage, after: [CaptureAfterStep]?), region(CaptureRegionSelector.Region) }
+    /// `.screenshot` crops the frozen frame; `.region` only reports where (long screenshots, recording).
+    enum Purpose { case screenshot, region(confirmTitle: String) }
+    let purpose: Purpose
+    init(purpose: Purpose = .screenshot) { self.purpose = purpose }
     struct Frozen { let screen: NSScreen; let displayID: CGDirectDisplayID; let image: CGImage; let windows: [CGRect] }
 
     private var panels: [NSPanel] = []
@@ -83,7 +87,7 @@ import ThermoL10n
             panel.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary, .stationary, .ignoresCycle]
             panel.isReleasedWhenClosed = false; panel.acceptsMouseMovedEvents = true; panel.hidesOnDeactivate = false
             panel.title = tr("Select a screenshot region")
-            let view = SelectorView(frame: NSRect(origin: .zero, size: item.screen.frame.size), frozen: item)
+            let view = SelectorView(frame: NSRect(origin: .zero, size: item.screen.frame.size), frozen: item, purpose: purpose)
             view.onFinish = { [weak self] outcome in self?.finish(.success(outcome)) }
             view.onBeginSelection = { [weak self, weak view] in
                 for other in self?.views ?? [] where other !== view { other.clearSelection() }
@@ -114,6 +118,7 @@ private final class SelectorView: NSView {
     private enum Drag { case none, drawing(start: CGPoint), moving(grab: CGPoint, original: CGRect), resizing(CaptureSelectionHandle) }
 
     let frozen: CaptureScreenshotSelector.Frozen
+    let purpose: CaptureScreenshotSelector.Purpose
     var onFinish: ((CaptureScreenshotSelector.Outcome) -> Void)?
     var onBeginSelection: (() -> Void)?
 
@@ -126,14 +131,19 @@ private final class SelectorView: NSView {
     private var pointer: CGPoint?
     private let toolbar = NSStackView()
 
-    init(frame: NSRect, frozen: CaptureScreenshotSelector.Frozen) {
-        self.frozen = frozen
+    init(frame: NSRect, frozen: CaptureScreenshotSelector.Frozen, purpose: CaptureScreenshotSelector.Purpose) {
+        self.frozen = frozen; self.purpose = purpose
         scale = frame.width > 0 ? CGFloat(frozen.image.width) / frame.width : frozen.screen.backingScaleFactor
         super.init(frame: frame)
         setAccessibilityLabel(tr("Select a screenshot region") + " · " + frozen.screen.localizedName)
         toolbar.orientation = .horizontal; toolbar.spacing = 6; toolbar.edgeInsets = NSEdgeInsets(top: 4, left: 6, bottom: 4, right: 6)
         toolbar.wantsLayer = true; toolbar.layer?.cornerRadius = 7; toolbar.layer?.backgroundColor = NSColor.windowBackgroundColor.withAlphaComponent(0.95).cgColor
-        for (title, action) in [(tr("Cancel"), #selector(cancelSelection)), (tr("Copy"), #selector(copySelection)), (tr("Done"), #selector(confirmSelection))] {
+        var buttons = [(tr("Cancel"), #selector(cancelSelection))]
+        switch purpose {
+        case .screenshot: buttons += [(tr("Copy"), #selector(copySelection)), (tr("Done"), #selector(confirmSelection))]
+        case .region(let title): buttons += [(title, #selector(confirmSelection))]
+        }
+        for (title, action) in buttons {
             let button = NSButton(title: title, target: self, action: action)
             button.bezelStyle = .rounded; button.controlSize = .regular
             if action == #selector(confirmSelection) { button.keyEquivalent = "\r" }
@@ -261,7 +271,7 @@ private final class SelectorView: NSView {
             selection = rect; layoutToolbar(); needsDisplay = true
         default:
             let key = event.charactersIgnoringModifiers?.lowercased()
-            if flags.contains(.command), key == "c" { finish(after: [.copyImage]) }
+            if flags.contains(.command), key == "c", case .screenshot = purpose { finish(after: [.copyImage]) }
             else if flags.contains(.command), key == "a" { onBeginSelection?(); selection = bounds; hovered = nil; layoutToolbar(); needsDisplay = true }
             else if flags.isEmpty, key == "c", let pointer, let hex = color(at: pointer)?.hex {
                 // Copy the color under the pointer, as a colour picker would, then close.
@@ -276,6 +286,13 @@ private final class SelectorView: NSView {
     @objc private func confirmSelection() { finish(after: nil) }
 
     private func finish(after: [CaptureAfterStep]?) {
+        if case .region = purpose {
+            // Recording and long screenshots need at least 32 points each way (see Region.validate).
+            guard let rect = target?.integral.intersection(bounds), rect.width >= 32, rect.height >= 32 else { NSSound.beep(); return }
+            onFinish?(.region(CaptureRegionSelector.Region(displayID: frozen.displayID, rect: rect, scale: frozen.screen.backingScaleFactor,
+                                                           selectedDisplaySize: frozen.screen.frame.size)))
+            return
+        }
         guard let rect = target, let pixels = G.pixelRect(rect, scale: scale, imageSize: CGSize(width: frozen.image.width, height: frozen.image.height)),
               let cropped = frozen.image.cropping(to: pixels) else { return }
         onFinish?(.captured(cropped, after: after))

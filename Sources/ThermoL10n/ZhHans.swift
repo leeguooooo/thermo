@@ -4060,6 +4060,7 @@ let zhHans: [String: String] = [
     "C copies": "C 复制",
     "Switch to English input while searching": "搜索时切换到英文输入",
     "Letters such as xtsz go straight to search instead of the input method. The previous input method comes back when search closes.": "直接敲 xtsz 这样的字母就能搜，不会先进输入法；关闭搜索后恢复原来的输入法。",
+    "Start scrolling capture": "开始长截图",
     "Select capture display": "选择采集屏幕",
     "Select entire display": "选择整块显示器",
     "Next display": "下一块显示器",

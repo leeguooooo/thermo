@@ -136,7 +136,7 @@ func captureFailureMessage(_ error:Error) -> String {
             guard !self.shuttingDown else {self.finishCapture(.failure(CaptureScriptFailure.cancelled));return}
             switch result {
             case .failure(let error): self.failCapture(error)
-            case .success(.cancelled): self.finishCapture(.success(false))
+            case .success(.cancelled),.success(.region): self.finishCapture(.success(false))
             case .success(.captured(let image,let after)):
                 var stepOptions=options;if let after {stepOptions.after=after}
                 self.runCaptured(image,options:stepOptions,id:id)
@@ -194,13 +194,10 @@ func captureFailureMessage(_ error:Error) -> String {
         }
     }
     func captureScrolling() {
-        guard regionSelector == nil else { return }
         if #available(macOS 14, *) {
             if let scrollWindow, scrollWindow.window?.isVisible == true { scrollWindow.showWindow(nil); return }
-            let selector = CaptureRegionSelector(); regionSelector = selector
-            selector.select { [weak self] region in
-                guard let self else { return }; self.regionSelector = nil
-                guard let region else { return }
+            selectRegion(confirmTitle: tr("Start scrolling capture")) { [weak self] region in
+                guard let self, let region else { return }
                 let window = ScrollCaptureWindow(region: region); self.scrollWindow = window; window.showWindow(nil)
             }
         } else { issue = tr("Scrolling capture requires macOS 14 or later."); showIssue() }
@@ -213,13 +210,30 @@ func captureFailureMessage(_ error:Error) -> String {
         if draftsOnly {
             let window = CaptureRecordingWindow(region:nil); recordingWindow = window; window.showWindow(nil); return
         }
-        guard regionSelector == nil else { return }
-        let selector = CaptureRegionSelector(); regionSelector = selector
-        selector.select { [weak self] region in
-            guard let self else { return }; self.regionSelector = nil
-            guard let region else { return }
+        selectRegion(confirmTitle: tr("Start recording")) { [weak self] region in
+            guard let self, let region else { return }
             let window = CaptureRecordingWindow(region:region); self.recordingWindow = window; window.showWindow(nil)
         }
+    }
+    /// Region picking for long screenshots and recording: the screenshot selector on macOS 14+,
+    /// the older live overlay before that.
+    private func selectRegion(confirmTitle:String,completion:@escaping(CaptureRegionSelector.Region?)->Void) {
+        guard regionSelector == nil, screenshotSelector == nil else { return }
+        if #available(macOS 14, *), screenCaptureAccess() {
+            let selector=CaptureScreenshotSelector(purpose:.region(confirmTitle:confirmTitle));screenshotSelector=selector
+            selector.start { [weak self] result in
+                guard let self else{return}
+                if self.screenshotSelector === selector {self.screenshotSelector=nil}
+                switch result {
+                case .success(.region(let region)): completion(region)
+                case .failure(let error): self.report(error);completion(nil)
+                default: completion(nil)
+                }
+            }
+            return
+        }
+        let selector = CaptureRegionSelector(); regionSelector = selector
+        selector.select { [weak self] region in self?.regionSelector = nil;completion(region) }
     }
     var recordingActive: Bool { recordingWindow?.model.active == true || recordingWindow?.model.exporting == true }
     func terminationReply(_ previous:NSApplication.TerminateReply) -> NSApplication.TerminateReply {
