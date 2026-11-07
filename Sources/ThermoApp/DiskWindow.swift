@@ -316,17 +316,19 @@ struct DiskHome: View {
                            subtitle: model.loadingSaved ? tr("Loading saved results…") : tr("Old AI sessions, model downloads, agent leftovers, build output and caches. Nothing is removed until you choose."), spinning: model.loadingSaved)
                 BigRoundButton(title: tr("Scan"), color: Theme.accent) { model.scan() }
                 if let disk = Self.startupDisk() {
+                    // Low the same way the menu bar panel says so: under 20 GB, or over 90% used.
+                    let low = disk.free < 20_000_000_000 || Double(disk.free) < Double(disk.total) * 0.1
                     VStack(spacing: Theme.Space.xs) {
                         GeometryReader { g in
                             ZStack(alignment: .leading) {
                                 Capsule().fill(Theme.surfaceRaised)
-                                Capsule().fill(disk.free < 20_000_000_000 ? Theme.caution : Theme.accent.opacity(0.8))
+                                Capsule().fill(low ? Theme.caution : Theme.accent.opacity(0.8))
                                     .frame(width: g.size.width * CGFloat(Double(disk.total - disk.free) / Double(max(disk.total, 1))))
                             }
                         }
                         .frame(width: 280, height: 6).accessibilityHidden(true)
                         Text(tr("%1$@ free of %2$@ on this Mac", ByteFormat.string(disk.free), ByteFormat.string(disk.total)))
-                            .font(Theme.caption.monospacedDigit()).foregroundStyle(disk.free < 20_000_000_000 ? Theme.caution : Theme.textTertiary)
+                            .font(Theme.caption.monospacedDigit()).foregroundStyle(low ? Theme.caution : Theme.textTertiary)
                     }
                     .padding(.top, Theme.Space.s)
                 }
