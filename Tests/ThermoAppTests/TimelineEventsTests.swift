@@ -27,7 +27,7 @@ final class TimelineEventsTests: XCTestCase {
         XCTAssertEqual(events.events.count, 1)
         events.observe(pulse([]), now: t0.addingTimeInterval(180))
         XCTAssertEqual(events.events.last?.kind, .calm)
-        XCTAssertEqual(events.events.last?.text, "swift-build calmed down after 3 min")
+        XCTAssertEqual(events.events.last?.text, "swift-build (thermo · Claude Code) calmed down after 3 min")  // the name it had when it got busy
     }
 
     func testOperationsComeFromTheJournalWithinTheWindowOnly() {

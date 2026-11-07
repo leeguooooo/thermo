@@ -49,6 +49,17 @@ final class WorktreeCensusTests: XCTestCase {
         XCTAssertEqual(item.actions.first?.steps, [.run(tool: "/usr/bin/git", args: ["-C", busy, "worktree", "prune"], cwd: nil)])
     }
 
+    func testARepositoryReachedThroughASymlinkIsReportedOnce() throws {
+        let repo = try repository("project/artifacts", count: 20, missing: 0)
+        let link = home.appendingPathComponent("artifacts").path
+        try FileManager.default.createSymbolicLink(atPath: link, withDestinationPath: repo)
+        try #"{"projects":{"\#(link)":{},"\#(repo)":{}}}"#
+            .write(to: home.appendingPathComponent(".claude.json"), atomically: true, encoding: .utf8)
+        var c = ConfigChecks(env: DoctorEnvironment(home: home, path: ["/usr/bin"], run: { _, _ in nil }))
+        c.checkWorktrees()
+        XCTAssertEqual(c.findings.count, 1)
+    }
+
     func testCensusCountsRegisteredAndMissing() throws {
         let repo = try repository("r", count: 5, missing: 2)
         let census = try XCTUnwrap(ConfigChecks.worktreeCensus(repo))

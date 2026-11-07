@@ -71,7 +71,9 @@ extension ConfigChecks {
         var seen = Set<String>()
         for project in projects {
             guard !env.cancelled() else { return }
-            guard let repo = Self.mainCheckout(project, home: home), seen.insert(repo).inserted,
+            // One repository reached through a symlink is still one repository.
+            guard let repo = Self.mainCheckout(project, home: home),
+                  seen.insert(URL(fileURLWithPath: repo).resolvingSymlinksInPath().path).inserted,
                   let census = Self.worktreeCensus(repo),
                   census.worktrees.count >= Self.manyWorktrees || census.missing.count >= Self.manyMissingWorktrees else { continue }
             let name = (repo as NSString).lastPathComponent
