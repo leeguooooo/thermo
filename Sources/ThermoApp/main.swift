@@ -256,13 +256,37 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate, UNU
         PanelModel.shared.setActive(true)
         let screen = panelScreen(hidden: hidden)
         PanelPopover.size(popover, visibleHeight: screen.visibleFrame.height)
-        if let button = statusItem.button, !hidden {
-            popover.show(relativeTo: button.bounds, of: button, preferredEdge: .minY)
-        } else {
-            let anchor = panelAnchor(on: screen)
-            popover.show(relativeTo: anchor.contentView!.bounds, of: anchor.contentView!, preferredEdge: .minY)
+        let present = { [self] in
+            if let button = statusItem.button, !hidden {
+                popover.show(relativeTo: button.bounds, of: button, preferredEdge: .minY)
+            } else {
+                let anchor = panelAnchor(on: screen)
+                popover.show(relativeTo: anchor.contentView!.bounds, of: anchor.contentView!, preferredEdge: .minY)
+            }
         }
+        present()
+        if !panelSpacesConfigured, let window = popover.contentViewController?.view.window {
+            // The popover's window only exists once shown, so the very first showing after launch
+            // still used the default Space behaviour (and isOnActiveSpace cannot be trusted for it).
+            // Configure it now and show once more; later showings start out right.
+            panelSpacesConfigured = true
+            joinFrontSpace(window)
+            popover.close(); present()
+        }
+        popover.contentViewController?.view.window?.orderFrontRegardless()
         popover.contentViewController?.view.window?.makeKey()
+    }
+
+    /// With a Dock icon Thermo is a regular app, and its popover window stays on the ordinary
+    /// desktop Space: clicked from another app's full-screen Space it opened off-screen, so the icon
+    /// looked dead. The window exists by now but is not on screen yet: let it join the front Space.
+    func popoverWillShow(_ notification: Notification) {
+        if let window = popover.contentViewController?.view.window { joinFrontSpace(window) }
+    }
+    private var panelSpacesConfigured = false
+    private func joinFrontSpace(_ window: NSWindow) {
+        window.collectionBehavior.remove(.moveToActiveSpace)
+        window.collectionBehavior.insert([.canJoinAllSpaces, .fullScreenAuxiliary])
     }
 
     private var anchorWindow: NSWindow?
