@@ -417,6 +417,10 @@ private struct ProblemCard: View {
                     }
                     if let f = findings.first {
                         Text(findingSentence(f.message)).font(Theme.secondary).foregroundStyle(Theme.textSecondary).fixedSize(horizontal: false, vertical: true)
+                        // No button to press: the advice is all there is, so it should not hide behind Details.
+                        if item.actions.isEmpty, let fix = f.fix {
+                            Text(findingSentence(fix)).font(Theme.caption).foregroundStyle(Theme.textTertiary).fixedSize(horizontal: false, vertical: true)
+                        }
                     }
                 }
                 Spacer(minLength: Theme.Space.s)
