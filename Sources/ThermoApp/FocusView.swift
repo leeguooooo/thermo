@@ -21,7 +21,8 @@ private struct FocusIntegerRow: View {
     @FocusState private var focused: Bool
 
     private func commit() {
-        if let parsed = FocusSettings.integer(from: draft, in: range) { value = parsed }
+        // Only write when it changed: closing the panel must not save every default as a user setting.
+        if let parsed = FocusSettings.integer(from: draft, in: range), parsed != value { value = parsed }
         draft = String(value)
     }
 
@@ -39,8 +40,10 @@ private struct FocusIntegerRow: View {
     var body: some View {
         let mark = "\u{1}"
         let parts = unit(mark).components(separatedBy: mark)
-        HStack(spacing: 6) {
-            Text(tr("%1$@: %2$@", label, ""))
+        // A grid row: the label column lines the four input boxes up whatever the label's length.
+        GridRow {
+            Text(tr("%1$@: %2$@", label, "")).gridColumnAlignment(.leading)
+            HStack(spacing: 6) {
             unitText(parts.first ?? "")
             TextField("", text: $draft)
                 .textFieldStyle(.roundedBorder).multilineTextAlignment(.center).monospacedDigit()
@@ -48,15 +51,16 @@ private struct FocusIntegerRow: View {
                 .onSubmit(commit)
             unitText(parts.last ?? "")
             Stepper(label, onIncrement: { step(1) }, onDecrement: { step(-1) }).labelsHidden()
-        }
+            }
         .onAppear { draft = String(value) }
         .onDisappear(perform: commit)
         // macOS 点按钮不会让输入框失焦，只靠失焦提交的话，输入后直接点「开始专注」用的还是旧值；所以范围内的数字边输边存。
         .onChange(of: draft) { text in
-            if let number = FocusSettings.parsedInteger(text), range.contains(number) { value = number }
+            if let number = FocusSettings.parsedInteger(text), range.contains(number), number != value { value = number }
         }
         .onChange(of: value) { if FocusSettings.parsedInteger(draft) != $0 { draft = String($0) } }
         .onChange(of: focused) { if !$0 { commit() } }
+        }
     }
 }
 
@@ -86,10 +90,12 @@ struct FocusPanel: View {
                 Text(model.phase.title + remaining).font(Theme.rowTitle.weight(.semibold)).monospacedDigit()
                     .foregroundStyle(model.phase.isActive ? Theme.good : Theme.textSecondary)
             }
-            minutes(tr("Focus length"), $focus)
-            minutes(tr("Short break length"), $shortBreak)
-            minutes(tr("Long break length"), $longBreak)
-            FocusIntegerRow(label: tr("Long break after"), unit: { tr("%1$@ short breaks", $0) }, value: $every, range: FocusSettings.longBreakEveryRange)
+            Grid(alignment: .leading, horizontalSpacing: 6, verticalSpacing: Theme.Space.s) {
+                minutes(tr("Focus length"), $focus)
+                minutes(tr("Short break length"), $shortBreak)
+                minutes(tr("Long break length"), $longBreak)
+                FocusIntegerRow(label: tr("Long break after"), unit: { tr("%1$@ short breaks", $0) }, value: $every, range: FocusSettings.longBreakEveryRange)
+            }
             Toggle(tr("Show progress icon in the menu bar"), isOn: $progressIcon)
             Toggle(tr("Start focus when Thermo opens"), isOn: $startOnLaunch)
             Toggle(tr("Start focus automatically when a break ends"), isOn: $autoStartFocus)
