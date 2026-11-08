@@ -476,6 +476,20 @@ final class AppDataRemovalTests: XCTestCase {
         XCTAssertTrue(AppOwnershipSnapshot.isDiscovered("/Applications/Suite/Extra.app", directories: directories))
     }
 
+    func testRunningSimulatorAppsAreNotRequiredMacAppOwners() {
+        // A running iOS Simulator keeps hundreds of iOS-layout bundles alive; none of them can own
+        // ~/Library data, and none has Contents/Info.plist. They must not make ownership incomplete.
+        let runtime = "/Library/Developer/CoreSimulator/Volumes/iOS_24A434/Library/Developer/CoreSimulator/Profiles/Runtimes/iOS 27.0.simruntime/Contents/Resources/RuntimeRoot/Applications/AdaptiveMusicApp.app"
+        let device = NSHomeDirectory() + "/Library/Developer/CoreSimulator/Devices/ABC/data/Containers/Bundle/Application/DEF/Phone.app"
+        let table = ProcessTable(entries: [
+            AgentProcess(pid: 41, name: "AdaptiveMusicApp", executable: runtime + "/AdaptiveMusicApp"),
+            AgentProcess(pid: 42, name: "Phone", executable: device + "/Phone"),
+        ])
+        XCTAssertEqual(AppOwnershipSnapshot.supplementalPaths(table, directories: ["/Applications"]), [])
+        XCTAssertTrue(AppOwnershipSnapshot.isSimulatorPath(runtime))
+        XCTAssertFalse(AppOwnershipSnapshot.isSimulatorPath("/Applications/Xcode.app/Contents/Developer/Applications/Simulator.app"))
+    }
+
     func testAppSuffixedWrapperWithoutDeclarationIsNotASecondUnknownApp() throws {
         let container = home + "/Portable/com.helper.app"
         let actual = container + "/Actual.app"

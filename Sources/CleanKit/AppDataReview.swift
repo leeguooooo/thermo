@@ -48,6 +48,11 @@ public struct AppOwnershipSnapshot: Codable, Sendable, Equatable {
         var paths = Set<String>()
         for process in processes.entries {
             guard let executable = process.executable, executable.hasPrefix("/") else { continue }
+            // iOS Simulator apps (runtime images and device containers) keep their data inside the
+            // simulator, never in the Mac's ~/Library, and their iOS-layout bundles have no
+            // Contents/Info.plist to read. Requiring them made every uninstall unverifiable while
+            // a simulator was running.
+            if isSimulatorPath(executable) { continue }
             var ancestors: [String] = []
             var start = executable.startIndex
             while let range = executable.range(of: ".app/", range: start..<executable.endIndex) {
@@ -62,6 +67,10 @@ public struct AppOwnershipSnapshot: Codable, Sendable, Equatable {
             }
         }
         return paths.sorted()
+    }
+
+    static func isSimulatorPath(_ path: String) -> Bool {
+        path.contains("/Library/Developer/CoreSimulator/")
     }
 
     static func isDiscovered(_ path: String, directories: [String]) -> Bool {
