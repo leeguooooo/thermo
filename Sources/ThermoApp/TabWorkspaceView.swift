@@ -138,8 +138,9 @@ struct TabWorkspaceView: View {
         _task = task
     }
     var groupNames: [String] { Array(Set(filtered.map(\.group))).sorted() }
-    var filtered: [TabWorkspace.Page] {
-        model.pages.filter { search.isEmpty || ($0.tab.title + " " + $0.tab.url + " " + $0.group).localizedCaseInsensitiveContains(search) }
+    var filtered: [TabWorkspace.Page] { Self.filter(model.pages, search: search) }
+    static func filter(_ pages: [TabWorkspace.Page], search: String) -> [TabWorkspace.Page] {
+        pages.filter { search.isEmpty || ($0.tab.title + " " + $0.tab.url + " " + $0.group).localizedCaseInsensitiveContains(search) }
     }
     var eligibleSelection: [TabWorkspace.Page] { model.chosen.filter(\.canArchive) }
     /// What a tick can be put on: closable tabs, or any tab while sorting the list into categories.
@@ -327,7 +328,10 @@ struct TabWorkspaceView: View {
     }
     /// With nothing ticked, the button offers every closable tab the list currently shows — never
     /// tabs hidden by the search, which the user cannot see before reviewing.
-    var archiveDefault: [TabWorkspace.Page] { model.selected.isEmpty ? filtered.filter(\.canArchive) : eligibleSelection }
+    var archiveDefault: [TabWorkspace.Page] { Self.archiveDefault(model, search: search) }
+    static func archiveDefault(_ model: TabWorkspaceModel, search: String) -> [TabWorkspace.Page] {
+        model.selected.isEmpty ? filter(model.pages, search: search).filter(\.canArchive) : model.chosen.filter(\.canArchive)
+    }
     var archivePrimary: some View {
         let pages = archiveDefault
         return Button { requestArchive(pages) } label: {

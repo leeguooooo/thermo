@@ -32,6 +32,16 @@ final class TabWorkspaceUXTests: XCTestCase {
         XCTAssertTrue(model.selected.isEmpty)
         XCTAssertEqual(model.candidates.count, 2)
     }
+    /// With nothing ticked, the review button offers only what the search shows (it once offered every closable tab).
+    @MainActor func testUntickedArchiveFollowsSearch() {
+        let pages = [page(1), page(2), page(3, protected: "Current tab"), page(12)]
+        let model = TabWorkspaceModel(app: "Fixture", preview: .init(inventory: .init(app: "Fixture", generated: Date(), pages: pages), saved: []))
+        XCTAssertEqual(TabWorkspaceView.archiveDefault(model, search: "").map(\.id), [pages[0].id, pages[1].id, pages[3].id])
+        XCTAssertEqual(TabWorkspaceView.archiveDefault(model, search: "Page 1").map(\.id), [pages[0].id, pages[3].id])
+        XCTAssertEqual(TabWorkspaceView.archiveDefault(model, search: "Page 3").map(\.id), [], "a protected match leaves nothing to save")
+        model.selected = [pages[1].id]
+        XCTAssertEqual(TabWorkspaceView.archiveDefault(model, search: "Page 1").map(\.id), [pages[1].id], "ticks win over the search")
+    }
     @MainActor func testReadOnlyPreviewDoesNotStartBrowserActions() {
         let pages = [page(1)]
         let record = TabWorkspace.Archive(name: "Fixture", app: "Fixture", entries: [])
