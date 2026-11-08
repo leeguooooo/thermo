@@ -198,7 +198,7 @@ struct TabWorkspaceView: View {
                     NativeTabOrganizerView(app: model.app, pages: model.pages, nativeGroups: model.inventory?.nativeGroups ?? [],
                                            renameProfiles: model.inventory?.renameProfiles ?? [],
                                            working: $model.busy,
-                                           previewOnly: model.isPreview, refresh: model.refresh)
+                                           previewOnly: model.isPreview, refresh: { model.refresh() })
                         .padding(.horizontal, Theme.pagePadding).padding(.bottom, Theme.Space.xl)
                         .frame(maxWidth: Theme.pageWidth, alignment: .leading)
                         .frame(maxWidth: .infinity, alignment: .leading)
