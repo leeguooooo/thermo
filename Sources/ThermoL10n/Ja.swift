@@ -29,5 +29,8 @@ let ja: [String: String] = [
     "%1$@ short breaks": "短い休憩 %1$@ 回",
     "Show progress icon in the menu bar": "メニューバーに進捗アイコンを表示",
     "Start focus when Thermo opens": "Thermo の起動時に集中を開始",
+    "Start focus automatically when a break ends": "休憩が終わったら自動で集中を開始",
+    "Break finished": "休憩終了",
+    "Start the next focus when you're ready.": "準備ができたら次の集中を始めましょう。",
     "New lengths apply from the next focus or break.": "新しい長さは次の集中または休憩から適用されます。",
 ]

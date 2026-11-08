@@ -7,7 +7,13 @@ enum FocusPhase: Equatable {
     /// 到了休息时间但用户推迟了一分钟；到点后重新进入同一种休息。
     case postponed(FocusBreak)
     case rest(FocusBreak)
+    /// 休息时间到了但用户没开自动专注：全屏画面留着，等用户操作。
+    case breakFinished
     var isActive: Bool { self != .idle }
+    var showsBreakScreen: Bool {
+        if case .rest = self { return true }
+        return self == .breakFinished
+    }
 }
 
 struct FocusSettings: Equatable {
@@ -17,6 +23,7 @@ struct FocusSettings: Equatable {
     static let longBreakEveryKey = "focus.longBreakEvery"
     static let progressIconKey = "focus.showProgressIcon"
     static let startOnLaunchKey = "focus.startOnLaunch"
+    static let autoStartFocusKey = "focus.autoStartFocusAfterBreak"
     static let minuteRange = 1...180
     static let longBreakEveryRange = 1...12
 
@@ -26,12 +33,13 @@ struct FocusSettings: Equatable {
     var longBreakEvery = 4
     var showProgressIcon = true
     var startOnLaunch = false
+    var autoStartFocus = false
 
     static func read(_ d: UserDefaults = .standard) -> FocusSettings {
         var s = FocusSettings()
         func int(_ key: String, _ range: ClosedRange<Int>, _ fallback: Int) -> Int {
             guard let value = (d.object(forKey: key) as? NSNumber)?.intValue else { return fallback }
-            return min(range.upperBound, max(range.lowerBound, value))
+            return clamped(value, to: range)
         }
         s.focusMinutes = int(focusKey, minuteRange, s.focusMinutes)
         s.shortBreakMinutes = int(shortBreakKey, minuteRange, s.shortBreakMinutes)
@@ -39,13 +47,25 @@ struct FocusSettings: Equatable {
         s.longBreakEvery = int(longBreakEveryKey, longBreakEveryRange, s.longBreakEvery)
         s.showProgressIcon = (d.object(forKey: progressIconKey) as? NSNumber)?.boolValue ?? s.showProgressIcon
         s.startOnLaunch = (d.object(forKey: startOnLaunchKey) as? NSNumber)?.boolValue ?? s.startOnLaunch
+        s.autoStartFocus = (d.object(forKey: autoStartFocusKey) as? NSNumber)?.boolValue ?? s.autoStartFocus
         return s
+    }
+
+    static func clamped(_ value: Int, to range: ClosedRange<Int>) -> Int {
+        min(range.upperBound, max(range.lowerBound, value))
+    }
+
+    static func parsedInteger(_ text: String) -> Int? { Int(text.trimmingCharacters(in: .whitespacesAndNewlines)) }
+
+    /// 不是整数时返回 nil，由调用方保持原值。
+    static func integer(from text: String, in range: ClosedRange<Int>) -> Int? {
+        parsedInteger(text).map { clamped($0, to: range) }
     }
 }
 
 /// 菜单、设置面板和休息画面共用的操作清单，避免各处各写一套按阶段的分支。
 enum FocusAction: CaseIterable {
-    case startFocus, stopFocus, shortBreak, longBreak, breakNow, postpone, stopBreak, endBreakAndFocus
+    case startFocus, stopFocus, shortBreak, longBreak, breakNow, postpone, stopBreak, endBreakAndFocus, dismissBreak
 
     static func available(in phase: FocusPhase) -> [FocusAction] {
         switch phase {
@@ -54,13 +74,14 @@ enum FocusAction: CaseIterable {
         case .postponed: return [.breakNow, .stopBreak]
         // 提前结束休息不做任何验证（spec 明确排除密码与 Touch ID）。
         case .rest: return [.postpone, .stopBreak, .endBreakAndFocus]
+        case .breakFinished: return [.dismissBreak, .startFocus]
         }
     }
 
     @MainActor func run(_ model: FocusTimerModel) {
         switch self {
         case .startFocus: model.startFocus()
-        case .stopFocus, .stopBreak: model.stop()
+        case .stopFocus, .stopBreak, .dismissBreak: model.stop()
         case .shortBreak: model.startBreak(.short)
         case .longBreak: model.startBreak(.long)
         case .breakNow: if case let .postponed(kind) = model.phase { model.startBreak(kind) }
@@ -139,7 +160,7 @@ enum FocusAction: CaseIterable {
     private func seconds(_ phase: FocusPhase) -> TimeInterval? {
         let s = settings()
         switch phase {
-        case .idle: return nil
+        case .idle, .breakFinished: return nil
         case .focus: return TimeInterval(s.focusMinutes * 60)
         case .postponed: return Self.postponeSeconds
         case .rest(.short): return TimeInterval(s.shortBreakMinutes * 60)
@@ -161,17 +182,16 @@ enum FocusAction: CaseIterable {
                 self.expire()
             }
         }
-        if case .rest = next { screen.show(self) } else { screen.hide() }
+        if next.showsBreakScreen { screen.show(self) } else { screen.hide() }
         onChange?()
     }
 
     private func expire() {
         switch phase {
-        case .idle: break
+        case .idle, .breakFinished: break
         case .focus: beginBreak(nextBreak)
         case let .postponed(kind): enter(.rest(kind))
-        // 休息自然结束只回空闲，由用户手动开始下一轮。
-        case .rest: enter(.idle)
+        case .rest: enter(settings().autoStartFocus ? .focus : .breakFinished)
         }
     }
 }
