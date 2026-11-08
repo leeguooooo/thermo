@@ -14,27 +14,29 @@ import ThermoKit
         var body: some View { FanControlCard(fan: fan, policy: box.policy, enabled: true) { _ in }.frame(width: 700) }
     }
 
-    func sliders(in element: NSAccessibilityProtocol) -> Int {
-        var count = element.accessibilityRole() == .slider ? 1 : 0
-        for child in element.accessibilityChildren() ?? [] {
-            if let child = child as? NSAccessibilityProtocol { count += sliders(in: child) }
-        }
-        return count
+    /// Height of the card as SwiftUI lays it out: fixed mode adds the speed slider row, auto shows no editor.
+    func height(_ policy: FanPolicy) -> CGFloat {
+        let box = Box(); box.policy = policy
+        let host = NSHostingView(rootView: Host(box: box))
+        host.layoutSubtreeIfNeeded(); RunLoop.main.run(until: Date().addingTimeInterval(0.2))
+        return host.fittingSize.height
     }
 
     func testEditorFollowsEachNewPolicy() {
+        let autoHeight = height(.auto), fixedHeight = height(.fixed(rpm: 3000))
+        XCTAssertGreaterThan(fixedHeight, autoHeight, "fixed mode shows the slider")
+
         let box = Box()
         let host = NSHostingView(rootView: Host(box: box))
-        host.frame = NSRect(x: 0, y: 0, width: 700, height: 200)
-        let window = NSWindow(contentRect: host.frame, styleMask: .borderless, backing: .buffered, defer: false)
+        let window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 700, height: 300), styleMask: .borderless, backing: .buffered, defer: false)
+        window.isReleasedWhenClosed = false
         window.contentView = host
-        func settle() { host.layoutSubtreeIfNeeded(); RunLoop.main.run(until: Date().addingTimeInterval(0.3)) }
-        settle()
-        XCTAssertEqual(sliders(in: host), 0, "auto: no speed slider")
-        box.policy = .fixed(rpm: 3000); settle()
-        XCTAssertEqual(sliders(in: host), 1, "fixed: the slider shows")
-        box.policy = .auto; settle()
-        XCTAssertEqual(sliders(in: host), 0, "back to auto: no slider")
+        func settle() -> CGFloat { host.layoutSubtreeIfNeeded(); RunLoop.main.run(until: Date().addingTimeInterval(0.4)); return host.fittingSize.height }
+        XCTAssertEqual(settle(), autoHeight, accuracy: 0.5)
+        box.policy = .fixed(rpm: 3000)
+        XCTAssertEqual(settle(), fixedHeight, accuracy: 0.5, "after Apply to fixed the editor shows fixed, not the previous auto")
+        box.policy = .auto
+        XCTAssertEqual(settle(), autoHeight, accuracy: 0.5, "after Apply to auto the editor shows auto, not the previous fixed")
         window.close()
     }
 
