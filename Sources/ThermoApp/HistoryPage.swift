@@ -308,7 +308,7 @@ struct HistoryPage: View {
                                 .font(.system(size: 9, weight: .bold))
                                 .foregroundStyle(item.status == "failed" ? Theme.caution : Theme.textTertiary).frame(width: 12)
                                 .accessibilityLabel(item.status)
-                            Text(item.target).font(Theme.mono).foregroundStyle(Theme.textSecondary)
+                            Text(FS.tilde(item.target)).font(Theme.mono).foregroundStyle(Theme.textSecondary)
                                 .lineLimit(2).truncationMode(.middle).textSelection(.enabled)
                             if let bytes = item.bytes {
                                 Text(ByteFormat.string(bytes)).font(Theme.caption.monospacedDigit()).foregroundStyle(Theme.textTertiary)

@@ -9,10 +9,15 @@ public struct DiskSpaceSnapshot: Codable, Sendable, Equatable {
     public var measuredAt: Date
     /// Monotonic ordering for live measurements; wall time can be adjusted during cleanup.
     public var uptimeNanoseconds: UInt64?
+    /// Space macOS frees on demand (snapshots, caches) on top of `availableBytes`. Finder and the
+    /// Smart Scan home count it as available, so the overview says how much of the gap it is.
+    public var purgeableBytes: Int64?
 
-    public init(volumeID: String, capacityBytes: Int64, availableBytes: Int64, measuredAt: Date, uptimeNanoseconds: UInt64? = nil) {
+    public init(volumeID: String, capacityBytes: Int64, availableBytes: Int64, measuredAt: Date, uptimeNanoseconds: UInt64? = nil,
+                purgeableBytes: Int64? = nil) {
         self.volumeID = volumeID; self.capacityBytes = capacityBytes
         self.availableBytes = availableBytes; self.measuredAt = measuredAt; self.uptimeNanoseconds = uptimeNanoseconds
+        self.purgeableBytes = purgeableBytes
     }
 
     public static func measure(path: String = NSHomeDirectory()) -> Self? {
@@ -23,8 +28,11 @@ public struct DiskSpaceSnapshot: Codable, Sendable, Equatable {
         let free = available.multipliedReportingOverflow(by: Int64(fs.f_bsize))
         guard !capacity.overflow, !free.overflow, capacity.partialValue > 0,
               free.partialValue >= 0, free.partialValue <= capacity.partialValue else { return nil }
+        let important = (try? URL(fileURLWithPath: path).resourceValues(forKeys: [.volumeAvailableCapacityForImportantUsageKey]))?
+            .volumeAvailableCapacityForImportantUsage
         return Self(volumeID: "\(fs.f_fsid.val.0):\(fs.f_fsid.val.1)", capacityBytes: capacity.partialValue,
-                    availableBytes: free.partialValue, measuredAt: Date(), uptimeNanoseconds: DispatchTime.now().uptimeNanoseconds)
+                    availableBytes: free.partialValue, measuredAt: Date(), uptimeNanoseconds: DispatchTime.now().uptimeNanoseconds,
+                    purgeableBytes: important.map { max(0, $0 - free.partialValue) })
     }
 }
 

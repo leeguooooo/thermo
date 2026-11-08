@@ -1127,6 +1127,7 @@ let zhHans: [String: String] = [
     "Whether ending each one interrupts your work": "结束每一个会不会打断手上的工作",
     "so far": "目前已知",
     "Some places could not be read. Scan again to check them.": "有些位置读不到，重新扫描再看看。",
+    "Protected places were skipped. Allow Full Disk Access above, then scan again.": "受保护的位置被跳过了。先在上方允许“完全磁盘访问权限”，再重新扫描。",
     "Scan lists the networks around you, with their signal and channel.": "点“扫描”列出附近的网络及其信号和信道。",
     "Disk": "磁盘",
     "Agents": "AI 诊断",
@@ -1456,6 +1457,7 @@ let zhHans: [String: String] = [
     "%1$@ detached process (parent exited; not managed by launchd), started %2$@, %3$@ — likely leaked by a session that ended": "%1$@ 个脱离进程（父进程已退出，也不归 launchd 管），最早的启动于 %2$@，共占 %3$@：多半是已结束的会话遗留的",
     "%1$@ detached process (parent exited; not managed by launchd), started %2$@, %3$@": "%1$@ 个脱离进程（父进程已退出，也不归 launchd 管），最早的启动于 %2$@，共占 %3$@",
     "end them if no agent is using them": "没有 agent 在用的话就结束它们",
+    "Thermo does not end an agent's own programs. Quit them from the agent, or in Activity Monitor once no session uses them": "Thermo 不结束 agent 自己的程序。请在 agent 里退出，或确认没有会话在用后在“活动监视器”里结束",
     "PID %1$@ is using %2$@%% CPU — a busy loop in a helper heats the Mac and drains battery":
         "PID %1$@ 占用 %2$@%% CPU：辅助进程空转会让 Mac 发热、耗电",
     "sample %1$@ 5   # see what it is doing; end it if it is stuck": "sample %1$@ 5   # 看看它在做什么；卡住了就结束它",

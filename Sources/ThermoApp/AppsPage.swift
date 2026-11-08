@@ -622,8 +622,11 @@ struct AppsPage: View {
             } else if model.orphanScanComplete {
                 EmptyState(symbol: "checkmark.circle", title: tr("No data left behind by deleted apps."))
             } else if !model.scanningOrphans {
+                // Without Full Disk Access a rescan reads the same places; point at the permission instead.
+                let needsAccess = model.orphanIssues.contains { $0.message.contains("Full Disk Access") }
                 EmptyState(symbol: "questionmark.folder", title: tr("Nothing found so far"),
-                           detail: tr("Some places could not be read. Scan again to check them."))
+                           detail: needsAccess ? tr("Protected places were skipped. Allow Full Disk Access above, then scan again.")
+                               : tr("Some places could not be read. Scan again to check them."))
             }
         } else {
             SkeletonList(rows: 5)

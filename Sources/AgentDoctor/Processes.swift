@@ -159,7 +159,9 @@ extension ConfigChecks {
                                       String(loose.count), Self.ago(oldest), Self.mb(loose.reduce(0) { $0 + $1.row.rssKB }))
                                  : tr(loose.count == 1 ? "%1$@ detached process (parent exited; not managed by launchd), started %2$@, %3$@" : "%1$@ detached processes (parent exited; not managed by launchd), oldest started %2$@, %3$@ total",
                                       String(loose.count), Self.ago(oldest), Self.mb(loose.reduce(0) { $0 + $1.row.rssKB })),
-                            fix: tr("end them if no agent is using them")))
+                            // No end button for the agent's own programs (killable is false): say so instead of suggesting it.
+                            fix: killable ? tr("end them if no agent is using them")
+                                : tr("Thermo does not end an agent's own programs. Quit them from the agent, or in Activity Monitor once no session uses them")))
             }
             func pids(_ ms: [Member]) -> String {
                 ms.prefix(12).map { String($0.row.pid) }.joined(separator: ", ") + (ms.count > 12 ? ", …" : "")

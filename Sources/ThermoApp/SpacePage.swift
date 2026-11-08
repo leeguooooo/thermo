@@ -936,7 +936,8 @@ struct Treemap: View {
             if r.width > 54 && r.height > 28 {
                 VStack(alignment: .leading, spacing: 0) {
                     Text(e.name).font(Theme.label).lineLimit(1)
-                    Text(e.sizeText).font(Theme.caption.monospacedDigit()).opacity(0.7)
+                    // One line: a narrow tile shrinks the size a little rather than splitting "20.4 GB" across lines.
+                    Text(e.sizeText).font(Theme.caption.monospacedDigit()).opacity(0.7).lineLimit(1).minimumScaleFactor(0.75)
                 }
                 .foregroundStyle(.white).padding(5)
             }

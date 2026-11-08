@@ -180,7 +180,7 @@ struct DiskOverviewView: View {
             VStack(alignment: .leading, spacing: Theme.Space.l) {
                 header
                 if let live = model.diskSpace {
-                    capacityBar(capacity: live.capacityBytes, free: live.availableBytes)
+                    capacityBar(capacity: live.capacityBytes, free: live.availableBytes, purgeable: live.purgeableBytes ?? 0)
                 } else if let o = model.overview {
                     capacityBar(capacity: o.capacity, free: o.free, purgeable: o.purgeable)
                 }
