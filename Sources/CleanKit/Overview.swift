@@ -44,6 +44,8 @@ public struct SpaceOverview: Codable, Sendable {
     public var overcounted: Int64? = nil
     public var incompleteLocations: [String]? = nil
     public var sizeVersion: Int? = nil
+    /// What grew since a complete overview at least 12 hours old (see `OverviewHistory`).
+    public var growth: SpaceGrowth? = nil
 
     public var used: Int64 { capacity - free }
 
@@ -641,6 +643,12 @@ public struct SpaceOverview: Codable, Sendable {
     private static func validEntries(_ entries: [Entry]) -> Bool {
         var ids = Set<String>()
         return entries.allSatisfy { $0.complete != false && $0.effectiveSizeState == .complete && $0.bytes >= 0 && ids.insert($0.id).inserted && validEntries($0.children) }
+    }
+
+    /// Records a complete measurement in the growth history and keeps what grew since an earlier one.
+    public mutating func noteGrowth(at: Date = Date(), history: URL = OverviewHistory.url) {
+        guard cancelled != true, sizeVersion == 1, incompleteLocations?.isEmpty != false, Self.validEntries(entries) else { return }
+        growth = OverviewHistory.record(self, at: at, to: history)
     }
 
     public func save(to url: URL = Self.cacheURL) {

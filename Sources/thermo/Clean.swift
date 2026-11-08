@@ -123,6 +123,7 @@ struct CleanCommand {
         }, onEntry: { entry in stream?.emit(.init(event: "entry", entry: entry)) }, cancellation: cancellation)
         if o.cancelled == true { o.budgetSeconds = budget }
         let incomplete = Self.incompleteMessage("Overview scan", reason: o.stopReason, budget: budget)
+        o.noteGrowth()
         if let stream { stream.emit(.init(event: "finished", overview: o)); o.save(); if o.cancelled == true { throw CLIError(incomplete,exitCode:3) }; return }
         o.save()  // the app's Overview opens with these numbers
         if tty { FileHandle.standardError.write("\n".data(using: .utf8)!) }
@@ -137,6 +138,13 @@ struct CleanCommand {
             let children = Array(e.children.filter { $0.effectiveSizeState == .complete }.prefix(args.has("all") ? 20 : 5)) + e.children.filter { $0.effectiveSizeState != .complete }
             for c in children where c.bytes >= 100_000_000 || c.effectiveSizeState != .complete {
                 lines.append(pad("", 11) + pad(c.sizeText, 18, right: true) + "  " + c.title + (c.action.map { style.dim("  → " + $0) } ?? ""))
+            }
+        }
+        if let g = o.growth {
+            let since = g.since.formatted(.relative(presentation: .named))
+            lines.append(""); lines.append(style.bold("Grew since the full measurement \(since)") + (g.freeDropBytes > 0 ? style.dim(" · free space down \(gb(g.freeDropBytes))") : ""))
+            for item in g.items {
+                lines.append(pad("+" + gb(item.changeBytes), 18, right: true) + "  " + (item.path.map { FS.tilde($0) } ?? item.title) + style.dim("  now \(gb(item.currentBytes))"))
             }
         }
         if let over = o.overcounted {

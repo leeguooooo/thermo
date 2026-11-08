@@ -4426,4 +4426,10 @@ let zhHans: [String: String] = [
     "The original browser session ended. Select an explicit --window in the correct profile.": "原来的浏览器会话已结束。请用 --window 指定正确用户资料里的窗口。",
     "The original browser session is unavailable.": "原来的浏览器会话不可用。",
     "Unsupported saved tab schema.": "不支持的暂存标签格式。",
+    // Disk growth
+    "Grew the most": "增长最多",
+    "Compared with the full measurement from %1$@. Only folders that grew by 1 GB or more are listed.": "和%1$@的完整测量相比，只列出增长 1 GB 以上的目录。",
+    "Free space dropped by %1$@ since then.": "从那时起，可用空间少了 %1$@。",
+    "now %1$@": "现在 %1$@",
+    "Show %1$@ in Finder": "在访达中显示 %1$@",
 ]

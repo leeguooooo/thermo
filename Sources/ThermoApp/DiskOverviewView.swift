@@ -28,7 +28,7 @@ final class SpaceOverviewModel: ObservableObject {
     private let readDiskSpace: @Sendable () -> DiskSpaceSnapshot?
 
     init(cached: (SpaceOverview, Date)? = SpaceOverview.cached(localize: true), diskSpace: DiskSpaceSnapshot? = .measure(),
-         read: @escaping @Sendable (ScanCancellation, ((SpaceOverview.Entry) -> Void)?) -> SpaceOverview = { SpaceOverview.measure(onEntry: $1, cancellation: $0, lowPriority: true) },
+         read: @escaping @Sendable (ScanCancellation, ((SpaceOverview.Entry) -> Void)?) -> SpaceOverview = { var o = SpaceOverview.measure(onEntry: $1, cancellation: $0, lowPriority: true); o.noteGrowth(); return o },
          save: @escaping @Sendable (SpaceOverview) -> Void = { $0.save() },
          readDiskSpace: @escaping @Sendable () -> DiskSpaceSnapshot? = { .measure() }) {
         self.read = read; self.save = save; self.readDiskSpace = readDiskSpace
@@ -204,6 +204,7 @@ struct DiskOverviewView: View {
                             .font(Theme.secondary).foregroundStyle(Theme.caution).fixedSize(horizontal: false, vertical: true)
                     }
                 }
+                if !model.measuring, let growth = model.overview?.growth { growthSection(growth) }
                 if model.entries.isEmpty {
                     if model.stopped {
                         EmptyState(symbol: "pause.circle", title: tr("No folders finished before stopping. Measure again to continue."))
@@ -374,6 +375,46 @@ struct DiskOverviewView: View {
 }
 
 /// One place's story: what it is, what to do about it, and its biggest folders.
+extension DiskOverviewView {
+    /// Which folders grew since an earlier full measurement: when the disk fills up, the first question is "what is eating it".
+    func growthSection(_ growth: SpaceGrowth) -> some View {
+        VStack(alignment: .leading, spacing: Theme.Space.s) {
+            SectionHeader(title: tr("Grew the most")) {
+                InfoButton(text: tr("Compared with the full measurement from %1$@. Only folders that grew by 1 GB or more are listed.",
+                                    growth.since.formatted(.relative(presentation: .named))))
+            }
+            if growth.freeDropBytes > 0 {
+                Text(tr("Free space dropped by %1$@ since then.", ByteFormat.string(growth.freeDropBytes)))
+                    .font(Theme.secondary).foregroundStyle(Theme.textSecondary)
+            }
+            InspectorPanel {
+                ForEach(Array(growth.items.enumerated()), id: \.offset) { i, item in
+                    if i > 0 { InspectorDivider(inset: Theme.Space.m) }
+                    HStack(spacing: Theme.Space.m) {
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text(item.title).font(Theme.body).foregroundStyle(Theme.textPrimary).lineLimit(1)
+                            if let path = item.path {
+                                Text(FSPath.tilde(path)).font(Theme.caption).foregroundStyle(Theme.textTertiary).lineLimit(1).truncationMode(.middle)
+                            }
+                        }
+                        Spacer(minLength: Theme.Space.s)
+                        VStack(alignment: .trailing, spacing: 2) {
+                            Text("+" + ByteFormat.string(item.changeBytes)).font(Theme.body.monospacedDigit()).foregroundStyle(Theme.caution)
+                            Text(tr("now %1$@", ByteFormat.string(item.currentBytes))).font(Theme.caption.monospacedDigit()).foregroundStyle(Theme.textTertiary)
+                        }
+                        if let path = item.path {
+                            Button { NSWorkspace.shared.activateFileViewerSelecting([URL(fileURLWithPath: path)]) } label: { Image(systemName: "magnifyingglass") }
+                                .buttonStyle(.plain).foregroundStyle(Theme.textSecondary).help(tr("Show in Finder"))
+                                .accessibilityLabel(tr("Show %1$@ in Finder", FSPath.tilde(path)))
+                        }
+                    }
+                    .padding(.horizontal, Theme.Space.m).padding(.vertical, Theme.Space.s)
+                }
+            }
+        }
+    }
+}
+
 struct SpaceDetailSheet: View {
     let entry: SpaceOverview.Entry
     var route: (label: String, category: CleanCategory?)?
