@@ -268,7 +268,10 @@ struct TabWorkspaceView: View {
 
     var savedToolbar: some View {
         HStack {
-            Text(tr("%1$@ saved", String(model.saved.count))).font(Theme.secondary.monospacedDigit()).foregroundStyle(Theme.textSecondary)
+            // The empty state below already says there is nothing saved; "0 saved" would repeat it.
+            if !model.saved.isEmpty {
+                Text(tr("%1$@ saved", String(model.saved.count))).font(Theme.secondary.monospacedDigit()).foregroundStyle(Theme.textSecondary)
+            }
             Spacer()
             refreshButton
         }
@@ -502,15 +505,19 @@ struct TabWorkspaceView: View {
                         }
                         DisclosureGroup {
                             VStack(alignment: .leading, spacing: 0) {
+                                HStack(spacing: Theme.Space.m) {
                                 Menu(tr("Reopen in a specific window")) {
                                     ForEach(openWindows, id: \.self) { window in
                                         Button(model.windowLabel(window)) { plan = Plan(archive: record, destinationWindow: window) }
                                     }
-                                }.controlSize(.small).fixedSize().disabled(record.remaining == 0 || model.busy).padding(.vertical, Theme.Space.s)
+                                }.controlSize(.small).fixedSize().disabled(record.remaining == 0 || model.busy)
+                                Spacer()
+                                // Reopening is the main path; removing sits at the far end of the same row.
                                 if record.remaining > 0 {
                                     Button(tr("Remove record…")) { plan = Plan(archive: record, forget: true) }
-                                        .buttonStyle(.link).font(Theme.caption).disabled(model.busy).padding(.bottom, Theme.Space.s)
+                                        .buttonStyle(.plain).font(Theme.caption).foregroundStyle(Theme.textSecondary).disabled(model.busy)
                                 }
+                                }.padding(.vertical, Theme.Space.s)
                                 ForEach(record.entries) { entry in
                                     InspectorDivider(inset: 0)
                                     HStack(alignment: .top) {
