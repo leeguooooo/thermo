@@ -2445,7 +2445,7 @@ let zhHans: [String: String] = [
     "Tick files or folders to remove them": "勾选要删除的文件或文件夹",
     "Review %1$@…": "检查 %1$@…",
     "Empty": "空",
-    "Measuring your home folder once; after that every folder opens at once.": "先完整测量一次个人文件夹，之后点开任何文件夹都不用再等。",
+    "Measuring your home folder once; after that every folder opens at once.": "正在完整测量一次个人文件夹，测完后点开任何文件夹都不用再等。",
     "Back": "返回",
     "changed %1$@": "%1$@修改",
     "Picked to move to the Trash": "已选，将移到废纸篓",
