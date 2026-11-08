@@ -420,6 +420,12 @@ struct App {
         let pt = time(10) { history.append(PulseRecord(pulseSampler.sample())) }
         try? FileManager.default.removeItem(at: history.url)
         lines.append(row("pulse history tick", pt, samples: 10))
+        // The slowdown diagnosis runs in the same tick; steady state again, since the first pass waits out its window.
+        let slowdown = SlowdownSampler()
+        _ = slowdown.sample(window: 0.2)
+        var seen = 0
+        let st = time(5) { seen = slowdown.sample().count }
+        lines.append(row("slowdown tick", st, "  \(seen) processes", samples: 5))
         lines.append(style.dim(String(format: "  estimated history CPU at 60 s interval: %.3f%% of one core (300 s on battery: %.3f%%)",
                                       pt.cpu / 60_000 * 100, pt.cpu / 300_000 * 100)))
         let report = BenchmarkReport(model: d.model, smcKeys: d.keyCount, smcSensors: d.sensors.count, fans: d.fans.count,

@@ -247,9 +247,9 @@ public struct SpaceOverview: Codable, Sendable {
                 : tr("APFS metadata and folders only macOS can read (Spotlight index, file versions); not measured one by one")
             let complete = !cancellation.isCancelled && list.allSatisfy { $0.effectiveSizeState == .complete }
             list.append(Entry(id: "other", title: tr("Not attributed to a folder"), path: nil, bytes: used - counted,
-                              children: [], note: (complete ? note : tr("Includes unmeasured locations; this residual is not a measured folder size."))
-                                  + (important > free ? tr("; ") + tr("%1$@ of it is purgeable", ByteFormat.string(important - free)) : "")
-                                  + (unreadable.isEmpty ? "" : tr("; ") + tr("%1$@ folders could not be read", String(Set(unreadable).count))),
+                              children: [], note: Self.joinNotes([complete ? note : tr("Includes unmeasured locations; this residual is not a measured folder size."),
+                                  important > free ? tr("%1$@ of it is purgeable", ByteFormat.string(important - free)) : nil,
+                                  unreadable.isEmpty ? nil : tr("%1$@ folders could not be read", String(Set(unreadable).count))]),
                               complete: complete, sizeState: complete ? .complete : .unavailable))
         }
         list.sort { $0.bytes > $1.bytes }
@@ -651,5 +651,15 @@ public struct SpaceOverview: Codable, Sendable {
 
     static func isBundle(_ path: String) -> Bool {
         ["app", "bundle", "framework", "photoslibrary", "musiclibrary", "tvlibrary"].contains((path as NSString).pathExtension.lowercased())
+    }
+}
+
+extension SpaceOverview {
+    /// Joins note fragments with "; ", dropping a fragment's closing full stop so the result never reads ".; ".
+    static func joinNotes(_ parts: [String?]) -> String {
+        let kept = parts.compactMap { $0 }.filter { !$0.isEmpty }
+        return kept.enumerated().map { i, part in
+            i < kept.count - 1 && (part.hasSuffix(".") || part.hasSuffix("。")) ? String(part.dropLast()) : part
+        }.joined(separator: tr("; "))
     }
 }

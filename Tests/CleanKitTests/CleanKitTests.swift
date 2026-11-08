@@ -1082,4 +1082,11 @@ extension CleanKitTests {
         XCTAssertEqual(MachinePulse.unversioned("@scope/tool"), "@scope/tool")
         XCTAssertEqual(MachinePulse.unversioned("node"), "node")
     }
+    func testResidualNoteNeverReadsFullStopThenSemicolon() {
+        let joined = SpaceOverview.joinNotes(["Includes unmeasured locations.", nil, "4.2 GB of it is purgeable", ""])
+        XCTAssertFalse(joined.contains(".;"), joined)
+        XCTAssertTrue(joined.hasPrefix("Includes unmeasured locations"))
+        XCTAssertTrue(joined.hasSuffix("purgeable"))
+        XCTAssertEqual(SpaceOverview.joinNotes(["Only one."]), "Only one.", "a lone note keeps its full stop")
+    }
 }
