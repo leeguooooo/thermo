@@ -248,7 +248,7 @@ struct OverviewPage: View {
         let mode = fans.contains { $0.manual == nil } ? tr("unknown") : fans.contains { $0.manual == true } ? tr("manual") : tr("auto")
         let detail: String? = monitor.sampledFans == nil ? monitor.fanEmptyMessage : fans.isEmpty ? tr("No fans")
             : lagging ? tr("Hot, but the fans are not at full speed")
-            : fans.allSatisfy { $0.manual == false } && FanControlPresentation.allStopped(fans, stopped: stopped) ? tr("auto · stopped while the Mac is cool")
+            : fans.allSatisfy { $0.manual == false } && FanControlPresentation.allStopped(fans, stopped: stopped) ? tr("auto · fan paused until macOS needs it")
             : top.map { mode + " · " + tr("%1$@ of max", $0.load.map { String(format: "%.0f%%", $0 * 100) } ?? tr("unknown")) }
         return link(tr("Fans"), "fan", value: FanControlPresentation.speedSummary(fans, stopped: stopped) ?? "—", caption: nil,
                     detail: detail, state: state, accessory: fans.isEmpty ? nil : AnyView(fanControls(fans))) { open(.fans) }

@@ -884,7 +884,7 @@ struct FanFigure: View {
             Text(tr("%1$@–%2$@ rpm · %3$@", FanControlPresentation.rpm(fan.min), FanControlPresentation.rpm(fan.max), tr(fan.controlMode)))
                 .font(Theme.caption.monospacedDigit()).foregroundStyle(Theme.textTertiary)
             if stopped && fan.rpm == 0 && fan.manual == false {
-                Text(tr("Stopped while the Mac is cool; it starts on its own as it warms up."))
+                Text(tr("Paused by macOS at the current temperature; it starts on its own when more cooling is needed."))
                     .font(Theme.caption).foregroundStyle(Theme.textTertiary).fixedSize(horizontal: false, vertical: true)
             }
         }
