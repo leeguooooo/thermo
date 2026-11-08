@@ -120,6 +120,7 @@ enum CommandHelp {
     tabs saved|tabs saved [--json]|cli
     tabs show|tabs show UUID [--json]|cli
     tabs restore|tabs restore UUID [--window ID] [--dry-run] [--yes] [--json]|browser
+    tabs forget|tabs forget UUID [--dry-run] [--yes] [--json]|cli
     tabs organize|tabs organize [--app BROWSER] [--ids IDS] [--window ID|--all-windows] [--dry-run] [--yes] [--json]|browser
     tabs organized|tabs organized [--json]|cli
     tabs undo-organize|tabs undo-organize UUID [--dry-run] [--yes] [--json]|browser

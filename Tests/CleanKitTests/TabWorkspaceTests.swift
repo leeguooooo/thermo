@@ -1,5 +1,6 @@
 import XCTest
 import JavaScriptCore
+import AgentCore
 @testable import CleanKit
 
 final class TabWorkspaceTests: XCTestCase {
@@ -47,6 +48,24 @@ final class TabWorkspaceTests: XCTestCase {
         _ = try TabWorkspace.restore(saved.id, home: root, openPage: { _, _ in XCTFail("must not open again"); return nil })
         XCTAssertEqual(opened, 2)
         XCTAssertEqual(try TabWorkspace.groups(home: root).assignments.count, 2)
+    }
+    func testForgettingASavedBatchTrashesOnlyItsRecordAndJournalsIt() async throws {
+        let root = try home(); let pages = [page("one")]; let fixture = Fixture(pages)
+        let saved = try await TabWorkspace.archive(pages, app: "Fixture", name: "Old", home: root,
+                                                   readInventory: { try fixture.inventory($0) }, close: { fixture.close($0, $1) })
+        let bin = URL(fileURLWithPath: root).appendingPathComponent("Trash", isDirectory: true)
+        try FileManager.default.createDirectory(at: bin, withIntermediateDirectories: true)
+        var trashed: [URL] = []
+        try TabWorkspace.removeArchive(saved.id, home: root, trash: { url in
+            let target = bin.appendingPathComponent(url.lastPathComponent)
+            try FileManager.default.moveItem(at: url, to: target); trashed.append(url); return target
+        })
+        XCTAssertEqual(trashed.map(\.lastPathComponent), [saved.id.uuidString + ".json"])
+        XCTAssertTrue(try TabWorkspace.archives(home: root).isEmpty)
+        let record = try XCTUnwrap(OperationJournal.read(home: root).first { $0.action == "removeSaved" })
+        XCTAssertEqual(record.undo?.kind, "trash")
+        XCTAssertEqual(record.items.map(\.target), ["https://example.test/one"])
+        XCTAssertThrowsError(try TabWorkspace.removeArchive(saved.id, home: root, trash: { _ in XCTFail("already gone"); return nil }))
     }
     func testNewProtectionSkipsWithoutClose() async throws {
         let root = try home(); let p = page("one"); let fixture = Fixture([p]); fixture.changeBeforeClose = true

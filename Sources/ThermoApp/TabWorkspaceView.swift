@@ -97,6 +97,16 @@ final class TabWorkspaceModel: ObservableObject {
             busy = false; refresh(keepError: true)
         }
     }
+    func forget(_ record: TabWorkspace.Archive) {
+        guard !busy, !isPreview else { return }; busy = true; error = nil
+        Task {
+            do {
+                try await Task.detached { try TabWorkspace.removeArchive(record.id) }.value
+                notice = tr("Moved the saved batch to the Trash.")
+            } catch { self.error = tr(error.localizedDescription) }
+            busy = false; refresh(keepError: true)
+        }
+    }
     func restore(_ record: TabWorkspace.Archive, destinationWindow: Int? = nil) {
         guard !busy, !isPreview else { return }; busy = true; error = nil
         Task {
@@ -154,6 +164,8 @@ struct TabWorkspaceView: View {
         var archive: TabWorkspace.Archive?
         var destinationWindow: Int?
         var name: String = ""
+        /// Remove the saved record itself instead of reopening it.
+        var forget = false
     }
     init(app: String, task: Binding<TabWorkspaceTask>) {
         _model = StateObject(wrappedValue: TabWorkspaceModel(app: app))
@@ -216,6 +228,15 @@ struct TabWorkspaceView: View {
             }
         }
         .sheet(item: $plan) { value in
+            if value.forget, let record = value.archive {
+                ConfirmSheet(title: tr("Remove this saved batch?"),
+                             summary: tr("The record and its %1$@ links move to the Trash. Open tabs are not touched.", String(record.entries.count)),
+                             destructive: true, heading: tr("Links in this batch"),
+                             lines: record.entries.map { $0.page.tab.title + " · " + TabWorkspace.site($0.page.tab.url) },
+                             footnote: tr("Put it back from the Trash in Finder if you need it again."),
+                             confirmTitle: tr("Move to Trash"),
+                             confirm: { plan = nil; model.forget(record) }, cancel: { plan = nil })
+            } else {
             ConfirmSheet(title: value.archive == nil ? tr("Save links and close %1$@ tabs?", String(value.pages.count)) : tr("Reopen saved tabs?"),
                          summary: value.archive == nil ? tr("Links are saved on this Mac first, then only the listed tabs are closed. You can reopen them from Saved for later.")
                              : tr("Only tabs confirmed closed and not already reopened will be opened. Other entries stay as they are."),
@@ -231,6 +252,7 @@ struct TabWorkspaceView: View {
                              if let record = value.archive { model.restore(record, destinationWindow: value.destinationWindow) }
                              else { model.archive(value.pages, name: value.name) }
                          }, cancel: { plan = nil })
+            }
         }
     }
 
@@ -454,6 +476,10 @@ struct TabWorkspaceView: View {
                             Text(tr("%1$@ saved · %2$@ closed · %3$@ not yet reopened", String(record.entries.count), String(record.closed), String(record.remaining)))
                                 .font(Theme.caption.monospacedDigit()).foregroundStyle(Theme.textTertiary)
                             // Nothing left to reopen: the line below says so; a greyed "Reopen 0 tabs" adds nothing.
+                            if record.remaining == 0 {
+                                Button(tr("Remove record…")) { plan = Plan(archive: record, forget: true) }
+                                    .buttonStyle(PillButtonStyle()).controlSize(.small).disabled(model.busy)
+                            }
                             if record.remaining > 0 {
                                 if model.originalWindowGone(record), !openWindows.isEmpty {
                                     // The original window is closed, so the default reopen would fail: ask for a window instead.
@@ -481,6 +507,10 @@ struct TabWorkspaceView: View {
                                         Button(model.windowLabel(window)) { plan = Plan(archive: record, destinationWindow: window) }
                                     }
                                 }.controlSize(.small).fixedSize().disabled(record.remaining == 0 || model.busy).padding(.vertical, Theme.Space.s)
+                                if record.remaining > 0 {
+                                    Button(tr("Remove record…")) { plan = Plan(archive: record, forget: true) }
+                                        .buttonStyle(.link).font(Theme.caption).disabled(model.busy).padding(.bottom, Theme.Space.s)
+                                }
                                 ForEach(record.entries) { entry in
                                     InspectorDivider(inset: 0)
                                     HStack(alignment: .top) {

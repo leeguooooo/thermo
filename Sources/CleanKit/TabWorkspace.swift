@@ -401,6 +401,22 @@ public enum TabWorkspace {
         return archive
     }
     /// Saving-and-closing and reopening tabs both go into the shared operation history.
+    public typealias TrashFile = (URL) throws -> URL?
+    /// Forget a saved batch: its record goes to the Trash (so it can be put back), open tabs are untouched.
+    @discardableResult
+    public static func removeArchive(_ id: UUID, home: String = NSHomeDirectory(), trash: TrashFile? = nil) throws -> Archive {
+        let lock = try Lock(home: home); defer { lock.release() }
+        let url = archiveURL(id, home: home)
+        let archive = try read(url)
+        let moved: URL?
+        do {
+            moved = try (trash ?? { url in var out: NSURL?; try FileManager.default.trashItem(at: url, resultingItemURL: &out); return out as URL? })(url)
+        } catch { throw WorkspaceError("Cannot move the saved tab record to the Trash.") }
+        OperationJournal.record(OperationRecord(feature: "tabs", action: "removeSaved", subject: archive.name,
+                                                items: archive.entries.map { .init(target: $0.page.tab.url, status: "done", detail: $0.page.tab.title) },
+                                                undo: moved.map { .init(kind: "trash", ref: $0.path) }), home: home)
+        return archive
+    }
     static func journal(_ archive: Archive, action: String, home: String) {
         let items: [OperationRecord.Item] = archive.entries.compactMap { entry in
             let target = entry.page.tab.url

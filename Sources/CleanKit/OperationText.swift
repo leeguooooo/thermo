@@ -39,6 +39,7 @@ extension OperationRecord {
         case ("privacy", "restoreTimezone"): return tr("Restore previous timezone")
         case ("tabs", "archive"): return tr("Saved and closed tabs")
         case ("tabs", "restore"): return tr("Reopened saved tabs")
+        case ("tabs", "removeSaved"): return tr("Removed a saved tab batch")
         case ("tabs", "organize"): return tr("Grouped tabs")
         case ("tabs", "rename"): return tr("Renamed tab groups")
         case ("tabs", "undoOrganize"): return tr("Undid tab grouping")

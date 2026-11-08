@@ -241,6 +241,7 @@ thermo tabs saved --json
 thermo tabs show UUID --json
 thermo tabs restore UUID --yes
 thermo tabs restore UUID --window WINDOW_ID --yes
+thermo tabs forget UUID --yes   # 把这组暂存记录移到废纸篓，不动打开的标签
 ```
 
 标签 ID 和窗口 ID 从 `tabs list` 读取；默认只操作前方窗口。`--ids`、`--group`、`--window` 可组合缩小范围。`tabs organize --dry-run` 先列出原生标签组方案，`--yes` 才执行；`tabs auto on` 开启持续整理，`tabs undo-organize` 按批次撤销。`tabs group --by-site --yes` 只调整 Thermo 本地分类。标签整理分别读取所有已连接 Chrome Profile 的保护信息，执行前使用标签所属账号的连接再次核对，不改变 chrome-use 的默认账号或 agent 会话，也不附加页面调试器。其他 Chromium 浏览器需兼容的连接，否则保持只读。

@@ -67,6 +67,11 @@ struct TabsCommand {
             if restored.entries.contains(where: { $0.restoreState == "opening" || $0.restoreState == "unconfirmed" }) || restored.remaining > 0 {
                 throw CLIError("Some tab restores are unconfirmed. Inspect the saved batch; do not retry uncertain entries.", exitCode: 3)
             }
+        case "forget":
+            let saved = try saved(rest)
+            if app.args.has("dry-run") { try emit(saved); return }
+            try approve("Move the saved batch \(saved.name) (\(saved.entries.count) links) to the Trash? Open tabs are not touched.")
+            try emit(try TabWorkspace.removeArchive(saved.id))
         case "list", "groups", "group", "archive":
             let inventory = try blocking { try await TabWorkspace.inventory(app: browser) }
             if sub == "list" || sub == "groups" { try emit(inventory); return }
