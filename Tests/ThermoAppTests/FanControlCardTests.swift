@@ -60,4 +60,14 @@ import ThermoKit
         XCTAssertFalse(FanControlCard.matches(mode: .curve, rpm: 0, curve: gpu, policy: .curve(curve), range: range))
         XCTAssertFalse(FanControlCard.matches(mode: .curve, rpm: 0, curve: nil, policy: .curve(curve), range: range), "an unparsable custom curve is not a match")
     }
+
+    func testReturningToAutoIsRecordedAsDone() {
+        // The helper reports automatic fans by leaving them out of its policy table.
+        XCTAssertTrue(Monitor.fanChangeApplied(fan: 0, policy: .auto, active: [:], error: nil))
+        XCTAssertTrue(Monitor.fanChangeApplied(fan: 0, policy: .fixed(rpm: 2500), active: [0: .fixed(rpm: 2498)], error: nil))
+        XCTAssertFalse(Monitor.fanChangeApplied(fan: 0, policy: .fixed(rpm: 2500), active: [:], error: nil))
+        XCTAssertFalse(Monitor.fanChangeApplied(fan: 0, policy: .auto, active: [0: .fixed(rpm: 2498)], error: nil))
+        XCTAssertFalse(Monitor.fanChangeApplied(fan: 0, policy: .auto, active: nil, error: nil), "no readback is not success")
+        XCTAssertFalse(Monitor.fanChangeApplied(fan: 0, policy: .auto, active: [:], error: "helper down"))
+    }
 }
