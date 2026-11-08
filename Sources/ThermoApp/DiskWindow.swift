@@ -589,10 +589,7 @@ struct DiskCategoryPage: View {
 }
 
 enum FSPath {
-    static func tilde(_ p: String) -> String {
-        let h = NSHomeDirectory()
-        return p.hasPrefix(h + "/") ? "~" + p.dropFirst(h.count) : p
-    }
+    static func tilde(_ p: String) -> String { FS.tilde(p) }
 }
 
 /// Inside an expanded card: why it can go, and every session or path.

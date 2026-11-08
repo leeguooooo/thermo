@@ -379,10 +379,10 @@ extension DiskOverviewView {
     /// A folder's title is usually its own path; show the folder name over its parent so the row doesn't say the path twice.
     static func growthLabel(_ item: SpaceGrowth.Item, home: String = NSHomeDirectory()) -> (title: String, caption: String?) {
         guard let path = item.path else { return (item.title, nil) }
-        let tilde = FSPath.tilde(path, home: home)
+        let tilde = FS.tilde(path, home: home)
         guard item.title == path || item.title == tilde else { return (item.title, tilde) }
         let ns = path as NSString
-        return (ns.lastPathComponent, FSPath.tilde(ns.deletingLastPathComponent, home: home))
+        return (ns.lastPathComponent, FS.tilde(ns.deletingLastPathComponent, home: home))
     }
 
     /// Which folders grew since an earlier full measurement: when the disk fills up, the first question is "what is eating it".
