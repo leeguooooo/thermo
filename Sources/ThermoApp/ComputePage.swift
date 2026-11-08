@@ -442,16 +442,29 @@ struct ComputePage: View {
             guard let app = NSWorkspace.shared.runningApplications.first(where: {
                 $0.bundleURL?.standardizedFileURL.path == path && target.pids.contains($0.processIdentifier)
             }) else { stopProblem = tr("%1$@ changed or exited since the reading. Check again before stopping it.", target.name); return }
-            if !app.terminate() { stopProblem = tr("%1$@ did not accept the quit request. Check its dialogs.", target.name) }
+            let accepted = app.terminate()
+            if !accepted { stopProblem = tr("%1$@ did not accept the quit request. Check its dialogs.", target.name) }
+            Self.record(action: "quit", target: target, items: [(target.name, accepted)])
             return
         }
         var skipped = false
+        var items: [(String, Bool)] = []
         for (pid, started) in target.processes {
             guard pid > 1, pid != getpid(), let now = ProcessTable.identity(pid), now.uid == getuid(),
                   started == nil || now.started == started else { skipped = true; continue }
-            if kill(pid, SIGTERM) != 0 { skipped = true }
+            let sent = kill(pid, SIGTERM) == 0
+            if !sent { skipped = true }
+            items.append(("\(target.name) · PID \(pid)", sent))
         }
         if skipped { stopProblem = tr("%1$@ changed or exited since the reading. Check again before stopping it.", target.name) }
+        if !items.isEmpty { Self.record(action: "end", target: target, items: items) }
+    }
+
+    /// Stops started here go into the same History list as those from the Memory page and the slowdown card.
+    static func record(action: String, target: ComputeStopTarget, items: [(String, Bool)]) {
+        OperationJournal.record(OperationRecord(feature: "pulse", action: action, subject: target.name,
+                                                items: items.map { .init(target: $0.0, status: $0.1 ? "done" : "failed",
+                                                                         detail: $0.1 ? "requested" : "notDelivered") }))
     }
 }
 

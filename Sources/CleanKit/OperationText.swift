@@ -45,7 +45,7 @@ extension OperationRecord {
         case ("worktrees", "repair"): return tr("Repaired worktree registrations")
         case ("archive", "archive"): return tr("Archived to another machine")
         case ("archive", "archiveAndRemove"): return tr("Archived to another machine and removed the local copy")
-        case ("pulse", "quit"): return tr("Stopped a program")
+        case ("pulse", "quit"), ("pulse", "end"): return tr("Stopped a program")
         case ("pulse", "restart"): return tr("Restarted an app")
         case ("history", "restore"): return tr("Put files back from the Trash")
         case ("power", "lidAwakeOn"): return tr("Turned on staying awake with the lid closed")
