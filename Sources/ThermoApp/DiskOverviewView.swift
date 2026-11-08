@@ -381,8 +381,8 @@ extension DiskOverviewView {
         guard let path = item.path else { return (item.title, nil) }
         let tilde = FSPath.tilde(path)
         guard item.title == path || item.title == tilde else { return (item.title, tilde) }
-        let url = URL(fileURLWithPath: path)
-        return (url.lastPathComponent, FSPath.tilde(url.deletingLastPathComponent().path))
+        let ns = path as NSString
+        return (ns.lastPathComponent, FSPath.tilde(ns.deletingLastPathComponent))
     }
 
     /// Which folders grew since an earlier full measurement: when the disk fills up, the first question is "what is eating it".
