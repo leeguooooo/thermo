@@ -247,9 +247,10 @@ public struct SpaceOverview: Codable, Sendable {
                 : tr("APFS metadata and folders only macOS can read (Spotlight index, file versions); not measured one by one")
             let complete = !cancellation.isCancelled && list.allSatisfy { $0.effectiveSizeState == .complete }
             list.append(Entry(id: "other", title: tr("Not attributed to a folder"), path: nil, bytes: used - counted,
-                              children: [], note: Self.joinNotes([complete ? note : tr("Includes unmeasured locations; this residual is not a measured folder size."),
-                                  important > free ? tr("%1$@ of it is purgeable", ByteFormat.string(important - free)) : nil,
-                                  unreadable.isEmpty ? nil : tr("%1$@ folders could not be read", String(Set(unreadable).count))]),
+                              children: [], note: complete
+                                  ? Self.joinNotes([note, important > free ? tr("%1$@ of it is purgeable", ByteFormat.string(important - free)) : nil,
+                                                    unreadable.isEmpty ? nil : tr("%1$@ folders could not be read", String(Set(unreadable).count))])
+                                  : Self.residualNote(bytes: used - counted, purgeable: max(0, important - free), unreadable: Set(unreadable).count),
                               complete: complete, sizeState: complete ? .complete : .unavailable))
         }
         list.sort { $0.bytes > $1.bytes }
@@ -626,7 +627,7 @@ public struct SpaceOverview: Codable, Sendable {
             copy.entries[index].title = tr(heading)
             if let note = notes[copy.entries[index].id] { copy.entries[index].note = tr(note) }
             if copy.entries[index].id == "other", copy.entries[index].effectiveSizeState != .complete {
-                copy.entries[index].note = tr("Includes unmeasured locations; this residual is not a measured folder size.")
+                copy.entries[index].note = Self.residualNote(bytes: copy.entries[index].bytes, purgeable: purgeable, unreadable: Set(unreadable ?? []).count)
             }
             if copy.entries[index].id == "simulator-runtimes", copy.entries[index].effectiveSizeState == .unavailable, copy.entries[index].children.isEmpty {
                 copy.entries[index].note = tr("Simulator runtime sizes could not be checked.")
@@ -655,6 +656,12 @@ public struct SpaceOverview: Codable, Sendable {
 }
 
 extension SpaceOverview {
+    /// The unattributed remainder after a stopped measurement: its upper bound, then what macOS can free and what could not be read.
+    static func residualNote(bytes: Int64, purgeable: Int64, unreadable: Int) -> String {
+        joinNotes([tr("Up to %1$@ here, including locations not measured yet. This residual is not a measured folder size.", ByteFormat.string(bytes)),
+                   purgeable > 0 ? tr("%1$@ of it is purgeable", ByteFormat.string(purgeable)) : nil,
+                   unreadable > 0 ? tr("%1$@ folders could not be read", String(unreadable)) : nil])
+    }
     /// Joins note fragments with "; ", dropping a fragment's closing full stop so the result never reads ".; ".
     static func joinNotes(_ parts: [String?]) -> String {
         let kept = parts.compactMap { $0 }.filter { !$0.isEmpty }

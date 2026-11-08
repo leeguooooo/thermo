@@ -646,6 +646,7 @@ let zhHans: [String: String] = [
     "Removing selected data can reset settings or sign-in state. Restore it from History before reopening the app.": "移除选中数据可能重置设置或登录状态。如需恢复，请在重新打开应用前通过操作记录恢复。",
     "Simulator runtime sizes could not be checked.": "无法核实模拟器运行时的大小。",
     "Includes unmeasured locations; this residual is not a measured folder size.": "包含尚未测量的位置，这个差额不代表某个目录的实测大小。",
+    "Up to %1$@ here, including locations not measured yet. This residual is not a measured folder size.": "这里最多 %1$@，其中包括还没测到的位置，这个差额不是某个目录的实测大小。",
     "Some categories could not be fully measured. Known bytes are lower bounds; the unattributed residual is not a measured folder size.": "部分分类未能完整测量。已知大小只是下限，未归属空间的差额不代表目录实测大小。",
     "Some locations were not fully measured. Sizes and chart areas show only known data.": "部分位置未能完整测量，大小和图块面积只表示已测到的数据。",
     "This location could not be measured. Check access and scan again.": "无法测量此位置，请检查访问权限后重新扫描。",

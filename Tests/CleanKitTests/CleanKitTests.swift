@@ -1088,5 +1088,9 @@ extension CleanKitTests {
         XCTAssertTrue(joined.hasPrefix("Includes unmeasured locations"))
         XCTAssertTrue(joined.hasSuffix("purgeable"))
         XCTAssertEqual(SpaceOverview.joinNotes(["Only one."]), "Only one.", "a lone note keeps its full stop")
+        let residual = SpaceOverview.residualNote(bytes: 625_000_000_000, purgeable: 4_200_000_000, unreadable: 54)
+        XCTAssertTrue(residual.contains(ByteFormat.string(625_000_000_000)), "a stopped measurement still says how much is unaccounted for")
+        XCTAssertTrue(residual.contains("54"))
+        XCTAssertFalse(residual.contains(".;"))
     }
 }
