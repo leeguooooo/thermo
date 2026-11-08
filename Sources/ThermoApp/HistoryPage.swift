@@ -241,6 +241,8 @@ struct HistoryPage: View {
         case "power": return tr("Keep awake")
         case "battery": return tr("Battery charging protection")
         case "search": return tr("Search apps and files")
+        case "fans": return tr("Fans")
+        case "network": return tr("Network low latency")
         default: return f
         }
     }
@@ -261,6 +263,8 @@ struct HistoryPage: View {
         case "power": return "cup.and.saucer"
         case "battery": return "battery.75percent"
         case "search": return "magnifyingglass"
+        case "fans": return "fan"
+        case "network": return "wifi"
         default: return "clock"
         }
     }

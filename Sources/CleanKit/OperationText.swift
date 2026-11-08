@@ -55,6 +55,7 @@ extension OperationRecord {
         case ("power", "idleAwakeStop"), ("power", "idleAwakeEnd"): return tr("Ended keeping the Mac awake")
         case ("power", "idleAwakePause"): return tr("Paused keeping the Mac awake")
         case ("power", "idleAwakeResume"): return tr("Resumed keeping the Mac awake")
+        case ("fans", "policy"): return tr("Changed fan mode")
         case ("network", "awdlBegin"): return tr("Started an AWDL low-latency session")
         case ("network", "awdlRestore"): return tr("AWDL session ended")
         case ("search", "takeOverSpotlight"): return tr("Took ⌘Space over from Spotlight")
@@ -87,6 +88,7 @@ extension OperationRecord {
         guard let undo else {
             switch (feature, action) {
             case ("network", "awdlBegin"): return tr("Stop in Network low latency. A session started in Terminal ends with Ctrl-C.")
+            case ("fans", "policy"): return tr("Change it back on the Fans page.")
             case ("apps", "update"): return tr("Check the installed version in Software → Updates. Thermo cannot automatically roll updates back.")
             case ("privacy", "clearClaudeEnvironment"): return tr("Cannot be undone: the values were never read or saved.")
             // Only when something actually went: a cleanup that failed deleted nothing.

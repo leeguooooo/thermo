@@ -602,11 +602,23 @@ final class Monitor: ObservableObject {
             fanControlState = state
             if let active = result.policies { policies = active }
             policiesAvailable = result.policies != nil
+            Self.recordFanChange(changes, active: result.policies, error: result.error, fans: sampledFans ?? [])
             lastError = result.error ?? state?.failure
             applyingPolicies = false
             sampleNow()
             if result.policies == nil { refreshHelper() }
         }
+    }
+
+    /// A fan mode change is a change Thermo made to the Mac, so History lists it with what each fan was asked for.
+    static func recordFanChange(_ changes: [(Int, FanPolicy)], active: [Int: FanPolicy]?, error: String?, fans: [FanReading]) {
+        guard let first = changes.first else { return }
+        let items = changes.map { fan, policy -> OperationRecord.Item in
+            let name = fan < 0 ? tr("All fans") : fans.first { $0.id == fan }?.displayName ?? tr("Fan %1$@", String(fan))
+            let applied = error == nil && (fan < 0 || active?[fan] == policy)
+            return .init(target: name, status: applied ? "done" : "failed", detail: FanControlPresentation.policy(policy))
+        }
+        OperationJournal.record(OperationRecord(feature: "fans", action: "policy", subject: FanControlPresentation.policy(first.1), items: items))
     }
 
     /// "Install…" / "Reinstall…" / "Update…" buttons and `--install-helper`.

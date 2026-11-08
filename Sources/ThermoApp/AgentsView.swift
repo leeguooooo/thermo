@@ -142,7 +142,7 @@ final class AgentScanner: ObservableObject {
         operationLanguage = L10n.current.rawValue
         let diagnose = currentDiagnosis()
         Task.detached(priority: .userInitiated) {
-            let result = ActionRunner.perform(action, env: DoctorEnvironment())
+            let result = ActionRunner.perform(action, env: DoctorEnvironment(), item: item.name)
             let r = diagnose()
             await MainActor.run {
                 self.recordResult(item: item.id, name: item.name, action: action.title, result: result)
@@ -175,7 +175,7 @@ final class AgentScanner: ObservableObject {
             var failed = 0
             for (i, (item, action)) in plans.enumerated() {
                 await MainActor.run { self.batch?.current = item.name; self.batch?.done = i }
-                let result = executor?(action) ?? ActionRunner.perform(action, env: env)
+                let result = executor?(action) ?? ActionRunner.perform(action, env: env, item: item.name)
                 if !result.ok { failed += 1 }
                 await MainActor.run {
                     let entry = self.recordResult(item: item.id, name: item.name, action: action.title, result: result)

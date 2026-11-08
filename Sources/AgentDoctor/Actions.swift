@@ -94,7 +94,9 @@ enum EditGuard {
 
 public enum ActionRunner {
     /// Runs every step in order; stops at the first failure. Each changed config is backed up first.
-    public static func perform(_ action: Action, env: DoctorEnvironment) -> ActionResult {
+    /// `item` names what the action is about (a launchd label, a server); History shows it next to the action
+    /// so "Remove job · 2 items" says which job.
+    public static func perform(_ action: Action, env: DoctorEnvironment, item: String? = nil) -> ActionResult {
         var log: [String] = []
         var backups: [String] = []
         let stamp = ISO8601DateFormatter().string(from: env.now).replacingOccurrences(of: ":", with: "")
@@ -114,7 +116,7 @@ public enum ActionRunner {
         func journal() {
             let undo: OperationRecord.Undo? = !backups.isEmpty ? .init(kind: "agentBackup", ref: backupDir.path)
                 : action.steps.contains(where: { if case .trash = $0 { return true } else { return false } }) ? .init(kind: "trash", ref: "") : nil
-            OperationJournal.record(OperationRecord(feature: "agents", action: action.kind.rawValue, subject: Redact.text(action.title),
+            OperationJournal.record(OperationRecord(feature: "agents", action: action.kind.rawValue, subject: Redact.text(item.map { action.title + " — " + $0 } ?? action.title),
                                                     items: items, undo: undo), home: env.home.path)
         }
         for step in action.steps {

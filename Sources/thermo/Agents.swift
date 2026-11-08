@@ -729,7 +729,7 @@ struct AgentsCommand {
         try app.approveAction("Apply the reviewed Agent actions? Configuration files are backed up first.")
         var results: [ActionResultRow] = []
         for (item, action) in plans {
-            let result = ActionRunner.perform(action, env: env)
+            let result = ActionRunner.perform(action, env: env, item: item.name)
             results.append(.init(name: Redact.text(item.name), succeeded: result.ok, log: result.log.map(Redact.text), backups: result.backups))
         }
         let complete = results.allSatisfy(\.succeeded)
