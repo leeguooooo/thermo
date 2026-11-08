@@ -41,4 +41,14 @@ final class OverviewHistoryTests: XCTestCase {
         o.noteGrowth(history: url)
         XCTAssertTrue(OverviewHistory.read(url).isEmpty)
     }
+    func testFinishedMeasurementWithUnreadableSystemFoldersStillRecordsItsMeasuredFolders() throws {
+        let url = file()
+        var o = overview(free: 1, downloads: 7_000_000_000, apps: 1); o.sizeVersion = 1
+        o.incompleteLocations = ["/System/Volumes/Data/private/var/db"]
+        o.entries.append(SpaceOverview.Entry(id: "trash", title: "Trash", path: nil, bytes: 0, children: [], note: nil, complete: false, sizeState: .unavailable))
+        o.noteGrowth(history: url)
+        let saved = try XCTUnwrap(OverviewHistory.read(url).first)
+        XCTAssertEqual(saved.sizes["/Users/x/Downloads"], 7_000_000_000)
+        XCTAssertNil(saved.sizes["#trash"], "an unreadable heading is not compared")
+    }
 }

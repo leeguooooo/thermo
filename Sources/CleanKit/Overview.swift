@@ -647,7 +647,9 @@ public struct SpaceOverview: Codable, Sendable {
 
     /// Records a complete measurement in the growth history and keeps what grew since an earlier one.
     public mutating func noteGrowth(at: Date = Date(), history: URL = OverviewHistory.url) {
-        guard cancelled != true, sizeVersion == 1, incompleteLocations?.isEmpty != false, Self.validEntries(entries) else { return }
+        // Without Full Disk Access some system folders are never readable, so a finished measurement is rarely
+        // "complete". The history keeps only fully measured folders, and only those are compared.
+        guard cancelled != true, sizeVersion == 1 else { return }
         growth = OverviewHistory.record(self, at: at, to: history)
     }
 
