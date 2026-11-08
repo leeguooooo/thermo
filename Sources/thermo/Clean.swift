@@ -141,7 +141,7 @@ struct CleanCommand {
             }
         }
         if let g = o.growth {
-            let since = g.since.formatted(.relative(presentation: .named))
+            let since = g.since.formatted(.relative(presentation: .named).locale(Locale(identifier: "en_US")))
             lines.append(""); lines.append(style.bold("Grew since the full measurement \(since)") + (g.freeDropBytes > 0 ? style.dim(" · free space down \(gb(g.freeDropBytes))") : ""))
             for item in g.items {
                 lines.append(pad("+" + gb(item.changeBytes), 18, right: true) + "  " + (item.path.map { FS.tilde($0) } ?? item.title) + style.dim("  now \(gb(item.currentBytes))"))
