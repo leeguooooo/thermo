@@ -30,7 +30,7 @@ public enum OverviewHistory {
         URL(fileURLWithPath: NSHomeDirectory()).appendingPathComponent("Library/Caches/dev.thermo/space-overview-history.jsonl")
     }
     static let keep: TimeInterval = 14 * 86_400
-    /// Compare with a measurement at least this old, so "grew" means over hours, not between two clicks.
+    /// Never compare with anything younger, so "grew" means over hours, not between two clicks.
     static let minimumAge: TimeInterval = 12 * 3_600
     static let threshold: Int64 = 1_000_000_000
 
@@ -51,9 +51,12 @@ public enum OverviewHistory {
         return text.split(separator: "\n").compactMap { try? decoder.decode(Snapshot.self, from: Data($0.utf8)) }.sorted { $0.at < $1.at }
     }
 
-    /// Growth against the newest snapshot at least `minimumAge` old; nil when there is none or nothing grew by 1 GB.
+    /// Growth over about a day: against the snapshot closest to 24 h old among those at least `minimumAge` old;
+    /// nil when there is none or nothing grew by 1 GB.
     static func growth(_ current: Snapshot, history: [Snapshot]) -> SpaceGrowth? {
-        guard let base = history.last(where: { current.at.timeIntervalSince($0.at) >= minimumAge }) else { return nil }
+        let candidates = history.filter { current.at.timeIntervalSince($0.at) >= minimumAge }
+        guard let base = candidates.min(by: { abs(current.at.timeIntervalSince($0.at) - 86_400) < abs(current.at.timeIntervalSince($1.at) - 86_400) })
+        else { return nil }
         // A heading includes its folders: list a folder, and drop the heading when one of its folders explains the growth.
         let items = current.sizes.compactMap { key, bytes -> SpaceGrowth.Item? in
             guard let before = base.sizes[key], bytes - before >= threshold else { return nil }

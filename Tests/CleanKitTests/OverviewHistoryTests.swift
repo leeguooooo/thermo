@@ -21,7 +21,7 @@ final class OverviewHistoryTests: XCTestCase {
                      "two hours is too soon to call it growth")
         let growth = try XCTUnwrap(OverviewHistory.record(overview(free: 3_000_000_000, downloads: 74_000_000_000, apps: 60_500_000_000), at: t0 + 86_400, to: url))
         XCTAssertEqual(growth.items.map(\.path), ["/Users/x/Downloads"], "the folder explains it; the heading and sub-1 GB changes are left out")
-        XCTAssertEqual(growth.items.first?.changeBytes, 22_000_000_000, "compared with the newest snapshot at least 12 h old")
+        XCTAssertEqual(growth.items.first?.changeBytes, 22_000_000_000, "compared with the snapshot closest to a day old")
         XCTAssertEqual(growth.freeDropBytes, 27_000_000_000)
         XCTAssertEqual(growth.since, t0)
     }
