@@ -376,6 +376,15 @@ struct DiskOverviewView: View {
 
 /// One place's story: what it is, what to do about it, and its biggest folders.
 extension DiskOverviewView {
+    /// A folder's title is usually its own path; show the folder name over its parent so the row doesn't say the path twice.
+    static func growthLabel(_ item: SpaceGrowth.Item) -> (title: String, caption: String?) {
+        guard let path = item.path else { return (item.title, nil) }
+        let tilde = FSPath.tilde(path)
+        guard item.title == path || item.title == tilde else { return (item.title, tilde) }
+        let url = URL(fileURLWithPath: path)
+        return (url.lastPathComponent, FSPath.tilde(url.deletingLastPathComponent().path))
+    }
+
     /// Which folders grew since an earlier full measurement: when the disk fills up, the first question is "what is eating it".
     func growthSection(_ growth: SpaceGrowth) -> some View {
         VStack(alignment: .leading, spacing: Theme.Space.s) {
@@ -391,10 +400,11 @@ extension DiskOverviewView {
                 ForEach(Array(growth.items.enumerated()), id: \.offset) { i, item in
                     if i > 0 { InspectorDivider(inset: Theme.Space.m) }
                     HStack(spacing: Theme.Space.m) {
+                        let label = Self.growthLabel(item)
                         VStack(alignment: .leading, spacing: 2) {
-                            Text(item.title).font(Theme.body).foregroundStyle(Theme.textPrimary).lineLimit(1)
-                            if let path = item.path {
-                                Text(FSPath.tilde(path)).font(Theme.caption).foregroundStyle(Theme.textTertiary).lineLimit(1).truncationMode(.middle)
+                            Text(label.title).font(Theme.body).foregroundStyle(Theme.textPrimary).lineLimit(1)
+                            if let caption = label.caption {
+                                Text(caption).font(Theme.caption).foregroundStyle(Theme.textTertiary).lineLimit(1).truncationMode(.middle)
                             }
                         }
                         Spacer(minLength: Theme.Space.s)
