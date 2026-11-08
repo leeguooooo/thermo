@@ -107,13 +107,13 @@ final class SpaceOverviewLifecycleTests: XCTestCase {
     }
 
     func testGrowthRowShowsFolderNameOverParent() {
-        let home = NSHomeDirectory()
+        let home = "/Users/someone"
         let folder = SpaceGrowth.Item(title: home + "/.cache", path: home + "/.cache", changeBytes: 3_000_000_000, currentBytes: 40_000_000_000)
-        XCTAssertEqual(DiskOverviewView.growthLabel(folder).title, ".cache")
-        XCTAssertEqual(DiskOverviewView.growthLabel(folder).caption, "~")
+        XCTAssertEqual(DiskOverviewView.growthLabel(folder, home: home).title, ".cache")
+        XCTAssertEqual(DiskOverviewView.growthLabel(folder, home: home).caption, "~")
         let named = SpaceGrowth.Item(title: "Xcode", path: home + "/Library/Developer/Xcode", changeBytes: 1, currentBytes: 1)
-        XCTAssertEqual(DiskOverviewView.growthLabel(named).title, "Xcode")
-        XCTAssertEqual(DiskOverviewView.growthLabel(named).caption, "~/Library/Developer/Xcode")
+        XCTAssertEqual(DiskOverviewView.growthLabel(named, home: home).title, "Xcode")
+        XCTAssertEqual(DiskOverviewView.growthLabel(named, home: home).caption, "~/Library/Developer/Xcode")
         let heading = SpaceGrowth.Item(title: "Caches", path: nil, changeBytes: 1, currentBytes: 1)
         XCTAssertNil(DiskOverviewView.growthLabel(heading).caption)
     }
