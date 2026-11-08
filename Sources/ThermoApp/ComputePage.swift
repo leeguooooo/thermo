@@ -348,6 +348,9 @@ struct ComputePage: View {
             .onHover { inside in if inside { hovered = program.id } else if hovered == program.id { hovered = nil } }
             .accessibilityElement(children: .combine)
             .accessibilityAddTraits(.isButton)
+            // The tap gesture alone is invisible to VoiceOver and other assistive tools: give the
+            // combined row the same toggle as its primary action.
+            .accessibilityAction { toggle(program.id) }
             .accessibilityValue(open ? tr("Expanded") : tr("Collapsed"))
             .contextMenu {
                 if program.quittable { Button(program.app != nil ? tr("Quit %1$@…", program.name) : tr("End %1$@…", program.name)) { stopping = ComputeStopTarget(program) } }
