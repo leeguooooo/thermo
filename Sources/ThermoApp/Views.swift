@@ -934,10 +934,11 @@ struct FanControlCard: View {
             .padding(.horizontal, Theme.Space.l).padding(.vertical, Theme.Space.s)
         }
         .disabled(!enabled)
-        .onAppear(perform: load)
-        // The helper's policies arrive after the card appears (at launch, after a helper restart):
-        // Load the desired policy so Apply does not resend stale editor defaults.
-        .onChange(of: policy) { _ in load() }
+        .onAppear { load(policy) }
+        // The helper's policies arrive after the card appears (at launch, after a helper restart, after Apply):
+        // load the new policy so Apply does not resend stale editor defaults. Use the value passed in —
+        // `self.policy` inside this closure is still the previous one, which flipped the picker back to the old mode.
+        .onChange(of: policy) { load($0) }
     }
 
     @ViewBuilder var editor: some View {
@@ -1010,7 +1011,7 @@ struct FanControlCard: View {
         FanControlPresentation.policy(policy)
     }
 
-    func load() {
+    func load(_ policy: FanPolicy) {
         curveError = nil
         rpm = fan.validRange.map { min($0.max, max($0.min, fan.target ?? fan.rpm ?? $0.min)) } ?? 0
         switch policy {
