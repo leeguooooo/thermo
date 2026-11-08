@@ -65,6 +65,11 @@ struct CleanupProtectionsView: View {
     init(home: String = NSHomeDirectory(), changed: @escaping () -> Void, close: @escaping () -> Void) {
         _model = StateObject(wrappedValue: CleanupProtectionsModel(home: home)); self.changed = changed; self.close = close
     }
+    /// Fits the list instead of a fixed 460 pt that left three rows floating in empty space; long lists still scroll.
+    static func height(rows: Int, rejected: Int, banners: Int) -> CGFloat {
+        let chrome: CGFloat = 150, row: CGFloat = 42, line: CGFloat = 48, banner: CGFloat = 36
+        return min(460, max(240, chrome + CGFloat(max(rows, 1)) * row + CGFloat(rejected) * line + CGFloat(banners) * banner))
+    }
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
             HStack(spacing: Theme.Space.s) {
@@ -114,7 +119,8 @@ struct CleanupProtectionsView: View {
                 Spacer()
                 Button(tr("Done"), action: close).keyboardShortcut(.cancelAction).buttonStyle(PillButtonStyle(prominent: true))
             }
-        }.padding(Theme.Space.xl).frame(width: 480, height: 460)
+        }.padding(Theme.Space.xl).frame(width: 480, height: Self.height(rows: model.entries.count, rejected: model.review?.value.rejected.count ?? 0,
+                                                                  banners: (model.issue == nil ? 0 : 1) + (model.notice == nil ? 0 : 1)))
             .background(Theme.canvas)
             .preferredColorScheme(.dark)
             .onAppear { model.reload() }
