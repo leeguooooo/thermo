@@ -45,4 +45,19 @@ import ThermoKit
         XCTAssertTrue(Monitor.sameMode(.auto, .auto))
         XCTAssertFalse(Monitor.sameMode(.auto, .fixed(rpm: 2500)))
     }
+
+    func testApplyHasNothingToSendWhenTheEditorMatchesThePolicy() {
+        let range = (min: 2317.0, max: 6550.0)
+        XCTAssertTrue(FanControlCard.matches(mode: .auto, rpm: 0, curve: nil, policy: .auto, range: range))
+        XCTAssertTrue(FanControlCard.matches(mode: .fixed, rpm: 2498, curve: nil, policy: .fixed(rpm: 2498), range: range))
+        XCTAssertTrue(FanControlCard.matches(mode: .fixed, rpm: 6550, curve: nil, policy: .fixed(rpm: .infinity), range: range))
+        XCTAssertFalse(FanControlCard.matches(mode: .fixed, rpm: 3000, curve: nil, policy: .fixed(rpm: 2498), range: range))
+        XCTAssertFalse(FanControlCard.matches(mode: .fixed, rpm: 2498, curve: nil, policy: .auto, range: range))
+        XCTAssertFalse(FanControlCard.matches(mode: .fixed, rpm: 2498, curve: nil, policy: .fixed(rpm: 2498), range: nil))
+        let curve = try! FanCurve(parsing: "50:min,70:3000,85:max")
+        var gpu = curve; gpu.sensor = .gpu
+        XCTAssertTrue(FanControlCard.matches(mode: .curve, rpm: 0, curve: curve, policy: .curve(curve), range: range))
+        XCTAssertFalse(FanControlCard.matches(mode: .curve, rpm: 0, curve: gpu, policy: .curve(curve), range: range))
+        XCTAssertFalse(FanControlCard.matches(mode: .curve, rpm: 0, curve: nil, policy: .curve(curve), range: range), "an unparsable custom curve is not a match")
+    }
 }

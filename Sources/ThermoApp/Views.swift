@@ -935,8 +935,9 @@ struct FanControlCard: View {
                 Spacer(minLength: Theme.Space.s)
                 Button(applying ? tr("Sending…") : tr("Apply")) { applyCurrent() }
                     .buttonStyle(PillButtonStyle(prominent: true)).controlSize(.small)
-                    // Nothing to send while it is already automatic (unless restoring after a failure), or while the helper is being checked.
-                    .disabled(!enabled || checking || applying || (mode != .auto && fan.validRange == nil) || (mode == .auto && isAuto(policy) && controlState?.failure == nil && controlState?.suspended != true))
+                    // Nothing to send while the editor matches the requested policy (unless restoring after a failure or
+                    // a safety suspension), or while the helper is being checked.
+                    .disabled(!enabled || checking || applying || (mode != .auto && fan.validRange == nil) || (unchanged && controlState?.failure == nil && controlState?.suspended != true))
             }
             .padding(.horizontal, Theme.Space.l).padding(.vertical, Theme.Space.s)
         }
@@ -1033,6 +1034,25 @@ struct FanControlCard: View {
     }
 
     func isAuto(_ p: FanPolicy) -> Bool { if case .auto = p { return true } else { return false } }
+
+    /// The editor shows exactly the requested policy, so Apply would resend it.
+    var unchanged: Bool { Self.matches(mode: mode, rpm: rpm, curve: draftCurve, policy: policy, range: fan.validRange) }
+    var draftCurve: FanCurve? {
+        guard var c = try? (preset.curve ?? FanCurve(parsing: customCurve)) else { return nil }
+        c.sensor = sensor
+        return c
+    }
+    static func matches(mode: FanMode, rpm: Double, curve: FanCurve?, policy: FanPolicy, range: (min: Double, max: Double)?) -> Bool {
+        switch (mode, policy) {
+        case (.auto, .auto): return true
+        case (.fixed, .fixed(let r)):
+            guard let range else { return false }
+            let requested = r.isInfinite ? range.max : min(range.max, max(range.min, r))
+            return abs(requested - rpm) < 0.5
+        case (.curve, .curve(let c)): return curve.map { $0.points == c.points && $0.sensor == c.sensor } ?? false
+        default: return false
+        }
+    }
 
     func applyCurrent() {
         curveError = nil
