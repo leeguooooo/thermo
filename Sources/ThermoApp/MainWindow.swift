@@ -528,7 +528,7 @@ struct MainSidebar: View {
                     row(.checkup, tr("AI Check-up"), "waveform.path.ecg", .mint, trailing: nil)
                     row(.sensors, tr("Sensors"), "thermometer.medium", .red, trailing: nil)
                     row(.fans, tr("Fans"), "fan", .blue,
-                        trailing: monitor.snapshot.flatMap { FanControlPresentation.speedSummary($0.fans) })
+                        trailing: monitor.snapshot.flatMap { FanControlPresentation.speedSummary($0.fans, stopped: monitor.stoppedFans) })
                     row(.connections, tr("Connections"), "wifi", .blue, trailing: nil)
 
                     header(tr("Resources"))

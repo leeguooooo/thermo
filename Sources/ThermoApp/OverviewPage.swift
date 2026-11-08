@@ -240,15 +240,17 @@ struct OverviewPage: View {
     var fanLink: some View {
         let s = monitor.snapshot
         let fans = monitor.sampledFans ?? []
-        let top = fans.filter { $0.reportedRPM != nil }.max { ($0.reportedRPM ?? 0) < ($1.reportedRPM ?? 0) }
+        let stopped = monitor.stoppedFans
+        let top = fans.filter { $0.reportedRPM(stopped: stopped) != nil }.max { ($0.reportedRPM(stopped: stopped) ?? 0) < ($1.reportedRPM(stopped: stopped) ?? 0) }
         let hot = (s?.hottest ?? 0) >= 85
         let lagging = hot && fans.contains { $0.manual == false } && (fans.compactMap(\.load).max() ?? 1) < 0.6
         let state: LinkState = monitor.sampledFans == nil ? .unknown : fans.isEmpty || fans.contains { $0.manual == nil || $0.rpm == nil || $0.validRange == nil } ? .unknown : lagging ? .alert : .normal
         let mode = fans.contains { $0.manual == nil } ? tr("unknown") : fans.contains { $0.manual == true } ? tr("manual") : tr("auto")
         let detail: String? = monitor.sampledFans == nil ? monitor.fanEmptyMessage : fans.isEmpty ? tr("No fans")
             : lagging ? tr("Hot, but the fans are not at full speed")
+            : fans.allSatisfy { $0.manual == false } && FanControlPresentation.allStopped(fans, stopped: stopped) ? tr("auto · stopped while the Mac is cool")
             : top.map { mode + " · " + tr("%1$@ of max", $0.load.map { String(format: "%.0f%%", $0 * 100) } ?? tr("unknown")) }
-        return link(tr("Fans"), "fan", value: FanControlPresentation.speedSummary(fans) ?? "—", caption: nil,
+        return link(tr("Fans"), "fan", value: FanControlPresentation.speedSummary(fans, stopped: stopped) ?? "—", caption: nil,
                     detail: detail, state: state, accessory: fans.isEmpty ? nil : AnyView(fanControls(fans))) { open(.fans) }
     }
 

@@ -45,6 +45,24 @@ final class FanControlPresentationTests: XCTestCase {
         XCTAssertEqual(spinning.reportedRPM, 2400)
     }
 
+    func testLastingZeroIsAStoppedFan() {
+        // Apple silicon fans stop while cool although they report a spinning minimum (M5: 2317 rpm).
+        let idle = FanReading(id: 0, name: "Fan", rpm: 0, min: 2317, max: 6550, target: nil, manual: false)
+        XCTAssertNil(idle.reportedRPM(stopped: []), "one zero may still be the SMC's launch value")
+        XCTAssertEqual(idle.reportedRPM(stopped: [0]), 0)
+        XCTAssertEqual(FanControlPresentation.speedSummary([idle], stopped: [0]), tr("%1$@ rpm", "0"))
+        XCTAssertTrue(FanControlPresentation.allStopped([idle], stopped: [0]))
+        XCTAssertFalse(FanControlPresentation.allStopped([idle], stopped: []))
+
+        var streaks: [Int: Int] = [:]
+        for _ in 1..<Monitor.stoppedAfterSamples { streaks = Monitor.zeroStreaks(streaks, fans: [idle]) }
+        XCTAssertLessThan(streaks[0] ?? 0, Monitor.stoppedAfterSamples)
+        streaks = Monitor.zeroStreaks(streaks, fans: [idle])
+        XCTAssertEqual(streaks[0], Monitor.stoppedAfterSamples)
+        let spinning = FanReading(id: 0, name: "Fan", rpm: 2400, min: 2317, max: 6550, target: nil, manual: false)
+        XCTAssertNil(Monitor.zeroStreaks(streaks, fans: [spinning])[0], "a real speed resets the count")
+    }
+
     func testPendingAndLegacyHelpersNeverRenderManualConfirmation() {
         let pending = FanControlState(policies: [0: .fixed(rpm: 3000)])
         XCTAssertEqual(FanControlPresentation.observation(pending, fan: 0), tr("Waiting for hardware verification"))

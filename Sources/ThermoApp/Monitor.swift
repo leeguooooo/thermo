@@ -97,10 +97,27 @@ final class Monitor: ObservableObject {
     @Published private(set) var fanReadingsUnavailable = false
     var fanEmptyMessage: String { tr(fanReadingsUnavailable ? "Fan readings unavailable" : "Checking…") }
 
+    /// Fans whose 0 rpm has held for several samples: stopped while the Mac is cool, not unread.
+    @Published private(set) var stoppedFans: Set<Int> = []
+    private var fanZeroStreak: [Int: Int] = [:]
+
     func publishSnapshot(_ value: Snapshot, parts: SamplerParts) {
         fanReadingsUnavailable = parts.contains(.fans) && value.fansAvailable == false
-        sampledFans = parts.contains(.fans) && value.hasFanReadings ? value.fans : nil
+        let fans = parts.contains(.fans) && value.hasFanReadings ? value.fans : nil
+        if let fans {
+            fanZeroStreak = Self.zeroStreaks(fanZeroStreak, fans: fans)
+            let stopped = Set(fanZeroStreak.filter { $0.value >= Self.stoppedAfterSamples }.keys)
+            if stopped != stoppedFans { stoppedFans = stopped }
+        }
+        sampledFans = fans
         snapshot = value
+    }
+    /// The SMC's launch-time 0 lasts until its first real poll; three zeros in a row are a stopped fan.
+    static let stoppedAfterSamples = 3
+    static func zeroStreaks(_ previous: [Int: Int], fans: [FanReading]) -> [Int: Int] {
+        var next: [Int: Int] = [:]
+        for fan in fans where fan.rpm == 0 { next[fan.id] = (previous[fan.id] ?? 0) + 1 }
+        return next
     }
     @Published private(set) var history: [HistoryPoint] = []
     @Published private(set) var helperState: HelperState = .unknown

@@ -292,10 +292,11 @@ struct PopoverView: View {
 
     var fanCard: some View {
         let fans = monitor.sampledFans ?? []
-        let top = fans.filter { $0.reportedRPM != nil }.max { $0.reportedRPM! < $1.reportedRPM! }
+        let stopped = monitor.stoppedFans
+        let top = fans.filter { $0.reportedRPM(stopped: stopped) != nil }.max { $0.reportedRPM(stopped: stopped)! < $1.reportedRPM(stopped: stopped)! }
         return PanelCard(title: tr("Fans"), symbol: "fan",
                          badge: top?.load.map { String(format: "%.0f%%", $0 * 100) }) {
-            BigValue(value: top.map { (fans.contains { $0.reportedRPM == nil } ? "≥ " : "") + FanControlPresentation.rpm($0.reportedRPM) } ?? "—", unit: top == nil ? nil : tr("RPM"))
+            BigValue(value: top.map { (fans.contains { $0.reportedRPM(stopped: stopped) == nil } ? "≥ " : "") + FanControlPresentation.rpm($0.reportedRPM(stopped: stopped)) } ?? "—", unit: top == nil ? nil : tr("RPM"))
             if fans.isEmpty {
                 Text(monitor.sampledFans == nil ? monitor.fanEmptyMessage : tr("No fans")).font(Theme.caption).foregroundStyle(Theme.textTertiary)
             } else if monitor.policiesAvailable {
@@ -492,7 +493,7 @@ struct OverviewView: View {
                 Divider()
                 ForEach(monitor.sampledFans ?? []) { f in
                     HStack(spacing: 8) {
-                        FanRow(fan: f)
+                        FanRow(fan: f, stopped: monitor.stoppedFans.contains(f.id))
                         QuickFanSwitch(monitor: monitor, fan: f)
                     }
                 }
@@ -507,12 +508,13 @@ struct OverviewView: View {
 
 struct FanRow: View {
     let fan: FanReading
+    var stopped = false
     var body: some View {
         HStack {
             Image(systemName: "fan").foregroundStyle(fan.manual == true ? Theme.caution : Theme.textSecondary)
             Text(fan.displayName).frame(width: 52, alignment: .leading)
             FanLoadIndicator(fan: fan)
-            Text(tr("%1$@ rpm", FanControlPresentation.rpm(fan.reportedRPM))).monospacedDigit().frame(width: 76, alignment: .trailing)
+            Text(tr("%1$@ rpm", FanControlPresentation.rpm(fan.reportedRPM(stopped: stopped ? [fan.id] : [])))).monospacedDigit().frame(width: 76, alignment: .trailing)
         }
         .font(Theme.body)
         .help(tr("%1$@–%2$@ rpm · %3$@", FanControlPresentation.rpm(fan.min), FanControlPresentation.rpm(fan.max), tr(fan.controlMode)))
@@ -738,7 +740,7 @@ struct FansView: View {
                     HStack(alignment: .top, spacing: 0) {
                         ForEach(Array(fans.enumerated()), id: \.element.id) { i, f in
                             if i > 0 { Rectangle().fill(Theme.hairline).frame(width: 1) }
-                            FanFigure(fan: f, checking: monitor.helperState == .unknown)
+                            FanFigure(fan: f, checking: monitor.helperState == .unknown, stopped: monitor.stoppedFans.contains(f.id))
                         }
                     }
                     .fixedSize(horizontal: false, vertical: true)
@@ -855,6 +857,7 @@ struct FansView: View {
 struct FanFigure: View {
     let fan: FanReading
     var checking = false
+    var stopped = false
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
@@ -866,11 +869,11 @@ struct FanFigure: View {
             }
             .foregroundStyle(Theme.textTertiary)
             HStack(alignment: .firstTextBaseline, spacing: Theme.Space.xs) {
-                if checking && (fan.rpm ?? 0) == 0 {
+                if checking && (fan.rpm ?? 0) == 0 && !stopped {
                     // A zero while the helper is still being read says nothing yet.
                     Text("—").font(Theme.figure(.hero)).foregroundStyle(Theme.textTertiary)
                 } else {
-                    Text(FanControlPresentation.rpm(fan.reportedRPM)).font(Theme.figure(.hero)).foregroundStyle(Theme.textPrimary)
+                    Text(FanControlPresentation.rpm(fan.reportedRPM(stopped: stopped ? [fan.id] : []))).font(Theme.figure(.hero)).foregroundStyle(Theme.textPrimary)
                         .contentTransition(.numericText())
                         .animation(Theme.standard.unlessReduced(reduceMotion), value: fan.rpm)
                 }
@@ -880,6 +883,10 @@ struct FanFigure: View {
             FanLoadIndicator(fan: fan).frame(maxWidth: 220).accessibilityHidden(true)
             Text(tr("%1$@–%2$@ rpm · %3$@", FanControlPresentation.rpm(fan.min), FanControlPresentation.rpm(fan.max), tr(fan.controlMode)))
                 .font(Theme.caption.monospacedDigit()).foregroundStyle(Theme.textTertiary)
+            if stopped && fan.rpm == 0 && fan.manual == false {
+                Text(tr("Stopped while the Mac is cool; it starts on its own as it warms up."))
+                    .font(Theme.caption).foregroundStyle(Theme.textTertiary).fixedSize(horizontal: false, vertical: true)
+            }
         }
         .padding(Theme.Space.l)
         .frame(maxWidth: .infinity, alignment: .leading)

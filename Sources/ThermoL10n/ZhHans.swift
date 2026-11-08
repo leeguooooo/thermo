@@ -2000,6 +2000,8 @@ let zhHans: [String: String] = [
     "In use": "正在使用",
     "Command-line tool update: %1$@ → %2$@": "命令行工具可更新：%1$@ → %2$@",
     "Stopped programs": "结束的程序",
+    "auto · stopped while the Mac is cool": "自动 · 机器凉时风扇停转",
+    "Stopped while the Mac is cool; it starts on its own as it warms up.": "机器凉时风扇停转，温度上来后会自己转起来。",
     "Privacy": "隐私",
     "Show one kind of change": "只看某一类操作",
     "All kinds": "全部类型",

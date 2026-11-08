@@ -25,13 +25,17 @@ enum FanControlPresentation {
     }
     static func rpm(_ value: Double?) -> String { value.map { String(format: "%.0f", $0) } ?? tr("unknown") }
     /// `speedSummary` and the cards use the reported speed, not the raw one: see `FanReading.reportedRPM`.
-    static func speedSummary(_ fans: [FanReading]) -> String? {
+    static func speedSummary(_ fans: [FanReading], stopped: Set<Int> = []) -> String? {
         guard !fans.isEmpty else { return nil }
         // No fan has a usable speed (the SMC's momentary 0, or an unreadable fan): the sidebar and
         // status menu show nothing rather than "unknown rpm"; the Fans page still says unknown.
-        guard let speed = fans.compactMap(\.reportedRPM).max() else { return nil }
-        let prefix = fans.contains { $0.reportedRPM == nil } ? "≥ " : ""
+        guard let speed = fans.compactMap({ $0.reportedRPM(stopped: stopped) }).max() else { return nil }
+        let prefix = fans.contains { $0.reportedRPM(stopped: stopped) == nil } ? "≥ " : ""
         return prefix + tr("%1$@ rpm", rpm(speed))
+    }
+    /// Every fan confirmed at rest: Apple silicon Macs stop their fans while cool.
+    static func allStopped(_ fans: [FanReading], stopped: Set<Int>) -> Bool {
+        !fans.isEmpty && fans.allSatisfy { $0.rpm == 0 && stopped.contains($0.id) }
     }
     static func errorText(_ error: String) -> String {
         if error.contains("no automatic-control readback key") || error.contains("no manual-control readback key") {
@@ -68,9 +72,12 @@ extension FanReading {
 extension FanReading {
     /// The speed worth showing. The SMC reports 0 rpm until its first real poll after launch, and a
     /// fan cannot run below its own minimum, so a 0 under that minimum is "not read yet", not a speed.
-    var reportedRPM: Double? {
+    var reportedRPM: Double? { reportedRPM(stopped: []) }
+    /// `stopped` holds fans whose 0 has persisted (see `Monitor.stoppedFans`): Apple silicon fans
+    /// do stop below their spinning minimum, so a lasting 0 is a real reading.
+    func reportedRPM(stopped: Set<Int>) -> Double? {
         guard let rpm else { return nil }
-        if rpm == 0, let min, min > 0 { return nil }
+        if rpm == 0, let min, min > 0, !stopped.contains(id) { return nil }
         return rpm
     }
 }
