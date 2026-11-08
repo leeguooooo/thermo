@@ -1,5 +1,6 @@
 import XCTest
 import AgentCore
+import ThermoL10n
 @testable import CleanKit
 @testable import ThermoApp
 
@@ -53,5 +54,23 @@ final class TabWorkspaceUXTests: XCTestCase {
         XCTAssertFalse(model.busy)
         XCTAssertEqual(model.pages, pages)
         XCTAssertNil(model.notice)
+    }
+    /// A batch saved from a window that has since closed: the default reopen would fail, so the card asks for a window.
+    @MainActor func testOriginalWindowGoneOnlyWhenEveryPendingPageLostItsWindow() {
+        let open = [page(1, window: 7)]
+        let model = TabWorkspaceModel(app: "Fixture", preview: .init(inventory: .init(app: "Fixture", generated: Date(), pages: open), saved: []))
+        func record(_ windows: [Int], status: String = "closed") -> TabWorkspace.Archive {
+            TabWorkspace.Archive(name: "B", app: "Fixture", entries: windows.enumerated().map { TabWorkspace.Entry(page: page(10 + $0.offset, window: $0.element), status: status) })
+        }
+        XCTAssertTrue(model.originalWindowGone(record([3])))
+        XCTAssertFalse(model.originalWindowGone(record([3, 7])), "one page can still go back to its own window")
+        XCTAssertFalse(model.originalWindowGone(record([3], status: "skipped")), "nothing left to reopen")
+        let unloaded = TabWorkspaceModel(app: "Fixture")
+        XCTAssertFalse(unloaded.originalWindowGone(record([3])), "unknown until tabs are loaded")
+    }
+    @MainActor func testRestoreFailurePointsAtTheWindowMenuOnlyForTheDefaultTarget() {
+        let gone = "Destination window is unavailable or its browser identity changed."
+        XCTAssertNotEqual(TabWorkspaceModel.restoreFailure(gone, chosenWindow: false), TabWorkspaceModel.restoreFailure(gone, chosenWindow: true))
+        XCTAssertEqual(TabWorkspaceModel.restoreFailure("Group name is empty.", chosenWindow: false), tr("Group name is empty."))
     }
 }

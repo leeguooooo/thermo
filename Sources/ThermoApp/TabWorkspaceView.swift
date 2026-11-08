@@ -57,8 +57,10 @@ final class TabWorkspaceModel: ObservableObject {
     var candidates: [TabWorkspace.Page] { pages.filter(\.canArchive) }
     func selectWindow(_ id: Int) { window = id; selected = [] }
     func selectAllWindows(_ value: Bool) { allWindows = value; selected = [] }
-    func refresh() {
-        guard !busy, !isPreview else { return }; busy = true; error = nil
+    /// `keepError`: after an action, its failure must stay on screen while the list reloads.
+    func refresh(keepError: Bool = false) {
+        guard !busy, !isPreview else { return }; busy = true
+        if !keepError { error = nil }
         let app = app
         Task {
             do {
@@ -67,7 +69,11 @@ final class TabWorkspaceModel: ObservableObject {
                 Self.loadedApps.insert(app)
                 inventory = inv; saved = records.filter { $0.app == app }
                 selected.formIntersection(Set(inv.pages.map(\.id)))
-            } catch { self.error = tr(error.localizedDescription); Self.loadedApps.insert(app) }
+            } catch {
+                // A failed reload keeps the old list on screen; say so, since it may be out of date.
+                self.error = tr(error.localizedDescription) + (inventory != nil ? "\n" + tr("This is the previous list. Refresh before taking action.") : "")
+                Self.loadedApps.insert(app)
+            }
             busy = false
         }
     }
@@ -76,8 +82,8 @@ final class TabWorkspaceModel: ObservableObject {
         guard !selection.isEmpty, !busy, !isPreview else { return }; busy = true; error = nil
         Task {
             do { try await Task.detached { try TabWorkspace.assign(selection, name: name) }.value }
-            catch { self.error = error.localizedDescription }
-            busy = false; refresh()
+            catch { self.error = tr(error.localizedDescription) }
+            busy = false; refresh(keepError: true)
         }
     }
     func archive(_ selection: [TabWorkspace.Page], name: String) {
@@ -87,8 +93,8 @@ final class TabWorkspaceModel: ObservableObject {
                 let record = try await Task.detached { try await TabWorkspace.archive(selection, app: app, name: name) }.value
                 notice = tr("Saved %1$@ pages; closed %2$@. Skipped or unconfirmed pages remain listed in the saved batch.", String(record.entries.count), String(record.closed))
                 selected.subtract(selection.map(\.id))
-            } catch { self.error = error.localizedDescription }
-            busy = false; refresh()
+            } catch { self.error = tr(error.localizedDescription) }
+            busy = false; refresh(keepError: true)
         }
     }
     func restore(_ record: TabWorkspace.Archive, destinationWindow: Int? = nil) {
@@ -98,9 +104,25 @@ final class TabWorkspaceModel: ObservableObject {
                 let result = try await Task.detached { try TabWorkspace.restore(record.id, destinationWindow: destinationWindow) }.value
                 let restored = result.entries.filter { $0.restoreState == "restored" }.count
                 notice = tr("%1$@ pages reopened. Unconfirmed operations are not retried automatically.", String(restored))
-            } catch { self.error = error.localizedDescription }
-            busy = false; refresh()
+            } catch { self.error = Self.restoreFailure(error.localizedDescription, chosenWindow: destinationWindow != nil) }
+            busy = false; refresh(keepError: true)
         }
+    }
+}
+
+extension TabWorkspaceModel {
+    /// True when none of the batch's pages still have their original window open (only known once tabs are loaded).
+    func originalWindowGone(_ record: TabWorkspace.Archive) -> Bool {
+        guard let pages = inventory?.pages else { return false }
+        let open = Set(pages.map(\.tab.window))
+        let pending = record.entries.filter { $0.status == "closed" && $0.restoreState == nil }
+        return !pending.isEmpty && pending.allSatisfy { !open.contains($0.page.tab.window) }
+    }
+    /// The core speaks in CLI terms (--window). In the app, point at the window menu instead.
+    static func restoreFailure(_ message: String, chosenWindow: Bool) -> String {
+        let windowGone = message.hasPrefix("Destination window is unavailable") || message.hasPrefix("The original browser session ended")
+        guard windowGone, !chosenWindow else { return tr(message) }
+        return tr("The window these tabs came from is closed. Open “Links, results and reopening options” and choose a window under “Reopen in a specific window”.")
     }
 }
 
@@ -153,7 +175,7 @@ struct TabWorkspaceView: View {
             VStack(alignment: .leading, spacing: Theme.Space.s) {
                 if task != .saved { scopePicker } else { savedToolbar }
                 if let error = model.error {
-                    NoticeBanner(text: error + (model.inventory != nil ? "\n" + tr("This is the previous list. Refresh before taking action.") : ""))
+                    NoticeBanner(text: error, dismiss: { model.error = nil })
                 }
                 if let notice = model.notice { NoticeBanner(text: notice, dismiss: { model.notice = nil }) }
                 if task != .saved, let hint = model.inventory?.hint {
@@ -406,6 +428,7 @@ struct TabWorkspaceView: View {
         .background(on ? Theme.accent.opacity(0.07) : .clear)
         .hoverHighlight()
     }
+    var openWindows: [Int] { Array(Set((model.inventory?.pages ?? []).map { $0.tab.window })).sorted() }
     var savedGroups: some View {
         ScrollView {
             LazyVStack(alignment: .leading, spacing: Theme.Space.m) {
@@ -432,9 +455,20 @@ struct TabWorkspaceView: View {
                                 .font(Theme.caption.monospacedDigit()).foregroundStyle(Theme.textTertiary)
                             // Nothing left to reopen: the line below says so; a greyed "Reopen 0 tabs" adds nothing.
                             if record.remaining > 0 {
-                                Button(tr("Reopen %1$@ tabs", String(record.remaining))) { plan = Plan(archive: record) }
-                                    .buttonStyle(PillButtonStyle(prominent: true)).controlSize(.small)
-                                    .disabled(model.busy)
+                                if model.originalWindowGone(record), !openWindows.isEmpty {
+                                    // The original window is closed, so the default reopen would fail: ask for a window instead.
+                                    Menu(tr("Reopen %1$@ tabs in…", String(record.remaining))) {
+                                        ForEach(openWindows, id: \.self) { window in
+                                            Button(model.windowLabel(window)) { plan = Plan(archive: record, destinationWindow: window) }
+                                        }
+                                    }
+                                    .controlSize(.small).fixedSize().disabled(model.busy)
+                                    .help(tr("The window these tabs came from is closed."))
+                                } else {
+                                    Button(tr("Reopen %1$@ tabs", String(record.remaining))) { plan = Plan(archive: record) }
+                                        .buttonStyle(PillButtonStyle(prominent: true)).controlSize(.small)
+                                        .disabled(model.busy)
+                                }
                             }
                         }
                         if record.remaining == 0 {
@@ -443,7 +477,7 @@ struct TabWorkspaceView: View {
                         DisclosureGroup {
                             VStack(alignment: .leading, spacing: 0) {
                                 Menu(tr("Reopen in a specific window")) {
-                                    ForEach(Array(Set((model.inventory?.pages ?? []).map { $0.tab.window })).sorted(), id: \.self) { window in
+                                    ForEach(openWindows, id: \.self) { window in
                                         Button(model.windowLabel(window)) { plan = Plan(archive: record, destinationWindow: window) }
                                     }
                                 }.controlSize(.small).fixedSize().disabled(record.remaining == 0 || model.busy).padding(.vertical, Theme.Space.s)
