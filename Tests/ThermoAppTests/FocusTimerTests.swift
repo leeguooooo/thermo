@@ -36,15 +36,43 @@ import XCTest
         XCTAssertTrue(h.screen.visible)
     }
 
-    func testBreakEndingNaturallyReturnsToIdleWithoutStartingNextFocus() {
+    func testBreakEndingKeepsTheFullScreenAndWaitsForTheUserByDefault() {
         let h = Harness()
+        XCTAssertFalse(h.settings.autoStartFocus)
         h.model.startFocus(); h.fireLatest()
         let scheduled = h.callbacks.count
         h.fireLatest()
-        XCTAssertEqual(h.model.phase, .idle)
-        XCTAssertFalse(h.screen.visible)
+        XCTAssertEqual(h.model.phase, .breakFinished)
+        XCTAssertTrue(h.screen.visible)
         XCTAssertNil(h.model.remaining(at: h.now))
-        XCTAssertEqual(h.callbacks.count, scheduled, "the break ending must not schedule another round")
+        XCTAssertEqual(h.callbacks.count, scheduled, "waiting for the user must not schedule anything")
+        XCTAssertEqual(FocusAction.available(in: .breakFinished), [.dismissBreak, .startFocus])
+    }
+
+    func testWaitingBreakScreenClosesIntoIdleOrANewFocus() {
+        let h = Harness()
+        h.model.startFocus(); h.fireLatest(); h.fireLatest()
+        FocusAction.dismissBreak.run(h.model)
+        XCTAssertEqual(h.model.phase, .idle); XCTAssertFalse(h.screen.visible)
+        h.model.startFocus(); h.fireLatest(); h.fireLatest()
+        FocusAction.startFocus.run(h.model)
+        XCTAssertEqual(h.model.phase, .focus); XCTAssertFalse(h.screen.visible)
+    }
+
+    func testBreakEndingStartsTheNextFocusWhenAutoStartIsOn() {
+        let h = Harness(); h.settings.autoStartFocus = true
+        h.model.startFocus(); h.fireLatest(); h.fireLatest()
+        XCTAssertEqual(h.model.phase, .focus)
+        XCTAssertFalse(h.screen.visible)
+        XCTAssertEqual(h.model.remaining(at: h.now), 25 * 60)
+    }
+
+    func testTypedLengthsAreIntegersClampedToTheAllowedRange() {
+        let range = FocusSettings.minuteRange
+        XCTAssertEqual(FocusSettings.integer(from: " 45 ", in: range), 45)
+        XCTAssertEqual(FocusSettings.integer(from: "0", in: range), 1)
+        XCTAssertEqual(FocusSettings.integer(from: "999", in: range), 180)
+        for invalid in ["", "abc", "12.5"] { XCTAssertNil(FocusSettings.integer(from: invalid, in: range), invalid) }
     }
 
     func testLongBreakFollowsTheConfiguredNumberOfShortBreaks() {
@@ -129,11 +157,12 @@ import XCTest
         XCTAssertEqual(FocusSettings.read(defaults), FocusSettings())
         // 设置面板经 @AppStorage 按这些键写入。
         let values: [(String, Any)] = [(FocusSettings.focusKey, 50), (FocusSettings.shortBreakKey, 10), (FocusSettings.longBreakKey, 30),
-                                       (FocusSettings.longBreakEveryKey, 3), (FocusSettings.progressIconKey, false), (FocusSettings.startOnLaunchKey, true)]
+                                       (FocusSettings.longBreakEveryKey, 3), (FocusSettings.progressIconKey, false), (FocusSettings.startOnLaunchKey, true),
+                                       (FocusSettings.autoStartFocusKey, true)]
         for (key, value) in values { defaults.set(value, forKey: key) }
         var saved = FocusSettings()
         saved.focusMinutes = 50; saved.shortBreakMinutes = 10; saved.longBreakMinutes = 30
-        saved.longBreakEvery = 3; saved.showProgressIcon = false; saved.startOnLaunch = true
+        saved.longBreakEvery = 3; saved.showProgressIcon = false; saved.startOnLaunch = true; saved.autoStartFocus = true
         let reopened = try XCTUnwrap(UserDefaults(suiteName: suite))
         XCTAssertEqual(FocusSettings.read(reopened), saved)
         reopened.set(0, forKey: FocusSettings.focusKey); reopened.set(99, forKey: FocusSettings.longBreakEveryKey)
@@ -168,7 +197,7 @@ import XCTest
     /// 日语表只覆盖专注计时；缺一条就会在日语界面里露出英文。
     func testEveryFocusStringHasAJapaneseTranslation() throws {
         let table = try XCTUnwrap(Language.japanese.table)
-        let phases: [FocusPhase] = [.idle, .focus, .postponed(.short), .rest(.short), .rest(.long)]
+        let phases: [FocusPhase] = [.idle, .focus, .postponed(.short), .rest(.short), .rest(.long), .breakFinished]
         L10n.override = .english; defer { L10n.override = nil }
         let shown = phases.map(\.title) + FocusAction.allCases.map(\.title)
         for key in shown { XCTAssertNotNil(table[key], "missing Japanese for: \(key)") }

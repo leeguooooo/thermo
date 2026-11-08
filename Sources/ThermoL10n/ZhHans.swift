@@ -4388,5 +4388,8 @@ let zhHans: [String: String] = [
     "%1$@ short breaks": "%1$@ 次短休息",
     "Show progress icon in the menu bar": "在菜单栏显示进度图标",
     "Start focus when Thermo opens": "打开 Thermo 时开始专注",
+    "Start focus automatically when a break ends": "休息结束后自动开始专注",
+    "Break finished": "休息结束",
+    "Start the next focus when you're ready.": "准备好后，开始下一轮专注。",
     "New lengths apply from the next focus or break.": "新时长从下一次专注或休息开始生效。",
 ]

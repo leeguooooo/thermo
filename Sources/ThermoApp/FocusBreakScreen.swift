@@ -14,6 +14,7 @@ extension FocusPhase {
         case .postponed: return tr("Break postponed")
         case .rest(.short): return tr("Short break")
         case .rest(.long): return tr("Long break")
+        case .breakFinished: return tr("Break finished")
         }
     }
 }
@@ -29,6 +30,7 @@ extension FocusAction {
         case .postpone: return tr("Postpone 1 minute")
         case .stopBreak: return tr("Stop break")
         case .endBreakAndFocus: return tr("End break and start focus")
+        case .dismissBreak: return tr("Close")
         }
     }
 }
@@ -121,24 +123,54 @@ struct FocusBreakOverlay: View {
             Color.black
             if let wallpaper { Image(nsImage: wallpaper).resizable().scaledToFill() }
             Color.black.opacity(0.4)
-            VStack(spacing: 20) {
-                Text(model.phase.title).font(.system(size: 28, weight: .semibold))
-                TimelineView(.periodic(from: .now, by: 1)) { context in
-                    Text(FocusTimerModel.countdownText(model.remaining(at: context.date) ?? 0))
-                        .font(.system(size: 96, weight: .light, design: .rounded)).monospacedDigit()
+            VStack(spacing: 28) {
+                VStack(spacing: 20) {
+                    Text(model.phase.title).font(.system(size: 28, weight: .semibold))
+                    if model.phase != .breakFinished {
+                        TimelineView(.periodic(from: .now, by: 1)) { context in
+                            Text(FocusTimerModel.countdownText(model.remaining(at: context.date) ?? 0))
+                                .font(.system(size: 96, weight: .light, design: .rounded)).monospacedDigit()
+                        }
+                    }
+                    Text(model.phase == .breakFinished ? tr("Start the next focus when you're ready.") : tr("Step away from the screen and rest your eyes."))
+                        .font(Theme.body)
                 }
-                Text(tr("Step away from the screen and rest your eyes.")).font(Theme.body)
+                .shadow(color: .black.opacity(0.5), radius: 8)
                 HStack(spacing: 12) {
                     ForEach(FocusAction.available(in: model.phase), id: \.self) { action in
-                        Button(action.title) { action.run(model) }
+                        Button(action.title) { action.run(model) }.buttonStyle(FocusBreakButtonStyle())
                     }
-                }.controlSize(.large)
+                }
             }
             .foregroundStyle(.white)
-            .shadow(color: .black.opacity(0.5), radius: 8)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .clipped()
         .ignoresSafeArea()
+    }
+}
+
+/// 休息画面压在任意壁纸上：用深色半透明底保证白字在浅色壁纸上也看得清，又不像系统白按钮那样跳出来。
+private struct FocusBreakButtonStyle: ButtonStyle {
+    func makeBody(configuration: Configuration) -> some View { BreakButton(configuration: configuration) }
+
+    private struct BreakButton: View {
+        let configuration: Configuration
+        @Environment(\.accessibilityReduceMotion) private var reduceMotion
+        @State private var hover = false
+
+        var body: some View {
+            configuration.label
+                .font(.system(size: 14, weight: .medium))
+                .foregroundStyle(.white)
+                .lineLimit(1)
+                .padding(.horizontal, 20).frame(minHeight: 38)
+                .background(Capsule().fill(Color.black.opacity(configuration.isPressed ? 0.55 : hover ? 0.44 : 0.3)))
+                .overlay(Capsule().strokeBorder(Color.white.opacity(hover ? 0.42 : 0.26)))
+                .contentShape(Capsule())
+                .onHover { hover = $0 }
+                .animation(reduceMotion ? nil : Theme.quick, value: hover)
+                .animation(reduceMotion ? nil : Theme.quick, value: configuration.isPressed)
+        }
     }
 }
