@@ -199,7 +199,9 @@ struct TabWorkspaceView: View {
                          destructive: value.archive == nil, heading: tr("Pages affected"),
                          lines: value.archive.map { $0.entries.filter { $0.status == "closed" && $0.restoreState == nil }.map { $0.page.tab.title + " · " + TabWorkspace.site($0.page.tab.url) } }
                              ?? value.pages.map { $0.tab.title + " · " + TabWorkspace.site($0.tab.url) },
-                         footnote: tr("Unsaved form input and page state are not saved. Current, pinned, audio, private and agent tabs stay open; pages that changed are skipped."),
+                         footnote: value.archive == nil
+                             ? tr("Unsaved form input and page state are not saved. Current, pinned, audio, private and agent tabs stay open; pages that changed are skipped.")
+                             : tr("Pages load fresh from their saved links; earlier form input and scroll position do not come back."),
                          confirmTitle: value.archive == nil ? tr("Save links and close tabs") : tr("Reopen tabs"),
                          confirm: {
                              plan = nil
@@ -323,10 +325,14 @@ struct TabWorkspaceView: View {
             .background(RoundedRectangle(cornerRadius: Theme.radiusSmall, style: .continuous).fill(Color.white.opacity(0.055)))
             .overlay(RoundedRectangle(cornerRadius: Theme.radiusSmall, style: .continuous).strokeBorder(Theme.hairline))
     }
+    /// With nothing ticked, the button offers every closable tab the list currently shows — never
+    /// tabs hidden by the search, which the user cannot see before reviewing.
+    var archiveDefault: [TabWorkspace.Page] { model.selected.isEmpty ? filtered.filter(\.canArchive) : eligibleSelection }
     var archivePrimary: some View {
-        Button { requestArchive(model.selected.isEmpty ? model.candidates : eligibleSelection) } label: {
-            Label(tr("Review saving %1$@ tabs", String(model.selected.isEmpty ? model.candidates.count : eligibleSelection.count)), systemImage: "archivebox")
-        }.buttonStyle(PillButtonStyle(prominent: true)).disabled(model.busy || (model.selected.isEmpty ? model.candidates : eligibleSelection).isEmpty)
+        let pages = archiveDefault
+        return Button { requestArchive(pages) } label: {
+            Label(tr("Review saving %1$@ tabs", String(pages.count)), systemImage: "archivebox")
+        }.buttonStyle(PillButtonStyle(prominent: true)).disabled(model.busy || pages.isEmpty)
     }
     var categoryName: some View { TextField(tr("Category name for selected tabs"), text: $groupName).textFieldStyle(.roundedBorder) }
     var categoryActions: some View {
@@ -420,9 +426,12 @@ struct TabWorkspaceView: View {
                             Spacer()
                             Text(tr("%1$@ saved · %2$@ closed · %3$@ not yet reopened", String(record.entries.count), String(record.closed), String(record.remaining)))
                                 .font(Theme.caption.monospacedDigit()).foregroundStyle(Theme.textTertiary)
-                            Button(tr("Reopen %1$@ tabs", String(record.remaining))) { plan = Plan(archive: record) }
-                                .buttonStyle(PillButtonStyle(prominent: record.remaining > 0)).controlSize(.small)
-                                .disabled(record.remaining == 0 || model.busy)
+                            // Nothing left to reopen: the line below says so; a greyed "Reopen 0 tabs" adds nothing.
+                            if record.remaining > 0 {
+                                Button(tr("Reopen %1$@ tabs", String(record.remaining))) { plan = Plan(archive: record) }
+                                    .buttonStyle(PillButtonStyle(prominent: true)).controlSize(.small)
+                                    .disabled(model.busy)
+                            }
                         }
                         if record.remaining == 0 {
                             Text(tr("No confirmed closed tabs remain to reopen.")).font(Theme.caption).foregroundStyle(Theme.textTertiary)

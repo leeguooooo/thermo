@@ -2656,6 +2656,7 @@ let zhHans: [String: String] = [
     "Use Save and close to keep links here before putting unused tabs away.": "去“暂存并关闭”挑选不用的页面，它们的网址会保存在这里。",
     "Choose tabs to save": "去挑选页面",
     "Reopen %1$@ tabs": "重新打开 %1$@ 个页面",
+    "Pages load fresh from their saved links; earlier form input and scroll position do not come back.": "页面按保存的网址重新加载，之前填写的内容和滚动位置不会恢复。",
     "%1$@ saved · %2$@ closed · %3$@ not yet reopened": "已保存 %1$@ 个 · 已关闭 %2$@ 个 · 还有 %3$@ 个未打开",
     "No confirmed closed tabs remain to reopen.": "没有已确认关闭、且待重新打开的页面。",
     "Links, results and reopening options": "查看网址、结果和打开位置",
