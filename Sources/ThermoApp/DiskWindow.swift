@@ -458,6 +458,9 @@ struct DiskCategoryPage: View {
                 EmptyState(symbol: "magnifyingglass", title: tr("Find space you can free")).padding(.bottom, -36)
                 Button(tr("Scan")) { model.scan(category: category) }.buttonStyle(PillButtonStyle(prominent: true))
             }.frame(maxWidth: .infinity)
+        } else if !search.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            // The search hid every row: say so. A stopped or incomplete scan already has its banner above the list.
+            EmptyState(symbol: "magnifyingglass", title: tr("No matching items"))
         } else if model.report?.cancelled == true {
             VStack(spacing: Theme.Space.m) {
                 EmptyState(symbol: "pause.circle", title: tr("Scan stopped. These are partial results.")).padding(.bottom, -36)
@@ -471,7 +474,7 @@ struct DiskCategoryPage: View {
             }.frame(maxWidth: .infinity)
         } else {
             EmptyState(symbol: "checkmark.circle",
-                       title: !search.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? tr("No matching items") : category == .aiSessions ? tr("No conversations are eligible. Recent, active or unverified data are kept.") : tr("Nothing here."))
+                       title: category == .aiSessions ? tr("No conversations are eligible. Recent, active or unverified data are kept.") : tr("Nothing here."))
         }
     }
 
