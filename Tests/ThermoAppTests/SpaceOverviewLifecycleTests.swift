@@ -1,6 +1,7 @@
 import XCTest
 @testable import CleanKit
 @testable import ThermoApp
+import ThermoL10n
 
 final class SpaceOverviewLifecycleTests: XCTestCase {
     private final class Calls: @unchecked Sendable {
@@ -113,7 +114,7 @@ final class SpaceOverviewLifecycleTests: XCTestCase {
         let home = "/Users/someone"
         let folder = SpaceGrowth.Item(title: home + "/.cache", path: home + "/.cache", changeBytes: 3_000_000_000, currentBytes: 40_000_000_000)
         XCTAssertEqual(DiskOverviewView.growthLabel(folder, home: home).title, ".cache")
-        XCTAssertEqual(DiskOverviewView.growthLabel(folder, home: home).caption, "~")
+        XCTAssertEqual(DiskOverviewView.growthLabel(folder, home: home).caption, tr("Home folder"))
         let named = SpaceGrowth.Item(title: "Xcode", path: home + "/Library/Developer/Xcode", changeBytes: 1, currentBytes: 1)
         XCTAssertEqual(DiskOverviewView.growthLabel(named, home: home).title, "Xcode")
         XCTAssertEqual(DiskOverviewView.growthLabel(named, home: home).caption, "~/Library/Developer/Xcode")

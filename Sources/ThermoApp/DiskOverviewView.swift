@@ -400,7 +400,9 @@ extension DiskOverviewView {
         let tilde = FS.tilde(path, home: home)
         guard item.title == path || item.title == tilde else { return (item.title, tilde) }
         let ns = path as NSString
-        return (ns.lastPathComponent, FS.tilde(ns.deletingLastPathComponent, home: home))
+        let parent = ns.deletingLastPathComponent
+        // A lone "~" reads as a stray character; name the home folder instead.
+        return (ns.lastPathComponent, parent == home ? tr("Home folder") : FS.tilde(parent, home: home))
     }
 
     /// Which folders grew since an earlier full measurement: when the disk fills up, the first question is "what is eating it".
