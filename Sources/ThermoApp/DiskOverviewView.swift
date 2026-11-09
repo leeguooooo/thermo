@@ -172,6 +172,8 @@ struct DiskOverviewView: View {
     @ObservedObject var model = SpaceOverviewModel.shared
     var openCleanup: (CleanCategory?) -> Void = { _ in }
     var cleanupDisabled = false
+    /// Opens a folder in Space Lens, where it can be picked and moved to the Trash.
+    var openInSpaceLens: (String) -> Void = { _ in }
     @State private var detail: SpaceOverview.Entry?
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
@@ -250,7 +252,7 @@ struct DiskOverviewView: View {
         .onDisappear { model.stop() }
         .sheet(item: $detail) { e in
             SpaceDetailSheet(entry: e, route: Self.cleanupRoute(for: e.id), cleanupDisabled: cleanupDisabled,
-                             openCleanup: openCleanup) { detail = nil }
+                             openCleanup: openCleanup, openInSpaceLens: openInSpaceLens) { detail = nil }
         }
     }
 
@@ -344,33 +346,48 @@ struct DiskOverviewView: View {
         }
     }
 
+    /// Clicking the row opens its details; a place that can be cleaned gets its own button, so
+    /// "can be cleaned" is something to press, not only a caption.
     func row(_ e: SpaceOverview.Entry) -> some View {
         let style = SpaceStyle.of(e.id)
-        return Button { detail = e } label: {
-            HStack(spacing: Theme.Space.m) {
-                SpaceTile(style: style)
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(style.title ?? e.title).font(Theme.rowTitle).foregroundStyle(Theme.textPrimary).lineLimit(1)
-                    // Unattributed space has no folder to clean; its sheet still points to a scan.
-                    if e.id != "other", Self.cleanupRoute(for: e.id) != nil {
-                        Text(tr("Can be cleaned")).font(Theme.caption).foregroundStyle(Theme.accent)
-                    } else if e.complete == false, let measured = e.measuredLocations, let total = e.totalLocations {
-                        Text(tr("%1$@ of %2$@ locations measured", String(measured), String(total))).font(Theme.caption).foregroundStyle(Theme.caution)
+        // Unattributed space has no folder to clean; its sheet still points to a scan.
+        let route = e.id == "other" ? nil : Self.cleanupRoute(for: e.id)
+        let title = style.title ?? e.title
+        return HStack(spacing: Theme.Space.m) {
+            Button { detail = e } label: {
+                HStack(spacing: Theme.Space.m) {
+                    SpaceTile(style: style)
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(title).font(Theme.rowTitle).foregroundStyle(Theme.textPrimary).lineLimit(1)
+                        if e.complete == false, let measured = e.measuredLocations, let total = e.totalLocations {
+                            Text(tr("%1$@ of %2$@ locations measured", String(measured), String(total))).font(Theme.caption).foregroundStyle(Theme.caution)
+                        }
                     }
+                    Spacer(minLength: Theme.Space.s)
+                    Text(e.sizeText).font(Theme.figure(.row, weight: .medium))
+                        .foregroundStyle(e.effectiveSizeState == .complete ? Theme.textSecondary : Theme.caution)
+                        .contentTransition(.numericText())
                 }
-                Spacer(minLength: Theme.Space.s)
-                Text(e.sizeText).font(Theme.figure(.row, weight: .medium))
-                    .foregroundStyle(e.effectiveSizeState == .complete ? Theme.textSecondary : Theme.caution)
-                    .contentTransition(.numericText())
+                .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel(tr("Details for %1$@", title))
+            .accessibilityValue(e.sizeText)
+            if let route {
+                Button(tr("Clean…")) { openCleanup(route.category) }
+                    .buttonStyle(PillButtonStyle()).controlSize(.small)
+                    .disabled(cleanupDisabled)
+                    .help(route.label)
+                    .accessibilityLabel(route.label)
+            }
+            Button { detail = e } label: {
                 Image(systemName: "info.circle").font(.system(size: 15)).foregroundStyle(Theme.textTertiary)
             }
-            .padding(.horizontal, Theme.Space.m + 2).padding(.vertical, Theme.Space.s + 1)
-            .contentShape(Rectangle())
+            .buttonStyle(.plain).help(tr("Details"))
+            .accessibilityLabel(tr("Details for %1$@", title))
         }
-        .buttonStyle(.plain)
+        .padding(.horizontal, Theme.Space.m + 2).padding(.vertical, Theme.Space.s + 1)
         .hoverHighlight()
-        .accessibilityLabel(tr("Details for %1$@", style.title ?? e.title))
-        .accessibilityValue(e.sizeText)
     }
 }
 
@@ -413,6 +430,10 @@ extension DiskOverviewView {
                             Text(tr("now %1$@", ByteFormat.string(item.currentBytes))).font(Theme.caption.monospacedDigit()).foregroundStyle(Theme.textTertiary)
                         }
                         if let path = item.path {
+                            Button(tr("Review…")) { openInSpaceLens(path) }
+                                .buttonStyle(PillButtonStyle()).controlSize(.small)
+                                .help(tr("Open in Space Lens to pick what to move to the Trash"))
+                                .accessibilityLabel(tr("Review %1$@ in Space Lens", FSPath.tilde(path)))
                             Button { NSWorkspace.shared.activateFileViewerSelecting([URL(fileURLWithPath: path)]) } label: { Image(systemName: "magnifyingglass") }
                                 .buttonStyle(.plain).foregroundStyle(Theme.textSecondary).help(tr("Show in Finder"))
                                 .accessibilityLabel(tr("Show %1$@ in Finder", FSPath.tilde(path)))
@@ -430,6 +451,7 @@ struct SpaceDetailSheet: View {
     var route: (label: String, category: CleanCategory?)?
     var cleanupDisabled = false
     var openCleanup: (CleanCategory?) -> Void = { _ in }
+    var openInSpaceLens: (String) -> Void = { _ in }
     let close: () -> Void
 
     var body: some View {
@@ -511,6 +533,10 @@ struct SpaceDetailSheet: View {
             Spacer(minLength: Theme.Space.s)
             Text(c.sizeText).font(Theme.secondary.monospacedDigit()).foregroundStyle(Theme.textSecondary)
             if let p = c.path {
+                Button(tr("Review…")) { close(); openInSpaceLens(p) }
+                    .buttonStyle(PillButtonStyle()).controlSize(.small)
+                    .help(tr("Open in Space Lens to pick what to move to the Trash"))
+                    .accessibilityLabel(tr("Review %1$@ in Space Lens", FSPath.tilde(p)))
                 Button { NSWorkspace.shared.activateFileViewerSelecting([URL(fileURLWithPath: p)]) } label: {
                     Image(systemName: "magnifyingglass")
                 }

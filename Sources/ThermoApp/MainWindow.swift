@@ -404,7 +404,11 @@ struct MainView: View {
                 SpaceOverviewModel.shared.stop()
                 if !disk.scanning && !disk.cleaning { disk.scan(category: category) }
                 page = category.map { .disk(.category($0)) } ?? .disk(.home)
-            }, cleanupDisabled: disk.scanning || disk.cleaning).transition(.page)
+            }, cleanupDisabled: disk.scanning || disk.cleaning, openInSpaceLens: { path in
+                SpaceOverviewModel.shared.stop()
+                SpaceLensModel.shared.reveal(path)
+                page = .space(.browse)
+            }).transition(.page)
         case let .disk(.category(c)):
             DiskCategoryPage(model: disk, category: c, clean: startClean, cleanOne: { item in if cleanReview == nil { cleanReview = disk.cleanupReview(of: item) } }).id(c)
                 .transition(.page)

@@ -143,7 +143,7 @@ final class SpaceLensModel: ObservableObject {
                     if !token.isCancelled { SpaceLens.save(updated, to: cache) }
                 }
                 self.removedDuringScan = []
-                if self.tree?.folder(self.path) == nil { self.path = root }
+                if let tree = self.tree { self.path = Self.nearestFolder(self.path, in: tree) }
                 self.lastOpened = [:]
                 if self.wantsLastOpened { self.loadLastOpened() }
             }
@@ -171,6 +171,19 @@ final class SpaceLensModel: ObservableObject {
     }
 
     func open(_ path: String) { if tree?.folder(path) != nil { self.path = path } }
+
+    /// Show `path` in the folder browser, from another page: the folder itself, or the nearest folder
+    /// holding it. Before the first measurement the path waits for the tree.
+    func reveal(_ path: String) {
+        guard let tree else { self.path = path; return }
+        self.path = Self.nearestFolder(path, in: tree)
+    }
+
+    nonisolated static func nearestFolder(_ path: String, in tree: SpaceTree) -> String {
+        var p = path
+        while tree.folder(p) == nil, tree.covers(p), p != tree.root, p != "/" { p = (p as NSString).deletingLastPathComponent }
+        return tree.folder(p) != nil ? p : tree.root
+    }
 
     func refusal(_ path: String) -> String? {
         if SpaceLens.isVirtual(path) { return tr("Not a folder: this space is a separate volume or could not be read") }
