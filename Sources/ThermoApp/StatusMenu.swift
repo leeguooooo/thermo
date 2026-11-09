@@ -16,80 +16,82 @@ final class StatusMenu: NSObject, NSMenuDelegate {
     static let shared = StatusMenu()
 
     func make(battery: Bool) -> NSMenu {
+        let captureShortcutSuffix = CaptureWorkspace.shared.shortcutSuffix(for: .screenshot)
+        let pinShortcutSuffix = CaptureWorkspace.shared.shortcutSuffix(for: .pinClipboard)
+        
+        let configuredEntries = CaptureWorkspace.shared.shortcuts.settings.entries
+            .filter { $0.appearsInMenu }
+            .map { entry -> String in
+                let label = CaptureWorkspace.shared.shortcuts.label(for: entry)
+                return (entry.title.isEmpty ? tr(entry.action.title) : entry.title) + (label.isEmpty ? "" : "  " + label)
+            }
+        
+        let context = StatusMenuLayout.RuntimeContext(
+            hasBattery: battery,
+            keepAwakeActive: IdleAwakeModel.shared.state.phase == .active,
+            focusTimerActive: FocusTimerModel.shared.phase.isActive,
+            configuredCaptureEntriesAppear: !configuredEntries.isEmpty,
+            menuBarQuickControlsAppear: MenuBarManager.shared.enabled && MenuBarManager.shared.hasHiddenAssignments || MenuBarManager.shared.enabled || MenuBarManager.shared.state != .visible,
+            updatesCanCheck: AppModels.shared.updates.canCheck,
+            moreToolsActiveStates: StatusMenuLayout.MoreToolsActiveStates(
+                cleanScreenActive: false,
+                lowLatencyActive: false,
+                batteryProtectionActive: false
+            )
+        )
+        
+        let layout = StatusMenuLayout.make(
+            context: context,
+            captureShortcutSuffix: captureShortcutSuffix,
+            pinShortcutSuffix: pinShortcutSuffix,
+            configuredCaptureEntries: configuredEntries
+        )
+        
+        return materialize(layout: layout)
+    }
+    
+    private func materialize(layout: StatusMenuLayout) -> NSMenu {
         let menu = NSMenu()
         menu.autoenablesItems = false
-        menu.addItem(item(tr("Open Thermo"), "macwindow", key: "o") { MainWindow.show() })
-        menu.addItem(item(tr("Search apps and files"), "magnifyingglass") { LocalSearchPanel.shared.show() })
-        menu.addItem(item(tr("Manage menu bar…"), "menubar.rectangle") { MenuBarManagerPanel.shared.show() })
-        for control in MenuBarQuickControls.items(model: .shared) { menu.addItem(control) }
-        menu.addItem(.separator())
-        // Grouped like the panel's capture menu: capture, pin from the clipboard, manage pins, settings.
-        menu.addItem(item(tr("Capture screen…") + CaptureWorkspace.shared.shortcutSuffix(for:.screenshot), "viewfinder") { CaptureWorkspace.shared.capture() })
-        menu.addItem(item(tr("Scrolling capture…"), "arrow.down.right.and.arrow.up.left") { CaptureWorkspace.shared.captureScrolling() })
-        menu.addItem(item(tr("Record screen…"), "record.circle") { CaptureWorkspace.shared.recordScreen() })
-        menu.addItem(item(tr("Recording drafts…"), "film.stack") { CaptureWorkspace.shared.recordScreen(draftsOnly:true) })
-        menu.addItem(item(tr("Open image…"), "photo") { CaptureWorkspace.shared.importImage() })
-        let configured=NSMenu();configured.autoenablesItems=false
-        for entry in CaptureWorkspace.shared.shortcuts.settings.entries where entry.appearsInMenu {
-            let label=CaptureWorkspace.shared.shortcuts.label(for:entry)
-            configured.addItem(item((entry.title.isEmpty ? tr(entry.action.title) : entry.title)+(label.isEmpty ? "" : "  "+label),nil) {
-                let workspace=CaptureWorkspace.shared;workspace.shortcuts.run(entry);if workspace.shortcuts.issue != nil { workspace.showActionSettings() }
-            })
+        
+        for productItem in layout.productItems {
+            switch productItem {
+            case .openThermo:
+                menu.addItem(item(tr("Open Thermo"), "macwindow", key: "o") { MainWindow.show() })
+                
+            case .searchAppsAndFiles:
+                menu.addItem(item(tr("Search apps and files"), "magnifyingglass") { LocalSearchPanel.shared.show() })
+                
+            case .menuGroup(let group):
+                menu.addItem(materializeGroup(group))
+                
+            case .directStatusItem(let status):
+                if status.title == "Keep awake" {
+                    menu.addItem(keepAwake())
+                } else if status.title == "Focus timer" {
+                    let focus = NSMenuItem(title: tr("Focus timer"), action: nil, keyEquivalent: "")
+                    focus.image = symbol("timer")
+                    if status.isActive { focus.state = .on }
+                    focus.submenu = focusMenu()
+                    menu.addItem(focus)
+                }
+                
+            case .manageMenuBar:
+                for control in MenuBarQuickControls.items(model: .shared) { menu.addItem(control) }
+                menu.addItem(item(tr("Manage menu bar…"), "menubar.rectangle") { MenuBarManagerPanel.shared.show() })
+                
+            case .history:
+                menu.addItem(page(tr("History"), "clock.arrow.circlepath", .history))
+                
+            case .settings:
+                menu.addItem(item(tr("Settings…"), "gearshape", key: ",") { MainWindow.show(.settings) })
+            }
         }
-        if !configured.items.isEmpty { let entry=NSMenuItem(title:tr("Configured capture actions"),action:nil,keyEquivalent:"");entry.submenu=configured;menu.addItem(entry) }
+        
         menu.addItem(.separator())
-        menu.addItem(item(tr("Pin clipboard") + CaptureWorkspace.shared.shortcutSuffix(for:.pinClipboard), "pin") { CaptureWorkspace.shared.pinClipboard() })
-        menu.addItem(item(tr("Pin clipboard as text"), "text.quote") { CaptureWorkspace.shared.pinClipboard(asText:true) })
-        menu.addItem(item(tr("Pin clipboard as LaTeX"), "function") { CaptureWorkspace.shared.pinClipboard(asLaTeX:true) })
-        menu.addItem(.separator())
-        menu.addItem(item(tr("Pin groups and history"), "square.stack") { CaptureWorkspace.shared.showPinLibrary() })
-        menu.addItem(item(tr("Restore last closed pin"), "arrow.uturn.backward") { CaptureWorkspace.shared.restoreLastPin() })
-        menu.addItem(item(tr("Restore pin mouse interaction"),"cursorarrow") {CaptureWorkspace.shared.pinSession.restoreMouseInteraction()})
-        menu.addItem(.separator())
-        menu.addItem(item(tr("Capture saving and after-actions"), "square.and.arrow.down") { CaptureWorkspace.shared.showSavingSettings() })
-        menu.addItem(item(tr("Capture shortcuts and actions"), "keyboard") { CaptureWorkspace.shared.showActionSettings() })
-        menu.addItem(.separator())
-
-        menu.addItem(page(tr("Overview"), "gauge.with.dots.needle.67percent", .overview))
-        menu.addItem(page(tr("AI Check-up"), "waveform.path.ecg", .checkup))
-        menu.addItem(page(tr("Sensors"), "thermometer.medium", .sensors))
-        menu.addItem(page(tr("Fans"), "fan", .fans))
-        menu.addItem(page(tr("Connections"), "wifi", .connections))
-        menu.addItem(.separator())
-
-        // The same groups, in the same order, as the window's sidebar.
-        menu.addItem(page(tr("CPU usage"), "cpu", .compute(false)))
-        menu.addItem(page(tr("GPU usage"), "square.stack.3d.up", .compute(true)))
-        menu.addItem(page(tr("Memory usage"), "memorychip", .memory))
-        menu.addItem(page(tr("Tab organizer"), "rectangle.stack", .browser("Google Chrome")))
-        menu.addItem(.separator())
-
-        menu.addItem(page(tr("Smart Scan"), "sparkles", .disk(.home)))
-        menu.addItem(page(tr("Space Lens"), "square.grid.3x3.topleft.filled", .space(.browse)))
-        menu.addItem(page(tr("Software"), "square.grid.2x2", .apps(.installed)))
-        menu.addItem(.separator())
-
-        menu.addItem(page(tr("Claude tools"), "person.2", .claude(.accounts)))
-        menu.addItem(page(tr("Smart Check"), "stethoscope", .agents(.home)))
-        menu.addItem(.separator())
-
-        menu.addItem(keepAwake())
-        let focus = NSMenuItem(title: tr("Focus timer"), action: nil, keyEquivalent: "")
-        focus.image = symbol("timer")
-        if FocusTimerModel.shared.phase.isActive { focus.state = .on }
-        focus.submenu = focusMenu()
-        menu.addItem(focus)
-        menu.addItem(item(tr("Clean Screen"), "sparkles.tv") { MainWindow.show(tool: .cleanScreen) })
-        menu.addItem(item(tr("Network low latency"), "network") { MainWindow.show(tool: .lowLatency) })
-        if battery {
-            menu.addItem(item(tr("Battery charging protection"), "battery.75") { MainWindow.show(tool: .batteryCare) })
-        }
-        menu.addItem(.separator())
-
-        menu.addItem(page(tr("History"), "clock.arrow.circlepath", .history))
-        menu.addItem(item(tr("Settings…"), "gearshape", key: ",") { MainWindow.show(.settings) })
+        
         let check = item(tr("Check for Updates…"), "arrow.triangle.2.circlepath") { AppModels.shared.updates.checkForUpdates() }
-        check.isEnabled = AppModels.shared.updates.canCheck
+        check.isEnabled = layout.retainedExtras.footer.checkForUpdatesEnabled
         menu.addItem(check)
         menu.addItem(item(tr("About Thermo"), "info.circle") {
             NSApp.activate(ignoringOtherApps: true)
@@ -97,7 +99,101 @@ final class StatusMenu: NSObject, NSMenuDelegate {
         })
         menu.addItem(.separator())
         menu.addItem(item(tr("Quit Thermo"), "power", key: "q") { NSApp.terminate(nil) })
+        
         return menu
+    }
+    
+    private func materializeGroup(_ group: StatusMenuLayout.MenuGroup) -> NSMenuItem {
+        let parent = NSMenuItem(title: tr(group.title), action: nil, keyEquivalent: "")
+        if group.hasActiveHint {
+            parent.state = .on
+        }
+        
+        let submenu = NSMenu()
+        submenu.autoenablesItems = false
+        
+        for leaf in group.leaves {
+            switch leaf {
+            case .captureScreen(let suffix):
+                submenu.addItem(item(tr("Capture screen…") + suffix, "viewfinder") { CaptureWorkspace.shared.capture() })
+            case .scrollingCapture:
+                submenu.addItem(item(tr("Scrolling capture…"), "arrow.down.right.and.arrow.up.left") { CaptureWorkspace.shared.captureScrolling() })
+            case .recordScreen:
+                submenu.addItem(item(tr("Record screen…"), "record.circle") { CaptureWorkspace.shared.recordScreen() })
+            case .recordingDrafts:
+                submenu.addItem(item(tr("Recording drafts…"), "film.stack") { CaptureWorkspace.shared.recordScreen(draftsOnly: true) })
+            case .openImage:
+                submenu.addItem(item(tr("Open image…"), "photo") { CaptureWorkspace.shared.importImage() })
+            case .configuredCaptureActions(let entries):
+                let configured = NSMenu()
+                configured.autoenablesItems = false
+                for (index, _) in entries.enumerated() {
+                    let entry = CaptureWorkspace.shared.shortcuts.settings.entries.filter { $0.appearsInMenu }[index]
+                    let label = CaptureWorkspace.shared.shortcuts.label(for: entry)
+                    configured.addItem(item((entry.title.isEmpty ? tr(entry.action.title) : entry.title) + (label.isEmpty ? "" : "  " + label), nil) {
+                        let workspace = CaptureWorkspace.shared
+                        workspace.shortcuts.run(entry)
+                        if workspace.shortcuts.issue != nil { workspace.showActionSettings() }
+                    })
+                }
+                let configItem = NSMenuItem(title: tr("Configured capture actions"), action: nil, keyEquivalent: "")
+                configItem.submenu = configured
+                submenu.addItem(configItem)
+            case .captureSavingSettings:
+                submenu.addItem(item(tr("Capture saving and after-actions"), "square.and.arrow.down") { CaptureWorkspace.shared.showSavingSettings() })
+            case .captureShortcutsSettings:
+                submenu.addItem(item(tr("Capture shortcuts and actions"), "keyboard") { CaptureWorkspace.shared.showActionSettings() })
+            case .pinClipboard(let suffix):
+                submenu.addItem(item(tr("Pin clipboard") + suffix, "pin") { CaptureWorkspace.shared.pinClipboard() })
+            case .pinClipboardAsText:
+                submenu.addItem(item(tr("Pin clipboard as text"), "text.quote") { CaptureWorkspace.shared.pinClipboard(asText: true) })
+            case .pinClipboardAsLaTeX:
+                submenu.addItem(item(tr("Pin clipboard as LaTeX"), "function") { CaptureWorkspace.shared.pinClipboard(asLaTeX: true) })
+            case .pinGroupsAndHistory:
+                submenu.addItem(item(tr("Pin groups and history"), "square.stack") { CaptureWorkspace.shared.showPinLibrary() })
+            case .restoreLastClosedPin:
+                submenu.addItem(item(tr("Restore last closed pin"), "arrow.uturn.backward") { CaptureWorkspace.shared.restoreLastPin() })
+            case .restorePinMouseInteraction:
+                submenu.addItem(item(tr("Restore pin mouse interaction"), "cursorarrow") { CaptureWorkspace.shared.pinSession.restoreMouseInteraction() })
+            case .overview:
+                submenu.addItem(page(tr("Overview"), "gauge.with.dots.needle.67percent", .overview))
+            case .aiCheckup:
+                submenu.addItem(page(tr("AI Check-up"), "waveform.path.ecg", .checkup))
+            case .sensors:
+                submenu.addItem(page(tr("Sensors"), "thermometer.medium", .sensors))
+            case .fans:
+                submenu.addItem(page(tr("Fans"), "fan", .fans))
+            case .connections:
+                submenu.addItem(page(tr("Connections"), "wifi", .connections))
+            case .cpuUsage:
+                submenu.addItem(page(tr("CPU usage"), "cpu", .compute(false)))
+            case .gpuUsage:
+                submenu.addItem(page(tr("GPU usage"), "square.stack.3d.up", .compute(true)))
+            case .memoryUsage:
+                submenu.addItem(page(tr("Memory usage"), "memorychip", .memory))
+            case .tabOrganizer:
+                submenu.addItem(page(tr("Tab organizer"), "rectangle.stack", .browser("Google Chrome")))
+            case .smartScan:
+                submenu.addItem(page(tr("Smart Scan"), "sparkles", .disk(.home)))
+            case .spaceLens:
+                submenu.addItem(page(tr("Space Lens"), "square.grid.3x3.topleft.filled", .space(.browse)))
+            case .software:
+                submenu.addItem(page(tr("Software"), "square.grid.2x2", .apps(.installed)))
+            case .claudeTools:
+                submenu.addItem(page(tr("Claude tools"), "person.2", .claude(.accounts)))
+            case .smartCheck:
+                submenu.addItem(page(tr("Smart Check"), "stethoscope", .agents(.home)))
+            case .cleanScreen:
+                submenu.addItem(item(tr("Clean Screen"), "sparkles.tv") { MainWindow.show(tool: .cleanScreen) })
+            case .networkLowLatency:
+                submenu.addItem(item(tr("Network low latency"), "network") { MainWindow.show(tool: .lowLatency) })
+            case .batteryProtection:
+                submenu.addItem(item(tr("Battery charging protection"), "battery.75") { MainWindow.show(tool: .batteryCare) })
+            }
+        }
+        
+        parent.submenu = submenu
+        return parent
     }
 
     /// Keep awake: the common lengths right here, everything else in its panel.
