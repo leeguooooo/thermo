@@ -518,6 +518,28 @@ final class HardeningTests: XCTestCase {
         XCTAssertTrue(transport.requests.allSatisfy { $0.url.query == "sign=new" })
     }
 
+    func testFinishedPartsMergeWithoutTheNetwork() async throws {
+        let id = UUID()
+        let content = payload(100)
+        try store.prepareDirectory(for: id)
+        try content.prefix(60).write(to: store.partURL(id: id, segment: 0))
+        try content.suffix(40).write(to: store.partURL(id: id, segment: 1))
+        let first = try PartHash.hash(of: store.partURL(id: id, segment: 0), length: 60)
+        let second = try PartHash.hash(of: store.partURL(id: id, segment: 1), length: 40)
+        try store.save(DownloadState(
+            id: id, url: URL(string: "https://example.test/f?sign=x")!, destination: destination,
+            size: 100, acceptsRanges: true, validator: "\"v1\"",
+            segments: [Segment(id: 0, start: 0, end: 60, written: 60, sha256: first),
+                       Segment(id: 1, start: 60, end: 100, written: 40, sha256: second)]
+        ))
+        let transport = FakeTransport(content: content)
+        let task = try engine(transport).restore(id: id, refreshLink: { _ in throw DownloadError.linkRequired })
+        await task.start()
+        let url = try await task.result()
+        XCTAssertEqual(try Data(contentsOf: url), content)
+        XCTAssertTrue(transport.requests.isEmpty, "an expired link must not block a finished download")
+    }
+
     func testOldStateFileLosesItsTokenOnLoad() throws {
         var state = DownloadState(id: UUID(), url: source, destination: destination, size: nil, acceptsRanges: false, validator: nil, segments: [])
         state.url = URL(string: "https://example.test/f?sign=x")!

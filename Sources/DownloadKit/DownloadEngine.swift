@@ -299,6 +299,13 @@ public actor DownloadTask {
 
     private func prepare() async throws {
         setPhase(.probing)
+        // Every byte is already on disk and hashed: verify the parts and merge without the network,
+        // so an expired or unrefreshable link cannot strand a finished download.
+        if hasPlan, state.size != nil, !state.segments.isEmpty,
+           state.segments.allSatisfy({ $0.isComplete && $0.sha256 != nil }) {
+            try reconcileWithDisk()
+            if state.segments.allSatisfy(\.isComplete) { return }
+        }
         if needsNewLink {
             try await refreshedLink(seen: linkGeneration, statusCode: nil, cause: .linkRequired)
             needsNewLink = false
