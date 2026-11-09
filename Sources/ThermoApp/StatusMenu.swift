@@ -26,17 +26,20 @@ final class StatusMenu: NSObject, NSMenuDelegate {
                 return (entry.title.isEmpty ? tr(entry.action.title) : entry.title) + (label.isEmpty ? "" : "  " + label)
             }
         
+        let menuBarManager = MenuBarManager.shared
+        let menuBarQuickControlsAppear = menuBarManager.enabled || menuBarManager.state != .visible
+        
         let context = StatusMenuLayout.RuntimeContext(
             hasBattery: battery,
             keepAwakeActive: IdleAwakeModel.shared.state.phase == .active,
             focusTimerActive: FocusTimerModel.shared.phase.isActive,
             configuredCaptureEntriesAppear: !configuredEntries.isEmpty,
-            menuBarQuickControlsAppear: MenuBarManager.shared.enabled && MenuBarManager.shared.hasHiddenAssignments || MenuBarManager.shared.enabled || MenuBarManager.shared.state != .visible,
+            menuBarQuickControlsAppear: menuBarQuickControlsAppear,
             updatesCanCheck: AppModels.shared.updates.canCheck,
             moreToolsActiveStates: StatusMenuLayout.MoreToolsActiveStates(
-                cleanScreenActive: false,
-                lowLatencyActive: false,
-                batteryProtectionActive: false
+                cleanScreenActive: CleanScreenModel.shared.active,
+                lowLatencyActive: AWDLModel.shared.state?.phase == .active,
+                batteryProtectionActive: battery && (BatteryCareModel.shared.state?.ownedByCaller == true)
             )
         )
         
