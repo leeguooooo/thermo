@@ -56,6 +56,9 @@ final class SpaceOverviewLifecycleTests: XCTestCase {
         XCTAssertEqual(DiskOverviewView.cleanupRoute(for: "projects")?.category, .projects)
         XCTAssertEqual(DiskOverviewView.cleanupRoute(for: "simulator-runtimes")?.category, .xcode)
         XCTAssertEqual(DiskOverviewView.cleanupRoute(for: "homebrew")?.category, .devCaches)
+        let tools = DiskOverviewView.cleanupRoute(for: "home-tools")
+        XCTAssertNotNil(tools, "tool folders can be cleaned")
+        XCTAssertNil(tools?.category, "tool folders mix several categories, so they open the full scan, not AI sessions alone")
         XCTAssertNil(DiskOverviewView.cleanupRoute(for: "apps"), "installed applications are not disposable cache")
         XCTAssertNil(DiskOverviewView.cleanupRoute(for: "app-data"), "active application data must not be suggested as generic garbage")
     }

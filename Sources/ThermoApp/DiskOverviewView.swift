@@ -337,11 +337,12 @@ struct DiskOverviewView: View {
     static func cleanupRoute(for id: String) -> (label: String, category: CleanCategory?)? {
         switch id {
         case "projects": return (tr("Scan build artifacts"), .projects)
-        case "home-tools": return (tr("Find cleanup candidates"), .aiSessions)
         case "developer", "simulator-runtimes": return (tr("Review Xcode cleanup"), .xcode)
         case "homebrew": return (tr("Scan developer caches"), .devCaches)
         case "temp": return (tr("Scan temporary files and leftovers"), .system)
-        case "caches", "other": return (tr("Find cleanup candidates"), nil)
+        // Tool folders mix AI sessions, models, tool and package caches: one category would show only a slice
+        // (often 0 B when sessions are all kept), so these open the full scan.
+        case "home-tools", "caches", "other": return (tr("Find cleanup candidates"), nil)
         default: return nil
         }
     }
