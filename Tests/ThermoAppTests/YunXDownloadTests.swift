@@ -1,6 +1,7 @@
+import CryptoKit
 import AppKit
 import CloudDriveKit
-import DownloadKit
+@testable import DownloadKit
 @testable import MediaToolsKit
 import ThermoL10n
 import VideoKit
@@ -292,6 +293,34 @@ final class YunXModelTests: XCTestCase {
         guard case .finished? = model.jobs.first?.state else { return XCTFail("\(model.jobs)") }
         XCTAssertEqual(drive.openedPasscodes, ["pw12"])
         XCTAssertTrue(FileManager.default.fileExists(atPath: temp.appendingPathComponent("out/Folder/a.bin").path))
+    }
+
+    /// All parts on disk and hashed: resuming merges them without reopening the share or asking for a link.
+    func testResumeMergesAFinishedTaskWithoutTheShare() async throws {
+        let drive = FakeDrive()
+        let jobs = MemoryBackend()
+        let store = DownloadStore(root: temp.appendingPathComponent("store"))
+        let taskID = UUID()
+        let content = Data("finished".utf8)
+        try store.prepareDirectory(for: taskID)
+        try content.write(to: store.partURL(id: taskID, segment: 0))
+        let hash = SHA256.hash(data: content).map { String(format: "%02x", $0) }.joined()
+        let destination = temp.appendingPathComponent("out/Folder/done.bin")
+        try store.save(DownloadState(
+            id: taskID, url: URL(string: "https://example.test/f")!, destination: destination, size: Int64(content.count),
+            acceptsRanges: true, validator: nil,
+            segments: [Segment(id: 0, start: 0, end: Int64(content.count), written: Int64(content.count), sha256: hash)]))
+        YunXJobStore(backend: jobs).put(YunXJobRecord(
+            id: UUID(), kind: .share, name: "Folder/done.bin", saveDirectory: temp.appendingPathComponent("out").path, taskId: taskID,
+            platform: "quark", shareId: "expired", passcode: "pw12", fileId: "done.bin", fileName: "done.bin", fileSize: Int64(content.count)))
+        let model = model(drive, jobs: jobs)
+        model.restoreJobs()
+        model.resume(model.jobs[0])
+        await settled(model, count: 1)
+        guard case .finished? = model.jobs.first?.state else { return XCTFail("\(model.jobs)") }
+        XCTAssertEqual(try Data(contentsOf: destination), content)
+        XCTAssertEqual(drive.openedPasscodes, [], "a finished download must not reopen the share")
+        XCTAssertEqual(drive.resolves, 0)
     }
 
     func testRetryUsesTheFileTokenOfTheReopenedShare() async throws {
