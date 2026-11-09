@@ -540,6 +540,29 @@ final class HardeningTests: XCTestCase {
         XCTAssertTrue(transport.requests.isEmpty, "an expired link must not block a finished download")
     }
 
+    func testRestoreFinishedNeedsNoLinkAndSkipsUnfinishedTasks() async throws {
+        let id = UUID()
+        let content = payload(80)
+        try store.prepareDirectory(for: id)
+        try content.write(to: store.partURL(id: id, segment: 0))
+        let hash = try PartHash.hash(of: store.partURL(id: id, segment: 0), length: 80)
+        var state = DownloadState(
+            id: id, url: URL(string: "https://example.test/f?sign=x")!, destination: destination,
+            size: 80, acceptsRanges: true, validator: nil, segments: [Segment(id: 0, start: 0, end: 80, written: 80, sha256: hash)]
+        )
+        state.segments[0].written = 40
+        try store.save(state)
+        let transport = FakeTransport(content: content)
+        XCTAssertNil(engine(transport).restoreFinished(id: id), "an unfinished part still needs the link")
+
+        state.segments[0].written = 80
+        try store.save(state)
+        let task = try XCTUnwrap(engine(transport).restoreFinished(id: id))
+        await task.start()
+        XCTAssertEqual(try Data(contentsOf: try await task.result()), content)
+        XCTAssertTrue(transport.requests.isEmpty)
+    }
+
     func testOldStateFileLosesItsTokenOnLoad() throws {
         var state = DownloadState(id: UUID(), url: source, destination: destination, size: nil, acceptsRanges: false, validator: nil, segments: [])
         state.url = URL(string: "https://example.test/f?sign=x")!

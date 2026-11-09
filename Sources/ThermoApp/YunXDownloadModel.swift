@@ -846,6 +846,11 @@ final class YunXDownloadModel: ObservableObject {
         } else {
             task = try engine.makeTask(DownloadRequest(url: url, destination: destination, headers: headers, refreshLink: refresh))
         }
+        return try await run(id, task: task)
+    }
+
+    /// Runs a task under a job, mirroring its progress into the list, and returns where it landed.
+    private func run(_ id: UUID, task: DownloadTask) async throws -> URL {
         tasks[id] = task
         jobStore.update(id) { $0.taskId = task.id }
         update(id) { $0.canPause = true }
@@ -1186,6 +1191,18 @@ final class YunXDownloadModel: ObservableObject {
         }
         launch(id: record.id, name: record.name, directory: directory) { [weak self] id in
             guard let self else { throw CancellationError() }
+            // Every byte is already here: merge first, so an expired share or a lost login cannot block it.
+            if let taskId = record.taskId, let finished = try? self.downloadEngine().restoreFinished(id: taskId) {
+                do {
+                    return try await self.run(id, task: finished)
+                } catch DownloadError.cancelled {
+                    throw DownloadError.cancelled
+                } catch is CancellationError {
+                    throw CancellationError()
+                } catch {
+                    // A part failed its check: fetch it again the usual way below.
+                }
+            }
             let source = try await self.source(for: record)
             let file = await self.currentFile(record, source: source)
             return try await self.transfer(id, file: file, name: record.name, source: source, directory: directory, restoring: record.taskId)

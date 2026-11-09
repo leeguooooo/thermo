@@ -63,6 +63,17 @@ public struct DownloadEngine: Sendable {
         )
     }
 
+    /// A saved task whose parts are all downloaded and hashed. Merging it needs no link, so an expired
+    /// share or a missing login cannot keep a finished download from landing. Nil when anything is left to fetch.
+    public func restoreFinished(id: UUID) -> DownloadTask? {
+        guard let state = try? store.load(id: id), state.size != nil, !state.segments.isEmpty,
+              state.segments.allSatisfy({ $0.isComplete && $0.sha256 != nil }) else { return nil }
+        return DownloadTask(
+            engine: self, state: state, link: state.url, needsNewLink: false, isRestored: true,
+            headers: [:], refreshLink: nil
+        )
+    }
+
     public func savedDownloads() -> [DownloadState] {
         store.list()
     }
