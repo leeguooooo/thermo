@@ -2053,6 +2053,7 @@ let zhHans: [String: String] = [
     "Could lose work (for example uncommitted changes). Only removed when you tick it yourself.": "可能会丢失工作（比如未提交的改动）。只有你亲手勾选才会删除。",
     "%1$@ item selected": "已选 %1$@ 项",
     "%1$@ items selected": "已选 %1$@ 项",
+    "%1$@ selected in all · %2$@ on this page": "共选 %1$@ 项，本页 %2$@ 项",
     "Open Disk Cleanup…": "打开磁盘清理…",
 
     // MARK: Disk: simulators, app data, overview

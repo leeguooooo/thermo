@@ -121,4 +121,11 @@ final class SpaceOverviewLifecycleTests: XCTestCase {
         let heading = SpaceGrowth.Item(title: "Caches", path: nil, changeBytes: 1, currentBytes: 1)
         XCTAssertNil(DiskOverviewView.growthLabel(heading).caption)
     }
+
+    func testFooterSaysWhenTheSelectionSpansOtherCategories() {
+        XCTAssertEqual(DiskCategoryPage.selectionText(total: 3, here: 3), trCount(3, "%1$@ item selected", "%1$@ items selected"))
+        let mixed = DiskCategoryPage.selectionText(total: 5, here: 0)
+        XCTAssertEqual(mixed, tr("%1$@ selected in all · %2$@ on this page", "5", "0"))
+        XCTAssertNotEqual(mixed, trCount(5, "%1$@ item selected", "%1$@ items selected"))
+    }
 }

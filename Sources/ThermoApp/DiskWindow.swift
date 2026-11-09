@@ -560,6 +560,12 @@ struct DiskCategoryPage: View {
         }
     }
 
+    /// The Clean button acts on every ticked item, across categories; say so when some are on other pages.
+    static func selectionText(total: Int, here: Int) -> String {
+        here == total ? trCount(total, "%1$@ item selected", "%1$@ items selected")
+                      : tr("%1$@ selected in all · %2$@ on this page", "\(total)", "\(here)")
+    }
+
     var footer: some View {
         ActionBar {
             if model.scanning {
@@ -581,7 +587,8 @@ struct DiskCategoryPage: View {
                 .help(tr("Safe: this is regenerated automatically (caches, logs, build output). It is deleted, not moved to the Trash."))
                 .disabled(model.report == nil || model.scanning || model.cleaning)
                 Spacer()
-                Text(trCount(model.selectedItems.count, "%1$@ item selected", "%1$@ items selected"))
+                Text(Self.selectionText(total: model.selectedItems.count,
+                                        here: model.selectedItems.filter { $0.category == category }.count))
                     .font(Theme.caption.monospacedDigit()).foregroundStyle(Theme.textTertiary)
                 Button(model.selectedItems.isEmpty ? tr("Clean") : tr("Clean %1$@", ByteFormat.string(model.selectedBytes)), action: clean)
                     .buttonStyle(PillButtonStyle(prominent: true))
