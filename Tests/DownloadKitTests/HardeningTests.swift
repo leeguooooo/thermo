@@ -559,7 +559,8 @@ final class HardeningTests: XCTestCase {
         try store.save(state)
         let task = try XCTUnwrap(engine(transport).restoreFinished(id: id))
         await task.start()
-        XCTAssertEqual(try Data(contentsOf: try await task.result()), content)
+        let merged = try await task.result()
+        XCTAssertEqual(try Data(contentsOf: merged), content)
         XCTAssertTrue(transport.requests.isEmpty)
     }
 
