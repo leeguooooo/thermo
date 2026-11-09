@@ -72,31 +72,60 @@ import XCTest
             configuredCaptureEntries: ["Test Entry"]
         )
         
-        let allLeaves = layout.productItems.compactMap { item -> StatusMenuLayout.MenuGroup? in
-            if case .menuGroup(let group) = item { return group }
-            return nil
-        }.flatMap { $0.leaves }
-        
-        let leafIdentities = allLeaves.map { $0.identity }
-        let uniqueIdentities = Set(leafIdentities)
-        
-        XCTAssertEqual(leafIdentities.count, uniqueIdentities.count, "Each leaf should appear exactly once")
-        
-        // Verify expected leaves are present
-        let expectedLeaves = [
-            "captureScreen", "scrollingCapture", "recordScreen", "recordingDrafts", "openImage",
-            "configuredCaptureActions", "captureSavingSettings", "captureShortcutsSettings",
-            "pinClipboard", "pinClipboardAsText", "pinClipboardAsLaTeX", "pinGroupsAndHistory",
-            "restoreLastClosedPin", "restorePinMouseInteraction",
-            "overview", "aiCheckup", "sensors", "fans", "connections",
-            "cpuUsage", "gpuUsage", "memoryUsage", "tabOrganizer",
-            "smartScan", "spaceLens", "software",
-            "claudeTools", "smartCheck", "cleanScreen", "networkLowLatency", "batteryProtection"
-        ]
-        
-        for expected in expectedLeaves {
-            XCTAssertTrue(leafIdentities.contains(expected), "\(expected) should be present")
+        // Collect all groups with their leaves
+        var groupsByTitle: [String: [String]] = [:]
+        for item in layout.productItems {
+            if case .menuGroup(let group) = item {
+                groupsByTitle[group.title] = group.leaves.map { $0.identity }
+            }
         }
+        
+        // Verify each leaf appears exactly once across all groups
+        let allLeaves = groupsByTitle.values.flatMap { $0 }
+        let uniqueIdentities = Set(allLeaves)
+        XCTAssertEqual(allLeaves.count, uniqueIdentities.count, "Each leaf should appear exactly once")
+        
+        // Verify group membership: each leaf in its assigned group
+        let captureGroup = groupsByTitle["Capture & record"] ?? []
+        XCTAssertTrue(captureGroup.contains("captureScreen"), "captureScreen should be in Capture & record")
+        XCTAssertTrue(captureGroup.contains("scrollingCapture"), "scrollingCapture should be in Capture & record")
+        XCTAssertTrue(captureGroup.contains("recordScreen"), "recordScreen should be in Capture & record")
+        XCTAssertTrue(captureGroup.contains("recordingDrafts"), "recordingDrafts should be in Capture & record")
+        XCTAssertTrue(captureGroup.contains("openImage"), "openImage should be in Capture & record")
+        XCTAssertTrue(captureGroup.contains("configuredCaptureActions"), "configuredCaptureActions should be in Capture & record")
+        XCTAssertTrue(captureGroup.contains("captureSavingSettings"), "captureSavingSettings should be in Capture & record")
+        XCTAssertTrue(captureGroup.contains("captureShortcutsSettings"), "captureShortcutsSettings should be in Capture & record")
+        
+        let clipboardGroup = groupsByTitle["Clipboard & pins"] ?? []
+        XCTAssertTrue(clipboardGroup.contains("pinClipboard"), "pinClipboard should be in Clipboard & pins")
+        XCTAssertTrue(clipboardGroup.contains("pinClipboardAsText"), "pinClipboardAsText should be in Clipboard & pins")
+        XCTAssertTrue(clipboardGroup.contains("pinClipboardAsLaTeX"), "pinClipboardAsLaTeX should be in Clipboard & pins")
+        XCTAssertTrue(clipboardGroup.contains("pinGroupsAndHistory"), "pinGroupsAndHistory should be in Clipboard & pins")
+        XCTAssertTrue(clipboardGroup.contains("restoreLastClosedPin"), "restoreLastClosedPin should be in Clipboard & pins")
+        XCTAssertTrue(clipboardGroup.contains("restorePinMouseInteraction"), "restorePinMouseInteraction should be in Clipboard & pins")
+        
+        let systemGroup = groupsByTitle["System & hardware"] ?? []
+        XCTAssertTrue(systemGroup.contains("overview"), "overview should be in System & hardware")
+        XCTAssertTrue(systemGroup.contains("aiCheckup"), "aiCheckup should be in System & hardware")
+        XCTAssertTrue(systemGroup.contains("sensors"), "sensors should be in System & hardware")
+        XCTAssertTrue(systemGroup.contains("fans"), "fans should be in System & hardware")
+        XCTAssertTrue(systemGroup.contains("connections"), "connections should be in System & hardware")
+        XCTAssertTrue(systemGroup.contains("cpuUsage"), "cpuUsage should be in System & hardware")
+        XCTAssertTrue(systemGroup.contains("gpuUsage"), "gpuUsage should be in System & hardware")
+        XCTAssertTrue(systemGroup.contains("memoryUsage"), "memoryUsage should be in System & hardware")
+        XCTAssertTrue(systemGroup.contains("tabOrganizer"), "tabOrganizer should be in System & hardware")
+        
+        let cleanGroup = groupsByTitle["Clean & storage"] ?? []
+        XCTAssertTrue(cleanGroup.contains("smartScan"), "smartScan should be in Clean & storage")
+        XCTAssertTrue(cleanGroup.contains("spaceLens"), "spaceLens should be in Clean & storage")
+        XCTAssertTrue(cleanGroup.contains("software"), "software should be in Clean & storage")
+        
+        let moreToolsGroup = groupsByTitle["More tools"] ?? []
+        XCTAssertTrue(moreToolsGroup.contains("claudeTools"), "claudeTools should be in More tools")
+        XCTAssertTrue(moreToolsGroup.contains("smartCheck"), "smartCheck should be in More tools")
+        XCTAssertTrue(moreToolsGroup.contains("cleanScreen"), "cleanScreen should be in More tools")
+        XCTAssertTrue(moreToolsGroup.contains("networkLowLatency"), "networkLowLatency should be in More tools")
+        XCTAssertTrue(moreToolsGroup.contains("batteryProtection"), "batteryProtection should be in More tools")
     }
     
     // A3: Battery unavailable => battery care leaf absent; available => present under More tools
@@ -406,6 +435,64 @@ import XCTest
         }.first!
         
         XCTAssertFalse(moreToolsInactive.hasActiveHint, "More tools should not have active hint when all are inactive")
+        
+        // Network low latency active
+        let lowLatencyActive = StatusMenuLayout.RuntimeContext(
+            hasBattery: true,
+            keepAwakeActive: false,
+            focusTimerActive: false,
+            configuredCaptureEntriesAppear: false,
+            menuBarQuickControlsAppear: false,
+            updatesCanCheck: true,
+            moreToolsActiveStates: StatusMenuLayout.MoreToolsActiveStates(
+                cleanScreenActive: false,
+                lowLatencyActive: true,
+                batteryProtectionActive: false
+            )
+        )
+        
+        let layoutLowLatencyActive = StatusMenuLayout.make(
+            context: lowLatencyActive,
+            captureShortcutSuffix: "",
+            pinShortcutSuffix: "",
+            configuredCaptureEntries: []
+        )
+        
+        let moreToolsLowLatency = layoutLowLatencyActive.productItems.compactMap { item -> StatusMenuLayout.MenuGroup? in
+            if case .menuGroup(let group) = item, group.title == "More tools" { return group }
+            return nil
+        }.first!
+        
+        XCTAssertTrue(moreToolsLowLatency.hasActiveHint, "More tools should have active hint when low latency is active")
+        
+        // Battery protection active (when battery available)
+        let batteryProtectionActive = StatusMenuLayout.RuntimeContext(
+            hasBattery: true,
+            keepAwakeActive: false,
+            focusTimerActive: false,
+            configuredCaptureEntriesAppear: false,
+            menuBarQuickControlsAppear: false,
+            updatesCanCheck: true,
+            moreToolsActiveStates: StatusMenuLayout.MoreToolsActiveStates(
+                cleanScreenActive: false,
+                lowLatencyActive: false,
+                batteryProtectionActive: true
+            )
+        )
+        
+        let layoutBatteryProtectionActive = StatusMenuLayout.make(
+            context: batteryProtectionActive,
+            captureShortcutSuffix: "",
+            pinShortcutSuffix: "",
+            configuredCaptureEntries: []
+        )
+        
+        let moreToolsBatteryProtection = layoutBatteryProtectionActive.productItems.compactMap { item -> StatusMenuLayout.MenuGroup? in
+            if case .menuGroup(let group) = item, group.title == "More tools" { return group }
+            return nil
+        }.first!
+        
+        XCTAssertTrue(moreToolsBatteryProtection.hasActiveHint, "More tools should have active hint when battery protection is active")
     }
     
     // A8: Group Status Hint payload contains no personal-data fields
@@ -431,11 +518,29 @@ import XCTest
             configuredCaptureEntries: []
         )
         
-        // Group Status Hint is represented as a boolean flag only, no payload with personal data
+        // Group Status Hint is represented as a boolean flag only (hasActiveHint: Bool).
+        // The structure has no string fields, user content fields, or path-like fields
+        // that could contain personal data. We verify the hint is purely structural state.
         for item in layout.productItems {
             if case .menuGroup(let group) = item {
-                // hasActiveHint is a boolean, contains no personal data
-                XCTAssertTrue(group.hasActiveHint == true || group.hasActiveHint == false)
+                // Verify hasActiveHint is a Bool type (structural constraint)
+                let hintValue: Bool = group.hasActiveHint
+                _ = hintValue  // Type constraint ensures this is Bool, not a string/path/user content type
+                
+                // Verify group title is from fixed inventory (not user-provided)
+                let knownGroupTitles = ["Capture & record", "Clipboard & pins", "System & hardware", 
+                                       "Clean & storage", "More tools"]
+                XCTAssertTrue(knownGroupTitles.contains(group.title), 
+                             "Group title must be from fixed inventory, not user content")
+                
+                // Verify all leaf identities are from fixed enum, not user-provided strings
+                for leaf in group.leaves {
+                    let identity = leaf.identity
+                    XCTAssertFalse(identity.contains("/"), "Leaf identity should not contain path separators")
+                    XCTAssertFalse(identity.contains("~"), "Leaf identity should not contain home directory markers")
+                    XCTAssertTrue(identity.first?.isLowercase ?? false, 
+                                 "Leaf identity should follow camelCase enum convention, not be free-form user text")
+                }
             }
         }
     }
@@ -490,9 +595,44 @@ import XCTest
         
         XCTAssertTrue(layoutWithoutControls.retainedExtras.quickControls.isEmpty, "Quick controls should be absent")
         
-        // Footer always present
-        XCTAssertTrue(layoutWithControls.retainedExtras.footer.checkForUpdatesEnabled)
-        XCTAssertTrue(layoutWithoutControls.retainedExtras.footer.checkForUpdatesEnabled)
+        // Footer always present with three members: Check for Updates, About Thermo, Quit Thermo
+        // Verify structure and order
+        let footer = layoutWithControls.retainedExtras.footer
+        XCTAssertEqual(footer.checkForUpdates.title, "Check for Updates…", "Check for Updates title should match")
+        XCTAssertEqual(footer.about.title, "About Thermo", "About title should match")
+        XCTAssertEqual(footer.quit.title, "Quit Thermo", "Quit title should match")
+        
+        // Verify Check for Updates enablement follows context
+        XCTAssertTrue(footer.checkForUpdates.enabled, "Check for Updates should be enabled when updatesCanCheck is true")
+        
+        // About and Quit are always enabled
+        XCTAssertTrue(footer.about.enabled, "About should always be enabled")
+        XCTAssertTrue(footer.quit.enabled, "Quit should always be enabled")
+        
+        // Test when updates cannot check
+        let withoutUpdates = StatusMenuLayout.RuntimeContext(
+            hasBattery: true,
+            keepAwakeActive: false,
+            focusTimerActive: false,
+            configuredCaptureEntriesAppear: false,
+            menuBarQuickControlsAppear: false,
+            updatesCanCheck: false,
+            moreToolsActiveStates: StatusMenuLayout.MoreToolsActiveStates(
+                cleanScreenActive: false,
+                lowLatencyActive: false,
+                batteryProtectionActive: false
+            )
+        )
+        
+        let layoutWithoutUpdates = StatusMenuLayout.make(
+            context: withoutUpdates,
+            captureShortcutSuffix: "",
+            pinShortcutSuffix: "",
+            configuredCaptureEntries: []
+        )
+        
+        XCTAssertFalse(layoutWithoutUpdates.retainedExtras.footer.checkForUpdates.enabled, 
+                      "Check for Updates should be disabled when updatesCanCheck is false")
     }
     
     // A10: Leaf Action identities remain stable for shortcut/binding metadata
@@ -513,8 +653,8 @@ import XCTest
         
         let layout = StatusMenuLayout.make(
             context: context,
-            captureShortcutSuffix: "",
-            pinShortcutSuffix: "",
+            captureShortcutSuffix: " ⌘⇧5",
+            pinShortcutSuffix: " ⌘⇧V",
             configuredCaptureEntries: ["Test"]
         )
         
@@ -523,15 +663,42 @@ import XCTest
             return nil
         }.flatMap { $0.leaves }
         
-        // Verify key action identities are present and stable
-        let criticalIdentities = [
-            "captureScreen",
-            "pinClipboard",
-            "cleanScreen"
+        let identities = Set(allLeaves.map { $0.identity })
+        
+        // Baseline identity set from task specification inventory (verified against upstream a9f9340ccd...)
+        // This is the complete inventory that must remain stable for shortcut/binding preservation
+        let baselineIdentities: Set<String> = [
+            "captureScreen", "scrollingCapture", "recordScreen", "recordingDrafts", "openImage",
+            "configuredCaptureActions", "captureSavingSettings", "captureShortcutsSettings",
+            "pinClipboard", "pinClipboardAsText", "pinClipboardAsLaTeX", "pinGroupsAndHistory",
+            "restoreLastClosedPin", "restorePinMouseInteraction",
+            "overview", "aiCheckup", "sensors", "fans", "connections",
+            "cpuUsage", "gpuUsage", "memoryUsage", "tabOrganizer",
+            "smartScan", "spaceLens", "software",
+            "claudeTools", "smartCheck", "cleanScreen", "networkLowLatency", "batteryProtection"
         ]
         
-        for identity in criticalIdentities {
-            XCTAssertTrue(allLeaves.contains { $0.identity == identity }, "\(identity) should maintain stable identity")
+        // Verify current layout matches baseline identity set
+        XCTAssertEqual(identities, baselineIdentities, "Leaf action identities must remain stable with baseline mapping")
+        
+        // Verify shortcut-bearing actions preserve their suffix field structure
+        // (Full keyEquivalent/selector binding verification requires AppKit adapter, marked UNVERIFIED at seam)
+        let captureScreenLeaf = allLeaves.first { $0.identity == "captureScreen" }
+        let pinClipboardLeaf = allLeaves.first { $0.identity == "pinClipboard" }
+        
+        XCTAssertNotNil(captureScreenLeaf, "captureScreen must be present")
+        XCTAssertNotNil(pinClipboardLeaf, "pinClipboard must be present")
+        
+        if case .captureScreen(let suffix) = captureScreenLeaf {
+            XCTAssertEqual(suffix, " ⌘⇧5", "captureScreen shortcut suffix should be preserved in structure")
+        } else {
+            XCTFail("captureScreen should preserve shortcutSuffix field")
+        }
+        
+        if case .pinClipboard(let suffix) = pinClipboardLeaf {
+            XCTAssertEqual(suffix, " ⌘⇧V", "pinClipboard shortcut suffix should be preserved in structure")
+        } else {
+            XCTFail("pinClipboard should preserve shortcutSuffix field")
         }
     }
     

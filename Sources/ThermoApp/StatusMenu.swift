@@ -93,15 +93,16 @@ final class StatusMenu: NSObject, NSMenuDelegate {
         
         menu.addItem(.separator())
         
-        let check = item(tr("Check for Updates…"), "arrow.triangle.2.circlepath") { AppModels.shared.updates.checkForUpdates() }
-        check.isEnabled = layout.retainedExtras.footer.checkForUpdatesEnabled
+        let footer = layout.retainedExtras.footer
+        let check = item(tr(footer.checkForUpdates.title), "arrow.triangle.2.circlepath") { AppModels.shared.updates.checkForUpdates() }
+        check.isEnabled = footer.checkForUpdates.enabled
         menu.addItem(check)
-        menu.addItem(item(tr("About Thermo"), "info.circle") {
+        menu.addItem(item(tr(footer.about.title), "info.circle") {
             NSApp.activate(ignoringOtherApps: true)
             NSApp.orderFrontStandardAboutPanel(nil)
         })
         menu.addItem(.separator())
-        menu.addItem(item(tr("Quit Thermo"), "power", key: "q") { NSApp.terminate(nil) })
+        menu.addItem(item(tr(footer.quit.title), "power", key: "q") { NSApp.terminate(nil) })
         
         return menu
     }

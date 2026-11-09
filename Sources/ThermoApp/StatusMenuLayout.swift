@@ -30,7 +30,14 @@ struct StatusMenuLayout {
     }
     
     struct Footer {
-        let checkForUpdatesEnabled: Bool
+        let checkForUpdates: FooterItem
+        let about: FooterItem
+        let quit: FooterItem
+        
+        struct FooterItem {
+            let title: String
+            let enabled: Bool
+        }
     }
     
     enum QuickControl {
@@ -254,7 +261,11 @@ struct StatusMenuLayout {
         
         let retainedExtras = RetainedExtras(
             quickControls: quickControls,
-            footer: Footer(checkForUpdatesEnabled: context.updatesCanCheck)
+            footer: Footer(
+                checkForUpdates: Footer.FooterItem(title: "Check for Updates…", enabled: context.updatesCanCheck),
+                about: Footer.FooterItem(title: "About Thermo", enabled: true),
+                quit: Footer.FooterItem(title: "Quit Thermo", enabled: true)
+            )
         )
         
         return StatusMenuLayout(productItems: productItems, retainedExtras: retainedExtras)
