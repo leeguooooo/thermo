@@ -407,6 +407,7 @@ struct DiskCategoryPage: View {
                 VStack(alignment: .leading, spacing: Theme.Space.m) {
                     DiskProtectionNotice(model: model)
                     DiskCleanupResult(model: model)
+                    AIPickBanner(model: model, category: category)
                     let list = items
                     let groups = Dictionary(grouping: list, by: { $0.group ?? "" })
                     if category == .projects && groups.count > 1 {
@@ -527,6 +528,15 @@ struct DiskCategoryPage: View {
                     }
                     Text(i.blocked ?? [i.detail, i.lastUsed.map { AgeFormat.string($0) }].compactMap { $0 }.filter { !$0.isEmpty }.joined(separator: " · "))
                         .font(Theme.caption).foregroundStyle(i.blocked != nil ? Theme.caution : Theme.textTertiary).lineLimit(1).truncationMode(.middle)
+                    if let ai = model.aiVerdicts[i.id] {
+                        let (label, color) = AskAIPanel.verdict(ai.verdict)
+                        HStack(alignment: .firstTextBaseline, spacing: 6) {
+                            Label(label, systemImage: "sparkles").font(Theme.caption.weight(.semibold)).foregroundStyle(color)
+                            Text(ai.reason).font(Theme.caption).foregroundStyle(Theme.textSecondary).lineLimit(2)
+                        }
+                        .help(ai.reason)
+                        .accessibilityElement(children: .combine)
+                    }
                 }
                 Spacer(minLength: Theme.Space.m)
                 Text(ByteFormat.string(model.selectedItems.first { $0.id == i.id }?.bytes ?? i.bytes))
@@ -586,6 +596,7 @@ struct DiskCategoryPage: View {
                 .buttonStyle(PillButtonStyle()).controlSize(.small)
                 .help(tr("Safe: this is regenerated automatically (caches, logs, build output). It is deleted, not moved to the Trash."))
                 .disabled(model.report == nil || model.scanning || model.cleaning)
+                AIPickButton(model: model, category: category)
                 Spacer()
                 Text(Self.selectionText(total: model.selectedItems.count,
                                         here: model.selectedItems.filter { $0.category == category }.count))
