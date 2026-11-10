@@ -82,6 +82,45 @@ public enum CaptureSelectionGeometry {
         return clipped.isNull ? CGRect(origin: CGPoint(x: min(max(rect.minX, bounds.minX), bounds.maxX), y: min(max(rect.minY, bounds.minY), bounds.maxY)), size: .zero) : clipped
     }
 
+    /// Selector toolbar lines: each group (tools, then outputs) starts its own line and wraps when
+    /// wider than `maxWidth`. The first group lines up on the left, later groups on the right, so
+    /// the primary output stays at the far right. Frames are in the toolbar's top-left space.
+    public static func toolbarLayout(_ groups: [[CGSize]], maxWidth: CGFloat, spacing: CGFloat = 4, padding: CGFloat = 6) -> (frames: [[CGRect]], size: CGSize) {
+        let available = max(1, maxWidth - padding * 2)
+        var lines: [(group: Int, items: [Int], width: CGFloat, height: CGFloat)] = []
+        for (group, sizes) in groups.enumerated() {
+            for (index, size) in sizes.enumerated() {
+                if var line = lines.last, line.group == group, line.width + spacing + size.width <= available {
+                    line.items.append(index); line.width += spacing + size.width; line.height = max(line.height, size.height)
+                    lines[lines.count - 1] = line
+                } else { lines.append((group, [index], size.width, size.height)) }
+            }
+        }
+        let width = (lines.map(\.width).max() ?? 0) + padding * 2
+        var frames = groups.map { Array(repeating: CGRect.zero, count: $0.count) }, y = padding
+        for line in lines {
+            var x = line.group == 0 ? padding : width - padding - line.width
+            for index in line.items {
+                let size = groups[line.group][index]
+                frames[line.group][index] = CGRect(x: x, y: y + (line.height - size.height) / 2, width: size.width, height: size.height)
+                x += size.width + spacing
+            }
+            y += line.height + spacing
+        }
+        return (frames, CGSize(width: width, height: lines.isEmpty ? 0 : y - spacing + padding))
+    }
+
+    /// Below the selection, above it when there is no room below, inside its bottom edge when
+    /// neither fits; right-aligned with the selection and kept inside `bounds`.
+    public static func toolbarOrigin(size: CGSize, selection: CGRect, bounds: CGRect, gap: CGFloat = 8, margin: CGFloat = 4) -> CGPoint {
+        var origin = CGPoint(x: selection.maxX - size.width, y: selection.maxY + gap)
+        if origin.y + size.height > bounds.maxY - margin { origin.y = selection.minY - size.height - gap }
+        if origin.y < bounds.minY + margin { origin.y = selection.maxY - size.height - gap }
+        origin.x = max(min(origin.x, bounds.maxX - size.width - margin), bounds.minX + margin)
+        origin.y = max(min(origin.y, bounds.maxY - size.height - margin), bounds.minY + margin)
+        return origin
+    }
+
     /// Image pixels covered by a point rectangle. `scale` is image pixels per point, so a frozen
     /// frame of any resolution maps exactly; edges are rounded outward to whole pixels.
     public static func pixelRect(_ rect: CGRect, scale: CGFloat, imageSize: CGSize) -> CGRect? {

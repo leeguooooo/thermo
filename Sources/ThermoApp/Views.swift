@@ -1404,24 +1404,27 @@ struct SettingsView: View {
 /// (a SwiftUI Menu cannot be rendered offscreen).
 struct CaptureMenuItems: View {
     var body: some View {
-                // Grouped: capture, pin from the clipboard, manage pins, then settings; same symbols as the status menu.
+                // Grouped like the status menu: everyday capture and pinning, recording, low-frequency tools one level down, then settings.
                 Button {CaptureWorkspace.shared.capture()} label: { Label(tr("Capture screen…") + CaptureWorkspace.shared.shortcutSuffix(for:.screenshot), systemImage: "viewfinder") }
-                Button {CaptureWorkspace.shared.captureScrolling()} label: { Label(tr("Scrolling capture…"), systemImage: "arrow.down.right.and.arrow.up.left") }
+                Button {CaptureWorkspace.shared.pinClipboard()} label: { Label(tr("Pin clipboard") + CaptureWorkspace.shared.shortcutSuffix(for:.pinClipboard), systemImage: "pin") }
+                Button {CaptureWorkspace.shared.importImage()} label: { Label(tr("Open image…"), systemImage: "photo") }
+                Divider()
                 Button {CaptureWorkspace.shared.recordScreen()} label: { Label(tr("Record screen…"), systemImage: "record.circle") }
                 Button {CaptureWorkspace.shared.recordScreen(draftsOnly:true)} label: { Label(tr("Recording drafts…"), systemImage: "film.stack") }
-                Button {CaptureWorkspace.shared.importImage()} label: { Label(tr("Open image…"), systemImage: "photo") }
-                CaptureConfiguredActionsMenu(model:CaptureWorkspace.shared.shortcuts)
                 Divider()
-                Button {CaptureWorkspace.shared.pinClipboard()} label: { Label(tr("Pin clipboard") + CaptureWorkspace.shared.shortcutSuffix(for:.pinClipboard), systemImage: "pin") }
-                Button {CaptureWorkspace.shared.pinClipboard(asText:true)} label: { Label(tr("Pin clipboard as text"), systemImage: "text.quote") }
-                Button {CaptureWorkspace.shared.pinClipboard(asLaTeX:true)} label: { Label(tr("Pin clipboard as LaTeX"), systemImage: "function") }
-                Divider()
-                Button {CaptureWorkspace.shared.showPinLibrary()} label: { Label(tr("Pin groups and history"), systemImage: "square.stack") }
-                Button {CaptureWorkspace.shared.restoreLastPin()} label: { Label(tr("Restore last closed pin"), systemImage: "arrow.uturn.backward") }
-                Button {CaptureWorkspace.shared.pinSession.restoreMouseInteraction()} label: { Label(tr("Restore pin mouse interaction"), systemImage: "cursorarrow") }
-                Button {CaptureWorkspace.shared.showAll()} label: { Label(tr("Show all pins"), systemImage: "eye") }
-                Button {CaptureWorkspace.shared.hideAll()} label: { Label(tr("Hide all pins"), systemImage: "eye.slash") }
-                Button {CaptureWorkspace.shared.closeAll()} label: { Label(tr("Close all pins"), systemImage: "xmark.circle") }
+                Menu {
+                    Button {CaptureWorkspace.shared.captureScrolling()} label: { Label(tr("Scrolling capture…"), systemImage: "arrow.down.right.and.arrow.up.left") }
+                    Button {CaptureWorkspace.shared.pinClipboard(asText:true)} label: { Label(tr("Pin clipboard as text"), systemImage: "text.quote") }
+                    Button {CaptureWorkspace.shared.pinClipboard(asLaTeX:true)} label: { Label(tr("Pin clipboard as LaTeX"), systemImage: "function") }
+                    CaptureConfiguredActionsMenu(model:CaptureWorkspace.shared.shortcuts)
+                    Divider()
+                    Button {CaptureWorkspace.shared.showPinLibrary()} label: { Label(tr("Pin groups and history"), systemImage: "square.stack") }
+                    Button {CaptureWorkspace.shared.restoreLastPin()} label: { Label(tr("Restore last closed pin"), systemImage: "arrow.uturn.backward") }
+                    Button {CaptureWorkspace.shared.pinSession.restoreMouseInteraction()} label: { Label(tr("Restore pin mouse interaction"), systemImage: "cursorarrow") }
+                    Button {CaptureWorkspace.shared.showAll()} label: { Label(tr("Show all pins"), systemImage: "eye") }
+                    Button {CaptureWorkspace.shared.hideAll()} label: { Label(tr("Hide all pins"), systemImage: "eye.slash") }
+                    Button {CaptureWorkspace.shared.closeAll()} label: { Label(tr("Close all pins"), systemImage: "xmark.circle") }
+                } label: { Label(tr("More capture tools"), systemImage: "ellipsis.circle") }
                 Divider()
                 Button {CaptureWorkspace.shared.showSavingSettings()} label: { Label(tr("Capture saving and after-actions"), systemImage: "square.and.arrow.down") }
                 Button {CaptureWorkspace.shared.showActionSettings()} label: { Label(tr("Capture shortcuts and actions"), systemImage: "keyboard") }

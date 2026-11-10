@@ -6,14 +6,20 @@ import ThermoL10n
 /// Thermo's own region picker for screenshots. Every display is frozen before the overlay appears,
 /// so menus and hover states stay as they were when the shortcut was pressed. Hovering highlights
 /// the window under the pointer (click takes it); dragging draws a region; the selection can then
-/// be moved, resized from eight handles or nudged with the arrow keys before confirming.
+/// be moved, resized from eight handles or nudged with the arrow keys, marked up, read with OCR,
+/// and finished with one explicit output: copy, pin to the desktop or save.
 @available(macOS 14, *)
 @MainActor final class CaptureScreenshotSelector {
-    enum Outcome { case cancelled, captured(CGImage, after: [CaptureAfterStep]?), region(CaptureRegionSelector.Region) }
-    /// `.screenshot` crops the frozen frame; `.region` only reports where (long screenshots, recording).
-    enum Purpose { case screenshot, region(confirmTitle: String) }
+    enum Outcome { case cancelled, captured(CGImage, after: [CaptureAfterStep], text: String?), region(CaptureRegionSelector.Region) }
+    /// `.screenshot` crops the frozen frame; `confirm` is what Enter and the primary button run
+    /// (nil: copy the image). `.region` only reports where (long screenshots, recording).
+    enum Purpose { case screenshot(confirm: [CaptureAfterStep]?), region(confirmTitle: String) }
+    enum SaveResult { case saved(copyAfterSave: Bool), cancelled, failed(Error) }
     let purpose: Purpose
-    init(purpose: Purpose = .screenshot) { self.purpose = purpose }
+    /// Saves the marked selection while the selector is hidden; anything but success brings the
+    /// same selection and marks back.
+    var saveImage: ((CGImage) -> SaveResult)?
+    init(purpose: Purpose = .screenshot(confirm: nil)) { self.purpose = purpose }
     struct Frozen { let screen: NSScreen; let displayID: CGDirectDisplayID; let image: CGImage; let windows: [CGRect] }
 
     private var panels: [NSPanel] = []
@@ -47,6 +53,32 @@ import ThermoL10n
         panels.removeAll(); views.removeAll()
         NSCursor.unhide()
         let callback = completion; completion = nil; callback?(result)
+    }
+
+    /// The panels sit above the save panel's level, so they step aside while it is open.
+    private func save(_ image: CGImage, from panel: NSWindow?) {
+        guard let saveImage else { NSSound.beep(); return }
+        for panel in panels { panel.orderOut(nil) }
+        let result = saveImage(image)
+        // A display change may have cancelled the capture while the save panel was open.
+        guard completion != nil else { return }
+        switch result {
+        case .saved(let copy): finish(.success(.captured(image, after: CaptureSelectionOutput.saved(copyAfterSave: copy).steps, text: nil)))
+        case .cancelled: reveal(panel)
+        case .failed(let error):
+            let alert = NSAlert(); alert.alertStyle = .warning
+            alert.messageText = tr("Could not save the screenshot."); alert.informativeText = captureFailureMessage(error)
+            alert.runModal()
+            guard completion != nil else { return }
+            reveal(panel)
+        }
+    }
+
+    private func reveal(_ key: NSWindow?) {
+        for panel in panels { panel.orderFrontRegardless() }
+        NSApp.activate(ignoringOtherApps: true)
+        let target = key ?? panels.first
+        target?.makeKeyAndOrderFront(nil); target?.makeFirstResponder(target?.contentView)
     }
 
     /// Captures each display at native resolution and records the on-screen windows, front to back,
@@ -95,6 +127,7 @@ import ThermoL10n
             panel.title = tr("Select a screenshot region")
             let view = SelectorView(frame: NSRect(origin: .zero, size: item.screen.frame.size), frozen: item, purpose: purpose)
             view.onFinish = { [weak self] outcome in self?.finish(.success(outcome)) }
+            view.onSave = { [weak self, weak panel] image in self?.save(image, from: panel) }
             view.onBeginSelection = { [weak self, weak view] in
                 for other in self?.views ?? [] where other !== view { other.clearSelection() }
             }
@@ -118,14 +151,104 @@ private final class SelectorPanel: NSPanel {
     override var canBecomeKey: Bool { true }
 }
 
+/// Tool and output rows, laid out by CaptureSelectionGeometry so they wrap instead of leaving the screen.
+private final class SelectorToolbar: NSView {
+    var groups: [[NSView]] = [] {
+        didSet { oldValue.joined().forEach { $0.removeFromSuperview() }; groups.joined().forEach { addSubview($0) } }
+    }
+    init() {
+        super.init(frame: .zero)
+        wantsLayer = true; layer?.cornerRadius = 8
+        layer?.backgroundColor = NSColor.windowBackgroundColor.withAlphaComponent(0.95).cgColor
+    }
+    required init?(coder: NSCoder) { fatalError("init(coder:) is not used") }
+    override var isFlipped: Bool { true }
+    func fit(maxWidth: CGFloat) -> CGSize {
+        let layout = CaptureSelectionGeometry.toolbarLayout(groups.map { $0.map(\.fittingSize) }, maxWidth: maxWidth)
+        for (views, frames) in zip(groups, layout.frames) { for (view, frame) in zip(views, frames) { view.frame = frame } }
+        return layout.size
+    }
+}
+
+/// Esc inside the recognised text goes back to the screenshot instead of completing a word.
+private final class RecognitionTextView: NSTextView {
+    var onEscape: (() -> Void)?
+    override func cancelOperation(_ sender: Any?) { onEscape?() }
+}
+
+/// Recognised text over the selection: edit, then copy and finish; failures keep retry and back.
 @available(macOS 14, *)
-private final class SelectorView: NSView {
+private final class RecognitionCard: NSView {
+    enum State { case working, text(String), failed(String) }
+    var onBack: (() -> Void)?
+    var onRetry: (() -> Void)?
+    var onCopy: ((String) -> Void)?
+    let textView = RecognitionTextView(frame: CGRect(x: 0, y: 0, width: 352, height: 160))
+    private let status = NSTextField(wrappingLabelWithString: "")
+    private let scroll = NSScrollView()
+    private let stack = NSStackView()
+    private var retryButton: NSButton!
+    private var copyButton: NSButton!
+
+    init() {
+        super.init(frame: CGRect(x: 0, y: 0, width: 380, height: 120))
+        wantsLayer = true; layer?.cornerRadius = 10
+        layer?.backgroundColor = NSColor.windowBackgroundColor.withAlphaComponent(0.97).cgColor
+        let title = NSTextField(labelWithString: tr("Recognize text")); title.font = .boldSystemFont(ofSize: 13)
+        textView.isRichText = false; textView.font = .systemFont(ofSize: 13); textView.allowsUndo = true
+        textView.isVerticallyResizable = true; textView.autoresizingMask = [.width]; textView.textContainer?.widthTracksTextView = true
+        textView.minSize = CGSize(width: 0, height: 160); textView.maxSize = CGSize(width: CGFloat.greatestFiniteMagnitude, height: .greatestFiniteMagnitude)
+        textView.onEscape = { [weak self] in self?.onBack?() }
+        scroll.documentView = textView; scroll.hasVerticalScroller = true; scroll.borderType = .bezelBorder
+        let back = NSButton(title: tr("Back to screenshot"), target: self, action: #selector(goBack))
+        retryButton = NSButton(title: tr("Try again"), target: self, action: #selector(tryAgain))
+        copyButton = NSButton(title: tr("Copy text and finish"), target: self, action: #selector(copyText))
+        copyButton.bezelColor = .controlAccentColor
+        let buttons = NSStackView(); buttons.orientation = .horizontal; buttons.spacing = 8
+        buttons.addView(back, in: .leading); buttons.addView(retryButton, in: .trailing); buttons.addView(copyButton, in: .trailing)
+        stack.orientation = .vertical; stack.alignment = .leading; stack.spacing = 10
+        stack.edgeInsets = NSEdgeInsets(top: 14, left: 14, bottom: 14, right: 14)
+        for view in [title, status, scroll, buttons] { stack.addArrangedSubview(view) }
+        stack.translatesAutoresizingMaskIntoConstraints = false; addSubview(stack)
+        NSLayoutConstraint.activate([
+            stack.leadingAnchor.constraint(equalTo: leadingAnchor), stack.trailingAnchor.constraint(equalTo: trailingAnchor),
+            stack.topAnchor.constraint(equalTo: topAnchor),
+            scroll.widthAnchor.constraint(equalToConstant: 352), scroll.heightAnchor.constraint(equalToConstant: 160),
+            status.widthAnchor.constraint(equalTo: scroll.widthAnchor), buttons.widthAnchor.constraint(equalTo: scroll.widthAnchor)])
+    }
+    required init?(coder: NSCoder) { fatalError("init(coder:) is not used") }
+
+    func show(_ state: State) {
+        switch state {
+        case .working: status.stringValue = tr("Recognizing text and barcodes…")
+        case .text(let text): textView.string = text
+        case .failed(let message): status.stringValue = message
+        }
+        if case .text = state { status.isHidden = true; scroll.isHidden = false } else { status.isHidden = false; scroll.isHidden = true }
+        if case .failed = state { retryButton.isHidden = false } else { retryButton.isHidden = true }
+        if case .text = state { copyButton.isHidden = false } else { copyButton.isHidden = true }
+        layoutSubtreeIfNeeded()
+        setFrameSize(CGSize(width: 380, height: stack.fittingSize.height))
+    }
+
+    @objc private func goBack() { onBack?() }
+    @objc private func tryAgain() { onRetry?() }
+    @objc private func copyText() {
+        let text = textView.string
+        guard !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { NSSound.beep(); return }
+        onCopy?(text)
+    }
+}
+
+@available(macOS 14, *)
+private final class SelectorView: NSView, NSTextFieldDelegate {
     private typealias G = CaptureSelectionGeometry
     private enum Drag { case none, drawing(start: CGPoint), moving(grab: CGPoint, original: CGRect), resizing(CaptureSelectionHandle) }
 
     let frozen: CaptureScreenshotSelector.Frozen
     let purpose: CaptureScreenshotSelector.Purpose
     var onFinish: ((CaptureScreenshotSelector.Outcome) -> Void)?
+    var onSave: ((CGImage) -> Void)?
     var onBeginSelection: (() -> Void)?
 
     private let scale: CGFloat
@@ -135,46 +258,63 @@ private final class SelectorView: NSView {
     private var mouseDownPoint: CGPoint?
     private var drawing = false
     private var pointer: CGPoint?
-    private let toolbar = NSStackView()
-    /// Marks drawn on the selection before confirming, in view coordinates (display points).
-    private struct Mark { let tool: CaptureTool; var points: [CGPoint] }
+    private let toolbar = SelectorToolbar()
+    /// Marks drawn on the selection before an output, in view coordinates (display points).
     private var tool: CaptureTool?
-    private var marks: [Mark] = []
-    private var draft: Mark?
+    private var markup = CaptureSelectionMarkup()
+    private var draft: CaptureSelectionMark?
+    private var textEntry: NSTextField?
+    private var recognition: RecognitionCard?
+    private var recognitionTask: Task<Void, Never>?
     private var toolButtons: [CaptureTool: NSButton] = [:]
+    private var undoButton: NSButton?
+    private var redoButton: NSButton?
+    /// Typed text is 18 points on screen, the size CaptureDocument draws for the mark's width.
+    private static let textPointSize: CGFloat = 18
     static let markTools: [(CaptureTool, String, String, String)] = [
         (.rectangle, "rectangle", "Rectangle", "r"), (.arrow, "arrow.up.right", "Arrow", "a"),
-        (.pencil, "pencil.tip", "Pencil", "p"), (.mosaic, "checkerboard.rectangle", "Mosaic", "m")]
+        (.text, "textformat", "Text", "t"), (.mosaic, "checkerboard.rectangle", "Mosaic", "m"),
+        (.number, "1.circle", "Sequence number", "n")]
 
     init(frame: NSRect, frozen: CaptureScreenshotSelector.Frozen, purpose: CaptureScreenshotSelector.Purpose) {
         self.frozen = frozen; self.purpose = purpose
         scale = frame.width > 0 ? CGFloat(frozen.image.width) / frame.width : frozen.screen.backingScaleFactor
         super.init(frame: frame)
         setAccessibilityLabel(tr("Select a screenshot region") + " · " + frozen.screen.localizedName)
-        toolbar.orientation = .horizontal; toolbar.spacing = 6; toolbar.edgeInsets = NSEdgeInsets(top: 4, left: 6, bottom: 4, right: 6)
-        toolbar.wantsLayer = true; toolbar.layer?.cornerRadius = 7; toolbar.layer?.backgroundColor = NSColor.windowBackgroundColor.withAlphaComponent(0.95).cgColor
-        if case .screenshot = purpose {
-            for (tool, symbol, title, key) in Self.markTools {
-                let button = NSButton(image: NSImage(systemSymbolName: symbol, accessibilityDescription: tr(title)) ?? NSImage(), target: self, action: #selector(pickTool(_:)))
-                button.setButtonType(.pushOnPushOff); button.bezelStyle = .texturedRounded; button.toolTip = tr(title) + " (" + key.uppercased() + ")"
-                button.identifier = NSUserInterfaceItemIdentifier(tool.rawValue)
-                toolButtons[tool] = button; toolbar.addArrangedSubview(button)
-            }
-            let undo = NSButton(image: NSImage(systemSymbolName: "arrow.uturn.backward", accessibilityDescription: tr("Undo")) ?? NSImage(), target: self, action: #selector(undoMark))
-            undo.bezelStyle = .texturedRounded; undo.toolTip = tr("Undo") + " (⌘Z)"
-            toolbar.addArrangedSubview(undo)
+        func iconButton(_ symbol: String, _ title: String, _ key: String, _ action: Selector) -> NSButton {
+            let button = NSButton(image: NSImage(systemSymbolName: symbol, accessibilityDescription: tr(title)) ?? NSImage(), target: self, action: action)
+            button.bezelStyle = .texturedRounded; button.toolTip = tr(title) + " (" + key + ")"
+            return button
         }
-        var buttons = [(tr("Cancel"), #selector(cancelSelection))]
+        func textButton(_ title: String, _ action: Selector) -> NSButton {
+            let button = NSButton(title: title, target: self, action: action); button.bezelStyle = .rounded
+            return button
+        }
+        var tools: [NSView] = [], outputs: [NSView] = [textButton(tr("Cancel"), #selector(cancelSelection))]
         switch purpose {
-        case .screenshot: buttons += [(tr("Copy"), #selector(copySelection)), (tr("Done"), #selector(confirmSelection))]
-        case .region(let title): buttons += [(title, #selector(confirmSelection))]
+        case .screenshot(let confirm):
+            for (tool, symbol, title, key) in Self.markTools {
+                let button = iconButton(symbol, title, key.uppercased(), #selector(pickTool(_:)))
+                button.setButtonType(.pushOnPushOff); button.identifier = NSUserInterfaceItemIdentifier(tool.rawValue)
+                toolButtons[tool] = button; tools.append(button)
+            }
+            let undo = iconButton("arrow.uturn.backward", "Undo", "⌘Z", #selector(undoMark))
+            let redo = iconButton("arrow.uturn.forward", "Redo", "⇧⌘Z", #selector(redoMark))
+            let ocr = NSButton(title: tr("Recognize text"), image: NSImage(systemSymbolName: "text.viewfinder", accessibilityDescription: nil) ?? NSImage(),
+                               target: self, action: #selector(recognizeSelection))
+            ocr.bezelStyle = .texturedRounded; ocr.imagePosition = .imageLeading
+            undoButton = undo; redoButton = redo; tools += [undo, redo, ocr]
+            let steps = CaptureSelectionOutput.primary(confirm: confirm).steps
+            // No key equivalent: Return must stay with a text field while typing.
+            let primary = textButton(steps == [.copyImage] ? tr("Copy image") : tr("Done"), #selector(confirmSelection))
+            primary.bezelColor = .controlAccentColor; primary.toolTip = "↩"
+            let save = textButton(tr("Save"), #selector(saveSelection)); save.toolTip = "⌘S"
+            outputs += [textButton(tr("Pin to desktop"), #selector(pinSelection)), save, primary]
+        case .region(let title):
+            outputs.append(textButton(title, #selector(confirmSelection)))
         }
-        for (title, action) in buttons {
-            let button = NSButton(title: title, target: self, action: action)
-            button.bezelStyle = .rounded; button.controlSize = .regular
-            if action == #selector(confirmSelection) { button.keyEquivalent = "\r" }
-            toolbar.addArrangedSubview(button)
-        }
+        toolbar.groups = [tools, outputs]
+        updateHistoryButtons()
         toolbar.isHidden = true
         addSubview(toolbar)
         addTrackingArea(NSTrackingArea(rect: .zero, options: [.mouseMoved, .mouseEnteredAndExited, .activeAlways, .inVisibleRect, .cursorUpdate], owner: self))
@@ -188,8 +328,9 @@ private final class SelectorView: NSView {
     // MARK: State
 
     func clearSelection() {
+        endTextEntry(commit: false); closeRecognition()
         selection = nil; drag = .none; toolbar.isHidden = true
-        marks.removeAll(); draft = nil; setTool(nil); needsDisplay = true
+        markup = CaptureSelectionMarkup(); draft = nil; setTool(nil); updateHistoryButtons(); needsDisplay = true
     }
 
     private func setTool(_ next: CaptureTool?) {
@@ -198,11 +339,15 @@ private final class SelectorView: NSView {
         needsDisplay = true
     }
     @objc private func pickTool(_ sender: NSButton) {
+        endTextEntry(commit: true)
         let picked = sender.identifier.flatMap { CaptureTool(rawValue: $0.rawValue) }
         setTool(picked == tool ? nil : picked)
         window?.makeFirstResponder(self)
     }
-    @objc private func undoMark() { if !marks.isEmpty { marks.removeLast(); needsDisplay = true } }
+    private func add(_ mark: CaptureSelectionMark) { markup.add(mark); updateHistoryButtons(); needsDisplay = true }
+    @objc private func undoMark() { endTextEntry(commit: true); markup.undo(); updateHistoryButtons(); needsDisplay = true }
+    @objc private func redoMark() { markup.redo(); updateHistoryButtons(); needsDisplay = true }
+    private func updateHistoryButtons() { undoButton?.isEnabled = markup.canUndo; redoButton?.isEnabled = markup.canRedo }
 
     func refreshHover() {
         guard let window else { return }
@@ -219,9 +364,41 @@ private final class SelectorView: NSView {
 
     private var target: CGRect? { selection ?? hovered }
 
+    // MARK: Text entry
+
+    private func beginTextEntry(at point: CGPoint, in selection: CGRect) {
+        let field = NSTextField(string: "")
+        field.font = .systemFont(ofSize: Self.textPointSize); field.textColor = .systemRed
+        field.isBordered = false; field.drawsBackground = true; field.backgroundColor = NSColor.white.withAlphaComponent(0.7)
+        field.focusRingType = .none; field.placeholderString = tr("Text"); field.delegate = self
+        let height = field.intrinsicContentSize.height
+        field.frame = CGRect(x: point.x, y: point.y - height / 2, width: max(120, selection.maxX - point.x), height: height)
+        addSubview(field); textEntry = field
+        window?.makeFirstResponder(field)
+    }
+
+    /// Typed text becomes a mark whose baseline box sits where the field showed it.
+    private func endTextEntry(commit: Bool) {
+        guard let field = textEntry else { return }
+        textEntry = nil
+        let text = field.stringValue.trimmingCharacters(in: .whitespacesAndNewlines)
+        window?.makeFirstResponder(self)
+        field.removeFromSuperview()
+        if commit, !text.isEmpty { add(CaptureSelectionMark(tool: .text, points: [CGPoint(x: field.frame.minX + 2, y: field.frame.maxY)], text: text)) }
+        needsDisplay = true
+    }
+
+    func control(_ control: NSControl, textView: NSTextView, doCommandBy commandSelector: Selector) -> Bool {
+        if commandSelector == #selector(NSResponder.insertNewline(_:)) { endTextEntry(commit: true); return true }
+        if commandSelector == #selector(NSResponder.cancelOperation(_:)) { endTextEntry(commit: false); return true }
+        return false
+    }
+    func controlTextDidEndEditing(_ obj: Notification) { endTextEntry(commit: true) }
+
     // MARK: Mouse
 
     override func mouseEntered(with event: NSEvent) {
+        guard recognition == nil, textEntry == nil else { return }
         window?.makeKeyAndOrderFront(nil); window?.makeFirstResponder(self)
         updateHover(convert(event.locationInWindow, from: nil))
     }
@@ -230,14 +407,21 @@ private final class SelectorView: NSView {
     override func cursorUpdate(with event: NSEvent) { updateCursor() }
 
     override func mouseDown(with event: NSEvent) {
+        guard recognition == nil else { return }
         let point = convert(event.locationInWindow, from: nil)
+        endTextEntry(commit: true)
         pointer = point; mouseDownPoint = point
         if let tool, let selection {
-            // With a tool picked, drags inside the selection draw; the selection itself stays put.
-            if selection.contains(point) { draft = Mark(tool: tool, points: [point]) }
+            // With a tool picked, clicks and drags inside the selection mark it; the selection stays put.
+            guard selection.contains(point) else { return }
+            switch tool {
+            case .text: beginTextEntry(at: point, in: selection)
+            case .number: if event.clickCount == 1 { add(CaptureSelectionMark(tool: .number, points: [point], text: String(markup.nextNumber))) }
+            default: draft = CaptureSelectionMark(tool: tool, points: [point])
+            }
             return
         }
-        if event.clickCount == 2, let selection, selection.contains(point) { finish(after: nil); return }
+        if event.clickCount == 2, let selection, selection.contains(point) { confirmSelection(); return }
         if let selection {
             if let handle = G.handle(at: point, of: selection) { drag = .resizing(handle); return }
             if selection.contains(point) { drag = .moving(grab: point, original: selection); return }
@@ -246,11 +430,12 @@ private final class SelectorView: NSView {
     }
 
     override func mouseDragged(with event: NSEvent) {
+        guard recognition == nil else { return }
         let point = convert(event.locationInWindow, from: nil)
         pointer = point
         if var mark = draft, let selection {
             let clamped = CGPoint(x: min(max(point.x, selection.minX), selection.maxX), y: min(max(point.y, selection.minY), selection.maxY))
-            if mark.tool == .pencil { mark.points.append(clamped) } else { mark.points = [mark.points[0], clamped] }
+            mark.points = [mark.points[0], clamped]
             draft = mark; needsDisplay = true; return
         }
         switch drag {
@@ -271,11 +456,12 @@ private final class SelectorView: NSView {
     }
 
     override func mouseUp(with event: NSEvent) {
+        guard recognition == nil else { return }
         let point = convert(event.locationInWindow, from: nil)
         if let mark = draft {
             draft = nil
             let a = mark.points.first!, b = mark.points.last!
-            if mark.tool == .pencil ? mark.points.count > 1 : hypot(b.x - a.x, b.y - a.y) >= 3 { marks.append(mark) }
+            if hypot(b.x - a.x, b.y - a.y) >= 3 { add(mark) }
             needsDisplay = true; return
         }
         defer { drag = .none; drawing = false; mouseDownPoint = nil; layoutToolbar(); needsDisplay = true }
@@ -292,12 +478,17 @@ private final class SelectorView: NSView {
     }
 
     override func rightMouseDown(with event: NSEvent) {
+        guard recognition == nil else { return }
+        if textEntry != nil { endTextEntry(commit: false); return }
         if tool != nil { setTool(nil); return }
         if selection != nil { clearSelection(); updateHover(convert(event.locationInWindow, from: nil)) } else { onFinish?(.cancelled) }
     }
 
     private func updateCursor() {
-        guard let pointer, let selection, case .none = drag, tool == nil else { NSCursor.crosshair.set(); return }
+        guard recognition == nil, let pointer, let selection, case .none = drag else { NSCursor.crosshair.set(); return }
+        if let tool {
+            (tool == .text && selection.contains(pointer) ? NSCursor.iBeam : NSCursor.crosshair).set(); return
+        }
         if let handle = G.handle(at: pointer, of: selection) {
             switch handle {
             case .left, .right: NSCursor.resizeLeftRight.set()
@@ -309,14 +500,29 @@ private final class SelectorView: NSView {
 
     // MARK: Keyboard
 
+    /// Command shortcuts only while the selector itself has focus, so typing a mark or editing OCR
+    /// text keeps its own undo, copy and save keys.
+    override func performKeyEquivalent(with event: NSEvent) -> Bool {
+        guard window?.firstResponder === self, recognition == nil, case .screenshot = purpose else { return super.performKeyEquivalent(with: event) }
+        let flags = event.modifierFlags.intersection([.command, .shift, .option, .control])
+        let key = event.charactersIgnoringModifiers?.lowercased()
+        if flags == [.command], key == "z" { undoMark() }
+        else if flags == [.command, .shift], key == "z" { redoMark() }
+        else if flags == [.command], key == "s" { saveSelection() }
+        else if flags == [.command], key == "c" { copySelection() }
+        else { return super.performKeyEquivalent(with: event) }
+        return true
+    }
+
     override func keyDown(with event: NSEvent) {
+        if recognition != nil { if event.keyCode == 53 { closeRecognition() }; return }
         let flags = event.modifierFlags.intersection(.deviceIndependentFlagsMask)
         let step: CGFloat = flags.contains(.shift) ? 10 : 1
         switch event.keyCode {
         case 53: onFinish?(.cancelled)                                   // Esc
-        case 36, 76: finish(after: nil)                                  // Return, Enter
+        case 36, 76: confirmSelection()                                  // Return, Enter
         case 123, 124, 125, 126:                                         // arrows
-            guard var rect = selection, marks.isEmpty, tool == nil else { return }
+            guard var rect = selection, markup.marks.isEmpty, tool == nil else { return }
             let dx: CGFloat = event.keyCode == 123 ? -step : event.keyCode == 124 ? step : 0
             let dy: CGFloat = event.keyCode == 126 ? -step : event.keyCode == 125 ? step : 0
             if flags.contains(.option) {
@@ -327,9 +533,7 @@ private final class SelectorView: NSView {
             selection = rect; layoutToolbar(); needsDisplay = true
         default:
             let key = event.charactersIgnoringModifiers?.lowercased()
-            if flags.contains(.command), key == "z" { undoMark() }
-            else if flags.isEmpty, selection != nil, case .screenshot = purpose, let pick = Self.markTools.first(where: { $0.3 == key }) { setTool(tool == pick.0 ? nil : pick.0) }
-            else if flags.contains(.command), key == "c", case .screenshot = purpose { finish(after: [.copyImage]) }
+            if flags.isEmpty, selection != nil, case .screenshot = purpose, let pick = Self.markTools.first(where: { $0.3 == key }) { setTool(tool == pick.0 ? nil : pick.0) }
             else if flags.contains(.command), key == "a" { onBeginSelection?(); selection = bounds; hovered = nil; layoutToolbar(); needsDisplay = true }
             else if flags.isEmpty, key == "c", let pointer, let hex = color(at: pointer)?.hex {
                 // Copy the color under the pointer, as a colour picker would, then close.
@@ -339,41 +543,102 @@ private final class SelectorView: NSView {
         }
     }
 
-    @objc private func cancelSelection() { onFinish?(.cancelled) }
-    @objc private func copySelection() { finish(after: [.copyImage]) }
-    @objc private func confirmSelection() { finish(after: nil) }
+    // MARK: Outputs
 
-    private func finish(after: [CaptureAfterStep]?) {
-        if case .region = purpose {
+    @objc private func cancelSelection() { onFinish?(.cancelled) }
+    @objc private func copySelection() { output(.copyImage) }
+    @objc private func pinSelection() { output(.pin) }
+    @objc private func confirmSelection() {
+        switch purpose {
+        case .screenshot(let confirm): output(.primary(confirm: confirm))
+        case .region:
             // Recording and long screenshots need at least 32 points each way (see Region.validate).
             guard let rect = target?.integral.intersection(bounds), rect.width >= 32, rect.height >= 32 else { NSSound.beep(); return }
             onFinish?(.region(CaptureRegionSelector.Region(displayID: frozen.displayID, rect: rect, scale: frozen.screen.backingScaleFactor,
                                                            selectedDisplaySize: frozen.screen.frame.size)))
-            return
         }
-        guard let rect = target, let pixels = G.pixelRect(rect, scale: scale, imageSize: CGSize(width: frozen.image.width, height: frozen.image.height)),
-              let cropped = frozen.image.cropping(to: pixels) else { return }
-        guard !marks.isEmpty else { onFinish?(.captured(cropped, after: after)); return }
-        var document = CaptureDocument(image: cropped)
-        for mark in layered(marks) {
-            let points = mark.points.map { G.imagePoint($0, scale: scale, crop: pixels) }
-            document.append(CaptureAnnotation(tool: mark.tool, points: points, color: .systemRed, width: max(2, (2 * scale).rounded())))
+    }
+    @objc private func saveSelection() {
+        endTextEntry(commit: true)
+        guard let image = renderedSelection() else { NSSound.beep(); return }
+        onSave?(image)
+    }
+
+    private func output(_ choice: CaptureSelectionOutput) {
+        endTextEntry(commit: true)
+        guard let image = renderedSelection() else { NSSound.beep(); return }
+        onFinish?(.captured(image, after: choice.steps, text: nil))
+    }
+
+    private func pixels(of rect: CGRect) -> CGRect? {
+        G.pixelRect(rect, scale: scale, imageSize: CGSize(width: frozen.image.width, height: frozen.image.height))
+    }
+
+    /// The selected pixels with this capture's marks burnt in.
+    private func renderedSelection() -> CGImage? {
+        guard let rect = target, let pixels = pixels(of: rect), let cropped = frozen.image.cropping(to: pixels) else { return nil }
+        do { return try markup.rendered(onto: cropped, crop: pixels, scale: scale) ?? cropped } catch { return nil }
+    }
+
+    // MARK: Text recognition
+
+    @objc private func recognizeSelection() {
+        endTextEntry(commit: true)
+        guard recognition == nil, let selection, let image = renderedSelection() else { NSSound.beep(); return }
+        setTool(nil); draft = nil
+        let card = RecognitionCard()
+        card.onBack = { [weak self] in self?.closeRecognition() }
+        card.onRetry = { [weak self] in self?.recognize(image) }
+        card.onCopy = { [weak self] text in self?.onFinish?(.captured(image, after: CaptureSelectionOutput.copyText.steps, text: text)) }
+        recognition = card; toolbar.isHidden = true
+        addSubview(card)
+        recognize(image)
+        placeRecognition(over: selection)
+        needsDisplay = true
+    }
+
+    private func recognize(_ image: CGImage) {
+        guard let card = recognition else { return }
+        recognitionTask?.cancel()
+        card.show(.working); window?.makeFirstResponder(self)
+        if let selection { placeRecognition(over: selection) }
+        recognitionTask = Task { [weak self] in
+            let result: Result<String, Error>
+            do { result = .success(try await CaptureSaveModel.recognizeText(image)) } catch { result = .failure(error) }
+            guard let self, !Task.isCancelled, self.recognition === card else { return }
+            switch result {
+            case .success(let text) where !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty:
+                card.show(.text(text)); self.window?.makeFirstResponder(card.textView)
+            case .success: card.show(.failed(tr("No text or barcode found.")))
+            case .failure(let error): card.show(.failed(captureFailureMessage(error)))
+            }
+            if let selection = self.selection { self.placeRecognition(over: selection) }
         }
-        guard let image = try? document.rendered() else { NSSound.beep(); return }
-        onFinish?(.captured(image, after: after))
+    }
+
+    private func placeRecognition(over selection: CGRect) {
+        guard let card = recognition else { return }
+        let size = card.frame.size
+        let x = min(max(selection.midX - size.width / 2, bounds.minX + 8), bounds.maxX - size.width - 8)
+        let y = min(max(selection.midY - size.height / 2, bounds.minY + 8), bounds.maxY - size.height - 8)
+        card.setFrameOrigin(CGPoint(x: x, y: y))
+    }
+
+    /// Back to the screenshot with its selection and marks untouched.
+    private func closeRecognition() {
+        guard let card = recognition else { return }
+        recognitionTask?.cancel(); recognitionTask = nil
+        recognition = nil; card.removeFromSuperview()
+        window?.makeFirstResponder(self); layoutToolbar(); needsDisplay = true
     }
 
     // MARK: Drawing
 
     private func layoutToolbar() {
-        guard let selection, case .none = drag else { toolbar.isHidden = true; return }
+        guard let selection, case .none = drag, recognition == nil else { toolbar.isHidden = true; return }
         toolbar.isHidden = false
-        let size = toolbar.fittingSize
-        var origin = CGPoint(x: selection.maxX - size.width, y: selection.maxY + 8)
-        if origin.y + size.height > bounds.maxY - 4 { origin.y = selection.minY - size.height - 8 }
-        if origin.y < bounds.minY + 4 { origin.y = selection.maxY - size.height - 8 }
-        origin.x = min(max(origin.x, bounds.minX + 4), bounds.maxX - size.width - 4)
-        toolbar.frame = CGRect(origin: origin, size: size)
+        let size = toolbar.fit(maxWidth: bounds.width - 8)
+        toolbar.frame = CGRect(origin: G.toolbarOrigin(size: size, selection: selection, bounds: bounds), size: size)
     }
 
     override func draw(_ dirtyRect: NSRect) {
@@ -402,57 +667,23 @@ private final class SelectorView: NSView {
                 }
             }
         }
-        for mark in layered(marks + (draft.map { [$0] } ?? [])) { drawMark(mark, in: context) }
+        drawMarks(in: context)
         if let pointer, showsMagnifier { drawMagnifier(at: pointer, in: context) }
     }
 
-    /// Mosaic hides the screenshot underneath, never the user's own boxes and arrows: effects go
-    /// first, then the drawn marks on top, in the preview and the saved image alike.
-    private func layered(_ list: [Mark]) -> [Mark] {
-        list.filter { $0.tool == .mosaic } + list.filter { $0.tool != .mosaic }
-    }
-
-    /// On-screen preview of a mark; the saved image is rendered by CaptureDocument from the same points.
-    private func drawMark(_ mark: Mark, in context: CGContext) {
-        guard let a = mark.points.first, let b = mark.points.last else { return }
-        let rect = CGRect(x: min(a.x, b.x), y: min(a.y, b.y), width: abs(a.x - b.x), height: abs(a.y - b.y))
-        NSColor.systemRed.setStroke()
-        switch mark.tool {
-        case .rectangle:
-            let path = NSBezierPath(rect: rect); path.lineWidth = 2; path.stroke()
-        case .arrow:
-            let path = NSBezierPath(); path.lineWidth = 2; path.lineCapStyle = .round
-            path.move(to: a); path.line(to: b)
-            let angle = atan2(b.y - a.y, b.x - a.x), head: CGFloat = 12
-            for side in [-0.45, 0.45] {
-                path.move(to: b); path.line(to: CGPoint(x: b.x - head * cos(angle + side), y: b.y - head * sin(angle + side)))
-            }
-            path.stroke()
-        case .pencil:
-            let path = NSBezierPath(); path.lineWidth = 2; path.lineCapStyle = .round; path.lineJoinStyle = .round
-            path.move(to: a); for point in mark.points.dropFirst() { path.line(to: point) }; path.stroke()
-        case .mosaic:
-            // Pixelate the frozen frame: draw a tiny copy back at full size without smoothing.
-            guard rect.width >= 2, rect.height >= 2,
-                  let pixels = G.pixelRect(rect, scale: scale, imageSize: CGSize(width: frozen.image.width, height: frozen.image.height)),
-                  let crop = frozen.image.cropping(to: pixels) else { return }
-            let cells = CGSize(width: max(1, (rect.width / 8).rounded()), height: max(1, (rect.height / 8).rounded()))
-            guard let small = CGContext(data: nil, width: Int(cells.width), height: Int(cells.height), bitsPerComponent: 8, bytesPerRow: 0,
-                                        space: CGColorSpaceCreateDeviceRGB(), bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue) else { return }
-            small.interpolationQuality = .medium
-            small.draw(crop, in: CGRect(origin: .zero, size: cells))
-            guard let tiny = small.makeImage() else { return }
-            context.saveGState()
-            context.interpolationQuality = .none
-            context.translateBy(x: 0, y: rect.maxY + rect.minY); context.scaleBy(x: 1, y: -1)
-            context.draw(tiny, in: rect)
-            context.restoreGState()
-        default: break
-        }
+    /// The preview draws each mark with CaptureDocument in the selection's pixel space, so what is
+    /// on screen is what the copied or saved image gets.
+    private func drawMarks(in context: CGContext) {
+        let marks = markup.layered + (draft.map { [$0] } ?? [])
+        guard !marks.isEmpty, let selection, let pixels = pixels(of: selection), let base = frozen.image.cropping(to: pixels) else { return }
+        context.saveGState(); defer { context.restoreGState() }
+        context.clip(to: selection)
+        context.translateBy(x: pixels.minX / scale, y: pixels.maxY / scale); context.scaleBy(x: 1 / scale, y: -1 / scale)
+        for mark in marks { try? CaptureDocument.draw(CaptureSelectionMarkup.annotation(mark, scale: scale, crop: pixels), in: context, base: base) }
     }
 
     private var showsMagnifier: Bool {
-        if tool != nil { return false }
+        if tool != nil || recognition != nil || textEntry != nil { return false }
         switch drag {
         case .moving: return false
         case .none: return selection == nil

@@ -96,7 +96,10 @@ func captureFailureMessage(_ error:Error) -> String {
         catch { if let completion{completion(.failure(error))} else {saving.issue=captureFailureMessage(error);showSavingSettings()};return }
         guard screenCaptureAccess() else {if let completion{completion(.failure(CaptureFailure.captureFailed))} else {report(CaptureFailure.captureFailed)};return}
         issue = nil; capturing = true;captureID=id;captureCompletion=completion
-        if makeCaptureProcess == nil, #available(macOS 14, *) { selectScreenshot(id:id,options:options);return }
+        // Note: 交互截图只跑用户点的输出，不回放默认贴图的动作链 — 见 .agents/notes/implemented/feature/2026-11-10-capture-toolbar.md。
+        if makeCaptureProcess == nil, #available(macOS 14, *) {
+            selectScreenshot(id:id,options:options,confirm:CaptureSelectionOutput.confirm(override:override,scripted:completion != nil,saved:options.after));return
+        }
         // The system selector supports region, Space for window, and Escape to cancel.
         // A unique private directory prevents cancelled captures from reusing old pixels.
         let directory = FileManager.default.temporaryDirectory.appendingPathComponent("thermo-capture-" + UUID().uuidString, isDirectory: true)
@@ -127,8 +130,9 @@ func captureFailureMessage(_ error:Error) -> String {
         catch {process=nil;captureDirectory=nil;try? FileManager.default.removeItem(at:directory);failCapture(error)}
     }
     @available(macOS 14, *)
-    private func selectScreenshot(id:UUID,options:CaptureSaveSettings) {
-        let selector=CaptureScreenshotSelector();screenshotSelector=selector
+    private func selectScreenshot(id:UUID,options:CaptureSaveSettings,confirm:[CaptureAfterStep]?) {
+        let selector=CaptureScreenshotSelector(purpose:.screenshot(confirm:confirm));screenshotSelector=selector
+        selector.saveImage={ [weak self] image in self?.saveSelection(image,options:options) ?? .cancelled }
         selector.start { [weak self] result in
             guard let self else{return}
             if self.screenshotSelector === selector {self.screenshotSelector=nil}
@@ -137,17 +141,30 @@ func captureFailureMessage(_ error:Error) -> String {
             switch result {
             case .failure(let error): self.failCapture(error)
             case .success(.cancelled),.success(.region): self.finishCapture(.success(false))
-            case .success(.captured(let image,let after)):
-                var stepOptions=options;if let after {stepOptions.after=after}
-                self.runCaptured(image,options:stepOptions,id:id)
+            case .success(.captured(let image,let after,let text)):
+                var stepOptions=options;stepOptions.after=after
+                self.runCaptured(image,options:stepOptions,recognizedText:text,id:id)
             }
         }
     }
+    /// The selector's Save: the save location from basic settings when one is set, otherwise a save panel.
+    @available(macOS 14, *)
+    private func saveSelection(_ image:CGImage,options:CaptureSaveSettings) -> CaptureScreenshotSelector.SaveResult {
+        let document=CaptureDocument(image:image)
+        do {
+            if !options.quick.directory.isEmpty {_=try saving.quickSave(document);return .saved(copyAfterSave:false)}
+            let panel=NSSavePanel(),manual=CaptureManualImageSave()
+            manual.configure(panel,name:"Thermo-"+ISO8601DateFormatter().string(from:Date()).replacingOccurrences(of:":",with:"-"))
+            guard panel.runModal() == .OK,let url=panel.url else {return .cancelled}
+            try manual.save(document,to:url,quality:options.quality)
+            return .saved(copyAfterSave:options.copyAfterManualSave)
+        } catch {return .failed(error)}
+    }
     /// Runs the configured after-capture steps for a freshly selected image.
-    private func runCaptured(_ image:CGImage,options:CaptureSaveSettings,id:UUID) {
+    private func runCaptured(_ image:CGImage,options:CaptureSaveSettings,recognizedText:String?=nil,id:UUID) {
         afterTask=Task { @MainActor [weak self] in
             guard let self else{return};defer{if self.captureID == nil || self.captureID == id{self.afterTask=nil}}
-            let success=await self.processCaptured(image,options:options)
+            let success=await self.processCaptured(image,options:options,recognizedText:recognizedText)
             guard self.captureID == id else{return}
             let scripted=self.captureCompletion != nil
             if Task.isCancelled {self.finishCapture(.failure(CaptureScriptFailure.cancelled))}
@@ -179,12 +196,13 @@ func captureFailureMessage(_ error:Error) -> String {
         finishCapture(.failure(CaptureScriptFailure.cancelled))
         cancelScreenshotSelector()
     }
-    @discardableResult func processCaptured(_ image:CGImage,options:CaptureSaveSettings,pasteboard:NSPasteboard = .general) async -> Bool {
+    /// `recognizedText` is OCR text the user already reviewed in the selector; it is copied as is.
+    @discardableResult func processCaptured(_ image:CGImage,options:CaptureSaveSettings,recognizedText:String?=nil,pasteboard:NSPasteboard = .general) async -> Bool {
         await saving.run(image,settings:options,pin:{ [weak self] in guard let self else {throw CaptureFailure.captureFailed};try self.pinSession.open($0) },copyImage:{ data in
             pasteboard.clearContents();guard pasteboard.setData(data,forType:.png) else {throw CaptureFailure.exportFailed}
         },copyText:{ text in
             pasteboard.clearContents();guard pasteboard.setString(text,forType:.string) else {throw CaptureFailure.exportFailed}
-        })
+        },recognize:{ image in if let recognizedText {return recognizedText};return try await CaptureSaveModel.recognizeText(image) })
     }
     func importImage() {
         let panel = NSOpenPanel(); panel.allowedContentTypes = [.image]; panel.allowsMultipleSelection = true

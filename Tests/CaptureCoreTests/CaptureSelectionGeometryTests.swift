@@ -52,6 +52,33 @@ final class CaptureSelectionGeometryTests: XCTestCase {
         XCTAssertEqual(G.pixelSize(CGRect(x: 0, y: 0, width: 100.4, height: 50), scale: 2).width, 201)
     }
 
+    /// Tools on the first line, outputs on their own line ending at the right edge.
+    func testToolbarPutsOutputsOnTheirOwnRightAlignedLine() {
+        let layout = G.toolbarLayout([[CGSize(width: 50, height: 30), CGSize(width: 50, height: 30), CGSize(width: 50, height: 30)],
+                                      [CGSize(width: 60, height: 30), CGSize(width: 60, height: 30)]], maxWidth: 1000)
+        XCTAssertEqual(layout.size, CGSize(width: 170, height: 76))
+        XCTAssertEqual(layout.frames[0].map(\.origin), [CGPoint(x: 6, y: 6), CGPoint(x: 60, y: 6), CGPoint(x: 114, y: 6)])
+        XCTAssertEqual(layout.frames[1].map(\.origin), [CGPoint(x: 40, y: 40), CGPoint(x: 104, y: 40)])
+    }
+
+    func testToolbarWrapsInsteadOfRunningPastANarrowScreen() {
+        let layout = G.toolbarLayout([[CGSize(width: 50, height: 30), CGSize(width: 50, height: 30), CGSize(width: 50, height: 30)],
+                                      [CGSize(width: 60, height: 30), CGSize(width: 60, height: 30)]], maxWidth: 120)
+        XCTAssertLessThanOrEqual(layout.size.width, 120)
+        XCTAssertEqual(Set(layout.frames.flatMap { $0 }.map(\.minY)).count, 4, "two tool lines and two output lines")
+        for frame in layout.frames.flatMap({ $0 }) { XCTAssertLessThanOrEqual(frame.maxX, layout.size.width - 6) }
+    }
+
+    func testToolbarSitsBelowTheSelectionThenAboveThenInsideAndNeverOffScreen() {
+        let size = CGSize(width: 170, height: 76)
+        XCTAssertEqual(G.toolbarOrigin(size: size, selection: CGRect(x: 100, y: 100, width: 400, height: 300), bounds: bounds), CGPoint(x: 330, y: 408))
+        XCTAssertEqual(G.toolbarOrigin(size: size, selection: CGRect(x: 100, y: 450, width: 400, height: 140), bounds: bounds), CGPoint(x: 330, y: 366))
+        XCTAssertEqual(G.toolbarOrigin(size: size, selection: bounds, bounds: bounds), CGPoint(x: 826, y: 516))
+        XCTAssertEqual(G.toolbarOrigin(size: size, selection: CGRect(x: 0, y: 100, width: 100, height: 100), bounds: bounds).x, 4)
+        let short = CGRect(x: 0, y: 0, width: 300, height: 60)
+        XCTAssertEqual(G.toolbarOrigin(size: size, selection: short, bounds: short).y, 4, "a toolbar taller than the screen keeps its top on screen")
+    }
+
     func testHexIsZeroPaddedUppercase() {
         XCTAssertEqual(G.hex(red: 0, green: 10, blue: 255), "#000AFF")
     }

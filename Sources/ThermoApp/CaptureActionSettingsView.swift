@@ -73,8 +73,13 @@ private struct CaptureActionEntryEditor:View {
             }
             Text(tr("Global shortcuts need Command, Control, Option or a function key. Pin-window shortcuts can use ordinary keys.")).font(.caption).foregroundStyle(.secondary).fixedSize(horizontal:false,vertical:true)
             if entry.action == .script {
-                TextEditor(text:Binding(get:{entry.script ?? ""},set:{entry.script=$0})).font(.system(.body,design:.monospaced)).frame(height:180).border(Color.secondary.opacity(0.3))
-                Text(tr("Use thermo.perform('actionID'). Calls run in order. Scripts run only when invoked.")).font(.caption).foregroundStyle(.secondary)
+                // 脚本是低频高级配置，与截图保存设置的「高级」一致，默认收起。
+                DisclosureGroup(tr("Advanced")) {
+                    VStack(alignment:.leading,spacing:8) {
+                        TextEditor(text:Binding(get:{entry.script ?? ""},set:{entry.script=$0})).font(.system(.body,design:.monospaced)).frame(height:180).border(Color.secondary.opacity(0.3))
+                        Text(tr("Use thermo.perform('actionID'). Calls run in order. Scripts run only when invoked.")).font(.caption).foregroundStyle(.secondary)
+                    }
+                }
             }
             Button(tr("Run selected action")) { model.run(entry) }
             if model.scriptRunning {Button(tr("Cancel capture script")){model.cancelScript()}}
