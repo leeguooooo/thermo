@@ -19,6 +19,8 @@ let package = Package(
         .library(name: "DownloadKit", targets: ["DownloadKit"]),
         .library(name: "MediaToolsKit", targets: ["MediaToolsKit"]),
         .library(name: "VideoKit", targets: ["VideoKit"]),
+        .library(name: "ModuleKit", targets: ["ModuleKit"]),
+        .library(name: "ModuleHost", targets: ["ModuleHost"]),
         .executable(name: "thermo-capture-script", targets: ["CaptureScriptWorker"]),
     ],
     dependencies: [
@@ -59,6 +61,17 @@ let package = Package(
         .target(name: "MediaToolsKit", linkerSettings: [.linkedFramework("AVFoundation")]),
         // Video link parsing, ported from YunX. Runs as the user; never linked into the privileged helper.
         .target(name: "VideoKit", linkerSettings: [.linkedFramework("WebKit")]),
+        // The contract between the kernel and feature modules: manifest, capabilities, XPC protocols. No dependencies.
+        .target(name: "ModuleKit"),
+        // The kernel's module manager: finds the modules inside the app and runs their processes (ExtensionKit).
+        .target(name: "ModuleHost", dependencies: ["ModuleKit"], linkerSettings: [.linkedFramework("ExtensionKit"), .linkedFramework("ExtensionFoundation")]),
+        // Test-only module and host for scripts/module-harness.sh; neither is copied into Thermo.app.
+        .executableTarget(name: "ProbeModule", dependencies: ["ModuleKit"], exclude: ["module.json"],
+                          swiftSettings: [.unsafeFlags(["-application-extension"])],
+                          linkerSettings: [.unsafeFlags(["-Xlinker", "-e", "-Xlinker", "_NSExtensionMain"])]),
+        .executableTarget(name: "ModuleHarness", dependencies: ["ModuleHost", "ModuleKit"]),
+        // Build-time check of the modules packed into the app; run by scripts/build.sh, not shipped.
+        .executableTarget(name: "ModuleCheck", dependencies: ["ModuleKit"]),
         .executableTarget(name: "thermo", dependencies: ["CaptureScriptCore", "ThermoKit", "AgentCore", "AgentDoctor", "CleanKit", "ThermoL10n", "SearchCore"]),
         .executableTarget(name: "ThermoHelper", dependencies: ["ThermoKit"]),
         .executableTarget(
@@ -83,6 +96,7 @@ let package = Package(
         .testTarget(name: "DownloadKitTests", dependencies: ["DownloadKit"]),
         .testTarget(name: "MediaToolsKitTests", dependencies: ["MediaToolsKit"]),
         .testTarget(name: "VideoKitTests", dependencies: ["VideoKit"]),
+        .testTarget(name: "ModuleKitTests", dependencies: ["ModuleKit"]),
     ],
     swiftLanguageVersions: [.v5]
 )
