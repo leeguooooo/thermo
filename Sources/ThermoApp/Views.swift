@@ -1142,6 +1142,7 @@ struct SettingsView: View {
     @AppStorage(Settings.alertThreshold) private var alertThreshold = 90.0
     @AppStorage(Settings.fahrenheit) private var fahrenheit = false
     @AppStorage(L10n.defaultsKey) private var language = "system"
+    @ObservedObject private var modules = ModuleCenter.shared
 
     var body: some View {
         VStack(alignment: .leading, spacing: Theme.Space.xl) {
@@ -1155,6 +1156,7 @@ struct SettingsView: View {
                     if let issue = installation.issue { Text(issue).foregroundStyle(Theme.caution) }
                 }.padding().background(Theme.caution.opacity(0.1)).cornerRadius(Theme.radius)
             }
+            if !modules.statuses.isEmpty { section(tr("Features")) { ModuleSwitches(center: modules) } }
             // Features with their own panel: one group of rows, each opening its panel.
             section(tr("Tools")) {
                 Button { MenuBarManagerPanel.shared.show() } label: {

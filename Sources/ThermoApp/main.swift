@@ -42,6 +42,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate, UNU
         Settings.register()
         AppInstallationMonitor.shared.start()
         AppControlHost.shared.start()
+        ModuleCenter.shared.start()
         CleanScreenShortcutModel.enableLive()
         LocalSearchShortcut.shared.activate()
         CaptureWorkspace.shared.activate()
@@ -650,6 +651,7 @@ if let i = CommandLine.arguments.firstIndex(of: "--render-preview"), i + 1 < Com
         BatteryCareModel.shared.restoreSavedPreference()
     }
     installStandardMenus()
+    ModuleCenter.shared.start()
     let models = AppModels.shared
     func value(after flag: String) -> String? { args.firstIndex(of: flag).flatMap { $0 + 1 < args.count ? args[$0 + 1] : nil } }
     var page = value(after: "--page").flatMap(MainPage.init(argument:)) ?? .overview
@@ -707,6 +709,11 @@ if let i = CommandLine.arguments.firstIndex(of: "--render-preview"), i + 1 < Com
             : models.softwareUpdates.report != nil && !models.softwareUpdates.busy
         case .apps(.store): return models.appStore.loaded
         case .plugins: return models.plugins.loaded && !models.plugins.checkingUpdates
+        case let .module(id, _):
+            // Worth a picture once the module's process is up, or once it is known to be off.
+            guard ModuleCenter.shared.loaded else { return false }
+            let status = ModuleCenter.shared.manager.status(id)
+            return status?.enabled != true || (status?.phase == .running && Date().timeIntervalSince(started) > 3)
         case .compute: return ComputeModel.shared.current?.cpu != nil && Date().timeIntervalSince(started) > 4
         case .connections: return ConnectionsModel.shared.bluetooth != nil || ConnectionsModel.shared.bluetoothFailed
         case .memory: return MemoryModel.shared.breakdown != nil && Date().timeIntervalSince(started) > 4
