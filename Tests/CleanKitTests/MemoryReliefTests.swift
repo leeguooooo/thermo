@@ -32,7 +32,7 @@ final class MemoryReliefTests: XCTestCase {
         XCTAssertEqual(targets, [first])
         let sampled = SlowdownSampler().sample().filter { $0.pid == first.pid }
         XCTAssertEqual(sampled.count, 1)
-        let outcome = MemoryRelief.end(targets, skipped: 1, live: sampled)
+        let outcome = MemoryRelief.end(targets, skipped: 1, live: sampled, journalHome: directory.path)
         XCTAssertEqual(outcome.ended, 1)
         XCTAssertEqual(outcome.skipped, 1)
         XCTAssertTrue(changed.isRunning)

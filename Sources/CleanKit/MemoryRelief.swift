@@ -80,7 +80,7 @@ public enum MemoryRelief {
     }
 
     /// Ends `targets` side by side (each waits up to 5 s for SIGTERM), then writes one journal record.
-    public static func end(_ targets: [ProcessIdentity], skipped: Int, live: [SlowdownProcess]) -> Outcome {
+    public static func end(_ targets: [ProcessIdentity], skipped: Int, live: [SlowdownProcess], journalHome: String = NSHomeDirectory()) -> Outcome {
         let before = SlowdownSystem.read().swapUsed
         let byPID = Dictionary(live.map { ($0.pid, $0) }, uniquingKeysWith: { a, _ in a })
         let lock = NSLock()
@@ -97,7 +97,7 @@ public enum MemoryRelief {
             OperationJournal.record(OperationRecord(feature: "memory", action: "relief", subject: nil, items: done.map { r in
                 .init(target: "\(r.name) · PID \(r.pid)", bytes: Int64(r.freedKB) * 1024,
                       status: r.outcome == .stopped || r.outcome == .killed ? "done" : "failed", detail: r.outcome.rawValue)
-            }))
+            }), home: journalHome)
         }
         return Outcome(results: done, skipped: skipped, swapBefore: before, swapAfter: SlowdownSystem.read().swapUsed)
     }
