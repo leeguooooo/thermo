@@ -675,6 +675,9 @@ if let i = CommandLine.arguments.firstIndex(of: "--render-preview"), i + 1 < Com
     if page == .checkup, let i = args.firstIndex(of: "--fixture"), i + 1 < args.count {
         CheckupModel.shared.loadFixture(answer: args[i + 1])
     }
+    if page == .memory, let i = args.firstIndex(of: "--fixture"), i + 1 < args.count {
+        MemoryReliefAdvice.shared.loadFixture(answer: args[i + 1])
+    }
     MainWindow.show(page)
     // `--height N`: a taller window, so a snapshot can show what sits below the fold.
     if let h = value(after: "--height").flatMap(Double.init), let w = MainWindow.window {

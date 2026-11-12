@@ -99,6 +99,17 @@ final class PulseRecorder: ObservableObject {
     /// A fresh answer now, e.g. after ending a culprit.
     func diagnoseNow() { queue.async { self.diagnose() } }
 
+    /// A fresh answer handed to `then` on the recorder's queue, with the processes it was made from.
+    /// It reuses the long-lived sampler, so busy streaks and idle times are judged as on every tick.
+    func diagnoseFresh(then: @escaping (SlowdownDiagnosis, [SlowdownProcess]) -> Void) {
+        queue.async {
+            let processes = self.slowdown.sample()
+            let found = SlowdownDiagnosis.diagnose(processes, system: .read())
+            DispatchQueue.main.async { self.diagnosis = found }
+            then(found, processes)
+        }
+    }
+
     private func notify(_ a: SlowdownAlerts.Alert) {
         // UserNotifications throws outside an app bundle (bare dev builds).
         guard Bundle.main.bundleIdentifier != nil else { return }
