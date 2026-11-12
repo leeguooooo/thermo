@@ -40,6 +40,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate, UNU
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         Settings.register()
+        AppInstallationMonitor.shared.start()
         AppControlHost.shared.start()
         CleanScreenShortcutModel.enableLive()
         LocalSearchShortcut.shared.activate()
@@ -551,6 +552,8 @@ private final class PageMenuTarget: NSObject, NSMenuItemValidation {
 }
 
 L10n.apply(preference: UserDefaults.standard.string(forKey: L10n.defaultsKey))
+// Freeze launch metadata before an updater can replace the bundle on disk.
+_ = AppInfo.buildMetadata
 let app = NSApplication.shared
 // `--dump-status-menu`: print the menu bar item's menu (titles, separators, submenus) and quit,
 // so its grouping and wording can be reviewed without opening it on screen.

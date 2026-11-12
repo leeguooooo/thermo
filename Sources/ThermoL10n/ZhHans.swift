@@ -4464,4 +4464,9 @@ let zhHans: [String: String] = [
     "Your call": "由你决定",
     "Nothing was ended: none of the processes still qualified when checked again.": "没有结束任何进程：再查时它们都不符合条件了。",
     "%1$@ were left alone: they no longer qualified when checked again.": "另有 %1$@ 个没动：再查时已不符合条件。",
+    "AI advice: %1$@": "AI 建议：%1$@",
+    "AI advice differs from Thermo’s checks. Review the impact before acting; AI never changes which processes the button can end.": "AI 建议与 Thermo 的检查结论不同。操作前请核对影响；AI 不会改变按钮能结束哪些进程。",
+    "An update is installed. Restart Thermo to use it.": "更新已安装，重启 Thermo 后生效。",
+    "Running Thermo %1$@. Saving and recording protections still apply when restarting.": "当前运行 Thermo %1$@。重启时仍会检查保存和录制状态。",
+    "Restart Thermo": "重启 Thermo",
 ]

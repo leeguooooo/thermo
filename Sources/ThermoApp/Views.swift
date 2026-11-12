@@ -1123,6 +1123,7 @@ struct FanLoadIndicator: View {
 // MARK: - Settings
 
 struct SettingsView: View {
+    @ObservedObject private var installation = AppInstallationMonitor.shared
     @ObservedObject var disk: DiskModel
     @ObservedObject var monitor: Monitor
     @AppStorage(Settings.showInDock) private var showInDock = true
@@ -1144,6 +1145,16 @@ struct SettingsView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: Theme.Space.xl) {
+            if installation.needsRestart {
+                VStack(alignment: .leading, spacing: 8) {
+                    Text(tr("An update is installed. Restart Thermo to use it.")).font(Theme.heading)
+                    Text(tr("Running Thermo %1$@. Saving and recording protections still apply when restarting.", AppInfo.version))
+                        .font(Theme.secondary).foregroundStyle(Theme.textSecondary)
+                    Button(tr("Restart Thermo")) { installation.restart() }
+                        .buttonStyle(PillButtonStyle(prominent: true)).disabled(installation.restarting)
+                    if let issue = installation.issue { Text(issue).foregroundStyle(Theme.caution) }
+                }.padding().background(Theme.caution.opacity(0.1)).cornerRadius(Theme.radius)
+            }
             // Features with their own panel: one group of rows, each opening its panel.
             section(tr("Tools")) {
                 Button { MenuBarManagerPanel.shared.show() } label: {

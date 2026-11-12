@@ -58,7 +58,7 @@ thermo search settings
 ## 构建
 
 ```sh
-make            # = scripts/build.sh：release 构建 + 打包 dist/Thermo.app + ad-hoc 签名
+make            # = scripts/build.sh：release 构建 + 打包 dist.noindex/Thermo.app + ad-hoc 签名
 make test       # 单元测试（含一个真机 SMC 测试，无 SMC 时自动跳过）
 make install    # CLI 装到 /usr/local/bin，App 拷到 /Applications
 ```
@@ -80,9 +80,9 @@ make release
 # 等价于：
 SIGN_ID="Developer ID Application: LI GUO (6ZPXG4KVVS)" NOTARY_PROFILE=thermo \
 NOTARY_KEYCHAIN=$HOME/Library/Keychains/login.keychain-db scripts/build.sh
-# 产物：dist/Thermo.app（已 staple）、dist/Thermo-<ver>.dmg、dist/Thermo-<ver>.zip
-# CLI：dist/thermo-cli-macos-universal.tar.gz 及 .sha256
-# 公开校验清单：dist/Thermo-<ver>-SHA256SUMS.txt
+# 产物：dist.noindex/Thermo.app（已 staple）、dist.noindex/Thermo-<ver>.dmg、dist.noindex/Thermo-<ver>.zip
+# CLI：dist.noindex/thermo-cli-macos-universal.tar.gz 及 .sha256
+# 公开校验清单：dist.noindex/Thermo-<ver>-SHA256SUMS.txt
 # 通用二进制：再加 ARCHS="arm64 x86_64"
 ```
 

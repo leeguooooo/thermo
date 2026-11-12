@@ -2,7 +2,7 @@
 # Builds release binaries, assembles and signs Thermo.app, and optionally notarizes,
 # packages a DMG and updates the Sparkle appcast.
 #
-#   scripts/build.sh                       ad-hoc signed  -> dist/
+#   scripts/build.sh                       ad-hoc signed  -> dist.noindex/
 #   SIGN_ID="Developer ID Application: Name (TEAMID)" scripts/build.sh
 #                                          Developer ID signed (helper then only trusts this team)
 #   SIGN_ID=… NOTARY_PROFILE=thermo [NOTARY_KEYCHAIN=…] scripts/build.sh
@@ -39,7 +39,7 @@ read -r SOURCE_COMMIT SOURCE_STATE BUILD <<EOF
 $SOURCE_INFO
 EOF
 VERSION="$(sed -n 's/.*static let string = "\(.*\)"/\1/p' Sources/ThermoKit/Version.swift)"
-DIST="${THERMO_DIST_DIR:-dist}"
+DIST="${THERMO_DIST_DIR:-dist.noindex}"
 RELEASES=releases
 SPARKLE_BIN=.build/artifacts/sparkle/Sparkle/bin
 

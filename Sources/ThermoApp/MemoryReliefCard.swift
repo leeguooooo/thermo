@@ -219,10 +219,14 @@ struct MemoryReliefCard: View {
                 if let f = advice.finding(for: step), !f.impact.isEmpty {
                     let (verdict, tone) = CheckupPage.safety(f.safety)
                     HStack(alignment: .firstTextBaseline, spacing: Theme.Space.s) {
-                        Label(verdict, systemImage: "sparkles").font(Theme.label).foregroundStyle(tone)
+                        Label(tr("AI advice: %1$@", verdict), systemImage: "sparkles").font(Theme.label).foregroundStyle(tone)
                             .padding(.horizontal, 6).padding(.vertical, 2).background(Capsule().fill(tone.opacity(0.15))).fixedSize()
                         Text(f.impact).font(Theme.secondary).foregroundStyle(Theme.textPrimary).textSelection(.enabled)
                             .fixedSize(horizontal: false, vertical: true)
+                    }
+                    if (step.tier == .safe && f.safety != .safe) || (step.tier != .safe && f.safety == .safe) {
+                        Text(tr("AI advice differs from Thermo’s checks. Review the impact before acting; AI never changes which processes the button can end."))
+                            .font(Theme.caption).foregroundStyle(Theme.caution).fixedSize(horizontal: false, vertical: true)
                     }
                 }
                 DisclosureGroup {

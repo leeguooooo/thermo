@@ -4,6 +4,44 @@ import XCTest
 @testable import CleanKit
 
 final class MemoryReliefTests: XCTestCase {
+    func testRealDisposableProcessesAreRecheckedBeforeEnding() throws {
+        let directory = FileManager.default.temporaryDirectory.appendingPathComponent("com.example.thermo-relief-" + UUID().uuidString)
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let binary = directory.appendingPathComponent("worker")
+        try FileManager.default.copyItem(at: URL(fileURLWithPath: "/bin/sleep"), to: binary)
+        func start() throws -> Process {
+            let process = Process(); process.executableURL = binary; process.arguments = ["60"]
+            try process.run(); return process
+        }
+        let selected = try start(), changed = try start()
+        defer {
+            for process in [selected, changed] {
+                if process.isRunning { process.terminate() }
+                process.waitUntilExit()
+            }
+        }
+        let first = try XCTUnwrap(ProcessTable.identity(selected.processIdentifier))
+        let second = try XCTUnwrap(ProcessTable.identity(changed.processIdentifier))
+        let fresh = diagnosis([culprit("test worker", kind: .orphan, action: .end, pids: [first.pid], identities: [first])])
+        let targets = MemoryRelief.targets(confirmed: [first, second], fresh: fresh)
+        XCTAssertEqual(targets, [first])
+        let sampled = SlowdownSampler().sample().filter { $0.pid == first.pid }
+        XCTAssertEqual(sampled.count, 1)
+        let outcome = MemoryRelief.end(targets, skipped: 1, live: sampled)
+        XCTAssertEqual(outcome.ended, 1)
+        XCTAssertEqual(outcome.skipped, 1)
+        XCTAssertTrue(changed.isRunning)
+        XCTAssertNil(ProcessTable.identity(first.pid))
+    }
+
+    func testSystemAgentAndThermoAreNeverEndable() {
+        XCTAssertFalse(SlowdownFix.endable(.init(pid: getpid(), ppid: 1, name: "Thermo")))
+        XCTAssertFalse(SlowdownFix.endable(.init(pid: 12345, ppid: 1, uid: 0, name: "launchd", executable: "/sbin/launchd")))
+        XCTAssertFalse(SlowdownFix.endable(.init(pid: 12345, ppid: 1, name: "claude", executable: "/tmp/claude", argv: ["claude"])))
+        XCTAssertFalse(SlowdownFix.endable(.init(pid: 12345, ppid: 1, name: "codex", executable: "/tmp/codex", argv: ["codex"])))
+    }
+
     func identity(_ pid: Int32, started: TimeInterval = 1_000) -> ProcessIdentity {
         ProcessIdentity(pid: pid, uid: 501, started: Date(timeIntervalSince1970: started), executable: "/opt/homebrew/bin/node")
     }

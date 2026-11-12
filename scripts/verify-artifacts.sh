@@ -1,7 +1,7 @@
 #!/bin/sh
 # Read-only validation of a packaged app, CLI and helper. Optional second argument: required architectures.
 set -eu
-DIST="${1:-dist}"
+DIST="${1:-dist.noindex}"
 ARCHS="${2:-}"
 APP="$DIST/Thermo.app"
 MINIMUM="$(/usr/libexec/PlistBuddy -c 'Print :LSMinimumSystemVersion' "$APP/Contents/Info.plist")"

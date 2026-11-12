@@ -1,4 +1,5 @@
 import Foundation
+import ThermoKit
 import AgentCore
 import Sparkle
 
@@ -42,7 +43,7 @@ final class Updates: NSObject, ObservableObject, SPUStandardUserDriverDelegate {
 }
 
 enum AppInfo {
-    static var buildMetadata: AppBuildMetadata { AppBuildMetadata(info: Bundle.main.infoDictionary ?? [:]) }
+    static let buildMetadata = AppBuildMetadata(info: Bundle.main.infoDictionary ?? [:])
     static var workingTreeLabel: String {
         switch buildMetadata.workingTree {
         case .clean: return "Working tree clean"
@@ -51,8 +52,8 @@ enum AppInfo {
         }
     }
     static var version: String {
-        let v = Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "dev"
-        let b = Bundle.main.object(forInfoDictionaryKey: "CFBundleVersion") as? String
-        return b.map { "\(v) (\($0))" } ?? v
+        // The bundle on disk can already belong to the next release; the compiled constant cannot.
+        let v = ThermoVersion.string
+        return buildMetadata.version == v ? buildMetadata.build.map { "\(v) (\($0))" } ?? v : v
     }
 }
