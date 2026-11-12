@@ -77,8 +77,8 @@ security find-generic-password -s https://sparkle-project.org -a dev.thermo -w |
 
 ```sh
 THERMO_DIST_DIR=/tmp/thermo-verification-dist.noindex SIGN_ID=- NOTARY_PROFILE= APPCAST_URL= scripts/build.sh
-codesign --verify --deep --strict /tmp/thermo-verification-dist.noindex.noindex/Thermo.app
-/tmp/thermo-verification-dist.noindex.noindex/thermo --version
+codesign --verify --deep --strict /tmp/thermo-verification-dist.noindex/Thermo.app
+/tmp/thermo-verification-dist.noindex/thermo --version
 ```
 
 这是 ad-hoc 签名的本地验证包，没有公证、在线更新或发布步骤。生产 helper 的签名认证和跨机型验收仍需用正式构建验证。

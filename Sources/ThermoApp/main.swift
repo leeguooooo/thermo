@@ -554,6 +554,7 @@ private final class PageMenuTarget: NSObject, NSMenuItemValidation {
 L10n.apply(preference: UserDefaults.standard.string(forKey: L10n.defaultsKey))
 // Freeze launch metadata before an updater can replace the bundle on disk.
 _ = AppInfo.buildMetadata
+MainActor.assumeIsolated { _ = AppInstallationMonitor.shared }
 let app = NSApplication.shared
 // `--dump-status-menu`: print the menu bar item's menu (titles, separators, submenus) and quit,
 // so its grouping and wording can be reviewed without opening it on screen.
