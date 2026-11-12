@@ -24,6 +24,19 @@ func uptime() -> Double { ProcessInfo.processInfo.systemUptime }
 @MainActor func scenario(_ window: NSWindow) async {
     let timing = ModuleLifecycle.Timing(idleTimeout: 2, firstBackoff: 0.5, longestBackoff: 4, stableRun: 60)
     let manager = ModuleManager(timing: timing)
+    // The kernel side of the probe's requests: real file services, a yes to every confirmation, a throwaway log.
+    let scratch = "/private/tmp/thermo-probe"
+    try? FileManager.default.removeItem(atPath: scratch)
+    try? FileManager.default.createDirectory(atPath: scratch + "/logs", withIntermediateDirectories: true)
+    FileManager.default.createFile(atPath: scratch + "/note.txt", contents: Data("hello".utf8))
+    let outside = NSHomeDirectory() + "/.thermo-probe-outside.txt"
+    FileManager.default.createFile(atPath: outside, contents: Data("private".utf8))
+    let log = ModuleAccessLog(home: scratch + "/logs")
+    manager.kernel = { manifest in
+        BrokerKernel(broker: CapabilityBroker(manifest: manifest, log: log,
+                                              handlers: [.filesRead: KernelServices.filesRead, .filesDelete: KernelServices.filesDelete],
+                                              confirm: { _ in true }))
+    }
     await manager.load { _ in false }
     note("problems: \(manager.problems); registrations: \(manager.registrations.sorted { $0.key < $1.key })")
     check(manager.modules.map(\.manifest.id) == [a, b], "finds the two modules inside this app: \(manager.modules.map(\.manifest.id))")
@@ -50,6 +63,28 @@ func uptime() -> Double { ProcessInfo.processInfo.systemUptime }
     let first = await ping(a)
     check(first != nil && first == pid(a), "first use starts the on-demand module (\(String(format: "%.0f ms", (uptime() - t0) * 1000)), pid \(first ?? 0))")
     let bPID = pid(b)
+
+    // Reaching the Mac only through the kernel.
+    func call(_ command: String, _ arguments: [String: Any]) async -> [String: Any] {
+        guard let data = try? await manager.run(a, command: command, arguments: JSONSerialization.data(withJSONObject: arguments)) else { return [:] }
+        return (try? JSONSerialization.jsonObject(with: data) as? [String: Any]) ?? [:]
+    }
+    let peek = await call("peek", ["path": scratch + "/note.txt"])
+    check(peek["readable"] as? Bool == false, "the sandboxed module cannot read the file by itself")
+    let read = await call("ask", ["capability": "files.read:" + scratch + "/note.txt", "payload": ["op": "read"]])
+    check(((read["answer"] as? [String: Any])?["base64"] as? String).flatMap { Data(base64Encoded: $0) } == Data("hello".utf8), "it reads the file through the kernel, as its manifest allows")
+    let stray = await call("ask", ["capability": "files.read:" + outside, "payload": ["op": "read"]])
+    check((stray["problem"] as? String)?.hasPrefix("denied") == true && stray["answer"] == nil, "a file its manifest does not cover is refused: \(stray["problem"] ?? "")")
+    let end = await call("ask", ["capability": "processes.end", "payload": [:]])
+    check((end["problem"] as? String)?.hasPrefix("denied") == true, "a capability it did not declare is refused")
+    let trash = await call("ask", ["capability": "files.delete:" + scratch + "/note.txt", "payload": ["op": "trash"]])
+    let trashed = ((trash["answer"] as? [String: Any])?["results"] as? [[String: Any]])?.first
+    check(trashed?["status"] as? String == "done" && !FileManager.default.fileExists(atPath: scratch + "/note.txt"), "a confirmed delete moves the file to the Trash")
+    if let path = trashed?["trashed"] as? String { try? FileManager.default.removeItem(atPath: path) }
+    let summary = log.summary(module: a)
+    check(summary.read == [scratch + "/note.txt"] && summary.deleted == [scratch + "/note.txt"] && summary.denied == 2,
+          "the access log shows what it read and deleted and that two requests were denied")
+    try? FileManager.default.removeItem(atPath: outside)
 
     // Memory and energy.
     if let before = manager.usage(a) {
@@ -130,6 +165,7 @@ func uptime() -> Double { ProcessInfo.processInfo.systemUptime }
     await sleep(5)
     check(manager.modules.allSatisfy { $0.pid == nil && $0.phase == .stopped }, "switched off: stays off")
 
+    try? FileManager.default.removeItem(atPath: scratch)
     print(failures == 0 ? "PASS" : "FAILED \(failures)")
     exit(failures == 0 ? 0 : 1)
 }

@@ -97,6 +97,7 @@ let package = Package(
         .testTarget(name: "MediaToolsKitTests", dependencies: ["MediaToolsKit"]),
         .testTarget(name: "VideoKitTests", dependencies: ["VideoKit"]),
         .testTarget(name: "ModuleKitTests", dependencies: ["ModuleKit"]),
+        .testTarget(name: "ModuleHostTests", dependencies: ["ModuleHost", "ModuleKit"]),
     ],
     swiftLanguageVersions: [.v5]
 )
