@@ -35,6 +35,7 @@ import ThermoL10n
         guard !started else { return }
         started = true
         manager.onChange = { [weak self] _ in self?.refresh() }
+        manager.kernel = { ModuleKernel.make(for: $0) }
         Task { @MainActor in
             let defaults = self.defaults
             await manager.load { defaults.object(forKey: Self.key($0.id)) as? Bool ?? $0.enabledByDefault }
@@ -117,6 +118,7 @@ private struct ModuleSceneView: NSViewControllerRepresentable {
 /// Settings: one switch per module inside the app. Not shown when there are none.
 struct ModuleSwitches: View {
     @ObservedObject var center: ModuleCenter
+    @State private var activity: ModuleManifest?
     var body: some View {
         ForEach(Array(center.statuses.enumerated()), id: \.element.manifest.id) { index, status in
             if index > 0 { InspectorDivider(inset: 46) }
@@ -129,9 +131,18 @@ struct ModuleSwitches: View {
                     }
                 }
                 Spacer()
+                Button(tr("Activity")) { activity = status.manifest }.buttonStyle(PillButtonStyle()).controlSize(.small).fixedSize()
                 Toggle("", isOn: Binding(get: { status.enabled }, set: { center.setEnabled(status.manifest.id, $0) }))
                     .labelsHidden().toggleStyle(.switch).accessibilityLabel(status.manifest.name)
             }.padding(.horizontal, Theme.Space.m).padding(.vertical, 8)
         }
+        .sheet(item: Binding(get: { activity.map(ActivityTarget.init) }, set: { activity = $0?.manifest })) { target in
+            ModuleActivityView(manifest: target.manifest) { activity = nil }
+        }
     }
+}
+
+private struct ActivityTarget: Identifiable {
+    let manifest: ModuleManifest
+    var id: String { manifest.id }
 }
