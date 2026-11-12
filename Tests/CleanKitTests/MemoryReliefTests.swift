@@ -10,6 +10,10 @@ final class MemoryReliefTests: XCTestCase {
         defer { try? FileManager.default.removeItem(at: directory) }
         let binary = directory.appendingPathComponent("worker")
         try FileManager.default.copyItem(at: URL(fileURLWithPath: "/bin/sleep"), to: binary)
+        let signer = Process(); signer.executableURL = URL(fileURLWithPath: "/usr/bin/codesign")
+        signer.arguments = ["--force", "--sign", "-", binary.path]
+        try signer.run(); signer.waitUntilExit()
+        XCTAssertEqual(signer.terminationStatus, 0)
         func start() throws -> Process {
             let process = Process(); process.executableURL = binary; process.arguments = ["60"]
             try process.run(); return process
