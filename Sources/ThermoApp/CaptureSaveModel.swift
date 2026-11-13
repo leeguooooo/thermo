@@ -57,7 +57,7 @@ import ThermoL10n
     nonisolated static func recognizeText(_ image:CGImage) async throws -> String {
         try await Task.detached(priority:.userInitiated) { let result=try CaptureRecognition.recognize(image);return ([result.text]+result.codes).filter{!$0.isEmpty}.joined(separator:"\n") }.value
     }
-    func quickSave(_ document:CaptureDocument) throws -> URL {
-        let value=try snapshot(),url=try CaptureImageSave.save(document,to:value.quick,quality:value.quality);saved=[url];return url
+    func quickSave(_ document:CaptureDocument,settings:CaptureSaveSettings?=nil) throws -> URL {
+        let value=try settings ?? snapshot(),url=try CaptureImageSave.save(document,to:value.quick,quality:value.quality);saved=[url];return url
     }
 }

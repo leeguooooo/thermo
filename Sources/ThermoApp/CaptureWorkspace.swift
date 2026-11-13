@@ -152,7 +152,7 @@ func captureFailureMessage(_ error:Error) -> String {
     private func saveSelection(_ image:CGImage,options:CaptureSaveSettings) -> CaptureScreenshotSelector.SaveResult {
         let document=CaptureDocument(image:image)
         do {
-            if !options.quick.directory.isEmpty {_=try saving.quickSave(document);return .saved(copyAfterSave:false)}
+            if !options.quick.directory.isEmpty {_=try saving.quickSave(document,settings:options);return .saved(copyAfterSave:false)}
             let panel=NSSavePanel(),manual=CaptureManualImageSave()
             manual.configure(panel,name:"Thermo-"+ISO8601DateFormatter().string(from:Date()).replacingOccurrences(of:":",with:"-"))
             guard panel.runModal() == .OK,let url=panel.url else {return .cancelled}

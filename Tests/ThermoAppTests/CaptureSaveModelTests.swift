@@ -13,6 +13,19 @@ import XCTest
         fail=false;XCTAssertTrue(model.apply(next));XCTAssertEqual(try CaptureSaveSettings.decode(saved),next)
         let invalid=CaptureSaveModel(read:{Data("invalid".utf8)},write:{_ in});XCTAssertTrue(invalid.invalidStoredSettings);XCTAssertThrowsError(try invalid.snapshot());XCTAssertTrue(invalid.apply(.init()));XCTAssertNoThrow(try invalid.snapshot())
     }
+    func testSelectorQuickSaveKeepsTheCaptureSettingsSnapshot() throws {
+        let root=FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        try FileManager.default.createDirectory(at:root,withIntermediateDirectories:true)
+        defer {try? FileManager.default.removeItem(at:root)}
+        let model=CaptureSaveModel(read:{nil},write:{_ in})
+        var captured=CaptureSaveSettings();captured.quick.directory=root.path;captured.quick.template="captured"
+        var changed=captured;changed.quick.template="changed"
+        XCTAssertTrue(model.apply(changed))
+        let file=try model.quickSave(CaptureDocument(image:image()),settings:captured)
+        XCTAssertEqual(file.lastPathComponent,"captured.png")
+        XCTAssertTrue(FileManager.default.fileExists(atPath:file.path))
+        XCTAssertEqual(model.settings.quick.template,"changed")
+    }
     func testOrderedChainUsesSameImageAndPreservesBothSaves() async throws {
         let model=CaptureSaveModel(read:{nil},write:{_ in}),image=image();var events:[String]=[]
         var options=CaptureSaveSettings();options.after=[.copyImage,.copyText,.quickSave,.pin];options.autoSave=true;options.quick.directory="/tmp/quick";options.automatic.directory="/tmp/auto"
