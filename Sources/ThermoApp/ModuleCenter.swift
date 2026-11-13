@@ -53,7 +53,8 @@ import ThermoL10n
     /// The sidebar's module rows: page entries of the modules that are on, in bundle order.
     var pages: [Page] {
         statuses.filter(\.enabled).flatMap { status in
-            status.manifest.entries.filter { $0.kind == .page }.map { Page(module: status.manifest, entry: $0) }
+            let shown = status.manifest.localized(L10n.current.rawValue)
+            return shown.entries.filter { $0.kind == .page }.map { Page(module: shown, entry: $0) }
         }
     }
 
@@ -125,13 +126,13 @@ struct ModuleSwitches: View {
             HStack(spacing: Theme.Space.m) {
                 Image(systemName: status.manifest.symbol).frame(width: 22).foregroundStyle(Theme.textSecondary)
                 VStack(alignment: .leading, spacing: 2) {
-                    Text(status.manifest.name).font(Theme.body)
+                    Text(status.manifest.localized(L10n.current.rawValue).name).font(Theme.body)
                     if !status.manifest.summary.isEmpty {
-                        Text(status.manifest.summary).font(Theme.secondary).foregroundStyle(Theme.textSecondary)
+                        Text(status.manifest.localized(L10n.current.rawValue).summary).font(Theme.secondary).foregroundStyle(Theme.textSecondary)
                     }
                 }
                 Spacer()
-                Button(tr("Activity")) { activity = status.manifest }.buttonStyle(PillButtonStyle()).controlSize(.small).fixedSize()
+                Button(tr("Activity")) { activity = status.manifest.localized(L10n.current.rawValue) }.buttonStyle(PillButtonStyle()).controlSize(.small).fixedSize()
                 Toggle("", isOn: Binding(get: { status.enabled }, set: { center.setEnabled(status.manifest.id, $0) }))
                     .labelsHidden().toggleStyle(.switch).accessibilityLabel(status.manifest.name)
             }.padding(.horizontal, Theme.Space.m).padding(.vertical, 8)

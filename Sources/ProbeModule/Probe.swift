@@ -1,73 +1,48 @@
 import ExtensionFoundation
 import ExtensionKit
 import ModuleKit
+import ModuleSDK
 import SwiftUI
 
 // A module that exists only to exercise the kernel's module manager. Never shipped in Thermo.app.
-
-final class ProbeService: NSObject, ModuleXPC {
-    weak var connection: NSXPCConnection?
-    func interface(reply: @escaping @Sendable (Int) -> Void) { reply(ModuleManifest.currentInterface) }
-    func run(_ command: String, arguments: Data, reply: @escaping @Sendable (Data?, String?) -> Void) {
-        let input = (try? JSONSerialization.jsonObject(with: arguments)) as? [String: Any] ?? [:]
-        switch command {
-        case "ping":
-            reply(try? JSONSerialization.data(withJSONObject: ["pid": getpid(), "home": NSHomeDirectory()]), nil)
-        case "burn":
-            let until = Date().addingTimeInterval(Double(input["ms"] as? Int ?? 200) / 1000)
-            var x = 0.0
-            while Date() < until { for i in 0..<10_000 { x += sin(Double(i)) } }
-            reply(try? JSONSerialization.data(withJSONObject: ["x": x]), nil)
-        case "exit":
-            exit(3)
-        case "peek":
-            // What the module can read by itself, without the kernel.
-            let path = input["path"] as? String ?? ""
-            reply(try? JSONSerialization.data(withJSONObject: ["readable": FileManager.default.contents(atPath: path) != nil]), nil)
-        case "poke":
-            // Whether the module can list a folder and create a file in it by itself.
-            let path = input["path"] as? String ?? ""
-            let listed = (try? FileManager.default.contentsOfDirectory(atPath: path))?.count
-            let file = path + "/.thermo-probe-write"
-            let wrote = FileManager.default.createFile(atPath: file, contents: Data("x".utf8))
-            if wrote { try? FileManager.default.removeItem(atPath: file) }
-            reply(try? JSONSerialization.data(withJSONObject: ["listed": listed ?? -1, "writable": wrote]), nil)
-        case "ask":
-            // Passes a request on to the kernel and answers with what the kernel said.
-            guard let kernel = connection?.remoteObjectProxyWithErrorHandler({ reply(nil, "\($0)") }) as? KernelXPC else { reply(nil, "no kernel"); return }
-            let payload = (try? JSONSerialization.data(withJSONObject: input["payload"] ?? [:])) ?? Data()
-            kernel.request(input["capability"] as? String ?? "", payload: payload) { data, problem in
-                var answer: [String: Any] = [:]
-                if let data, let object = try? JSONSerialization.jsonObject(with: data) { answer["answer"] = object }
-                if let problem { answer["problem"] = problem }
-                reply(try? JSONSerialization.data(withJSONObject: answer), nil)
-            }
-        default:
-            reply(nil, "unknown command \(command)")
-        }
-    }
-}
-
-func accept(_ connection: NSXPCConnection) -> Bool {
-    connection.exportedInterface = ModuleXPCInterfaces.module
-    let service = ProbeService(); service.connection = connection
-    connection.exportedObject = service
-    connection.remoteObjectInterface = ModuleXPCInterfaces.kernel
-    connection.resume()
-    return true
-}
-
-struct ProbeConfiguration: AppExtensionConfiguration {
-    func accept(connection: NSXPCConnection) -> Bool { ProbeModule.accept(connection) }
-}
 
 struct ProbeView: View {
     var body: some View { Text("probe \(String(getpid()))").padding().frame(maxWidth: .infinity, maxHeight: .infinity) }
 }
 
 @main struct Probe: AppExtension {
+    init() {
+        let runtime = ModuleRuntime.shared
+        runtime.command("ping") { _, _ in ["pid": Int(getpid()), "home": NSHomeDirectory()] }
+        runtime.command("burn") { input, _ in
+            let until = Date().addingTimeInterval(Double(input["ms"] as? Int ?? 200) / 1000)
+            var x = 0.0
+            while Date() < until { for i in 0..<10_000 { x += sin(Double(i)) } }
+            return ["x": x]
+        }
+        runtime.command("exit") { _, _ in exit(3) }
+        // What the module can read by itself, without the kernel.
+        runtime.command("peek") { input, _ in
+            ["readable": FileManager.default.contents(atPath: input["path"] as? String ?? "") != nil]
+        }
+        // Whether the module can list a folder and create a file in it by itself.
+        runtime.command("poke") { input, _ in
+            let path = input["path"] as? String ?? ""
+            let listed = (try? FileManager.default.contentsOfDirectory(atPath: path))?.count
+            let file = path + "/.thermo-probe-write"
+            let wrote = FileManager.default.createFile(atPath: file, contents: Data("x".utf8))
+            if wrote { try? FileManager.default.removeItem(atPath: file) }
+            return ["listed": listed ?? -1, "writable": wrote]
+        }
+        // Passes a request on to the kernel and answers with what the kernel said.
+        runtime.command("ask") { input, kernel in
+            do {
+                return ["answer": try await kernel.request(input["capability"] as? String ?? "", input["payload"] as? [String: Any] ?? [:])]
+            } catch { return ["problem": "\(error)"] }
+        }
+    }
+
     var configuration: AppExtensionSceneConfiguration {
-        AppExtensionSceneConfiguration(PrimitiveAppExtensionScene(id: "main") { ProbeView() } onConnection: { ProbeModule.accept($0) },
-                                       configuration: ProbeConfiguration())
+        AppExtensionSceneConfiguration(moduleScene("main") { ProbeView() }, configuration: ModuleConfiguration())
     }
 }

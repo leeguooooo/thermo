@@ -2,6 +2,30 @@ import XCTest
 @testable import ModuleKit
 
 final class ModuleManifestTests: XCTestCase {
+    func testTextsFollowTheLanguageAndMisspeltKeysAreRefused() throws {
+        var m = ModuleManifest(id: "dev.thermo.disk", name: "Disk Cleanup", summary: "Frees space.", symbol: "internaldrive", version: "1.0.0",
+                               entries: [.init(id: "home", kind: .page, title: "Smart Scan", scene: "home")],
+                               commands: [.init(id: "scan", title: "Scan", summary: "Looks for what can go.",
+                                                parameters: [.init(name: "all", kind: .boolean, summary: "Every category.")])],
+                               localizations: ["zh-Hans": ["name": "磁盘清理", "entry.home.title": "智能扫描", "command.scan.summary": "找出可以清掉的东西。",
+                                                           "parameter.scan.all.summary": "所有类别。"]])
+        XCTAssertEqual(m.problems(), [])
+        let zh = m.localized("zh-Hans")
+        XCTAssertEqual([zh.name, zh.summary, zh.entries[0].title, zh.commands[0].title, zh.commands[0].summary, zh.commands[0].parameters[0].summary],
+                       ["磁盘清理", "Frees space.", "智能扫描", "Scan", "找出可以清掉的东西。", "所有类别。"])
+        XCTAssertEqual(m.localized("ja"), m)
+        XCTAssertEqual(m.localized("en").name, "Disk Cleanup")
+        // Survives JSON, and a manifest without translations still loads.
+        XCTAssertEqual(try ModuleManifest.load(JSONEncoder().encode(m)).localized("zh-Hans").name, "磁盘清理")
+        var plain = m; plain.localizations = nil
+        XCTAssertNil(try ModuleManifest.load(JSONEncoder().encode(plain)).localizations)
+
+        m.localizations = ["zh-Hans": ["nmae": "磁盘清理", "entry.missing.title": "x", "summary": ""], "en": ["name": "Disk"]]
+        let problems = m.problems().joined(separator: "\n")
+        XCTAssertTrue(problems.contains("unknown key nmae") && problems.contains("unknown key entry.missing.title"), problems)
+        XCTAssertTrue(problems.contains("leaves summary empty") && problems.contains("may not redefine the English texts"), problems)
+    }
+
     let home = "/Users/someone"
 
     func disk() -> ModuleManifest {
