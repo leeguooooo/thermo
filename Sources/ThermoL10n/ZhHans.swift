@@ -2011,6 +2011,7 @@ let zhHans: [String: String] = [
     "Copy": "拷贝",
     // Disk Cleanup window
     "Disk Cleanup": "磁盘清理",
+    "Storage & apps": "磁盘与应用",
     "Size": "大小",
     "Last used": "上次使用",
     "Name": "名称",
