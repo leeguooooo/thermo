@@ -530,7 +530,7 @@ App 命令要求运行兼容版本的 Thermo.app。通道检查当前用户身�
 {
   "mcpServers": {
     "thermo": {
-      "command": "/Applications/Thermo.app/Contents/MacOS/thermo",
+      "command": "/Applications/Thermo.app/Contents/Helpers/thermo",
       "args": ["mcp"]
     }
   }

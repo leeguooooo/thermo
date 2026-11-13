@@ -92,10 +92,11 @@ actor ModuleMCPState {
                 defer { try? input.close() }
                 guard let executable = Bundle.main.executableURL?.path else { throw CLIError("Cannot locate this CLI executable.") }
                 return CommandRunner.run(executable,arguments:["--module-tool-request"],timeout:Double.greatestFiniteMagnitude,
-                    outputLimit:4*1024*1024,input:input,cancelled:{ cancellable && cancellation.isCancelled })
+                    outputLimit:4*1024*1024,input:input,separateError:true,cancelled:{ cancellable && cancellation.isCancelled })
             }.value
         } onCancel: { cancellation.cancel(reason:"user") }
         var text = result.output
+        if result.status != 0, !result.errorOutput.isEmpty { text += "\n" + result.errorOutput }
         if result.cancelled { text += "\nRead-only command cancelled." }
         if result.truncated { text += "\nOutput exceeded 4 MiB. The command may have completed; inspect history before another change." }
         if result.status != 0 { text += "\nCLI exit status: \(result.status). No operation was automatically retried." }

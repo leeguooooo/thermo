@@ -2,6 +2,14 @@ import XCTest
 import AgentCore
 
 final class CommandRunnerTests: XCTestCase {
+    func testSeparateDiagnosticsKeepsJSONOutputParseable() throws {
+        let result = CommandRunner.run("/bin/sh", arguments: ["-c", "printf '{\"ok\":true}'; printf 'progress\\n' >&2"],
+                                       input: FileHandle.nullDevice, separateError: true)
+        XCTAssertEqual(result.status, 0)
+        XCTAssertEqual(result.errorOutput, "progress\n")
+        let object = try JSONSerialization.jsonObject(with: Data(result.output.utf8)) as? [String: Bool]
+        XCTAssertEqual(object?["ok"], true)
+    }
     func testAnOpenDescriptorSuppliesInputWithoutArgumentParsing() throws {
         let file=FileManager.default.temporaryDirectory.appendingPathComponent("thermo-runner-input-"+UUID().uuidString)
         let text=String(repeating:"{\"value\":\"--yes ; $(not-a-command) 中文\"}\n",count:1000)
