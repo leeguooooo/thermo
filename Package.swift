@@ -21,6 +21,7 @@ let package = Package(
         .library(name: "VideoKit", targets: ["VideoKit"]),
         .library(name: "ModuleKit", targets: ["ModuleKit"]),
         .library(name: "ModuleHost", targets: ["ModuleHost"]),
+        .library(name: "ModuleSDK", targets: ["ModuleSDK"]),
         .executable(name: "thermo-capture-script", targets: ["CaptureScriptWorker"]),
     ],
     dependencies: [
@@ -66,7 +67,10 @@ let package = Package(
         // The kernel's module manager: finds the modules inside the app and runs their processes (ExtensionKit).
         .target(name: "ModuleHost", dependencies: ["ModuleKit"], linkerSettings: [.linkedFramework("ExtensionKit"), .linkedFramework("ExtensionFoundation")]),
         // Test-only module and host for scripts/module-harness.sh; neither is copied into Thermo.app.
-        .executableTarget(name: "ProbeModule", dependencies: ["ModuleKit"], exclude: ["module.json"],
+        // What a module links: its commands, its scenes and its connection to the kernel.
+        .target(name: "ModuleSDK", dependencies: ["ModuleKit"], swiftSettings: [.unsafeFlags(["-application-extension"])],
+                linkerSettings: [.linkedFramework("ExtensionKit"), .linkedFramework("ExtensionFoundation")]),
+        .executableTarget(name: "ProbeModule", dependencies: ["ModuleKit", "ModuleSDK"], exclude: ["module.json"],
                           swiftSettings: [.unsafeFlags(["-application-extension"])],
                           linkerSettings: [.unsafeFlags(["-Xlinker", "-e", "-Xlinker", "_NSExtensionMain"])]),
         .executableTarget(name: "ModuleHarness", dependencies: ["ModuleHost", "ModuleKit"]),
