@@ -584,7 +584,7 @@ struct MainSidebar: View {
                     row(.memory, tr("Memory usage"), "memorychip", .green, trailing: memoryTrailing)
                     row(.browser("Google Chrome"), tr("Tab organizer"), "rectangle.stack", .teal, trailing: nil)
 
-                    header(tr("Disk Cleanup"))
+                    header(modules.isOn(BuiltinModules.disk.id) ? tr("Disk Cleanup") : tr("Storage & apps"))
                     if modules.isOn(BuiltinModules.disk.id) {
                         DiskSidebarRows(disk: AppModels.shared.disk) { disk in
                             row(.disk(.home), tr("Smart Scan"), "sparkles", .pink, trailing: disk.report.map { ByteFormat.string($0.totalBytes) })
