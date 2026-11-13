@@ -1,9 +1,12 @@
 import CleanKit
+import ModuleKit
 import Foundation
 
 /// `thermo clean`: scan (read-only) and `thermo clean run`: remove selected items.
 struct CleanCommand {
     let app: App
+    let projectRoots: [String]?
+    init(app: App, projectRoots: [String]? = nil) { self.app = app; self.projectRoots = projectRoots }
     var style: Style { app.style }
     var args: Args { app.args }
 
@@ -38,15 +41,20 @@ struct CleanCommand {
         }
     }
 
-    func run(_ rest: [String]) throws {
-        if args.options["budget"] != nil || args.options["timeout"] != nil, (rest.first == "log" || (rest.first == "run" && !args.has("dry-run"))) {
+    func validateInvocation(_ command: String) throws {
+        if args.options["budget"] != nil || args.options["timeout"] != nil, (command == "log" || (command == "run" && !args.has("dry-run"))) {
             throw CLIError("--budget is for read-only scans")
         }
         if args.has("stream") {
-            guard !args.has("csv"), !["run", "log", "empty-trash", "restore", "repair-worktrees", "whitelist"].contains(rest.first ?? "") else {
+            guard !args.has("csv"), !["run", "log", "empty-trash", "restore", "repair-worktrees", "whitelist"].contains(command) else {
                 throw CLIError("--stream is for read-only scans and cannot be combined with --csv")
             }
         }
+    }
+
+    func run(_ rest: [String]) throws {
+        try ModuleCLI.requireEnabled(BuiltinModuleManifests.disk)
+        try validateInvocation(rest.first ?? "scan")
         switch rest.first {
         case "run": try clean(Array(rest.dropFirst()))
         case "plan": try savePlan(Array(rest.dropFirst()))
@@ -164,9 +172,9 @@ struct CleanCommand {
             o.olderThanDays = d
             o.sessionRetentionDays = d
         }
-        if let roots = args.options["root"] {
+        if let roots = projectRoots ?? args.options["root"].map({ $0.split(separator: ",").map(String.init) }) {
             o.discoverProjectRoots = false
-            o.projectRoots = roots.split(separator: ",").map { FS.expand(String($0)) }
+            o.projectRoots = roots.map { FS.expand($0) }
                 .map { URL(fileURLWithPath: $0).standardizedFileURL.path }
         }
         return o

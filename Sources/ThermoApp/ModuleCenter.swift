@@ -30,12 +30,12 @@ import ThermoL10n
         self.manager = manager ?? ModuleManager(); self.defaults = defaults
     }
 
-    static func key(_ id: String) -> String { "module.enabled." + id }
+    static func key(_ id: String) -> String { ModulePreferences.key(id) }
 
     /// The person's choice for a module, or the manifest's default when they never chose.
     /// `bool(forKey:)` also reads a value given on the command line (`-module.enabled.<id> NO`).
     static func stored(_ manifest: ModuleManifest, in defaults: UserDefaults) -> Bool {
-        defaults.object(forKey: key(manifest.id)) == nil ? manifest.enabledByDefault : defaults.bool(forKey: key(manifest.id))
+        ModulePreferences.isEnabled(manifest, in: defaults)
     }
 
     /// Reads the modules and starts the ones that are on and meant to run in the background.

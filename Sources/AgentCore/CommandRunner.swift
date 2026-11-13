@@ -14,6 +14,14 @@ public enum CommandRunner {
     public static func run(_ executable: String, arguments: [String], directory: String? = nil,
                            environment: [String: String]? = nil, timeout: TimeInterval = 15,
                            outputLimit: Int = 1_048_576, captureError: Bool = true, cancelled: () -> Bool = { false }) -> Result {
+        run(executable,arguments:arguments,directory:directory,environment:environment,timeout:timeout,
+            outputLimit:outputLimit,captureError:captureError,input:FileHandle.nullDevice,cancelled:cancelled)
+    }
+
+    /// Reads stdin from an already-open descriptor at its current offset.
+    public static func run(_ executable: String, arguments: [String], directory: String? = nil,
+                           environment: [String: String]? = nil, timeout: TimeInterval = 15,
+                           outputLimit: Int = 1_048_576, captureError: Bool = true, input: FileHandle, cancelled: () -> Bool = { false }) -> Result {
         guard timeout.isFinite, timeout > 0 else { return Result(status: -1, output: "invalid timeout", timedOut: false, cancelled: false) }
         if cancelled() { return Result(status: -1, output: "", timedOut: false, cancelled: true) }
         let process = Process()
@@ -21,7 +29,7 @@ public enum CommandRunner {
         process.arguments = arguments
         if let environment { process.environment = environment }
         if let directory { process.currentDirectoryURL = URL(fileURLWithPath: directory) }
-        process.standardInput = FileHandle.nullDevice
+        process.standardInput = input
         let pipe = Pipe()
         process.standardOutput = pipe
         if captureError { process.standardError = pipe } else { process.standardError = FileHandle.nullDevice }

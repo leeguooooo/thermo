@@ -5,13 +5,7 @@ import ThermoL10n
 /// module that runs in its own process and are switched on and off in the same place; switched
 /// off, a feature has no entry anywhere and none of its objects is created.
 enum BuiltinModules {
-    static let disk = ModuleManifest(
-        id: "dev.thermo.disk", name: "Disk Cleanup", summary: "Finds caches, leftovers and old files that can go, and removes what you pick.",
-        symbol: "sparkles", version: "1.0.0", launch: .onDemand, enabledByDefault: true,
-        entries: [
-            .init(id: "scan", kind: .page, title: "Smart Scan", symbol: "sparkles", scene: "disk"),
-            .init(id: "overview", kind: .page, title: "Where the space is", symbol: "chart.pie", scene: "disk:overview"),
-        ])
+    static let disk = BuiltinModuleManifests.disk
 
     static let all = [disk]
 

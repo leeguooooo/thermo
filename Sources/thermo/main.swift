@@ -4,6 +4,7 @@ import Foundation
 import ThermoKit
 import ThermoL10n
 import SearchCore
+import ModuleKit
 
 let thermoVersion = ThermoVersion.string
 
@@ -453,9 +454,15 @@ setvbuf(stdout, nil, _IOFBF, 1 << 16)
 // Scripts and logs parse CLI output, so it stays English unless THERMO_LANG asks otherwise.
 if ProcessInfo.processInfo.environment["THERMO_LANG"] == nil { L10n.override = .english }
 do {
-    let args = try Args(Array(CommandLine.arguments.dropFirst()))
-    try App(args: args).run()
+    let argv = Array(CommandLine.arguments.dropFirst())
+    if argv == ["mcp"] { ModuleMCPServer.run() }
+    else if argv == ["--module-tool-request"] { try ModuleCLI.runChildRequest() }
+    else if ModuleCLI.handles(argv) { try ModuleCLI.run(argv) }
+    else { let args = try Args(argv); try App(args: args).run() }
     fflush(stdout)
+} catch let e as ModuleCommandCatalog.Invalid {
+    fflush(stdout)
+    fail(e.description, code: 2)
 } catch let e as CLIError {
     fflush(stdout)
     fail(e.description, code: e.exitCode)

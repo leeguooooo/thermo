@@ -26,6 +26,7 @@ let package = Package(
     ],
     dependencies: [
         .package(url: "https://github.com/sparkle-project/Sparkle", exact: "2.9.6"),
+        .package(url: "https://github.com/modelcontextprotocol/swift-sdk", exact: "0.12.1"),
         .package(url: "https://github.com/swiftlang/swift-markdown", exact: "0.9.0"),
         .package(url: "https://github.com/jpsim/Yams", exact: "6.2.2"),
         .package(url: "https://github.com/SDWebImage/libwebp-Xcode", exact: "1.6.0"),
@@ -76,7 +77,7 @@ let package = Package(
         .executableTarget(name: "ModuleHarness", dependencies: ["ModuleHost", "ModuleKit"]),
         // Build-time check of the modules packed into the app; run by scripts/build.sh, not shipped.
         .executableTarget(name: "ModuleCheck", dependencies: ["ModuleKit"]),
-        .executableTarget(name: "thermo", dependencies: ["CaptureScriptCore", "ThermoKit", "AgentCore", "AgentDoctor", "CleanKit", "ThermoL10n", "SearchCore"]),
+        .executableTarget(name: "thermo", dependencies: ["CaptureScriptCore", "ThermoKit", "AgentCore", "AgentDoctor", "CleanKit", "ThermoL10n", "SearchCore", "ModuleKit", .product(name: "MCP", package: "swift-sdk")]),
         .executableTarget(name: "ThermoHelper", dependencies: ["ThermoKit"]),
         .executableTarget(
             name: "ThermoApp",
@@ -85,7 +86,7 @@ let package = Package(
                              .linkedFramework("CoreWLAN"), .linkedFramework("IOBluetooth"), .linkedFramework("CoreAudio"),
                              .linkedFramework("AudioToolbox"), .linkedFramework("CoreLocation")]
         ),
-        .testTarget(name: "ThermoCLITests", dependencies: ["thermo"]),
+        .testTarget(name: "ThermoCLITests", dependencies: ["thermo", "ModuleKit", .product(name: "MCP", package: "swift-sdk")]),
         .testTarget(name: "ThermoAppTests", dependencies: ["ThermoApp", "ModuleKit", "ModuleHost", "ThermoKit", "CleanKit", "AgentCore", "AgentDoctor", "SearchCore", "MenuBarCore", "CloudDriveKit", "DownloadKit", "MediaToolsKit", "VideoKit"]),
         .testTarget(name: "ThermoKitTests", dependencies: ["ThermoKit", "CSMC"]),
         .testTarget(name: "ThermoHelperTests", dependencies: ["ThermoHelper", "ThermoKit"]),
