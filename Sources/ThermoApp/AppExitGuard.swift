@@ -56,6 +56,7 @@ enum AppExitGuard {
 
 @MainActor
 final class MainOnlyDelegate: NSObject, NSApplicationDelegate {
+    func applicationDidFinishLaunching(_ notification: Notification) { AppInstallationMonitor.shared.start() }
     func applicationWillTerminate(_ notification: Notification) {
         MenuBarManager.shared.shutdown()
     }

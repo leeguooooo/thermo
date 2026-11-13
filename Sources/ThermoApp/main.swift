@@ -40,7 +40,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate, UNU
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         Settings.register()
+        AppInstallationMonitor.shared.start()
         AppControlHost.shared.start()
+        ModuleCenter.shared.start()
         CleanScreenShortcutModel.enableLive()
         LocalSearchShortcut.shared.activate()
         CaptureWorkspace.shared.activate()
@@ -551,6 +553,9 @@ private final class PageMenuTarget: NSObject, NSMenuItemValidation {
 }
 
 L10n.apply(preference: UserDefaults.standard.string(forKey: L10n.defaultsKey))
+// Freeze launch metadata before an updater can replace the bundle on disk.
+_ = AppInfo.buildMetadata
+MainActor.assumeIsolated { _ = AppInstallationMonitor.shared }
 let app = NSApplication.shared
 // `--dump-status-menu`: print the menu bar item's menu (titles, separators, submenus) and quit,
 // so its grouping and wording can be reviewed without opening it on screen.
@@ -577,7 +582,13 @@ if CommandLine.arguments.contains("--show-status-menu") || CommandLine.arguments
             NSApp.activate(ignoringOtherApps: true)
             if CommandLine.arguments.contains("--show-status-menu") {
                 let menu = StatusMenu.shared.make(battery: true)
-                let close = Timer(timeInterval: 6, repeats: false) { _ in menu.cancelTracking() }
+                let menuSeconds: TimeInterval = {
+                    let args = CommandLine.arguments
+                    guard let i = args.firstIndex(of: "--menu-seconds"), i + 1 < args.count,
+                          let value = Double(args[i + 1]), value.isFinite, (2...120).contains(value) else { return 6 }
+                    return value
+                }()
+                let close = Timer(timeInterval: menuSeconds, repeats: false) { _ in menu.cancelTracking() }
                 RunLoop.main.add(close, forMode: .common)
                 print("shown"); fflush(stdout)
                 // Where the menu bar item would drop it: just under the menu bar.
@@ -646,6 +657,7 @@ if let i = CommandLine.arguments.firstIndex(of: "--render-preview"), i + 1 < Com
         BatteryCareModel.shared.restoreSavedPreference()
     }
     installStandardMenus()
+    ModuleCenter.shared.start()
     let models = AppModels.shared
     func value(after flag: String) -> String? { args.firstIndex(of: flag).flatMap { $0 + 1 < args.count ? args[$0 + 1] : nil } }
     var page = value(after: "--page").flatMap(MainPage.init(argument:)) ?? .overview
@@ -675,6 +687,9 @@ if let i = CommandLine.arguments.firstIndex(of: "--render-preview"), i + 1 < Com
     if page == .checkup, let i = args.firstIndex(of: "--fixture"), i + 1 < args.count {
         CheckupModel.shared.loadFixture(answer: args[i + 1])
     }
+    if page == .memory, let i = args.firstIndex(of: "--fixture"), i + 1 < args.count {
+        MemoryReliefAdvice.shared.loadFixture(answer: args[i + 1])
+    }
     MainWindow.show(page)
     // `--height N`: a taller window, so a snapshot can show what sits below the fold.
     if let h = value(after: "--height").flatMap(Double.init), let w = MainWindow.window {
@@ -700,6 +715,11 @@ if let i = CommandLine.arguments.firstIndex(of: "--render-preview"), i + 1 < Com
             : models.softwareUpdates.report != nil && !models.softwareUpdates.busy
         case .apps(.store): return models.appStore.loaded
         case .plugins: return models.plugins.loaded && !models.plugins.checkingUpdates
+        case let .module(id, _):
+            // Worth a picture once the module's process is up, or once it is known to be off.
+            guard ModuleCenter.shared.loaded else { return false }
+            let status = ModuleCenter.shared.manager.status(id)
+            return status?.enabled != true || (status?.phase == .running && Date().timeIntervalSince(started) > 3)
         case .compute: return ComputeModel.shared.current?.cpu != nil && Date().timeIntervalSince(started) > 4
         case .connections: return ConnectionsModel.shared.bluetooth != nil || ConnectionsModel.shared.bluetoothFailed
         case .memory: return MemoryModel.shared.breakdown != nil && Date().timeIntervalSince(started) > 4

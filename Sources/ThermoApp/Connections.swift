@@ -2,6 +2,7 @@ import AgentCore
 import AppKit
 import AudioToolbox
 import CoreAudio
+import CoreBluetooth
 import CoreLocation
 import CoreWLAN
 import IOBluetooth
@@ -149,6 +150,9 @@ struct BluetoothDevice: Identifiable, Equatable, Sendable {
     var connected: Bool
     var kind: Kind
     var levels: [Level]
+    var rssi: Int? = nil
+
+    var prominent: Bool { rssi != nil || kind == .computer || kind == .phone }
 
     /// Keyboards, mice and trackpads: disconnecting one by accident can leave the Mac without input.
     var isInput: Bool { kind == .keyboard || kind == .mouse || kind == .trackpad || kind == .gamepad }
@@ -177,7 +181,9 @@ struct BluetoothDevice: Identifiable, Equatable, Sendable {
         address.lowercased().replacingOccurrences(of: "-", with: ":")
     }
 
-    static func kind(minorType: String?, name: String) -> Kind {
+    static func kind(minorType: String?, name: String, majorClass: UInt32? = nil) -> Kind {
+        if majorClass == UInt32(kBluetoothDeviceClassMajorComputer) { return .computer }
+        if majorClass == UInt32(kBluetoothDeviceClassMajorPhone) { return .phone }
         switch minorType?.lowercased() ?? "" {
         case let t where t.contains("headphone") || t.contains("headset"): return .headphones
         case let t where t.contains("speaker") || t.contains("loudspeaker"): return .speaker
@@ -200,19 +206,27 @@ struct BluetoothReport: Equatable, Sendable {
     var powerOn: Bool
     var devices: [BluetoothDevice]
 
+    /// Devices with a reported signal, and known computers/phones, must not disappear behind old headsets.
+    var defaultDevices: [BluetoothDevice] {
+        let connected = devices.filter(\.connected)
+        let remaining = devices.filter { !$0.connected }
+        let prominent = remaining.filter(\.prominent)
+        let others = remaining.filter { !$0.prominent }
+        return connected + prominent + Array(others.prefix(max(0, 6 - connected.count - prominent.count)))
+    }
+
     /// `system_profiler SPBluetoothDataType -json`: each device is a one-key object, its name the key.
-    static func parse(_ data: Data) -> BluetoothReport? {
+    static func parse(_ data: Data, majorClasses: [String: UInt32] = [:]) -> BluetoothReport? {
         guard let root = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
               let controller = (root["SPBluetoothDataType"] as? [[String: Any]])?.first else { return nil }
         let state = (controller["controller_properties"] as? [String: Any])?["controller_state"] as? String
         var devices: [BluetoothDevice] = []
-        var seen = Set<String>()
+        var indices = [String: Int]()
         for (key, connected) in [("device_connected", true), ("device_not_connected", false)] {
             for entry in controller[key] as? [[String: Any]] ?? [] {
                 for (name, value) in entry {
                     guard let info = value as? [String: Any], let raw = info["device_address"] as? String else { continue }
                     let address = BluetoothDevice.normalized(raw)
-                    guard seen.insert(address).inserted else { continue }
                     let levels: [BluetoothDevice.Level] = [("device_batteryLevelMain", .main), ("device_batteryLevel", .main),
                                                             ("device_batteryLevelLeft", .left), ("device_batteryLevelRight", .right),
                                                             ("device_batteryLevelCase", .box)].compactMap { field, part in
@@ -221,13 +235,31 @@ struct BluetoothReport: Equatable, Sendable {
                               (0...100).contains(percent) else { return nil }
                         return BluetoothDevice.Level(part: part, percent: percent)
                     }
-                    devices.append(BluetoothDevice(name: name, address: address, connected: connected,
-                                                   kind: BluetoothDevice.kind(minorType: info["device_minorType"] as? String, name: name),
-                                                   levels: levels))
+                    let signal = (info["device_rssi"] as? NSNumber)?.intValue
+                        ?? (info["device_rssi"] as? String).flatMap(Int.init)
+                    let rssi = signal.flatMap { (-127 ... 20).contains($0) ? $0 : nil }
+                    let kind = BluetoothDevice.kind(minorType: info["device_minorType"] as? String, name: name,
+                                                    majorClass: majorClasses[address])
+                    if let index = indices[address] {
+                        devices[index].connected = devices[index].connected || connected
+                        if devices[index].kind == .other { devices[index].kind = kind }
+                        for level in levels where !devices[index].levels.contains(where: { $0.part == level.part }) {
+                            devices[index].levels.append(level)
+                        }
+                        if let rssi { devices[index].rssi = max(devices[index].rssi ?? rssi, rssi) }
+                    } else {
+                        indices[address] = devices.count
+                        devices.append(BluetoothDevice(name: name, address: address, connected: connected,
+                                                       kind: kind, levels: levels, rssi: rssi))
+                    }
                 }
             }
         }
-        devices.sort { $0.connected != $1.connected ? $0.connected : $0.name.localizedStandardCompare($1.name) == .orderedAscending }
+        devices.sort {
+            if $0.connected != $1.connected { return $0.connected }
+            if $0.prominent != $1.prominent { return $0.prominent }
+            return $0.name.localizedStandardCompare($1.name) == .orderedAscending
+        }
         return BluetoothReport(powerOn: state.map { $0 == "attrib_on" } ?? !devices.isEmpty, devices: devices)
     }
 
@@ -235,7 +267,15 @@ struct BluetoothReport: Equatable, Sendable {
         let r = CommandRunner.run("/usr/sbin/system_profiler", arguments: ["SPBluetoothDataType", "-json"],
                                   timeout: 20, outputLimit: 4_194_304, captureError: false)
         guard r.status == 0, !r.timedOut else { return nil }
-        return parse(Data(r.output.utf8))
+        var classes = [String: UInt32]()
+        // Reading the page must not introduce a new Bluetooth authorization prompt.
+        if CBManager.authorization == .allowedAlways {
+            for device in IOBluetoothDevice.pairedDevices() as? [IOBluetoothDevice] ?? [] {
+                guard let address = device.addressString else { continue }
+                classes[BluetoothDevice.normalized(address)] = device.deviceClassMajor
+            }
+        }
+        return parse(Data(r.output.utf8), majorClasses: classes)
     }
 
     /// Asks the paired device to connect or disconnect. Blocks until the device answers or times out.

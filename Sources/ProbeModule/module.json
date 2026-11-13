@@ -1,0 +1,27 @@
+{
+  "interface": 1,
+  "id": "dev.thermo.probe.a",
+  "name": "Probe",
+  "summary": "Exercises the module manager.",
+  "symbol": "wrench",
+  "version": "0.1.0",
+  "launch": "onDemand",
+  "enabledByDefault": false,
+  "capabilities": ["files.read:/private/tmp/thermo-probe/open", "files.delete:/private/tmp/thermo-probe/bin"],
+  "entries": [{"id": "main", "kind": "page", "title": "Probe", "scene": "main"}],
+  "commands": [
+    {"id": "ping", "title": "Ping", "summary": "Answers with its pid.", "mutates": false, "parameters": [], "capabilities": []},
+    {"id": "burn", "title": "Burn", "summary": "Uses the CPU for a moment.", "mutates": false,
+     "parameters": [{"name": "ms", "kind": "integer", "required": false, "summary": "How long."}], "capabilities": []},
+    {"id": "peek", "title": "Peek", "summary": "Tries to read a file directly.", "mutates": false,
+     "parameters": [{"name": "path", "kind": "path", "required": true, "summary": "The file."}], "capabilities": []},
+    {"id": "poke", "title": "Poke", "summary": "Tries to list and write a folder directly.", "mutates": true,
+     "parameters": [{"name": "path", "kind": "path", "required": true, "summary": "The folder."}], "capabilities": []},
+    {"id": "ask", "title": "Ask", "summary": "Passes a request to the kernel.", "mutates": true,
+     "parameters": [{"name": "capability", "kind": "string", "required": true, "summary": "The capability."}], "capabilities": []},
+    {"id": "exit", "title": "Exit", "summary": "Exits at once.", "mutates": false, "parameters": [], "capabilities": []}
+  ],
+  "localizations": {
+    "zh-Hans": {"name": "探针", "summary": "用来检验模块管理器。", "entry.main.title": "探针"}
+  }
+}

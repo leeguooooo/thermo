@@ -170,6 +170,11 @@ struct MemoryPage: View {
                 if let b = model.breakdown {
                     if b.swapBlocked { swapBlockedBanner(b) }
                     breakdownCard(b)
+                    MemoryReliefCard(programs: model.programs, quit: { confirming = $0 }, restart: { restartTarget = $0 },
+                                     inspect: { name in
+                                         search = name
+                                         expanded.formUnion(["program:cmd:" + name.lowercased(), "program:app:" + name.lowercased()])
+                                     }, acted: resample)
                     if !model.suspects.isEmpty { suspectsCard }
                     programsCard
                     trendCard
