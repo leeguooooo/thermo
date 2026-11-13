@@ -7,7 +7,8 @@ import ModuleKit
 // never shipped. Prints one line per check and exits 0 only when all passed.
 
 setvbuf(stdout, nil, _IOLBF, 0)
-let a = "dev.thermo.probe.a", b = "dev.thermo.probe.b"
+// "b" alone is a reserved command name, so the second copy is called "other".
+let a = "dev.thermo.probe.a", b = "dev.thermo.probe.other"
 var failures = 0
 func check(_ ok: Bool, _ what: String) { print((ok ? "ok    " : "FAIL  ") + what); if !ok { failures += 1 } }
 func note(_ what: String) { print("      " + what) }

@@ -32,8 +32,8 @@ cat > "$APP/Contents/Info.plist" <<P
 P
 cp Resources/Modules/dev.thermo.module.appextensionpoint "$APP/Contents/Extensions/"
 if [ "$SIGN_ID" = "-" ]; then TS="--timestamp=none"; else TS="--timestamp"; fi
-for which in a b; do
-    case "$which" in a) launch=onDemand ;; b) launch=always ;; esac
+for which in a other; do
+    case "$which" in a) launch=onDemand ;; other) launch=always ;; esac
     sed -e "s/dev\.thermo\.probe\.a/dev.thermo.probe.$which/" -e "s/\"onDemand\"/\"$launch\"/" Sources/ProbeModule/module.json |
         sh scripts/assemble-module.sh "$BIN/ProbeModule" "dev.thermo.probe.$which" "$APP/Contents/Extensions/Probe-$which.appex" - "$MODULE_VERSION" "$MODULE_VERSION"
     [ "$CONFIGURATION" = release ] && strip "$APP/Contents/Extensions/Probe-$which.appex/Contents/MacOS/Probe-$which"
