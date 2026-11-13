@@ -598,7 +598,7 @@ struct AppsPage: View {
                     Spacer(minLength: Theme.Space.s)
                     // A protected container never reads without the permission; scanning again would not help.
                     if model.orphanIssues.contains(where: { $0.message.contains("Full Disk Access") }) {
-                        Button(tr("Open Full Disk Access")) { AppModels.shared.disk.openFullDiskAccess() }
+                        Button(tr("Open Full Disk Access")) { DiskModel.openFullDiskAccess() }
                             .buttonStyle(PillButtonStyle()).controlSize(.small)
                     }
                 }

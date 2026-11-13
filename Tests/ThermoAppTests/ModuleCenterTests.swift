@@ -112,3 +112,36 @@ import XCTest
         XCTAssertEqual(text.action, "Move to Trash")
     }
 }
+
+@MainActor final class BuiltinModuleTests: XCTestCase {
+    func testBuiltinManifestsAreValidAndTheirPagesExist() {
+        for manifest in BuiltinModules.all {
+            XCTAssertEqual(manifest.problems(), [], manifest.id)
+            for entry in manifest.entries where entry.kind == .page {
+                let page = MainPage(argument: entry.scene ?? "")
+                XCTAssertEqual(page?.module, manifest.id, "\(manifest.id) entry \(entry.id) must lead to one of its own pages")
+            }
+        }
+        XCTAssertNil(MainPage.overview.module)
+        XCTAssertNil(MainPage.settings.module)
+    }
+
+    func testASwitchedOffFeatureHasNoEntryAndComesBackWhenSwitchedOn() {
+        let name = "thermo-builtin-tests-" + UUID().uuidString
+        let defaults = UserDefaults(suiteName: name)!
+        defer { defaults.removePersistentDomain(forName: name) }
+        let empty = FileManager.default.temporaryDirectory.appendingPathComponent("thermo-none-" + UUID().uuidString + "/Thermo.app")
+        let center = ModuleCenter(manager: ModuleManager(app: empty), defaults: defaults)
+        let id = BuiltinModules.disk.id
+        // On for everyone who never touched the switch.
+        XCTAssertTrue(center.isOn(id))
+        XCTAssertTrue(center.shows(.disk(.home)) && center.shows(.disk(.overview)))
+        center.setEnabled(id, false)
+        XCTAssertFalse(center.isOn(id))
+        XCTAssertFalse(center.shows(.disk(.home)) || center.shows(.disk(.category(.aiSessions))))
+        XCTAssertTrue(center.shows(.overview) && center.shows(.memory), "other pages are untouched")
+        XCTAssertEqual(center.switches.first { $0.manifest.id == id }?.enabled, false)
+        center.setEnabled(id, true)
+        XCTAssertTrue(center.shows(.disk(.home)))
+    }
+}

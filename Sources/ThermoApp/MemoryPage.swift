@@ -240,7 +240,9 @@ struct MemoryPage: View {
                     .font(Theme.caption).foregroundStyle(Theme.textSecondary).fixedSize(horizontal: false, vertical: true)
             }
             Spacer()
-            Button(tr("Free disk space")) { open(.disk(.home)) }.buttonStyle(PillButtonStyle(prominent: true, color: Theme.danger))
+            if ModuleCenter.shared.shows(.disk(.home)) {
+                Button(tr("Free disk space")) { open(.disk(.home)) }.buttonStyle(PillButtonStyle(prominent: true, color: Theme.danger))
+            }
         }
         .padding(14).glass()
         .overlay(RoundedRectangle(cornerRadius: Theme.radius, style: .continuous).strokeBorder(Theme.danger.opacity(0.45)))

@@ -408,7 +408,7 @@ struct PopoverView: View {
                 Spacer(minLength: 0)
                 Menu { CaptureMenuItems() } label: { Image(systemName: "viewfinder").frame(width: 22) }
                 .menuStyle(.borderlessButton).fixedSize().help(tr("Screenshots and pins"))
-                shortcut("internaldrive", tr("Disk Cleanup"), .disk(.home))
+                if ModuleCenter.shared.shows(.disk(.home)) { shortcut("internaldrive", tr("Disk Cleanup"), .disk(.home)) }
                 shortcut("stethoscope", tr("AI Agent Diagnostics"), .agents(.home))
                 Button { TabQuickAction.request() } label: { Image(systemName: "archivebox").frame(width: 22) }
                     .buttonStyle(.plain).foregroundStyle(Theme.textSecondary).help(tr("Save and close background tabs"))
@@ -1124,7 +1124,6 @@ struct FanLoadIndicator: View {
 
 struct SettingsView: View {
     @ObservedObject private var installation = AppInstallationMonitor.shared
-    @ObservedObject var disk: DiskModel
     @ObservedObject var monitor: Monitor
     @AppStorage(Settings.showInDock) private var showInDock = true
     @AppStorage(PulseRecorder.alertsKey) private var slowdownAlerts = true
@@ -1156,7 +1155,7 @@ struct SettingsView: View {
                     if let issue = installation.issue { Text(issue).foregroundStyle(Theme.caution) }
                 }.padding().background(Theme.caution.opacity(0.1)).cornerRadius(Theme.radius)
             }
-            if !modules.statuses.isEmpty { section(tr("Features")) { ModuleSwitches(center: modules) } }
+            section(tr("Features")) { ModuleSwitches(center: modules) }
             // Features with their own panel: one group of rows, each opening its panel.
             section(tr("Tools")) {
                 Button { MenuBarManagerPanel.shared.show() } label: {
@@ -1176,8 +1175,10 @@ struct SettingsView: View {
                 AWDLButton()
                 InspectorDivider(inset: 46)
                 BatteryCareButton()
-                InspectorDivider(inset: 46)
-                CleanupProtectionsButton(disk: disk, asRow: true)
+                if modules.isOn(BuiltinModules.disk.id) {
+                    InspectorDivider(inset: 46)
+                    CleanupProtectionsButton(disk: AppModels.shared.disk, asRow: true)
+                }
             }
             section(tr("General")) {
                 row(tr("Language")) {

@@ -453,7 +453,9 @@ final class DiskModel: ObservableObject {
         report = nil; selected = []; excluded = [:]; error = nil
     }
 
-    func openFullDiskAccess() {
+    func openFullDiskAccess() { Self.openFullDiskAccess() }
+    /// Usable without a model: other pages point at the same system setting.
+    static func openFullDiskAccess() {
         NSWorkspace.shared.open(URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_AllFiles")!)
     }
 

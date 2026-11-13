@@ -1261,6 +1261,7 @@ let zhHans: [String: String] = [
     "Plugin marketplace": "插件市场",
     "This feature is switched off.": "这项功能已关闭。",
     "Features": "功能",
+    "Finds caches, leftovers and old files that can go, and removes what you pick.": "找出可以清掉的缓存、残留和旧文件，并删除你选中的部分。",
     "Allow": "允许",
     "Ended": "结束过",
     "Files read": "读取过",
