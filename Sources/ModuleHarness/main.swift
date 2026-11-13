@@ -131,16 +131,52 @@ func uptime() -> Double { ProcessInfo.processInfo.systemUptime }
         await sleep(3)
         check(alive(second) && phase(a) == .running, "a module with a scene on screen is not idled out")
 
+        // The remote view draws its current state; the host can compose it without screen permission.
+        do {
+            let firstPNG = try await scene.snapshot()
+            let output = Bundle.main.bundleURL.deletingLastPathComponent().appendingPathComponent("snapshots")
+            try FileManager.default.createDirectory(at: output, withIntermediateDirectories: true)
+            try firstPNG.write(to: output.appendingPathComponent("scene-first.png"))
+            let bitmap = NSBitmapImageRep(data: firstPNG)
+            let color = bitmap?.colorAt(x: 4, y: 4)?.usingColorSpace(.deviceRGB)
+            check(color.map { $0.greenComponent > $0.redComponent + 0.2 && $0.greenComponent > $0.blueComponent + 0.2 } == true,
+                  "scene snapshot includes the live view's post-task state")
+            let composed = try await manager.snapshot(in: scene.controller.view)
+            try composed.write(to: output.appendingPathComponent("host-composed.png"))
+            let hostColor = NSBitmapImageRep(data: composed)?.colorAt(x: 4, y: 4)?.usingColorSpace(.deviceRGB)
+            check(hostColor.map { $0.greenComponent > $0.redComponent + 0.2 } == true, "host snapshot includes remote pixels")
+            let other = try manager.attach(a, scene: "main")
+            let otherWindow = NSWindow(contentRect: window.contentRect(forFrameRect: window.frame), styleMask: [.borderless], backing: .buffered, defer: false)
+            otherWindow.isReleasedWhenClosed = false
+            otherWindow.contentView = other.controller.view
+            defer { manager.detach(other); otherWindow.close() }
+            otherWindow.orderBack(nil)
+            let otherReady = await until(5) { other.active }
+            check(otherReady != nil, "second instance of the same scene becomes active")
+            await sleep(0.3)
+            let otherPNG = try await other.snapshot()
+            try otherPNG.write(to: output.appendingPathComponent("scene-second.png"))
+            let originalAgain = try await scene.snapshot()
+            check(otherPNG != firstPNG && originalAgain == firstPNG, "scene snapshot connection identifies its own instance and preserves local state")
+        } catch { check(false, "scene snapshot: \(error)") }
+
         // Crash with a scene attached: comes back by itself.
         if let second { kill(second, SIGKILL) }
         let back = await until(8) { scene.active && pid(a) != nil && pid(a) != second }
         check(back != nil && activations == 2, "killed module restarts and its scene returns (\(back.map { String(format: "%.1f s", $0) } ?? "never"), crashes \(manager.status(a)?.crashes ?? -1))")
         check(pid(b) == bPID && alive(bPID), "the other module kept its process")
         let third = pid(a)
+        await sleep(0.1)
+        do {
+            let recovered = try await scene.snapshot()
+            check(ModuleSnapshot.dimensions(recovered) != nil, "scene snapshot connection is restored after a crash")
+        } catch { check(false, "snapshot after crash: \(error)") }
         manager.detach(scene)
         window.contentView = NSView()
         let left = await until(8) { phase(a) == .stopped && !alive(third) }
         check(left != nil, "after the scene is detached the module idles out")
+        do { _ = try await scene.snapshot(); check(false, "detached scene snapshot must fail") }
+        catch { check(pid(a) == nil, "detached scene snapshot fails without starting a process") }
     } else { check(false, "scene attaches") }
 
     // Crashes of a module with no UI, with backoff.

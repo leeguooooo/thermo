@@ -1,3 +1,4 @@
+import ModuleHost
 import AgentDoctor
 import AppKit
 import SwiftUI
@@ -225,11 +226,17 @@ enum MainWindow {
             MainActor.assumeIsolated {
                 guard ready() else { return snapshot(to: path, when: ready) }
                 DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
-                    if let view = window?.contentView, let rep = view.bitmapImageRepForCachingDisplay(in: view.bounds) {
-                        view.cacheDisplay(in: view.bounds, to: rep)
-                        try? rep.representation(using: .png, properties: [:])?.write(to: URL(fileURLWithPath: path))
+                    Task { @MainActor in
+                        do {
+                            guard let view = window?.contentView else { throw ModuleError.failed("no main window") }
+                            let png = try await ModuleCenter.shared.manager.snapshot(in: view)
+                            try png.write(to: URL(fileURLWithPath: path))
+                            exit(0)
+                        } catch {
+                            FileHandle.standardError.write(Data("snapshot failed: \(error)\n".utf8))
+                            exit(2)
+                        }
                     }
-                    exit(0)
                 }
             }
         }
