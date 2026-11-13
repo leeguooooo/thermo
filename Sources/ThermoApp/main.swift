@@ -691,11 +691,11 @@ if let i = CommandLine.arguments.firstIndex(of: "--render-preview"), i + 1 < Com
     }
     guard let path = value(after: "--snapshot") else { return }
     let started = Date()
-    // Verification: a feature that is off must not have had its model created by the time the picture is taken.
-    if args.contains("--expect-no-disk-model") {
-        DispatchQueue.main.asyncAfter(deadline: .now() + 2) { if AppModels.shared.diskLoaded { FileHandle.standardError.write(Data("disk model was created\n".utf8)); exit(3) } }
-    }
     MainWindow.snapshot(to: path) {
+        // Check in the capture gate: a delayed check could be skipped by a fast successful snapshot.
+        if args.contains("--expect-no-disk-model"), models.diskLoaded {
+            FileHandle.standardError.write(Data("disk model was created\n".utf8)); exit(3)
+        }
         // Give each page what it needs to be worth a picture, but never wait more than 90 s.
         if Date().timeIntervalSince(started) > 90 { return true }
         if let ready = BuiltinModules.snapshotReady(page, arguments: args, models: models, center: .shared) { return ready }

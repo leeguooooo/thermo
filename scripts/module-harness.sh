@@ -12,10 +12,13 @@ OUT="${THERMO_HARNESS_DIR:-.build/module-harness.noindex}"
 CONFIGURATION="${THERMO_BUILD_CONFIGURATION:-debug}"
 # A second copy with a higher module version checks that this app still gets its own modules.
 MODULE_VERSION="${THERMO_HARNESS_MODULE_VERSION:-0.1}"
-swift build -c "$CONFIGURATION" --product ModuleHarness 2>&1 | tail -3
-swift build -c "$CONFIGURATION" --product ProbeModule 2>&1 | tail -3
-swift build -c "$CONFIGURATION" --product ModuleCheck 2>&1 | tail -1
-BIN="$(swift build -c "$CONFIGURATION" --show-bin-path)"
+HARNESS_BUILD_JOBS="${THERMO_BUILD_JOBS:-1}"
+case "$HARNESS_BUILD_JOBS" in ''|*[!0-9]*) echo "THERMO_BUILD_JOBS must be a positive decimal integer" >&2; exit 2 ;; esac
+[ "$HARNESS_BUILD_JOBS" -gt 0 ] || { echo "THERMO_BUILD_JOBS must be positive" >&2; exit 2; }
+swift build --jobs "$HARNESS_BUILD_JOBS" -c "$CONFIGURATION" --product ModuleHarness
+swift build --jobs "$HARNESS_BUILD_JOBS" -c "$CONFIGURATION" --product ProbeModule
+swift build --jobs "$HARNESS_BUILD_JOBS" -c "$CONFIGURATION" --product ModuleCheck
+BIN="$(swift build --jobs "$HARNESS_BUILD_JOBS" -c "$CONFIGURATION" --show-bin-path)"
 APP="$OUT/ModuleHarness.app"
 LSREGISTER=/System/Library/Frameworks/CoreServices.framework/Frameworks/LaunchServices.framework/Support/lsregister
 [ -d "$APP" ] && "$LSREGISTER" -u "$APP" >/dev/null 2>&1 || true
@@ -35,6 +38,11 @@ if [ "$SIGN_ID" = "-" ]; then TS="--timestamp=none"; else TS="--timestamp"; fi
 for which in a b; do
     case "$which" in a) launch=onDemand ;; b) launch=always ;; esac
     sed -e "s/dev\.thermo\.probe\.a/dev.thermo.probe.$which/" -e "s/\"onDemand\"/\"$launch\"/" Sources/ProbeModule/module.json |
+        python3 -c 'import json,sys
+m=json.load(sys.stdin)
+for command in m["commands"]:
+    command["cli"]=["probe-"+sys.argv[1],command["id"]]
+json.dump(m,sys.stdout)' "$which" |
         sh scripts/assemble-module.sh "$BIN/ProbeModule" "dev.thermo.probe.$which" "$APP/Contents/Extensions/Probe-$which.appex" - "$MODULE_VERSION" "$MODULE_VERSION"
     [ "$CONFIGURATION" = release ] && strip "$APP/Contents/Extensions/Probe-$which.appex/Contents/MacOS/Probe-$which"
     generated="$(mktemp)"

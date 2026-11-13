@@ -263,8 +263,6 @@ enum MainWindow {
     }
 }
 
-/// Disk cleanup's pages with what belongs to them: the error and rescan banners above the page and
-/// the confirmation before cleaning. Nothing outside this view holds the disk model.
 struct MainView: View {
     @Binding var page: MainPage
     let monitor: Monitor

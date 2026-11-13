@@ -97,6 +97,7 @@ enum DiskModule: BuiltinModule {
     }
 }
 
+/// The feature owns its page host, scan notices and cleanup confirmation.
 struct DiskPages: View {
     @Binding var page: MainPage
     let sub: DiskPage
