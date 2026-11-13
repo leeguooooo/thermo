@@ -19,7 +19,14 @@ import Foundation
     func run(_ command: String, arguments: Data, reply: @escaping @Sendable (Data?, String?) -> Void)
 }
 
+/// Scene-specific connection, separate from commands and from privileged kernel requests.
+@objc(TMModuleSceneXPC) public protocol ModuleSceneXPC {
+    /// Renders the attached instance's current view, including its current local SwiftUI state.
+    func snapshot(reply: @escaping @Sendable (Data?, String?) -> Void)
+}
+
 public enum ModuleXPCInterfaces {
+    public static var scene: NSXPCInterface { NSXPCInterface(with: ModuleSceneXPC.self) }
     public static var kernel: NSXPCInterface { NSXPCInterface(with: KernelXPC.self) }
     public static var module: NSXPCInterface { NSXPCInterface(with: ModuleXPC.self) }
 }

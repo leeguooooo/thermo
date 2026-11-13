@@ -1,3 +1,4 @@
+import AppKit
 import ExtensionFoundation
 import ExtensionKit
 import Foundation
@@ -121,10 +122,59 @@ public struct ModuleConfiguration: AppExtensionConfiguration {
 
 /// One scene of the module, named as in the manifest's entries.
 @MainActor public func moduleScene<Content: View>(_ id: String, @ViewBuilder content: @escaping () -> Content) -> some AppExtensionScene {
-    PrimitiveAppExtensionScene(id: id) { content() } onConnection: { connection in
-        // The kernel talks over the process connection; a scene connection carries nothing yet.
-        connection.resume()
-        return true
+    RenderedModuleScene(id: id, content: content)
+}
+
+/// A fresh body supplies each scene instance with its own view and connection service.
+@MainActor private struct RenderedModuleScene<Content: View>: AppExtensionScene {
+    let id: String
+    let content: () -> Content
+    var body: some AppExtensionScene {
+        let renderer = SceneRenderer()
+        return PrimitiveAppExtensionScene(id: id) {
+            SnapshotContent(content: content(), renderer: renderer)
+        } onConnection: { connection in
+            connection.exportedInterface = ModuleXPCInterfaces.scene
+            connection.exportedObject = renderer
+            connection.resume()
+            return true
+        }
+    }
+}
+
+@MainActor private struct SnapshotContent<Content: View>: NSViewRepresentable {
+    let content: Content
+    let renderer: SceneRenderer
+    func makeNSView(context: Context) -> NSHostingView<AnyView> {
+        let view = NSHostingView(rootView: AnyView(content.environment(\.self, context.environment)))
+        renderer.view = view
+        return view
+    }
+    func updateNSView(_ view: NSHostingView<AnyView>, context: Context) {
+        view.rootView = AnyView(content.environment(\.self, context.environment))
+    }
+}
+
+@MainActor private final class SceneRenderer: NSObject, ModuleSceneXPC {
+    weak var view: NSView?
+    nonisolated func snapshot(reply: @escaping @Sendable (Data?, String?) -> Void) {
+        Task { @MainActor in
+            guard let view = self.view, view.window != nil, !view.bounds.isEmpty else {
+                reply(nil, "scene has no attached view"); return
+            }
+            view.layoutSubtreeIfNeeded()
+            guard let rep = view.bitmapImageRepForCachingDisplay(in: view.bounds),
+                  rep.pixelsWide > 0, rep.pixelsHigh > 0,
+                  rep.pixelsWide <= ModuleSnapshot.maxDimension, rep.pixelsHigh <= ModuleSnapshot.maxDimension,
+                  rep.pixelsWide * rep.pixelsHigh <= ModuleSnapshot.maxPixels else {
+                reply(nil, "scene snapshot exceeds pixel limits"); return
+            }
+            view.cacheDisplay(in: view.bounds, to: rep)
+            guard let png = rep.representation(using: .png, properties: [:]), ModuleSnapshot.dimensions(png) != nil else {
+                reply(nil, "scene could not be rendered"); return
+            }
+            reply(png, nil)
+        }
     }
 }
 

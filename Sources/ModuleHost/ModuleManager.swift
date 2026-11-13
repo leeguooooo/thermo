@@ -43,8 +43,52 @@ public enum ModuleError: Error, CustomStringConvertible, Equatable {
         /// Called on the main thread when the module's UI appears or goes away.
         public var onChange: ((Bool) -> Void)?
         init(module: String, scene: String) { self.module = module; self.scene = scene; super.init(); controller.delegate = self }
-        public func hostViewControllerDidActivate(_ viewController: EXHostViewController) { active = true; onChange?(true) }
-        public func hostViewControllerWillDeactivate(_ viewController: EXHostViewController, error: (any Error)?) { active = false; onChange?(false) }
+        private var snapshotConnection: NSXPCConnection?
+        private var snapshotGeneration = 0
+        public func hostViewControllerDidActivate(_ viewController: EXHostViewController) {
+            snapshotGeneration &+= 1
+            snapshotConnection?.invalidate()
+            do {
+                let connection = try viewController.makeXPCConnection()
+                connection.remoteObjectInterface = ModuleXPCInterfaces.scene
+                connection.resume()
+                snapshotConnection = connection
+            } catch { snapshotConnection = nil }
+            active = true; onChange?(true)
+        }
+        public func hostViewControllerWillDeactivate(_ viewController: EXHostViewController, error: (any Error)?) {
+            snapshotGeneration &+= 1
+            snapshotConnection?.invalidate(); snapshotConnection = nil
+            active = false; onChange?(false)
+        }
+
+        /// Asking a scene never starts a process or retries a command with side effects.
+        public func snapshot() async throws -> Data {
+            guard active, let connection = snapshotConnection else { throw ModuleError.failed("scene snapshot connection is not ready") }
+            let generation = snapshotGeneration
+            let data = try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Data, Error>) in
+                let once = Once()
+                let timeout = DispatchWorkItem { once.run { continuation.resume(throwing: ModuleError.failed("scene snapshot timed out")) } }
+                DispatchQueue.main.asyncAfter(deadline: .now() + 3, execute: timeout)
+                let proxy = connection.remoteObjectProxyWithErrorHandler { error in
+                    timeout.cancel()
+                    once.run { continuation.resume(throwing: ModuleError.failed(error.localizedDescription)) }
+                } as? ModuleSceneXPC
+                guard let proxy else {
+                    timeout.cancel(); once.run { continuation.resume(throwing: ModuleError.failed("no scene snapshot service")) }; return
+                }
+                proxy.snapshot { data, problem in
+                    timeout.cancel()
+                    once.run {
+                        if let data, ModuleSnapshot.dimensions(data) != nil { continuation.resume(returning: data) }
+                        else { continuation.resume(throwing: ModuleError.failed(problem ?? "invalid scene PNG")) }
+                    }
+                }
+            }
+            guard active, snapshotGeneration == generation else { throw ModuleError.failed("scene changed during snapshot") }
+            return data
+        }
+
     }
 
     private final class Slot {
@@ -199,6 +243,28 @@ public enum ModuleError: Error, CustomStringConvertible, Equatable {
         slot.scenes.remove(at: index)
         scene.controller.configuration = nil
         send(.release, to: slot)
+    }
+
+    /// Cache-display the host and replace each remote area with that scene instance's own pixels.
+    public func snapshot(in root: NSView) async throws -> Data {
+        root.layoutSubtreeIfNeeded()
+        let bounds = root.bounds
+        var overlays: [(frame: CGRect, png: Data)] = []
+        for slot in slots.values {
+            for scene in slot.scenes {
+                let view = scene.controller.view
+                guard (view === root || view.isDescendant(of: root)), !view.isHiddenOrHasHiddenAncestor else { continue }
+                let frame = view.convert(view.bounds, to: root)
+                guard frame.intersects(root.bounds) else { continue }
+                overlays.append((frame, try await scene.snapshot()))
+                guard slot.lifecycle.enabled, slot.scenes.contains(where: { $0 === scene }),
+                      view.window === root.window, (view === root || view.isDescendant(of: root)), scene.active,
+                      view.convert(view.bounds, to: root) == frame, root.bounds == bounds else {
+                    throw ModuleError.failed("scene changed during snapshot")
+                }
+            }
+        }
+        return try ModuleSnapshotCompositor.capture(root, overlays: overlays)
     }
 
     private func show(_ scene: Scene, _ slot: Slot) {

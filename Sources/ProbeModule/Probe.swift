@@ -7,7 +7,14 @@ import SwiftUI
 // A module that exists only to exercise the kernel's module manager. Never shipped in Thermo.app.
 
 struct ProbeView: View {
-    var body: some View { Text("probe \(String(getpid()))").padding().frame(maxWidth: .infinity, maxHeight: .infinity) }
+    @State private var instance = UUID().uuidString
+    @State private var ready = false
+    var body: some View {
+        Text("probe \(String(getpid()))\n\(instance)")
+            .padding().frame(maxWidth: .infinity, maxHeight: .infinity)
+            .background(ready ? Color.green : Color.red)
+            .task { ready = true }
+    }
 }
 
 @main struct Probe: AppExtension {
