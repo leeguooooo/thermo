@@ -408,7 +408,7 @@ struct PopoverView: View {
                 Spacer(minLength: 0)
                 Menu { CaptureMenuItems() } label: { Image(systemName: "viewfinder").frame(width: 22) }
                 .menuStyle(.borderlessButton).fixedSize().help(tr("Screenshots and pins"))
-                if ModuleCenter.shared.shows(.disk(.home)) { shortcut("internaldrive", tr("Disk Cleanup"), .disk(.home)) }
+                ModulePanelLinks()
                 shortcut("stethoscope", tr("AI Agent Diagnostics"), .agents(.home))
                 Button { TabQuickAction.request() } label: { Image(systemName: "archivebox").frame(width: 22) }
                     .buttonStyle(.plain).foregroundStyle(Theme.textSecondary).help(tr("Save and close background tabs"))
@@ -1175,10 +1175,7 @@ struct SettingsView: View {
                 AWDLButton()
                 InspectorDivider(inset: 46)
                 BatteryCareButton()
-                if modules.isOn(BuiltinModules.disk.id) {
-                    InspectorDivider(inset: 46)
-                    CleanupProtectionsButton(disk: AppModels.shared.disk, asRow: true)
-                }
+                ModuleSettingsControls(center: modules, models: .shared)
             }
             section(tr("General")) {
                 row(tr("Language")) {

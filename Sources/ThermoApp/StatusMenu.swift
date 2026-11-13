@@ -178,7 +178,10 @@ final class StatusMenu: NSObject, NSMenuDelegate {
             case .tabOrganizer:
                 submenu.addItem(page(tr("Tab organizer"), "rectangle.stack", .browser("Google Chrome")))
             case .smartScan:
-                if ModuleCenter.shared.shows(.disk(.home)) { submenu.addItem(page(tr("Smart Scan"), "sparkles", .disk(.home))) }
+                // Keep the saved preference slot; its label, icon and destination come from the registry.
+                if let declared = ModuleCenter.shared.legacyMenuPage("smartScan") {
+                    submenu.addItem(page(declared.title, declared.symbol, declared.target))
+                }
             case .spaceLens:
                 submenu.addItem(page(tr("Space Lens"), "square.grid.3x3.topleft.filled", .space(.browse)))
             case .software:

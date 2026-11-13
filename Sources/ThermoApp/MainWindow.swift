@@ -1,65 +1,8 @@
 import AgentDoctor
 import AppKit
-import CleanKit
 import SwiftUI
 import ThermoKit
 import ThermoL10n
-
-/// What the app keeps once: the menu bar panel and the main window show the same models.
-@MainActor
-final class AppModels {
-    static let shared = AppModels()
-    lazy var monitor = Monitor()
-    lazy var updates = Updates()
-    /// Whether disk cleanup's model exists. It is created on first use and never while the feature is off.
-    private var storedDisk: DiskModel?
-    private let makeDisk: () -> DiskModel
-    var diskLoaded: Bool { storedDisk != nil }
-    var disk: DiskModel {
-        get {
-            if let storedDisk { return storedDisk }
-            let created = makeDisk(); storedDisk = created; return created
-        }
-        set { storedDisk = newValue }
-    }
-
-    init(makeDisk: @escaping () -> DiskModel = { DiskModel(retentionPreferences:.stored(in:.standard)) }) {
-        self.makeDisk = makeDisk
-    }
-
-    func prepareDiskStop() throws -> BuiltinModules.FinishStop? {
-        guard let model = storedDisk else { return nil }
-        guard model.prepareToDisable() else {
-            throw BuiltinModules.StopRefused(description: tr("Wait for cleanup or AI selection to finish before switching this feature off."))
-        }
-        return { [weak self] in
-            await model.finishDisabling()
-            if self?.storedDisk === model { self?.storedDisk = nil }
-        }
-    }
-    lazy var agents = AgentScanner()
-    lazy var apps = AppsModel()
-    lazy var startup = StartupItemsModel()
-    lazy var softwareUpdates = AppUpdatesModel()
-    lazy var nativeUpdates = NativeUpdatesModel()
-    lazy var claudeCleanup = ClaudeCleanupModel()
-    lazy var plugins = PluginsModel()
-    lazy var appStore = AppStoreModel()
-    private var browsers: [String: ChromePagesModel] = [:]
-
-    func stopBrowserChecks() {
-        for model in browsers.values where model.running { model.stop() }
-    }
-
-    /// One pages model per browser, so its last result is still there when the page is reopened.
-    func browser(_ app: String, memoryKB: Int? = nil, gpuKB: Int? = nil) -> ChromePagesModel {
-        let m = browsers[app] ?? ChromePagesModel(app: app, appMemoryKB: memoryKB, gpuKB: gpuKB)
-        if let memoryKB { m.appMemoryKB = memoryKB }
-        if let gpuKB { m.gpuKB = gpuKB }
-        browsers[app] = m
-        return m
-    }
-}
 
 /// The pages under Claude tools in the sidebar.
 enum ClaudeTab: String, Hashable, CaseIterable {
@@ -71,7 +14,6 @@ enum MainPage: Hashable {
     case overview, sensors, fans, settings
     case checkup
     case browser(String)
-    case disk(DiskPage)
     case agents(SidebarEntry)
     case apps(AppsTab)
     case space(SpaceTab)
@@ -88,6 +30,7 @@ enum MainPage: Hashable {
     /// `--page` values: overview, checkup, sensors, fans, settings, pages, disk, disk:overview, disk:<category>,
     /// module:<id>[:<entry>], agents, agents:<area>, apps, apps:leftovers, apps:store, plugins, space, space:large, space:duplicates, memory, cpu, gpu, claude, claude:<accounts|reset|privacy>, claude-cleanup, history, connections.
     init?(argument: String) {
+        if let feature = BuiltinModules.argument(argument) { self = feature; return }
         let parts = argument.split(separator: ":", maxSplits: 1).map(String.init)
         guard let command = parts.first else { return nil }
         switch command {
@@ -97,7 +40,6 @@ enum MainPage: Hashable {
         case "fans": self = .fans
         case "settings": self = .settings
         case "pages": self = .browser(parts.count > 1 ? parts[1] : "Google Chrome")
-        case "disk": self = .disk(parts.count > 1 ? (DiskPage(argument: parts[1]) ?? .home) : .home)
         case "agents": self = .agents(parts.count > 1 ? (Area(rawValue: parts[1]).map { .area($0) } ?? .home) : .home)
         case "apps": self = .apps(parts.count > 1 ? (parts[1] == "feeds" ? .updates : AppsTab(rawValue: parts[1]) ?? .installed) : .installed)
         case "memory": self = .memory
@@ -119,7 +61,6 @@ enum MainPage: Hashable {
         }
     }
 
-    var isDisk: Bool { if case .disk = self { return true } else { return false } }
     var samplingSurface: SamplingSurface {
         switch self {
         case .overview: return .overview
@@ -324,84 +265,6 @@ enum MainWindow {
 
 /// Disk cleanup's pages with what belongs to them: the error and rescan banners above the page and
 /// the confirmation before cleaning. Nothing outside this view holds the disk model.
-struct DiskPages: View {
-    @Binding var page: MainPage
-    let sub: DiskPage
-    @ObservedObject var disk: DiskModel
-    @State private var cleanReview: DiskCleanupReview?
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
-
-    var cleanupCategory: CleanCategory? {
-        if case let .category(category) = sub { return category }
-        return nil
-    }
-
-    var cleanupNoticeNeeded: Bool {
-        switch sub {
-        case .home, .category:
-            return disk.scopeNeedsRefresh(category: cleanupCategory) || disk.resultsNeedRefresh || disk.languageStale
-        default: return false
-        }
-    }
-
-    func startClean() { if cleanReview == nil { cleanReview = disk.cleanupReview() } }
-    func load() { if disk.report == nil, !disk.scanning { disk.loadSaved(category: cleanupCategory) } }
-
-    var body: some View {
-        VStack(spacing: 0) {
-            if let error = disk.error {
-                Label(error, systemImage: "exclamationmark.triangle.fill")
-                    .font(Theme.body).foregroundStyle(Theme.caution).textSelection(.enabled)
-                    .frame(maxWidth: .infinity, alignment: .leading).padding(14).glass(radius: 12)
-                    .padding(.horizontal, 32).padding(.top, 12)
-            }
-            if cleanupNoticeNeeded {
-                HStack {
-                    Text(disk.resultsNeedRefresh ? tr("Some paths could not be removed. Scan again to refresh the remaining items.") : disk.languageStale ? tr("Scan again to refresh results in the selected language.") : tr("Scan scope changed. Scan again to update these results.")).font(Theme.body)
-                    Spacer()
-                    Button(tr("Scan again")) { disk.scan(category: cleanupCategory) }.disabled(disk.scanning || disk.cleaning)
-                }
-                .padding(14).glass(radius: 12).padding(.horizontal, 32).padding(.top, 12)
-            }
-            ZStack { content }.frame(maxWidth: .infinity, maxHeight: .infinity)
-                .animation(Theme.standard.unlessReduced(reduceMotion), value: sub)
-        }
-        .onChange(of: sub) { _ in load() }
-        .onAppear { load() }
-        .sheet(item: $cleanReview) { review in
-            DiskCleanConfirmation(review: review,
-                                  confirm: { cleanReview = nil; disk.clean(review: review) }, cancel: { cleanReview = nil })
-        }
-    }
-
-    @ViewBuilder var content: some View {
-        switch sub {
-        case .home:
-            DiskHome(model: disk, open: { page = .disk(.category($0)) }, clean: startClean).transition(.page)
-        case .overview:
-            DiskOverviewView(openCleanup: { category in
-                SpaceOverviewModel.shared.stop()
-                if !disk.scanning && !disk.cleaning { disk.scan(category: category) }
-                page = category.map { .disk(.category($0)) } ?? .disk(.home)
-            }, cleanupDisabled: disk.scanning || disk.cleaning, openInSpaceLens: { path in
-                SpaceOverviewModel.shared.stop()
-                SpaceLensModel.shared.reveal(path)
-                page = .space(.browse)
-            }).transition(.page)
-        case let .category(c):
-            DiskCategoryPage(model: disk, category: c, clean: startClean, cleanOne: { item in if cleanReview == nil { cleanReview = disk.cleanupReview(of: item) } }).id(c)
-                .transition(.page)
-        }
-    }
-}
-
-/// The sidebar's disk cleanup rows redraw with the scan; the rest of the sidebar does not hold the model.
-private struct DiskSidebarRows<Content: View>: View {
-    @ObservedObject var disk: DiskModel
-    @ViewBuilder let content: (DiskModel) -> Content
-    var body: some View { content(disk) }
-}
-
 struct MainView: View {
     @Binding var page: MainPage
     let monitor: Monitor
@@ -439,23 +302,32 @@ struct MainView: View {
     }
 
     var glow: Bool {
+        if let owner = BuiltinModules.owner(page) { return modules.isOn(owner.manifest.id) && owner.appearance(page).glow }
         switch page {
-        case .overview, .disk(.home), .agents(.home): return true
+        case .overview, .agents(.home): return true
         default: return false
         }
     }
 
     var tint: Color? {
+        if let owner = BuiltinModules.owner(page), modules.isOn(owner.manifest.id) { return owner.appearance(page).tint }
         switch page {
         case .agents:
             guard let r = agents.report else { return Color(red: 0.42, green: 0.36, blue: 1.0) }
             return r.count(.error) > 0 ? .red : r.count(.warning) > 0 ? .orange : .green
-        case .disk: return Color(red: 0.36, green: 0.42, blue: 1.0)
         default: return nil
         }
     }
 
     @ViewBuilder var content: some View {
+        if let owner = BuiltinModules.owner(page) {
+            if modules.isOn(owner.manifest.id), let feature = BuiltinModules.page(page) {
+                owner.page(feature.entry, selection: $page, models: models).id(owner.manifest.id).transition(.page)
+            } else { ModuleOffView().transition(.page) }
+        } else { coreContent }
+    }
+
+    @ViewBuilder var coreContent: some View {
         switch page {
         case .overview:
             OverviewPage(monitor: monitor, open: { page = $0 }).transition(.page)
@@ -473,10 +345,6 @@ struct MainView: View {
             }.transition(.page)
         case let .browser(app):
             ChromePagesView(model: models.browser(app), embedded: true).id(app).transition(.page)
-        case let .disk(sub):
-            // The model is created here, on first use, and only while the feature is on.
-            if modules.isOn(BuiltinModules.disk.id) { DiskPages(page: $page, sub: sub, disk: models.disk).transition(.page) }
-            else { ModuleOffView().transition(.page) }
         case .agents(.home):
             DiagnosticsHome(scanner: agents, open: { a in page = .agents(.area(a)) }).transition(.page)
         case let .agents(.area(a)):
@@ -607,22 +475,18 @@ struct MainSidebar: View {
                     row(.memory, tr("Memory usage"), "memorychip", .green, trailing: memoryTrailing)
                     row(.browser("Google Chrome"), tr("Tab organizer"), "rectangle.stack", .teal, trailing: nil)
 
-                    header(modules.isOn(BuiltinModules.disk.id) ? tr("Disk Cleanup") : tr("Storage & apps"))
-                    if modules.isOn(BuiltinModules.disk.id) {
-                        DiskSidebarRows(disk: AppModels.shared.disk) { disk in
-                            row(.disk(.home), tr("Smart Scan"), "sparkles", .pink, trailing: disk.report.map { ByteFormat.string($0.totalBytes) })
-                            if page.isDisk {
-                                row(.disk(.overview), tr("Where the space is"), "chart.pie", .teal, trailing: nil, indent: true)
-                                ForEach(CleanCategory.allCases, id: \.self) { c in
-                                    let bytes = disk.report?.bytes(in: c) ?? 0
-                                    // Retention is configured here, so this entry cannot depend on
-                                    // a scan having found conversations eligible for removal.
-                                    if c == .aiSessions || bytes > 0 || (disk.report?.items ?? []).contains(where: { $0.category == c }) {
-                                        let size: String? = c == .aiSessions && disk.sessionRetentionDays == nil ? nil : ByteFormat.string(bytes)
-                                        row(.disk(.category(c)), c.title, DiskStyle.icon(c), DiskStyle.tint(c), trailing: size, indent: true)
-                                    }
-                                }
-                            }
+                    if !BuiltinModules.implementations.contains(where: { modules.isOn($0.manifest.id) && $0.manifest.entries.contains(where: { $0.kind == .page }) }) {
+                        header(tr("Storage & apps"))
+                    }
+                    ForEach(BuiltinModules.implementations.indices, id: \.self) { index in
+                        let feature = BuiltinModules.implementations[index]
+                        if modules.isOn(feature.manifest.id), feature.manifest.entries.contains(where: { $0.kind == .page }) {
+                            header(tr(feature.manifest.name))
+                            BuiltinSidebarGroup(implementation: feature, selection: $page, row: { item in
+                                AnyView(row(item.target, tr(item.entry.title), item.entry.symbol ?? feature.manifest.symbol,
+                                            item.tint, trailing: item.trailing, indent: item.entry.parent != nil, selected: item.selected)
+                                    .padding(.leading, CGFloat(max(0, feature.manifest.depth(of: item.entry.id) - 1)) * 14))
+                            })
                         }
                     }
 
@@ -633,9 +497,14 @@ struct MainSidebar: View {
                     row(.yunx, tr("YunX Download"), "arrow.down.circle", .blue, trailing: nil)
                     row(.plugins, tr("Plugin marketplace"), "puzzlepiece.extension", .orange, trailing: nil)
                     // Pages of the modules that are on; a module that is off has no row.
-                    ForEach(modules.pages) { item in
-                        row(item.target, item.entry.title, item.entry.symbol ?? item.module.symbol, .teal, trailing: nil,
-                            selected: { if case let .module(id, entry) = page { return id == item.module.id && (entry.isEmpty ? item.id == modules.pages.first { $0.module.id == id }?.id : entry == item.entry.id) }; return false }())
+                    ForEach(modules.pageGroups) { group in
+                        header(group.module.name)
+                        ForEach(group.pages.filter { $0.entry.parent == nil || page.module == group.module.id }) { item in
+                            row(item.target, item.entry.title, item.entry.symbol ?? item.module.symbol, .teal, trailing: nil,
+                                indent: item.depth > 0,
+                                selected: { if case let .module(id, entry) = page { return id == item.module.id && (entry.isEmpty ? item.entry.parent == nil && item.id == group.pages.first { $0.entry.parent == nil }?.id : entry == item.entry.id) }; return false }())
+                                .padding(.leading, CGFloat(max(0, item.depth - 1)) * 14)
+                        }
                     }
 
                     header(tr("AI Agent Diagnostics"))
@@ -734,12 +603,16 @@ struct MainSidebar: View {
         .background(Color.clear.frame(height: (indent ? 26 : 30) + 40).id(target))
     }
     @ViewBuilder func shortcut(_ target: MainPage) -> some View {
+        if modules.shows(target), let value = modules.navigationKey(target), let character = value.first {
+            key(KeyEquivalent(character), target)
+        } else { coreShortcut(target) }
+    }
+    @ViewBuilder func coreShortcut(_ target: MainPage) -> some View {
         switch target {
         case .overview: key("1", target)
         case .sensors: key("2", target)
         case .fans: key("3", target)
         case .browser("Google Chrome"): key("4", target)
-        case .disk(.home): if modules.isOn(BuiltinModules.disk.id) { key("5", target) }
         case .agents(.home): key("6", target)
         case .settings: key(",", target)
         default: EmptyView()

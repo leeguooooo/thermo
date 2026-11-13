@@ -341,7 +341,7 @@ struct OverviewPage: View {
               pulse.current.flatMap { $0.swapUsedMB > 0 ? tr("swap %1$@", MemoryFormat.string(mebibytes: $0.swapUsedMB)) : nil }]
                 .compactMap { $0 }.joined(separator: " · "), .memory),
             // With disk cleanup off, free space leads to where the space is used instead.
-            (tr("Disk"), disk.map { ByteFormat.string($0.freeBytes) } ?? "—", tr("free"), ModuleCenter.shared.shows(.disk(.home)) ? .disk(.home) : .space(.browse)),
+            (tr("Disk"), disk.map { ByteFormat.string($0.freeBytes) } ?? "—", tr("free"), ModuleCenter.shared.rootPage(BuiltinModules.disk.id) ?? .space(.browse)),
             (tr("Power"), s?.systemPower.map { String(format: "%.1f W", $0) } ?? "—", tr("System"), .sensors),
             (tr("Battery"), s?.battery?.percent.map { String(format: "%.0f%%", $0) } ?? "—",
              s?.battery.map { b in b.health.map { tr("health %1$@%%", String(format: "%.0f", $0 * 100)) } ?? (b.charging ? tr("charging") : "") },

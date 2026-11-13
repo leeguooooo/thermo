@@ -2012,6 +2012,8 @@ let zhHans: [String: String] = [
     // Disk Cleanup window
     "Disk Cleanup": "磁盘清理",
     "Storage & apps": "磁盘与应用",
+    "Command-%1$@ belongs to Thermo's built-in navigation.": "Command-%1$@ 已用于 Thermo 的内置页面导航。",
+    "Command-%1$@ is already used by %2$@. Switch that feature off first.": "Command-%1$@ 已由%2$@使用，请先关闭该功能。",
     "Wait for cleanup or AI selection to finish before switching this feature off.": "请等当前清理或 AI 勾选完成后再关闭此功能。",
     "Size": "大小",
     "Last used": "上次使用",
