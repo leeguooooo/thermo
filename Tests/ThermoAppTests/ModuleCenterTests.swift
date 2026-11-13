@@ -201,13 +201,13 @@ import XCTest
         let id = BuiltinModules.disk.id
         // On for everyone who never touched the switch.
         XCTAssertTrue(center.isOn(id))
-        XCTAssertTrue(center.shows(.disk(.home)) && center.shows(.disk(.overview)))
+        XCTAssertTrue(center.shows(.module(BuiltinModules.disk.id, "scan")) && center.shows(.module(BuiltinModules.disk.id, "overview")))
         center.setEnabled(id, false)
         XCTAssertFalse(center.isOn(id))
-        XCTAssertFalse(center.shows(.disk(.home)) || center.shows(.disk(.category(.aiSessions))))
+        XCTAssertFalse(center.shows(.module(BuiltinModules.disk.id, "scan")) || center.shows(.module(BuiltinModules.disk.id, "ai-sessions")))
         XCTAssertTrue(center.shows(.overview) && center.shows(.memory), "other pages are untouched")
         XCTAssertEqual(center.switches.first { $0.manifest.id == id }?.enabled, false)
         center.setEnabled(id, true)
-        XCTAssertTrue(center.shows(.disk(.home)))
+        XCTAssertTrue(center.shows(.module(BuiltinModules.disk.id, "scan")))
     }
 }

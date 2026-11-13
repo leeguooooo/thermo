@@ -240,8 +240,8 @@ struct MemoryPage: View {
                     .font(Theme.caption).foregroundStyle(Theme.textSecondary).fixedSize(horizontal: false, vertical: true)
             }
             Spacer()
-            if ModuleCenter.shared.shows(.disk(.home)) {
-                Button(tr("Free disk space")) { open(.disk(.home)) }.buttonStyle(PillButtonStyle(prominent: true, color: Theme.danger))
+            if let cleanupPage = ModuleCenter.shared.rootPage(BuiltinModules.disk.id) {
+                Button(tr("Free disk space")) { open(cleanupPage) }.buttonStyle(PillButtonStyle(prominent: true, color: Theme.danger))
             }
         }
         .padding(14).glass()

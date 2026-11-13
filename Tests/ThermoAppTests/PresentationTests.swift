@@ -161,7 +161,7 @@ final class PresentationTests: XCTestCase {
         XCTAssertNil(MainPage(argument: ""))
         XCTAssertNil(MainPage(argument: ":"))
         XCTAssertEqual(MainPage(argument: "sensors"), .sensors)
-        XCTAssertEqual(MainPage(argument: "disk:overview"), .disk(.overview))
+        XCTAssertEqual(MainPage(argument: "disk:overview"), .module(BuiltinModules.disk.id, "overview"))
     }
 
     func testChartIncludesHotAppleSiliconReadings() {

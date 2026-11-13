@@ -6,6 +6,7 @@ import AgentDoctor
 import CleanKit
 import ThermoKit
 import ThermoL10n
+import ModuleKit
 
 /// The menu bar panel is sized once per show for the screen it opens on. SwiftUI changes while it is open
 /// must not resize it, or AppKit shifts it across the menu bar and onto the neighbouring display.
@@ -495,7 +496,7 @@ private final class PageMenuTarget: NSObject, NSMenuItemValidation {
 }
 
 /// AppKit routes text editing shortcuts through the menu even for SwiftUI text fields.
-@MainActor func installStandardMenus() {
+@MainActor func installStandardMenus(center: ModuleCenter = .shared) {
     let main = NSApp.mainMenu ?? NSMenu()
     NSApp.mainMenu = main
     for item in main.items where ["thermo.edit", "thermo.view", "thermo.window"].contains(item.identifier?.rawValue ?? "") {
@@ -525,16 +526,17 @@ private final class PageMenuTarget: NSObject, NSMenuItemValidation {
     let viewItem = NSMenuItem(title: tr("View"), action: nil, keyEquivalent: "")
     viewItem.identifier = NSUserInterfaceItemIdentifier("thermo.view")
     let viewMenu = NSMenu(title: tr("View"))
-    let pages: [(String, String, MainPage)] = [
-        (tr("Overview"), "1", .overview), (tr("Sensors"), "2", .sensors), (tr("Fans"), "3", .fans),
-        (tr("Browser pages"), "4", .browser("Google Chrome")), (tr("Disk Cleanup"), "5", .disk(.home)),
-        (tr("AI Agent Diagnostics"), "6", .agents(.home)),
-        (tr("Software"), "7", .apps(.installed)), (tr("Memory usage"), "8", .memory),
-        (tr("CPU usage"), "9", .compute(false)), (tr("GPU usage"), "0", .compute(true)),
-        (tr("Space Lens"), "", .space(.browse)), (tr("Claude tools"), "", .claude(.accounts)),
-        (tr("Settings"), ",", .settings),
-    ]
-    for (title, key, page) in pages where ModuleCenter.shared.shows(page) {
+    var pages: [(String, String, MainPage)] = HostPageSpecification.pages.compactMap { entry in
+        MainPage(argument: entry.argument).map { (tr(entry.title), entry.key, $0) }
+    }
+    for entry in center.navigationPages where entry.entry.parent == nil || entry.entry.navigationKey != nil {
+        pages.append((entry.navigationTitle, center.navigationKey(entry.target) ?? "", entry.target))
+    }
+    func rank(_ key: String) -> Int { key == "0" ? 10 : Int(key) ?? (key == "," ? 12 : 11) }
+    pages = pages.enumerated().sorted { a, b in
+        rank(a.element.1) == rank(b.element.1) ? a.offset < b.offset : rank(a.element.1) < rank(b.element.1)
+    }.map(\.element)
+    for (title, key, page) in pages where center.shows(page) {
         let item = viewMenu.addItem(withTitle: title, action: #selector(PageMenuTarget.open(_:)), keyEquivalent: key)
         item.target = PageMenuTarget.shared
         item.representedObject = page
@@ -662,15 +664,7 @@ if let i = CommandLine.arguments.firstIndex(of: "--render-preview"), i + 1 < Com
     func value(after flag: String) -> String? { args.firstIndex(of: flag).flatMap { $0 + 1 < args.count ? args[$0 + 1] : nil } }
     var page = value(after: "--page").flatMap(MainPage.init(argument:)) ?? .overview
     if value(after: "--page") == "apps:feeds" { models.softwareUpdates.channel = "native" }
-    if args.contains("--disk"), ModuleCenter.shared.shows(.disk(.home)) {
-        page = .disk(value(after: "--page").flatMap(DiskPage.init(argument:)) ?? .home)
-        if args.contains("--all") { models.disk.scope = .all }
-        if !args.contains("--no-scan") {
-            let category: CleanCategory?
-            if case let .disk(.category(selected)) = page { category = selected } else { category = nil }
-            models.disk.loadSaved(category: category, scanIfMissing: true)
-        }
-    }
+    for feature in BuiltinModules.implementations { feature.prepareReview(args, page: &page, models: models) }
     if args.contains("--agents") {
         page = .agents(value(after: "--agents").flatMap(Area.init(rawValue:)).map { .area($0) } ?? .home)
         models.agents.scan()
@@ -697,16 +691,15 @@ if let i = CommandLine.arguments.firstIndex(of: "--render-preview"), i + 1 < Com
     }
     guard let path = value(after: "--snapshot") else { return }
     let started = Date()
-    // Verification: a feature that is off must not have had its model created by the time the picture is taken.
-    if args.contains("--expect-no-disk-model") {
-        DispatchQueue.main.asyncAfter(deadline: .now() + 2) { if AppModels.shared.diskLoaded { FileHandle.standardError.write(Data("disk model was created\n".utf8)); exit(3) } }
-    }
     MainWindow.snapshot(to: path) {
+        // Check in the capture gate: a delayed check could be skipped by a fast successful snapshot.
+        if args.contains("--expect-no-disk-model"), models.diskLoaded {
+            FileHandle.standardError.write(Data("disk model was created\n".utf8)); exit(3)
+        }
         // Give each page what it needs to be worth a picture, but never wait more than 90 s.
         if Date().timeIntervalSince(started) > 90 { return true }
+        if let ready = BuiltinModules.snapshotReady(page, arguments: args, models: models, center: .shared) { return ready }
         switch page {
-        case .disk where !ModuleCenter.shared.shows(page): return true
-        case .disk: return !models.disk.loadingSaved && (args.contains("--no-scan") ? !models.disk.scanning : models.disk.report != nil && !models.disk.scanning)
         case .agents: return models.agents.report != nil && !models.agents.scanning
         case .claude(.accounts): return ClaudeAccountsModel.shared.loaded
         case .claude: return models.claudeCleanup.loaded && !models.claudeCleanup.busy
