@@ -15,28 +15,39 @@ struct CaptureSaveSettingsView:View {
             if let message=error ?? model.issue { Text(message).foregroundStyle(.red).textSelection(.enabled) }
             ScrollView {
                 VStack(alignment:.leading,spacing:14) {
-                    GroupBox(tr("Quick save")) { CaptureDestinationEditor(destination:$draft.quick) }
-                    Toggle(tr("Automatically save an extra copy after each successful screenshot"),isOn:$draft.autoSave)
-                    GroupBox(tr("Automatic copy")) { CaptureDestinationEditor(destination:$draft.automatic) }
-                    HStack { Text(tr("JPEG quality"));Slider(value:$draft.quality,in:0...1);Text("\(Int(draft.quality*100))%").monospacedDigit() }
-                    Toggle(tr("Copy image after a successful manual save"),isOn:$draft.copyAfterManualSave)
-                    GroupBox(tr("After selecting a screenshot")) {
-                        VStack(alignment:.leading,spacing:8) {
-                            Text(tr("Steps run from top to bottom. An empty chain only keeps the optional automatic copy.")).font(.caption)
-                            ForEach(Array(draft.after.enumerated()),id:\.element) { index,step in
-                                HStack {
-                                    Text("\(index+1). "+tr(step.title));Spacer()
-                                    Button(tr("Move step up")) { draft.after.swapAt(index,index-1) }.disabled(index == 0)
-                                    Button(tr("Move step down")) { draft.after.swapAt(index,index+1) }.disabled(index == draft.after.count-1)
-                                    Button(tr("Remove step")) { draft.after.remove(at:index) }
-                                }
-                            }
-                            Menu(tr("Add after-action")) { ForEach(CaptureAfterStep.allCases.filter{!draft.after.contains($0)}) { step in Button(tr(step.title)) { draft.after.append(step) } } }
-                        }.padding(6)
+                    GroupBox(tr("Save location")) {
+                        VStack(alignment:.leading,spacing:6) {
+                            Text(tr("Save in the screenshot toolbar writes here. Without a folder it asks where to save.")).font(.caption).foregroundStyle(.secondary)
+                            CaptureDestinationEditor(destination:$draft.quick)
+                        }
                     }
+                    HStack { Text(tr("JPEG quality"));Slider(value:$draft.quality,in:0...1);Text("\(Int(draft.quality*100))%").monospacedDigit() }
                     Text(tr("Supported filename variables: $yyyy$, $MM$, $dd$, $HH$, $mm$, $ss$, $SSS$, $yyyy-MM-dd_HH-mm-ss-SSS$, %width%, %height%, %uuid%, %os%. Use / for subfolders; the selected format sets the extension.")).font(.caption).foregroundStyle(.secondary)
                     Text(tr("Quick-save filename preview")+": "+preview).font(.caption).textSelection(.enabled)
-                    Text(tr("Existing files are kept; a number is added on collision. Failed chains stop and open the captured image as a pin. Completed copies and saves are kept.")).font(.caption).foregroundStyle(.secondary)
+                    // 脚本、动作链和自动保存是低频配置，默认收起，基础设置只留保存位置。
+                    DisclosureGroup(tr("Advanced")) {
+                        VStack(alignment:.leading,spacing:14) {
+                            Toggle(tr("Automatically save an extra copy after each successful screenshot"),isOn:$draft.autoSave)
+                            GroupBox(tr("Automatic copy")) { CaptureDestinationEditor(destination:$draft.automatic) }
+                            Toggle(tr("Copy image after a successful manual save"),isOn:$draft.copyAfterManualSave)
+                            GroupBox(tr("After-capture chain for scripts")) {
+                                VStack(alignment:.leading,spacing:8) {
+                                    Text(tr("Runs when a script captures without its own steps, and after the system selector before macOS 14. The screenshot toolbar runs only the button you press.")).font(.caption)
+                                    Text(tr("Steps run from top to bottom. An empty chain only keeps the optional automatic copy.")).font(.caption)
+                                    ForEach(Array(draft.after.enumerated()),id:\.element) { index,step in
+                                        HStack {
+                                            Text("\(index+1). "+tr(step.title));Spacer()
+                                            Button(tr("Move step up")) { draft.after.swapAt(index,index-1) }.disabled(index == 0)
+                                            Button(tr("Move step down")) { draft.after.swapAt(index,index+1) }.disabled(index == draft.after.count-1)
+                                            Button(tr("Remove step")) { draft.after.remove(at:index) }
+                                        }
+                                    }
+                                    Menu(tr("Add after-action")) { ForEach(CaptureAfterStep.allCases.filter{!draft.after.contains($0)}) { step in Button(tr(step.title)) { draft.after.append(step) } } }
+                                }.padding(6)
+                            }
+                            Text(tr("Existing files are kept; a number is added on collision. Failed chains stop and open the captured image as a pin. Completed copies and saves are kept.")).font(.caption).foregroundStyle(.secondary)
+                        }.padding(.top,8)
+                    }
                     if !model.saved.isEmpty { Text(tr("Last saved files")+":\n"+model.saved.map(\.path).joined(separator:"\n")).font(.caption).textSelection(.enabled) }
                 }.padding(4)
             }

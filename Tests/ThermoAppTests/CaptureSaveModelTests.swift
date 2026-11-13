@@ -13,6 +13,19 @@ import XCTest
         fail=false;XCTAssertTrue(model.apply(next));XCTAssertEqual(try CaptureSaveSettings.decode(saved),next)
         let invalid=CaptureSaveModel(read:{Data("invalid".utf8)},write:{_ in});XCTAssertTrue(invalid.invalidStoredSettings);XCTAssertThrowsError(try invalid.snapshot());XCTAssertTrue(invalid.apply(.init()));XCTAssertNoThrow(try invalid.snapshot())
     }
+    func testSelectorQuickSaveKeepsTheCaptureSettingsSnapshot() throws {
+        let root=FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        try FileManager.default.createDirectory(at:root,withIntermediateDirectories:true)
+        defer {try? FileManager.default.removeItem(at:root)}
+        let model=CaptureSaveModel(read:{nil},write:{_ in})
+        var captured=CaptureSaveSettings();captured.quick.directory=root.path;captured.quick.template="captured"
+        var changed=captured;changed.quick.template="changed"
+        XCTAssertTrue(model.apply(changed))
+        let file=try model.quickSave(CaptureDocument(image:image()),settings:captured)
+        XCTAssertEqual(file.lastPathComponent,"captured.png")
+        XCTAssertTrue(FileManager.default.fileExists(atPath:file.path))
+        XCTAssertEqual(model.settings.quick.template,"changed")
+    }
     func testOrderedChainUsesSameImageAndPreservesBothSaves() async throws {
         let model=CaptureSaveModel(read:{nil},write:{_ in}),image=image();var events:[String]=[]
         var options=CaptureSaveSettings();options.after=[.copyImage,.copyText,.quickSave,.pin];options.autoSave=true;options.quick.directory="/tmp/quick";options.automatic.directory="/tmp/auto"
@@ -61,6 +74,29 @@ import XCTest
         XCTAssertTrue(result);XCTAssertTrue(board.string(forType:.string)?.contains("12345") == true);XCTAssertEqual(workspace.pinSession.count,0)
         XCTAssertEqual(workspace.saving.saved.map(\.lastPathComponent),["automatic.png","quick.png"])
         for file in workspace.saving.saved {XCTAssertEqual(NSBitmapImageRep(data:try Data(contentsOf:file))?.pixelsWide,800)}
+    }
+    /// The selector's outputs through the real workspace: copy leaves no pin, only 钉在桌面 pins,
+    /// and reviewed OCR text is copied as edited instead of being recognised again.
+    func testSelectorOutputsCopyWithoutPinningAndCopyReviewedText() async throws {
+        _=NSApplication.shared
+        let root=FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        try FileManager.default.createDirectory(at:root,withIntermediateDirectories:true)
+        let session=CapturePinSession(store:.init(root:root.appendingPathComponent("pins"))),workspace=CaptureWorkspace(pinSession:session),board=NSPasteboard.withUniqueName()
+        defer {workspace.shutdown();session.closeAll();board.releaseGlobally();try? FileManager.default.removeItem(at:root)}
+        workspace.saving=CaptureSaveModel(read:{nil},write:{_ in})
+        var options=CaptureSaveSettings()
+        options.after=CaptureSelectionOutput.primary(confirm:nil).steps
+        let copied=await workspace.processCaptured(image(),options:options,pasteboard:board)
+        XCTAssertTrue(copied);XCTAssertNotNil(board.data(forType:.png));XCTAssertEqual(session.count,0,"Copying must not leave a pin")
+        options.after=CaptureSelectionOutput.copyText.steps
+        let texted=await workspace.processCaptured(image(),options:options,recognizedText:"edited 文字",pasteboard:board)
+        XCTAssertTrue(texted);XCTAssertEqual(board.string(forType:.string),"edited 文字");XCTAssertEqual(session.count,0)
+        options.after=CaptureSelectionOutput.pin.steps
+        let pinned=await workspace.processCaptured(image(),options:options,pasteboard:board)
+        XCTAssertTrue(pinned);XCTAssertEqual(session.count,1)
+        options.after=CaptureSelectionOutput.saved(copyAfterSave:false).steps
+        let saved=await workspace.processCaptured(image(),options:options,pasteboard:board)
+        XCTAssertTrue(saved);XCTAssertEqual(session.count,1,"A finished save adds no pin");XCTAssertEqual(CaptureSaveSettings().after,[.pin],"The stored default chain is untouched")
     }
     func testDefaultPinAndExplicitEmptyChainDoNotCreateFilesOrCopy() async {
         let model=CaptureSaveModel(read:{nil},write:{_ in});var pins=0,copies=0,saves=0

@@ -22,7 +22,7 @@ import ThermoL10n
     func snapshot() throws -> CaptureSaveSettings { guard !invalidStoredSettings else { throw CaptureSaveFailure.invalidSettings };return settings }
     /// The same immutable pixels and settings snapshot are used for every ordered step.
     func run(_ image:CGImage,settings value:CaptureSaveSettings,pin:(CGImage)throws->Void,copyImage:(Data)throws->Void,copyText:(String)throws->Void,
-             recognize:(CGImage)async throws->String={image in try await Task.detached(priority:.userInitiated) { let result=try CaptureRecognition.recognize(image);return ([result.text]+result.codes).filter{!$0.isEmpty}.joined(separator:"\n") }.value},
+             recognize:(CGImage)async throws->String=CaptureSaveModel.recognizeText,
              save:(CaptureDocument,CaptureSaveDestination,Double)async throws->URL={document,destination,quality in try await Task.detached(priority:.userInitiated) {try CaptureImageSave.save(document,to:destination,quality:quality)}.value}) async -> Bool {
         guard !running else { issue=tr(CaptureSaveFailure.busy.localizedDescription);return false }
         guard value.valid else { issue=tr(CaptureSaveFailure.invalidSettings.localizedDescription);return false }
@@ -53,7 +53,11 @@ import ThermoL10n
             return false
         }
     }
-    func quickSave(_ document:CaptureDocument) throws -> URL {
-        let value=try snapshot(),url=try CaptureImageSave.save(document,to:value.quick,quality:value.quality);saved=[url];return url
+    /// Text and barcodes in the image, one per line.
+    nonisolated static func recognizeText(_ image:CGImage) async throws -> String {
+        try await Task.detached(priority:.userInitiated) { let result=try CaptureRecognition.recognize(image);return ([result.text]+result.codes).filter{!$0.isEmpty}.joined(separator:"\n") }.value
+    }
+    func quickSave(_ document:CaptureDocument,settings:CaptureSaveSettings?=nil) throws -> URL {
+        let value=try settings ?? snapshot(),url=try CaptureImageSave.save(document,to:value.quick,quality:value.quality);saved=[url];return url
     }
 }
