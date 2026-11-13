@@ -10,6 +10,15 @@ enum BuiltinModules {
     static let all = [disk]
 
     static func manifest(_ id: String) -> ModuleManifest? { all.first { $0.id == id } }
+
+    typealias FinishStop = @MainActor () async -> Void
+
+    struct StopRefused: Error, CustomStringConvertible { let description: String }
+
+    @MainActor static func prepareStop(_ id: String) throws -> FinishStop? {
+        if id == disk.id { return try AppModels.shared.prepareDiskStop() }
+        return nil
+    }
 }
 
 extension MainPage {

@@ -12,8 +12,31 @@ final class AppModels {
     lazy var monitor = Monitor()
     lazy var updates = Updates()
     /// Whether disk cleanup's model exists. It is created on first use and never while the feature is off.
-    private(set) var diskLoaded = false
-    lazy var disk: DiskModel = { diskLoaded = true; return DiskModel(retentionPreferences:.stored(in:.standard)) }()
+    private var storedDisk: DiskModel?
+    private let makeDisk: () -> DiskModel
+    var diskLoaded: Bool { storedDisk != nil }
+    var disk: DiskModel {
+        get {
+            if let storedDisk { return storedDisk }
+            let created = makeDisk(); storedDisk = created; return created
+        }
+        set { storedDisk = newValue }
+    }
+
+    init(makeDisk: @escaping () -> DiskModel = { DiskModel(retentionPreferences:.stored(in:.standard)) }) {
+        self.makeDisk = makeDisk
+    }
+
+    func prepareDiskStop() throws -> BuiltinModules.FinishStop? {
+        guard let model = storedDisk else { return nil }
+        guard model.prepareToDisable() else {
+            throw BuiltinModules.StopRefused(description: tr("Wait for cleanup or AI selection to finish before switching this feature off."))
+        }
+        return { [weak self] in
+            await model.finishDisabling()
+            if self?.storedDisk === model { self?.storedDisk = nil }
+        }
+    }
     lazy var agents = AgentScanner()
     lazy var apps = AppsModel()
     lazy var startup = StartupItemsModel()

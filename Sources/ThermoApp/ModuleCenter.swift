@@ -19,6 +19,9 @@ import ThermoL10n
 
     let manager: ModuleManager
     private let defaults: UserDefaults
+    private let prepareBuiltinStop: @MainActor (String) throws -> BuiltinModules.FinishStop?
+    @Published private(set) var changing = Set<String>()
+    @Published private(set) var switchIssues: [String: String] = [:]
     @Published private(set) var statuses: [ModuleManager.Status] = []
     /// Bumped when a built-in feature is switched, so views that show its entries update.
     @Published private(set) var revision = 0
@@ -26,8 +29,10 @@ import ThermoL10n
     @Published private(set) var loaded = false
     private var started = false
 
-    init(manager: ModuleManager? = nil, defaults: UserDefaults = .standard) {
+    init(manager: ModuleManager? = nil, defaults: UserDefaults = .standard,
+         prepareBuiltinStop: @escaping @MainActor (String) throws -> BuiltinModules.FinishStop? = BuiltinModules.prepareStop) {
         self.manager = manager ?? ModuleManager(); self.defaults = defaults
+        self.prepareBuiltinStop = prepareBuiltinStop
     }
 
     static func key(_ id: String) -> String { ModulePreferences.key(id) }
@@ -89,6 +94,14 @@ import ThermoL10n
     }
 
     func setEnabled(_ id: String, _ on: Bool) {
+        guard !changing.contains(id) else { return }
+        var finish: BuiltinModules.FinishStop?
+        if !on, BuiltinModules.manifest(id) != nil {
+            do { finish = try prepareBuiltinStop(id) }
+            catch { switchIssues[id] = String(describing: error); return }
+        }
+        switchIssues[id] = nil
+        if finish != nil { changing.insert(id) }
         defaults.set(on, forKey: Self.key(id))
         if BuiltinModules.manifest(id) != nil {
             revision += 1
@@ -97,6 +110,12 @@ import ThermoL10n
         } else { manager.setEnabled(id, on) }
         // A module that was switched off is in no entry point, the open page included.
         if !on, MainWindow.state.page.module == id { MainWindow.state.page = .overview }
+        if let finish {
+            Task { @MainActor in
+                await finish()
+                changing.remove(id)
+            }
+        }
     }
 }
 
@@ -165,6 +184,12 @@ struct ModuleSwitches: View {
                     if !status.manifest.summary.isEmpty {
                         Text(status.builtin ? tr(status.manifest.summary) : status.manifest.localized(L10n.current.rawValue).summary).font(Theme.secondary).foregroundStyle(Theme.textSecondary)
                     }
+                    if let issue = center.switchIssues[status.manifest.id] {
+                        Text(issue).font(Theme.secondary).foregroundStyle(Theme.caution)
+                    }
+                    if center.changing.contains(status.manifest.id) {
+                        Text(tr("stopping…")).font(Theme.secondary).foregroundStyle(Theme.textSecondary)
+                    }
                 }
                 Spacer()
                 // Only a module in its own process goes through the kernel and has a record of it.
@@ -173,6 +198,7 @@ struct ModuleSwitches: View {
                 }
                 Toggle("", isOn: Binding(get: { status.enabled }, set: { center.setEnabled(status.manifest.id, $0) }))
                     .labelsHidden().toggleStyle(.switch).accessibilityLabel(status.manifest.name)
+                    .disabled(center.changing.contains(status.manifest.id))
             }.padding(.horizontal, Theme.Space.m).padding(.vertical, 8)
         }
         .sheet(item: Binding(get: { activity.map(ActivityTarget.init) }, set: { activity = $0?.manifest })) { target in

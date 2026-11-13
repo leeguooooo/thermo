@@ -50,6 +50,7 @@ final class DiskModel: ObservableObject {
     var remembersSessionRetention: Bool { retentionPreferences.persistent }
     private var savedLoadGeneration = UUID()
     private var savedReadRunning = false
+    private var retiring = false
     private var savedRequest: SavedRequest?
     private struct SavedRequest: Equatable {
         var scope: Scope
@@ -144,7 +145,7 @@ final class DiskModel: ObservableObject {
     /// Repeated page appearances share one physical reader. A later request replaces
     /// the pending scope; superseded results never become a cleanup plan.
     func loadSaved(category: CleanCategory? = nil, scanIfMissing: Bool = false) {
-        guard report == nil, !scanning, !cleaning else { return }
+        guard !retiring, report == nil, !scanning, !cleaning else { return }
         let request = SavedRequest(scope: scope, category: category, retention: sessionRetentionDays,
                                    language: L10n.current.rawValue, scanIfMissing: scanIfMissing)
         if let current = savedRequest, current.matches(request) {
@@ -201,7 +202,7 @@ final class DiskModel: ObservableObject {
     }
 
     func scan(category: CleanCategory? = nil) {
-        guard !scanning, !cleaning else { return }
+        guard !retiring, !scanning, !cleaning else { return }
         clearAIPick()
         requestNotifications()
         scanning = true
@@ -259,7 +260,10 @@ final class DiskModel: ObservableObject {
                 guard let self, self.scanCancellation === cancellation else { return }
                 self.acceptScan(result)
                 // The scanner saved its report after any cleanup had cleared the old one.
-                if self.cleaning || !self.cleanedDuringScan.isEmpty { self.cleanQueue.async { ScanReportCache.invalidate() } }
+                if self.cleaning || !self.cleanedDuringScan.isEmpty {
+                    let home = self.cleanGuard.home
+                    self.cleanQueue.async { ScanReportCache.invalidate(home: home) }
+                }
                 self.cleanedDuringScan = [:]
                 self.scanning = false
                 self.stopping = false
@@ -287,6 +291,22 @@ final class DiskModel: ObservableObject {
         }
     }
 
+    @MainActor func prepareToDisable() -> Bool {
+        guard !cleaning, aiPicking == nil else { return false }
+        retiring = true
+        invalidateSavedLoad()
+        stop()
+        return true
+    }
+
+    @MainActor func finishDisabling() async {
+        while scanning || savedReadRunning { try? await Task.sleep(nanoseconds: 50_000_000) }
+        let worker = queue, cleaner = cleanQueue
+        await withCheckedContinuation { (continuation: CheckedContinuation<Void, Never>) in
+            worker.async { cleaner.async { continuation.resume() } }
+        }
+    }
+
     /// Stop the running scan; whatever was found so far stays on screen.
     func stop() {
         guard scanning, let scanCancellation else { return }
@@ -308,7 +328,7 @@ final class DiskModel: ObservableObject {
     }
 
     func clean(review: DiskCleanupReview? = nil) {
-        guard !cleaning else { return }
+        guard !retiring, !cleaning else { return }
         if let review, !isCurrentCleanupReview(review) {
             error = tr("Cleanup plan changed. Review the current items before cleaning.")
             lastResult = nil
@@ -325,12 +345,12 @@ final class DiskModel: ObservableObject {
         cleaningTotal = items.count
         let g = cleanGuard
         cleanQueue.async { [weak self] in
-            do { _ = try Whitelist.loadForRemoval() } catch {
+            do { _ = try Whitelist.loadForRemoval(home: g.home) } catch {
                 let why = Whitelist.unreadable(error)
                 DispatchQueue.main.async { self?.error = why; self?.cleaning = false }
                 return
             }
-            ScanReportCache.invalidate()
+            ScanReportCache.invalidate(home: g.home)
             let spaceBefore = DiskSpaceSnapshot.measure()
             let batchID = UUID().uuidString
             var batchRecorded = false
@@ -353,7 +373,7 @@ final class DiskModel: ObservableObject {
                     remaining[i.id] = rest
                 }
             }
-            ScanReportCache.invalidate()
+            ScanReportCache.invalidate(home: g.home)
             let observation = DiskSpaceObservation(before: spaceBefore, after: DiskSpaceSnapshot.measure())
             var text = estimateIncomplete
                 ? (freed == 0 ? tr("Removed size is unknown") : tr("Measured removed size: %1$@; total size is unknown", ByteFormat.string(freed)))
@@ -414,7 +434,7 @@ final class DiskModel: ObservableObject {
     /// "Always keep": the item's paths (or just some: one session, one path) go into the whitelist
     /// and stay out of every cleanup.
     func alwaysKeep(_ item: CleanItem, paths: [String]? = nil, home: String = NSHomeDirectory()) {
-        guard !cleaning, !scanning else { return }
+        guard !retiring, !cleaning, !scanning else { return }
         do {
             let change = try Whitelist.addWithUndo(paths ?? (item.paths + (item.commandScope ?? [])), home: home)
             invalidateSavedLoad()
@@ -435,7 +455,7 @@ final class DiskModel: ObservableObject {
     }
 
     func undoProtection() {
-        guard !cleaning, !scanning, let undo = protectionUndo else { return }
+        guard !retiring, !cleaning, !scanning, let undo = protectionUndo else { return }
         do {
             try Whitelist.undoAddition(undo)
             protectionUndo = nil
@@ -487,7 +507,7 @@ extension DiskModel {
     /// Asks the local AI about every item on the page and ticks the ones it calls safe to delete.
     /// Never cleans: the user still reviews and presses Clean.
     @MainActor func aiPick(_ category: CleanCategory, using backend: LocalAIBackend) {
-        guard aiPicking == nil, !scanning, !cleaning else { return }
+        guard !retiring, aiPicking == nil, !scanning, !cleaning else { return }
         let question = aiQuestion(category)
         guard !question.items.isEmpty else { return }
         let asked = report?.started
