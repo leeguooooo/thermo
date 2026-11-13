@@ -229,11 +229,8 @@ struct ConnectionsPage: View {
                 } else if r.devices.isEmpty {
                     InspectorPanel { EmptyState(symbol: "dot.radiowaves.left.and.right", title: tr("No paired devices")) }
                 } else {
-                    let connected = r.devices.filter(\.connected)
-                    let rest = r.devices.filter { !$0.connected }
-                    let limit = max(0, 6 - connected.count)
-                    RowList(items: connected + (showAllDevices ? rest : Array(rest.prefix(limit))), inset: 50) { deviceRow($0) }
-                    if rest.count > limit {
+                    RowList(items: showAllDevices ? r.devices : r.defaultDevices, inset: 50) { deviceRow($0) }
+                    if r.devices.count > r.defaultDevices.count {
                         Button(showAllDevices ? tr("Show fewer") : tr("Show all %1$@ paired devices", String(r.devices.count))) {
                             withAnimation(Theme.standard) { showAllDevices.toggle() }
                         }
@@ -261,6 +258,10 @@ struct ConnectionsPage: View {
             }
             Spacer(minLength: Theme.Space.s)
             if d.connected { StatusTag(text: tr("Connected"), color: Theme.good) }
+            else if let rssi = d.rssi {
+                StatusTag(text: tr("Nearby") + " · \(rssi) dBm", color: Theme.accent)
+                    .help(tr("Signal reported by macOS; it may be cached and does not mean this device is connected."))
+            }
             if model.busy.contains(d.address) {
                 ProgressView().controlSize(.small).frame(width: 84)
             } else {

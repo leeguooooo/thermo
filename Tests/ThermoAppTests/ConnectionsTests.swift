@@ -52,6 +52,44 @@ final class ConnectionsTests: XCTestCase {
         XCTAssertNil(BluetoothReport.parse(Data("not json".utf8)))
     }
 
+    func testShortComputerNameUsesSystemClassRatherThanGuessingFromItsName() {
+        XCTAssertEqual(BluetoothDevice.kind(minorType: nil, name: "m5", majorClass: 1), .computer)
+        XCTAssertEqual(BluetoothDevice.kind(minorType: nil, name: "m5", majorClass: nil), .other)
+        XCTAssertEqual(BluetoothDevice.kind(minorType: "Headphones", name: "Mac speaker", majorClass: 4), .headphones)
+    }
+
+    func testNearbyComputerRemainsVisibleWhenHeadphonesFillTheDefaultList() throws {
+        var entries = (0..<8).map { ["AirPods \($0)": ["device_address": "00:00:00:00:00:0\($0)", "device_minorType": "Headphones"]] }
+        entries.append(["m5": ["device_address": "00:00:00:00:01:00", "device_rssi": "-39"]])
+        let bytes = try JSONSerialization.data(withJSONObject: ["SPBluetoothDataType": [[
+            "controller_properties": ["controller_state": "attrib_on"], "device_not_connected": entries
+        ]]])
+        let report = try XCTUnwrap(BluetoothReport.parse(bytes, majorClasses: ["00:00:00:00:01:00": 1]))
+        XCTAssertEqual(report.devices.first?.name, "m5")
+        XCTAssertEqual(report.devices.first?.rssi, -39)
+        XCTAssertTrue(report.defaultDevices.contains { $0.name == "m5" && $0.kind == .computer })
+        XCTAssertLessThan(report.defaultDevices.count, report.devices.count)
+    }
+
+    func testSignalIsShownWithoutPretendingAnUnknownDeviceIsAComputer() throws {
+        let bytes = Data(#"{"SPBluetoothDataType":[{"device_not_connected":[{"short-name":{"device_address":"00:00:00:00:00:01","device_rssi":-51}},{"invalid":{"device_address":"00:00:00:00:00:02","device_rssi":"127"}}]}]}"#.utf8)
+        let report = try XCTUnwrap(BluetoothReport.parse(bytes))
+        XCTAssertEqual(report.devices.first?.name, "short-name")
+        XCTAssertEqual(report.devices.first?.kind, .other)
+        XCTAssertEqual(report.devices.first?.rssi, -51)
+        XCTAssertNil(report.devices.last?.rssi)
+    }
+
+    func testRepeatedAddressMergesConnectionAndBatteryWithoutMergingDifferentDevicesByName() throws {
+        let bytes = Data(#"{"SPBluetoothDataType":[{"device_connected":[{"Pods":{"device_address":"AA:00:00:00:00:01"}}],"device_not_connected":[{"Pods":{"device_address":"aa-00-00-00-00-01","device_batteryLevelMain":"75%","device_minorType":"Headphones","device_rssi":"-45"}},{"Pods":{"device_address":"aa:00:00:00:00:02","device_minorType":"Headphones"}}]}]}"#.utf8)
+        let report = try XCTUnwrap(BluetoothReport.parse(bytes))
+        XCTAssertEqual(report.devices.count, 2)
+        let connected = try XCTUnwrap(report.devices.first { $0.connected })
+        XCTAssertEqual(connected.levels.map(\.percent), [75])
+        XCTAssertEqual(connected.kind, .headphones)
+        XCTAssertEqual(connected.rssi, -45)
+    }
+
     func testNearbyKeepsStrongestPerNameAndSkipsCurrent() {
         let merged = WiFiNetwork.merge([
             WiFiNetwork(id: "a", ssid: "Home", rssi: -70, channel: 1, band: .ghz24, secure: true),

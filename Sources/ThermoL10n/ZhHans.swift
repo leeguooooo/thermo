@@ -4490,4 +4490,6 @@ let zhHans: [String: String] = [
     "System & hardware": "系统与硬件",
     "Clean & storage": "清理与存储",
     "More tools": "更多工具",
+    "Nearby": "附近",
+    "Signal reported by macOS; it may be cached and does not mean this device is connected.": "macOS 报告的信号可能来自缓存，不表示这台设备已连接。",
 ]
