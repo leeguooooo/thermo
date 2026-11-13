@@ -4485,6 +4485,11 @@ let zhHans: [String: String] = [
     "An update is installed. Restart Thermo to use it.": "更新已安装，重启 Thermo 后生效。",
     "Running Thermo %1$@. Saving and recording protections still apply when restarting.": "当前运行 Thermo %1$@。重启时仍会检查保存和录制状态。",
     "Restart Thermo": "重启 Thermo",
+    "Capture & record": "截图与录屏",
+    "Clipboard & pins": "剪贴板与贴图",
+    "System & hardware": "系统与硬件",
+    "Clean & storage": "清理与存储",
+    "More tools": "更多工具",
     "Nearby": "附近",
     "Signal reported by macOS; it may be cached and does not mean this device is connected.": "macOS 报告的信号可能来自缓存，不表示这台设备已连接。",
 ]

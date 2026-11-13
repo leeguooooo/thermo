@@ -582,7 +582,13 @@ if CommandLine.arguments.contains("--show-status-menu") || CommandLine.arguments
             NSApp.activate(ignoringOtherApps: true)
             if CommandLine.arguments.contains("--show-status-menu") {
                 let menu = StatusMenu.shared.make(battery: true)
-                let close = Timer(timeInterval: 6, repeats: false) { _ in menu.cancelTracking() }
+                let menuSeconds: TimeInterval = {
+                    let args = CommandLine.arguments
+                    guard let i = args.firstIndex(of: "--menu-seconds"), i + 1 < args.count,
+                          let value = Double(args[i + 1]), value.isFinite, (2...120).contains(value) else { return 6 }
+                    return value
+                }()
+                let close = Timer(timeInterval: menuSeconds, repeats: false) { _ in menu.cancelTracking() }
                 RunLoop.main.add(close, forMode: .common)
                 print("shown"); fflush(stdout)
                 // Where the menu bar item would drop it: just under the menu bar.
