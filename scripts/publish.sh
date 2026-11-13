@@ -52,6 +52,7 @@ cat > "$R/_headers" <<'H'
 /*.dmg
   Cache-Control: public, max-age=31536000, immutable
 H
+cp "$R/_headers" "$STAGE/_headers"
 
 WA_PASSTHROUGH=1 wrangler pages deploy "$STAGE" --project-name "$PROJECT" --branch main --commit-dirty=true
 echo "published: https://app.leeguoo.com/thermo/appcast.xml (origin https://$PROJECT.pages.dev)"
