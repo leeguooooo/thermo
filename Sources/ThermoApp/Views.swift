@@ -1175,7 +1175,7 @@ struct SettingsView: View {
                 AWDLButton()
                 InspectorDivider(inset: 46)
                 BatteryCareButton()
-                if modules.isOn(BuiltinModules.disk.id) {
+                if modules.shows(.disk(.home)) {
                     InspectorDivider(inset: 46)
                     CleanupProtectionsButton(disk: AppModels.shared.disk, asRow: true)
                 }

@@ -1,6 +1,10 @@
 import ModuleKit
 import ThermoL10n
 
+/// Adding a feature here takes three things: its manifest in `all`, its pages in `MainPage.module`,
+/// and making sure nothing outside its own views creates its model. The sidebar, the page area, the
+/// View menu and the shortcuts ask `ModuleCenter.shows` and need no further change.
+///
 /// Thermo's own features that run inside the app. They are described by the same manifest as a
 /// module that runs in its own process and are switched on and off in the same place; switched
 /// off, a feature has no entry anywhere and none of its objects is created.

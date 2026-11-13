@@ -432,7 +432,12 @@ struct MainView: View {
         }
     }
 
+    /// One gate for every page: a page of a feature that is switched off is never built.
     @ViewBuilder var content: some View {
+        if modules.shows(page) { pageContent } else { ModuleOffView().transition(.page) }
+    }
+
+    @ViewBuilder var pageContent: some View {
         switch page {
         case .overview:
             OverviewPage(monitor: monitor, open: { page = $0 }).transition(.page)
@@ -452,8 +457,7 @@ struct MainView: View {
             ChromePagesView(model: models.browser(app), embedded: true).id(app).transition(.page)
         case let .disk(sub):
             // The model is created here, on first use, and only while the feature is on.
-            if modules.isOn(BuiltinModules.disk.id) { DiskPages(page: $page, sub: sub, disk: models.disk).transition(.page) }
-            else { ModuleOffView().transition(.page) }
+            DiskPages(page: $page, sub: sub, disk: models.disk).transition(.page)
         case .agents(.home):
             DiagnosticsHome(scanner: agents, open: { a in page = .agents(.area(a)) }).transition(.page)
         case let .agents(.area(a)):
@@ -585,7 +589,8 @@ struct MainSidebar: View {
                     row(.browser("Google Chrome"), tr("Tab organizer"), "rectangle.stack", .teal, trailing: nil)
 
                     header(tr("Disk Cleanup"))
-                    if modules.isOn(BuiltinModules.disk.id) {
+                    // The rows gate themselves; this one also keeps the model from being created.
+                    if modules.shows(.disk(.home)) {
                         DiskSidebarRows(disk: AppModels.shared.disk) { disk in
                             row(.disk(.home), tr("Smart Scan"), "sparkles", .pink, trailing: disk.report.map { ByteFormat.string($0.totalBytes) })
                             if page.isDisk {
@@ -664,8 +669,16 @@ struct MainSidebar: View {
 
     /// One place in the sidebar. Icons stay grey so the list reads as one column; the selected
     /// row's icon takes its color, and the selection slides from row to row.
-    func row(_ target: MainPage, _ title: String, _ symbol: String, _ color: Color, trailing: String?,
-             trailingColor: Color? = nil, badge: Int = 0, indent: Bool = false, selected: Bool? = nil) -> some View {
+    /// One gate for every row: a feature that is switched off has no row.
+    @ViewBuilder func row(_ target: MainPage, _ title: String, _ symbol: String, _ color: Color, trailing: String?,
+                          trailingColor: Color? = nil, badge: Int = 0, indent: Bool = false, selected: Bool? = nil) -> some View {
+        if modules.shows(target) {
+            visibleRow(target, title, symbol, color, trailing: trailing, trailingColor: trailingColor, badge: badge, indent: indent, selected: selected)
+        }
+    }
+
+    func visibleRow(_ target: MainPage, _ title: String, _ symbol: String, _ color: Color, trailing: String?,
+                    trailingColor: Color?, badge: Int, indent: Bool, selected: Bool?) -> some View {
         let on = selected ?? (page == target)
         return Button { page = target } label: {
             HStack(spacing: 9) {
@@ -711,12 +724,16 @@ struct MainSidebar: View {
         .background(Color.clear.frame(height: (indent ? 26 : 30) + 40).id(target))
     }
     @ViewBuilder func shortcut(_ target: MainPage) -> some View {
+        if modules.shows(target) { shortcutKey(target) }
+    }
+
+    @ViewBuilder func shortcutKey(_ target: MainPage) -> some View {
         switch target {
         case .overview: key("1", target)
         case .sensors: key("2", target)
         case .fans: key("3", target)
         case .browser("Google Chrome"): key("4", target)
-        case .disk(.home): if modules.isOn(BuiltinModules.disk.id) { key("5", target) }
+        case .disk(.home): key("5", target)
         case .agents(.home): key("6", target)
         case .settings: key(",", target)
         default: EmptyView()
