@@ -18,9 +18,9 @@ public struct ModuleManifest: Codable, Sendable, Equatable {
 
     public struct Entry: Codable, Sendable, Equatable {
         public enum Kind: String, Codable, Sendable {
-            case page, overviewCard, menuBarItem, hotkey, toolbarAction
+            case page, overviewCard, menuBarItem, settingsItem, hotkey, toolbarAction
             /// Rendered by the module in its own process and embedded by the kernel.
-            public var showsUI: Bool { self == .page || self == .overviewCard || self == .menuBarItem }
+            public var showsUI: Bool { self == .page || self == .overviewCard || self == .menuBarItem || self == .settingsItem }
         }
         public var id: String
         public var kind: Kind
@@ -30,9 +30,15 @@ public struct ModuleManifest: Codable, Sendable, Equatable {
         public var scene: String?
         /// The command to run, for hotkeys and toolbar actions.
         public var command: String?
+        /// Parent page in this manifest; nil is a top-level sidebar entry.
+        public var parent: String?
+        /// Command+digit navigation inside the App, distinct from system-wide hotkeys.
+        public var navigationKey: String?
 
-        public init(id: String, kind: Kind, title: String, symbol: String? = nil, scene: String? = nil, command: String? = nil) {
+        public init(id: String, kind: Kind, title: String, symbol: String? = nil, scene: String? = nil, command: String? = nil,
+                    parent: String? = nil, navigationKey: String? = nil) {
             self.id = id; self.kind = kind; self.title = title; self.symbol = symbol; self.scene = scene; self.command = command
+            self.parent = parent; self.navigationKey = navigationKey
         }
     }
 
@@ -129,6 +135,16 @@ public struct ModuleManifest: Codable, Sendable, Equatable {
         return copy
     }
 
+    /// Safe on unvalidated metadata too; malformed/cyclic parents stop at their first repeat.
+    public func depth(of id: String) -> Int {
+        let byID = Dictionary(entries.map { ($0.id, $0) }, uniquingKeysWith: { first, _ in first })
+        var parent = byID[id]?.parent, seen: Set<String> = [id], depth = 0
+        while let id = parent, let entry = byID[id], seen.insert(id).inserted {
+            depth += 1; parent = entry.parent
+        }
+        return depth
+    }
+
     public struct Invalid: Error, Equatable, CustomStringConvertible {
         public var problems: [String]
         public var description: String { problems.joined(separator: "; ") }
@@ -206,10 +222,28 @@ public struct ModuleManifest: Codable, Sendable, Equatable {
         }
 
         var entryIDs = Set<String>()
+        var navigationKeys = Set<String>()
+        let byID = Dictionary(entries.map { ($0.id, $0) }, uniquingKeysWith: { first, _ in first })
         for entry in entries {
             if !Self.matches(Self.local, entry.id) { found.append("entry id \(entry.id) must be lowercase letters, digits and hyphens") }
             if !entryIDs.insert(entry.id).inserted { found.append("entry \(entry.id) is defined twice") }
             if entry.title.isEmpty { found.append("entry \(entry.id) has no title") }
+            if let parent = entry.parent {
+                if entry.kind != .page || byID[parent]?.kind != .page {
+                    found.append("entry \(entry.id) parent must name a page in this manifest")
+                }
+                var seen = Set<String>(), cursor: String? = entry.id
+                while let id = cursor {
+                    if !seen.insert(id).inserted { found.append("entry \(entry.id) has a parent cycle"); break }
+                    cursor = byID[id]?.parent
+                }
+            }
+            if let key = entry.navigationKey {
+                if entry.kind != .page || key.utf8.count != 1 || !(48...57).contains(Int(key.utf8.first ?? 0)) {
+                    found.append("entry \(entry.id) navigationKey must be one digit on a page")
+                }
+                if !navigationKeys.insert(key).inserted { found.append("navigation key \(key) is defined twice") }
+            }
             if entry.kind.showsUI {
                 if (entry.scene ?? "").isEmpty { found.append("entry \(entry.id) shows UI and needs a scene") }
             } else if let command = entry.command, commandIDs.contains(command) {

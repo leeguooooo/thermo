@@ -16,8 +16,18 @@ public enum BuiltinModuleManifests {
     public static let disk = ModuleManifest(
         id:"dev.thermo.disk",name:"Disk Cleanup",summary:"Finds caches, leftovers and old files that can go, and removes what you pick.",
         symbol:"sparkles",version:"1.0.0",launch:.onDemand,enabledByDefault:true,
-        entries:[.init(id:"scan",kind:.page,title:"Smart Scan",symbol:"sparkles",scene:"disk"),
-                 .init(id:"overview",kind:.page,title:"Where the space is",symbol:"chart.pie",scene:"disk:overview")],
+        entries:[.init(id:"scan",kind:.page,title:"Smart Scan",symbol:"sparkles",scene:"disk",navigationKey:"5"),
+                 .init(id:"overview",kind:.page,title:"Where the space is",symbol:"chart.pie",scene:"disk:overview",parent:"scan"),
+                 .init(id:"ai-sessions",kind:.page,title:"AI sessions",symbol:"bubble.left.and.text.bubble.right.fill",scene:"disk:ai-sessions",parent:"scan"),
+                 .init(id:"agent-worktrees",kind:.page,title:"Agent worktrees",symbol:"arrow.triangle.branch",scene:"disk:agent-worktrees",parent:"scan"),
+                 .init(id:"ai-models",kind:.page,title:"AI models",symbol:"cpu.fill",scene:"disk:ai-models",parent:"scan"),
+                 .init(id:"ai-caches",kind:.page,title:"AI tool caches",symbol:"sparkles",scene:"disk:ai-caches",parent:"scan"),
+                 .init(id:"dev-caches",kind:.page,title:"Developer caches",symbol:"hammer.fill",scene:"disk:dev-caches",parent:"scan"),
+                 .init(id:"xcode",kind:.page,title:"Xcode",symbol:"swift",scene:"disk:xcode",parent:"scan"),
+                 .init(id:"projects",kind:.page,title:"Project build artifacts",symbol:"folder.fill",scene:"disk:projects",parent:"scan"),
+                 .init(id:"browsers",kind:.page,title:"Browser caches",symbol:"globe",scene:"disk:browsers",parent:"scan"),
+                 .init(id:"system",kind:.page,title:"System & apps",symbol:"gearshape.fill",scene:"disk:system",parent:"scan"),
+                 .init(id:"protection",kind:.settingsItem,title:"Disk Cleanup protected locations",symbol:"shield.checkered",scene:"disk-protection")],
         commands:[
             .init(id:"scan",title:"Scan disk cleanup",summary:"Find cleanable categories and item IDs without removing anything.",parameters:
                 [P(name:"categories",kind:.string,summary:"Category names or ai.",repeats:true)] + scanOptions +
