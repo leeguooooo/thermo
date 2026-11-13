@@ -719,7 +719,7 @@ if let i = CommandLine.arguments.firstIndex(of: "--render-preview"), i + 1 < Com
             let status = ModuleCenter.shared.manager.status(id)
             return status?.enabled != true || (status?.phase == .running && Date().timeIntervalSince(started) > 3)
         case .compute: return ComputeModel.shared.current?.cpu != nil && Date().timeIntervalSince(started) > 4
-        case .connections: return ConnectionsModel.shared.bluetooth != nil || ConnectionsModel.shared.bluetoothFailed
+        case .connections: return !ConnectionsModel.shared.readingBluetooth && (ConnectionsModel.shared.bluetooth != nil || ConnectionsModel.shared.bluetoothFailed)
         case .memory: return MemoryModel.shared.breakdown != nil && Date().timeIntervalSince(started) > 4
         case .space(.duplicates): return true
         case .space: return SpaceLensModel.shared.tree != nil && !SpaceLensModel.shared.scanning

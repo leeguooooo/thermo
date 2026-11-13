@@ -1,6 +1,12 @@
 // 简体中文. Keys are the English format strings passed to tr(); keep positional arguments (%1$@) intact.
 // Add new sections at the end (e.g. `// Disk`) so parallel work doesn't collide.
 let zhHans: [String: String] = [
+    "Refreshing Bluetooth devices…": "正在刷新蓝牙设备…",
+    "The list comes from macOS. Local network model records can help identify custom device names; those matches are marked as inferred. Connecting or disconnecting asks for Bluetooth access the first time.": "列表来自 macOS。局域网机型记录可辅助识别自定义名称的设备，这类结果会标明为推断。首次连接或断开时，系统会请求蓝牙权限。",
+    "Possible computer · %1$@": "可能是电脑 · %1$@",
+    "A device on your local network advertises this Mac model under the same name. The type is inferred from that name match.": "局域网中有同名设备报告了这个 Mac 机型；类型按名称推断。",
+    "Local network access is unavailable. Check System Settings → Privacy & Security → Local Network to identify computers with custom names.": "本地网络访问不可用。可在「系统设置 → 隐私与安全性 → 本地网络」中检查权限，以识别使用自定义名称的电脑。",
+
     "Module moved files to the Trash": "模块已将文件移到废纸篓",
     "Modules": "模块",
     "Space": "空格",
