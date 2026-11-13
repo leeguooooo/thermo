@@ -111,15 +111,16 @@ enum ModuleKernel {
     /// What the person is asked before a module deletes files or ends processes. Built from the
     /// request the kernel checked, never from text the module supplied.
     static func confirmation(_ request: BrokerRequest, names: [String]) -> (title: String, detail: String, action: String) {
+        let name = request.manifest.localized(L10n.current.rawValue).name
         let shown = names.prefix(8).joined(separator: "\n")
         let more = names.count > 8 ? "\n" + tr("…and %1$@ more", String(names.count - 8)) : ""
         switch request.kind {
         case .filesDelete:
-            return (tr("%1$@ wants to move %2$@ items to the Trash", request.manifest.name, String(names.count)), shown + more, tr("Move to Trash"))
+            return (tr("%1$@ wants to move %2$@ items to the Trash", name, String(names.count)), shown + more, tr("Move to Trash"))
         case .processesEnd:
-            return (tr("%1$@ wants to end %2$@ processes", request.manifest.name, String(names.count)), shown + more, tr("End"))
+            return (tr("%1$@ wants to end %2$@ processes", name, String(names.count)), shown + more, tr("End"))
         default:
-            return (tr("%1$@ wants to change this Mac", request.manifest.name), request.kind.rawValue, tr("Allow"))
+            return (tr("%1$@ wants to change this Mac", name), request.kind.rawValue, tr("Allow"))
         }
     }
 

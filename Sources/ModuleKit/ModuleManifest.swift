@@ -76,11 +76,49 @@ public struct ModuleManifest: Codable, Sendable, Equatable {
     public var capabilities: [Capability]
     public var entries: [Entry]
     public var commands: [Command]
+    /// Translations of the texts above, by language (`zh-Hans`, `ja`) and then by key: `name`,
+    /// `summary`, `entry.<id>.title`, `command.<id>.title`, `command.<id>.summary`,
+    /// `parameter.<command id>.<name>.summary`. The texts in the manifest itself are English.
+    public var localizations: [String: [String: String]]?
 
     public init(interface: Int = ModuleManifest.currentInterface, id: String, name: String, summary: String, symbol: String, version: String,
-                launch: Launch = .onDemand, enabledByDefault: Bool = false, capabilities: [Capability] = [], entries: [Entry] = [], commands: [Command] = []) {
+                launch: Launch = .onDemand, enabledByDefault: Bool = false, capabilities: [Capability] = [], entries: [Entry] = [], commands: [Command] = [],
+                localizations: [String: [String: String]]? = nil) {
         self.interface = interface; self.id = id; self.name = name; self.summary = summary; self.symbol = symbol; self.version = version
         self.launch = launch; self.enabledByDefault = enabledByDefault; self.capabilities = capabilities; self.entries = entries; self.commands = commands
+        self.localizations = localizations
+    }
+
+    /// Every key a translation may use, for this manifest.
+    var localizableKeys: Set<String> {
+        var keys: Set<String> = ["name", "summary"]
+        for entry in entries { keys.insert("entry.\(entry.id).title") }
+        for command in commands {
+            keys.insert("command.\(command.id).title"); keys.insert("command.\(command.id).summary")
+            for parameter in command.parameters { keys.insert("parameter.\(command.id).\(parameter.name).summary") }
+        }
+        return keys
+    }
+
+    /// The manifest as shown in `language` (`zh-Hans`, falling back to `zh`); texts without a
+    /// translation stay as written.
+    public func localized(_ language: String) -> ModuleManifest {
+        let base = language.split(separator: "-").first.map(String.init) ?? language
+        guard let table = localizations?[language] ?? localizations?[base] else { return self }
+        var copy = self
+        copy.name = table["name"] ?? name
+        copy.summary = table["summary"] ?? summary
+        copy.entries = entries.map { entry in var e = entry; e.title = table["entry.\(entry.id).title"] ?? entry.title; return e }
+        copy.commands = commands.map { command in
+            var c = command
+            c.title = table["command.\(command.id).title"] ?? command.title
+            c.summary = table["command.\(command.id).summary"] ?? command.summary
+            c.parameters = command.parameters.map { parameter in
+                var p = parameter; p.summary = table["parameter.\(command.id).\(parameter.name).summary"] ?? parameter.summary; return p
+            }
+            return c
+        }
+        return copy
     }
 
     public struct Invalid: Error, Equatable, CustomStringConvertible {
@@ -158,6 +196,15 @@ public struct ModuleManifest: Codable, Sendable, Equatable {
                 if entry.scene != nil { found.append("entry \(entry.id) runs a command and takes no scene") }
             } else {
                 found.append("entry \(entry.id) must name one of the module's commands")
+            }
+        }
+        // A misspelt key would silently leave the English text in place.
+        let known = localizableKeys
+        for (language, table) in (localizations ?? [:]).sorted(by: { $0.key < $1.key }) {
+            if language.isEmpty || language == "en" { found.append("localizations may not redefine the English texts (\(language.isEmpty ? "empty language" : language))") }
+            for (key, text) in table.sorted(by: { $0.key < $1.key }) {
+                if !known.contains(key) { found.append("localization \(language) has unknown key \(key)") }
+                if text.isEmpty { found.append("localization \(language) leaves \(key) empty") }
             }
         }
         return found

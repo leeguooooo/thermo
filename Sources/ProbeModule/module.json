@@ -20,5 +20,8 @@
     {"id": "ask", "title": "Ask", "summary": "Passes a request to the kernel.", "mutates": true,
      "parameters": [{"name": "capability", "kind": "string", "required": true, "summary": "The capability."}], "capabilities": []},
     {"id": "exit", "title": "Exit", "summary": "Exits at once.", "mutates": false, "parameters": [], "capabilities": []}
-  ]
+  ],
+  "localizations": {
+    "zh-Hans": {"name": "探针", "summary": "用来检验模块管理器。", "entry.main.title": "探针"}
+  }
 }
