@@ -158,6 +158,43 @@ final class BrokerTests: XCTestCase {
         XCTAssertEqual(plain.outcome, .failed)
     }
 
+    func testReadRotationCannotEvictChangesAndCopiesDoNotCountTwice() {
+        let change = ModuleAccessRecord(module: id, capability: "files.delete", operation: "trash", targets: ["/owned/deleted"], outcome: .allowed)
+        log.record(change)
+        log.record(change) // Two identical requests are still two distinct events.
+        log.record(.init(module: id, capability: "processes.end", operation: "end", targets: ["fixture · PID 42"], outcome: .allowed))
+        for _ in 0..<240 {
+            log.record(.init(module: id, capability: "files.read", targets: ["/owned/read"], outcome: .allowed,
+                             detail: String(repeating: "x", count: 20_000)))
+        }
+        let reopened = ModuleAccessLog(home: home.path)
+        XCTAssertEqual(reopened.records(module: id).filter { $0.capability == "files.delete" }.count, 2)
+        XCTAssertEqual(reopened.summary(module: id).deleted, ["/owned/deleted"])
+        XCTAssertEqual(reopened.summary(module: id).ended, ["fixture · PID 42"])
+    }
+
+    func testOldFormatChangesSurviveTheirOriginalStreamRotation() throws {
+        let file = log.url(module: id)
+        try FileManager.default.createDirectory(at: file.deletingLastPathComponent(), withIntermediateDirectories: true)
+        let encoder = JSONEncoder(); encoder.dateEncodingStrategy = .iso8601
+        var data = try encoder.encode(ModuleAccessRecord(module: id, capability: "files.delete", targets: ["/owned/legacy"], outcome: .allowed))
+        data.append(10)
+        try data.write(to: file)
+        for _ in 0..<240 {
+            log.record(.init(module: id, capability: "files.read", outcome: .allowed, detail: String(repeating: "x", count: 20_000)))
+        }
+        let reopened = ModuleAccessLog(home: home.path)
+        XCTAssertEqual(reopened.records(module: id).filter { $0.capability == "files.delete" }.count, 1)
+        XCTAssertEqual(reopened.summary(module: id).deleted, ["/owned/legacy"])
+    }
+
+    func testChangeAndReadCopiesKeepRequestOrder() {
+        log.record(.init(module: id, capability: "files.read", outcome: .denied))
+        log.record(.init(module: id, capability: "files.delete", targets: ["/owned/file"], outcome: .allowed))
+        log.record(.init(module: id, capability: "files.read", outcome: .failed))
+        XCTAssertEqual(log.records(module: id).map(\.outcome), [.denied, .allowed, .failed])
+    }
+
     func testTheLogRotatesAndIgnoresBadModuleNames() {
         log.record(.init(module: "../../evil", capability: "files.read", outcome: .allowed))
         XCTAssertFalse(FileManager.default.fileExists(atPath: home.path + "/Library/Application Support/Thermo/evil"))

@@ -1,4 +1,5 @@
 import AgentCore
+import CleanKit
 import ModuleHost
 import ModuleKit
 import ThermoL10n
@@ -100,6 +101,71 @@ import XCTest
             XCTAssertTrue(error.message.contains("is protected"), error.message)
         }
         XCTAssertEqual(asked.count, 0)
+    }
+
+    func testModuleTrashIsInHistoryAndRestoresOnlyItsRecordedItems() throws {
+        let (_, root) = scratchLog()
+        let home = CapabilityBroker.resolved(root.path)
+        defer { try? FileManager.default.removeItem(atPath: home) }
+        let source = URL(fileURLWithPath: home).appendingPathComponent("Cache/owned.txt")
+        let trash = URL(fileURLWithPath: home).appendingPathComponent(".Trash")
+        try FileManager.default.createDirectory(at: source.deletingLastPathComponent(), withIntermediateDirectories: true)
+        try FileManager.default.createDirectory(at: trash, withIntermediateDirectories: true)
+        let content = Data("module fixture".utf8)
+        try content.write(to: source)
+        let unrelated = trash.appendingPathComponent("unrelated")
+        try Data("keep".utf8).write(to: unrelated)
+        let answer = try ModuleKernel.trashFiles(request(.filesDelete, targets: [source.path]), home: home) { path in
+            let destination = trash.appendingPathComponent("owned.txt")
+            try FileManager.default.moveItem(atPath: path, toPath: destination.path)
+            return destination
+        }
+        XCTAssertEqual(answer.acted, [source.path])
+        let record = try XCTUnwrap(OperationJournal.read(home: home).first)
+        XCTAssertEqual(record.feature, "modules")
+        XCTAssertEqual(record.subject, "dev.thermo.disk")
+        XCTAssertEqual(record.outcome, "succeeded")
+        XCTAssertNil(record.bytes, "unknown bytes must not be shown as zero")
+        let undo = try XCTUnwrap(record.undo)
+        XCTAssertEqual(undo.kind, "trashBatch")
+        let restored = try TrashBatches.restore(id: undo.ref, home: home)
+        XCTAssertEqual(restored.items.first?.status, "restored")
+        XCTAssertEqual(try Data(contentsOf: source), content)
+        XCTAssertEqual(try Data(contentsOf: unrelated), Data("keep".utf8))
+    }
+
+    func testSuccessfulMoveWithNoUndoReceiptIsReportedHonestly() throws {
+        let (_, root) = scratchLog()
+        let home = CapabilityBroker.resolved(root.path)
+        defer { try? FileManager.default.removeItem(atPath: home) }
+        let source = root.appendingPathComponent("owned")
+        try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
+        try Data("owned".utf8).write(to: source)
+        let answer = try ModuleKernel.trashFiles(request(.filesDelete, targets: [CapabilityBroker.resolved(source.path)]), home: home) { path in
+            try FileManager.default.moveItem(atPath: path, toPath: root.appendingPathComponent("moved").path)
+            return nil
+        }
+        XCTAssertEqual(answer.acted?.count, 1)
+        let record = try XCTUnwrap(OperationJournal.read(home: home).first)
+        XCTAssertEqual(record.outcome, "partial")
+        XCTAssertNil(record.undo)
+        XCTAssertTrue(record.items[0].detail?.contains("undo recording failed") == true)
+    }
+
+    func testFailedMoveNeverCreatesAnUndoReceipt() throws {
+        let (_, root) = scratchLog()
+        let home = CapabilityBroker.resolved(root.path)
+        defer { try? FileManager.default.removeItem(atPath: home) }
+        let source = URL(fileURLWithPath: home).appendingPathComponent("owned")
+        try FileManager.default.createDirectory(at: source.deletingLastPathComponent(), withIntermediateDirectories: true)
+        try Data("keep".utf8).write(to: source)
+        XCTAssertThrowsError(try ModuleKernel.trashFiles(request(.filesDelete, targets: [source.path]), home: home) { _ in
+            throw NSError(domain: "owned-fixture", code: 1)
+        })
+        let record = try XCTUnwrap(OperationJournal.read(home: home).first)
+        XCTAssertEqual(record.outcome, "failed")
+        XCTAssertNil(record.undo)
+        XCTAssertEqual(try Data(contentsOf: source), Data("keep".utf8))
     }
 
     func testTheConfirmationIsBuiltFromTheCheckedRequest() {
