@@ -524,6 +524,23 @@ App 命令要求运行兼容版本的 Thermo.app。通道检查当前用户身�
 
 `screen shortcut` 用 `--key-code`、`--modifiers`、`--key-label` 指定与 App 相同的 Carbon 快捷键；至少两个修饰键，其中必须含 Command、Control 或 Option。`screen status` 包含已保存的时长，`screen duration --duration` 可单独设置；`screen start` 未指定时长时采用 App 已保存的选择。`screen start --duration` 接受 `oneMinute`、`twoMinutes`、`fiveMinutes` 或 `manual`。这些修改先用 `--dry-run` 查看，再加 `--yes` 执行。
 
+**模块 MCP 服务**：将 `thermo mcp` 配为客户端的 stdio 服务。例如，使用已安装 App 随附的 CLI：
+
+```json
+{
+  "mcpServers": {
+    "thermo": {
+      "command": "/Applications/Thermo.app/Contents/MacOS/thermo",
+      "args": ["mcp"]
+    }
+  }
+}
+```
+
+磁盘清理的 CLI 参数、帮助和 MCP 工具来自同一份模块清单。设置里关闭磁盘清理后，命令和工具会隐藏，已知工具名的调用也会被拒绝；已开始的操作仍会完成并记录结果。MCP 的标准输出只承载协议消息。
+
+先用 `dev.thermo.disk.plan` 保存并审阅计划，再用 `dev.thermo.disk.apply` 预演（`dry-run: true`）；确认范围后另一次调用显式传入 `yes: true` 才执行。`dry-run` 与 `yes` 同时传入仍只预演。`targets` 和 `root` 等重复参数使用 JSON 数组，路径按原值处理。连接中断或回执不明确时，先查看 `dev.thermo.disk.log`，不要自动重试写操作。
+
 **固定清理计划**避免预演和执行反复扫描整机：
 
 ```sh
