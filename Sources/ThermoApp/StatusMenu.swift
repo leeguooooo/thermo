@@ -178,7 +178,7 @@ final class StatusMenu: NSObject, NSMenuDelegate {
             case .tabOrganizer:
                 submenu.addItem(page(tr("Tab organizer"), "rectangle.stack", .browser("Google Chrome")))
             case .smartScan:
-                submenu.addItem(page(tr("Smart Scan"), "sparkles", .disk(.home)))
+                if ModuleCenter.shared.shows(.disk(.home)) { submenu.addItem(page(tr("Smart Scan"), "sparkles", .disk(.home))) }
             case .spaceLens:
                 submenu.addItem(page(tr("Space Lens"), "square.grid.3x3.topleft.filled", .space(.browse)))
             case .software:

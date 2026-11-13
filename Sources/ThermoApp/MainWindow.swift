@@ -11,7 +11,9 @@ final class AppModels {
     static let shared = AppModels()
     lazy var monitor = Monitor()
     lazy var updates = Updates()
-    lazy var disk = DiskModel(retentionPreferences:.stored(in:.standard))
+    /// Whether disk cleanup's model exists. It is created on first use and never while the feature is off.
+    private(set) var diskLoaded = false
+    lazy var disk: DiskModel = { diskLoaded = true; return DiskModel(retentionPreferences:.stored(in:.standard)) }()
     lazy var agents = AgentScanner()
     lazy var apps = AppsModel()
     lazy var startup = StartupItemsModel()
@@ -275,7 +277,7 @@ enum MainWindow {
         @AppStorage(L10n.defaultsKey) private var language = "system"
         var body: some View {
             let _ = L10n.apply(preference: language)
-            MainView(page: $state.page, monitor: models.monitor, disk: models.disk, agents: models.agents, models: models)
+            MainView(page: $state.page, monitor: models.monitor, agents: models.agents, models: models)
                 .environment(\.windowSamplingActive, state.visible)
                 .onChange(of: state.page) { models.monitor.setWindowSurface($0.samplingSurface) }
                 .id(language)
@@ -297,38 +299,103 @@ enum MainWindow {
     }
 }
 
+/// Disk cleanup's pages with what belongs to them: the error and rescan banners above the page and
+/// the confirmation before cleaning. Nothing outside this view holds the disk model.
+struct DiskPages: View {
+    @Binding var page: MainPage
+    let sub: DiskPage
+    @ObservedObject var disk: DiskModel
+    @State private var cleanReview: DiskCleanupReview?
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
+    var cleanupCategory: CleanCategory? {
+        if case let .category(category) = sub { return category }
+        return nil
+    }
+
+    var cleanupNoticeNeeded: Bool {
+        switch sub {
+        case .home, .category:
+            return disk.scopeNeedsRefresh(category: cleanupCategory) || disk.resultsNeedRefresh || disk.languageStale
+        default: return false
+        }
+    }
+
+    func startClean() { if cleanReview == nil { cleanReview = disk.cleanupReview() } }
+    func load() { if disk.report == nil, !disk.scanning { disk.loadSaved(category: cleanupCategory) } }
+
+    var body: some View {
+        VStack(spacing: 0) {
+            if let error = disk.error {
+                Label(error, systemImage: "exclamationmark.triangle.fill")
+                    .font(Theme.body).foregroundStyle(Theme.caution).textSelection(.enabled)
+                    .frame(maxWidth: .infinity, alignment: .leading).padding(14).glass(radius: 12)
+                    .padding(.horizontal, 32).padding(.top, 12)
+            }
+            if cleanupNoticeNeeded {
+                HStack {
+                    Text(disk.resultsNeedRefresh ? tr("Some paths could not be removed. Scan again to refresh the remaining items.") : disk.languageStale ? tr("Scan again to refresh results in the selected language.") : tr("Scan scope changed. Scan again to update these results.")).font(Theme.body)
+                    Spacer()
+                    Button(tr("Scan again")) { disk.scan(category: cleanupCategory) }.disabled(disk.scanning || disk.cleaning)
+                }
+                .padding(14).glass(radius: 12).padding(.horizontal, 32).padding(.top, 12)
+            }
+            ZStack { content }.frame(maxWidth: .infinity, maxHeight: .infinity)
+                .animation(Theme.standard.unlessReduced(reduceMotion), value: sub)
+        }
+        .onChange(of: sub) { _ in load() }
+        .onAppear { load() }
+        .sheet(item: $cleanReview) { review in
+            DiskCleanConfirmation(review: review,
+                                  confirm: { cleanReview = nil; disk.clean(review: review) }, cancel: { cleanReview = nil })
+        }
+    }
+
+    @ViewBuilder var content: some View {
+        switch sub {
+        case .home:
+            DiskHome(model: disk, open: { page = .disk(.category($0)) }, clean: startClean).transition(.page)
+        case .overview:
+            DiskOverviewView(openCleanup: { category in
+                SpaceOverviewModel.shared.stop()
+                if !disk.scanning && !disk.cleaning { disk.scan(category: category) }
+                page = category.map { .disk(.category($0)) } ?? .disk(.home)
+            }, cleanupDisabled: disk.scanning || disk.cleaning, openInSpaceLens: { path in
+                SpaceOverviewModel.shared.stop()
+                SpaceLensModel.shared.reveal(path)
+                page = .space(.browse)
+            }).transition(.page)
+        case let .category(c):
+            DiskCategoryPage(model: disk, category: c, clean: startClean, cleanOne: { item in if cleanReview == nil { cleanReview = disk.cleanupReview(of: item) } }).id(c)
+                .transition(.page)
+        }
+    }
+}
+
+/// The sidebar's disk cleanup rows redraw with the scan; the rest of the sidebar does not hold the model.
+private struct DiskSidebarRows<Content: View>: View {
+    @ObservedObject var disk: DiskModel
+    @ViewBuilder let content: (DiskModel) -> Content
+    var body: some View { content(disk) }
+}
+
 struct MainView: View {
     @Binding var page: MainPage
     let monitor: Monitor
-    @ObservedObject var disk: DiskModel
     @ObservedObject var agents: AgentScanner
     let models: AppModels
-    @State private var cleanReview: DiskCleanupReview?
+    @ObservedObject private var modules = ModuleCenter.shared
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
         ZStack {
             MainBackdrop(glow: glow, overrideTint: tint, monitor: monitor)
             HStack(spacing: 0) {
-                MainSidebar(page: $page, monitor: monitor, disk: disk, agents: agents)
+                MainSidebar(page: $page, monitor: monitor, agents: agents)
                     .frame(width: 228).background(Theme.sidebar.opacity(0.92))
                 Rectangle().fill(Theme.hairline).frame(width: 1)
                 VStack(spacing: 0) {
                     MonitorErrorBanner(monitor: monitor)
-                    if page.isDisk, let error = disk.error {
-                        Label(error, systemImage: "exclamationmark.triangle.fill")
-                            .font(Theme.body).foregroundStyle(Theme.caution).textSelection(.enabled)
-                            .frame(maxWidth: .infinity, alignment: .leading).padding(14).glass(radius: 12)
-                            .padding(.horizontal, 32).padding(.top, 12)
-                    }
-                    if cleanupNoticeNeeded {
-                        HStack {
-                            Text(disk.resultsNeedRefresh ? tr("Some paths could not be removed. Scan again to refresh the remaining items.") : disk.languageStale ? tr("Scan again to refresh results in the selected language.") : tr("Scan scope changed. Scan again to update these results.")).font(Theme.body)
-                            Spacer()
-                            Button(tr("Scan again")) { disk.scan(category: cleanupCategory) }.disabled(disk.scanning || disk.cleaning)
-                        }
-                        .padding(14).glass(radius: 12).padding(.horizontal, 32).padding(.top, 12)
-                    }
                     // Only the page swap animates; the sidebar and banners keep still.
                     ZStack { content }.frame(maxWidth: .infinity, maxHeight: .infinity)
                         .animation(Theme.standard.unlessReduced(reduceMotion), value: page)
@@ -339,15 +406,9 @@ struct MainView: View {
         .preferredColorScheme(.dark)
         .onChange(of: page) { p in
             if p.isAgents { agents.scan(ifOlderThan: 60) }
-            if p.isDisk, disk.report == nil, !disk.scanning { disk.loadSaved(category: cleanupCategory) }
         }
         .onAppear {
             if page.isAgents { agents.scan(ifOlderThan: 60) }
-            if page.isDisk, disk.report == nil, !disk.scanning { disk.loadSaved(category: cleanupCategory) }
-        }
-        .sheet(item: $cleanReview) { review in
-            DiskCleanConfirmation(review: review,
-                                  confirm: { cleanReview = nil; disk.clean(review: review) }, cancel: { cleanReview = nil })
         }
         .sheet(isPresented: Binding(get: { agents.batch?.finished == true }, set: { if !$0 { agents.batch = nil } })) {
             BatchResult(scanner: agents)
@@ -371,21 +432,6 @@ struct MainView: View {
         }
     }
 
-    var cleanupCategory: CleanCategory? {
-        if case let .disk(.category(category)) = page { return category }
-        return nil
-    }
-
-    var cleanupNoticeNeeded: Bool {
-        switch page {
-        case .disk(.home), .disk(.category):
-            return disk.scopeNeedsRefresh(category: cleanupCategory) || disk.resultsNeedRefresh || disk.languageStale
-        default: return false
-        }
-    }
-
-    func startClean() { if cleanReview == nil { cleanReview = disk.cleanupReview() } }
-
     @ViewBuilder var content: some View {
         switch page {
         case .overview:
@@ -400,25 +446,14 @@ struct MainView: View {
             }.transition(.page)
         case .settings:
             WindowPage(title: tr("Settings"), subtitle: "Thermo \(AppInfo.version)") {
-                SettingsView(disk: disk, monitor: monitor, updates: models.updates)
+                SettingsView(monitor: monitor, updates: models.updates)
             }.transition(.page)
         case let .browser(app):
             ChromePagesView(model: models.browser(app), embedded: true).id(app).transition(.page)
-        case .disk(.home):
-            DiskHome(model: disk, open: { page = .disk(.category($0)) }, clean: startClean).transition(.page)
-        case .disk(.overview):
-            DiskOverviewView(openCleanup: { category in
-                SpaceOverviewModel.shared.stop()
-                if !disk.scanning && !disk.cleaning { disk.scan(category: category) }
-                page = category.map { .disk(.category($0)) } ?? .disk(.home)
-            }, cleanupDisabled: disk.scanning || disk.cleaning, openInSpaceLens: { path in
-                SpaceOverviewModel.shared.stop()
-                SpaceLensModel.shared.reveal(path)
-                page = .space(.browse)
-            }).transition(.page)
-        case let .disk(.category(c)):
-            DiskCategoryPage(model: disk, category: c, clean: startClean, cleanOne: { item in if cleanReview == nil { cleanReview = disk.cleanupReview(of: item) } }).id(c)
-                .transition(.page)
+        case let .disk(sub):
+            // The model is created here, on first use, and only while the feature is on.
+            if modules.isOn(BuiltinModules.disk.id) { DiskPages(page: $page, sub: sub, disk: models.disk).transition(.page) }
+            else { ModuleOffView().transition(.page) }
         case .agents(.home):
             DiagnosticsHome(scanner: agents, open: { a in page = .agents(.area(a)) }).transition(.page)
         case let .agents(.area(a)):
@@ -510,12 +545,10 @@ extension WindowPage where Trailing == EmptyView {
 struct MainSidebar: View {
     @Binding var page: MainPage
     @ObservedObject var monitor: Monitor
-    @ObservedObject var disk: DiskModel
     @ObservedObject var agents: AgentScanner
     @AppStorage(Settings.fahrenheit) private var fahrenheit = false
     @ObservedObject private var modules = ModuleCenter.shared
 
-    var items: [CleanItem] { disk.report?.items ?? [] }
     /// Share of memory in use; refreshed with the sidebar (the monitor ticks while the window is open).
     var memoryTrailing: String? {
         guard monitor.snapshot != nil, let m = SystemStats.memory() else { return nil }
@@ -552,16 +585,20 @@ struct MainSidebar: View {
                     row(.browser("Google Chrome"), tr("Tab organizer"), "rectangle.stack", .teal, trailing: nil)
 
                     header(tr("Disk Cleanup"))
-                    row(.disk(.home), tr("Smart Scan"), "sparkles", .pink, trailing: disk.report.map { ByteFormat.string($0.totalBytes) })
-                    if page.isDisk {
-                        row(.disk(.overview), tr("Where the space is"), "chart.pie", .teal, trailing: nil, indent: true)
-                        ForEach(CleanCategory.allCases, id: \.self) { c in
-                            let bytes = disk.report?.bytes(in: c) ?? 0
-                            // Retention is configured here, so this entry cannot depend on
-                            // a scan having found conversations eligible for removal.
-                            if c == .aiSessions || bytes > 0 || items.contains(where: { $0.category == c }) {
-                                let size: String? = c == .aiSessions && disk.sessionRetentionDays == nil ? nil : ByteFormat.string(bytes)
-                                row(.disk(.category(c)), c.title, DiskStyle.icon(c), DiskStyle.tint(c), trailing: size, indent: true)
+                    if modules.isOn(BuiltinModules.disk.id) {
+                        DiskSidebarRows(disk: AppModels.shared.disk) { disk in
+                            row(.disk(.home), tr("Smart Scan"), "sparkles", .pink, trailing: disk.report.map { ByteFormat.string($0.totalBytes) })
+                            if page.isDisk {
+                                row(.disk(.overview), tr("Where the space is"), "chart.pie", .teal, trailing: nil, indent: true)
+                                ForEach(CleanCategory.allCases, id: \.self) { c in
+                                    let bytes = disk.report?.bytes(in: c) ?? 0
+                                    // Retention is configured here, so this entry cannot depend on
+                                    // a scan having found conversations eligible for removal.
+                                    if c == .aiSessions || bytes > 0 || (disk.report?.items ?? []).contains(where: { $0.category == c }) {
+                                        let size: String? = c == .aiSessions && disk.sessionRetentionDays == nil ? nil : ByteFormat.string(bytes)
+                                        row(.disk(.category(c)), c.title, DiskStyle.icon(c), DiskStyle.tint(c), trailing: size, indent: true)
+                                    }
+                                }
                             }
                         }
                     }
@@ -679,7 +716,7 @@ struct MainSidebar: View {
         case .sensors: key("2", target)
         case .fans: key("3", target)
         case .browser("Google Chrome"): key("4", target)
-        case .disk(.home): key("5", target)
+        case .disk(.home): if modules.isOn(BuiltinModules.disk.id) { key("5", target) }
         case .agents(.home): key("6", target)
         case .settings: key(",", target)
         default: EmptyView()

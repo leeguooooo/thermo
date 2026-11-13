@@ -20,6 +20,8 @@ import ThermoL10n
     let manager: ModuleManager
     private let defaults: UserDefaults
     @Published private(set) var statuses: [ModuleManager.Status] = []
+    /// Bumped when a built-in feature is switched, so views that show its entries update.
+    @Published private(set) var revision = 0
     /// False until the modules inside the app have been read.
     @Published private(set) var loaded = false
     private var started = false
@@ -30,6 +32,12 @@ import ThermoL10n
 
     static func key(_ id: String) -> String { "module.enabled." + id }
 
+    /// The person's choice for a module, or the manifest's default when they never chose.
+    /// `bool(forKey:)` also reads a value given on the command line (`-module.enabled.<id> NO`).
+    static func stored(_ manifest: ModuleManifest, in defaults: UserDefaults) -> Bool {
+        defaults.object(forKey: key(manifest.id)) == nil ? manifest.enabledByDefault : defaults.bool(forKey: key(manifest.id))
+    }
+
     /// Reads the modules and starts the ones that are on and meant to run in the background.
     func start() {
         guard !started else { return }
@@ -38,7 +46,7 @@ import ThermoL10n
         manager.kernel = { ModuleKernel.make(for: $0) }
         Task { @MainActor in
             let defaults = self.defaults
-            await manager.load { defaults.object(forKey: Self.key($0.id)) as? Bool ?? $0.enabledByDefault }
+            await manager.load { Self.stored($0, in: defaults) }
             for problem in manager.problems { NSLog("Thermo module refused: %@", problem) }
             loaded = true
             refresh()
@@ -63,11 +71,32 @@ import ThermoL10n
         pages.first { $0.module.id == module && (entry.isEmpty || $0.entry.id == entry) }
     }
 
+    /// Whether a module is on. A built-in feature is known at once; a module in its own process once it has been read.
+    func isOn(_ id: String) -> Bool {
+        if let builtin = BuiltinModules.manifest(id) { return Self.stored(builtin, in: defaults) }
+        return statuses.first { $0.manifest.id == id }?.enabled ?? false
+    }
+
+    /// Whether anything may lead to `page`: always for Thermo's own pages, otherwise only while the module is on.
+    func shows(_ page: MainPage) -> Bool {
+        guard let module = page.module else { return true }
+        return BuiltinModules.manifest(module) == nil ? true : isOn(module)
+    }
+
+    /// Every module with its switch, built-in features first.
+    var switches: [(manifest: ModuleManifest, enabled: Bool, builtin: Bool)] {
+        BuiltinModules.all.map { ($0, isOn($0.id), true) } + statuses.map { ($0.manifest, $0.enabled, false) }
+    }
+
     func setEnabled(_ id: String, _ on: Bool) {
         defaults.set(on, forKey: Self.key(id))
-        manager.setEnabled(id, on)
+        if BuiltinModules.manifest(id) != nil {
+            revision += 1
+            // The View menu and its shortcuts list pages too.
+            if NSApp != nil { installStandardMenus() }
+        } else { manager.setEnabled(id, on) }
         // A module that was switched off is in no entry point, the open page included.
-        if !on, case let .module(shown, _) = MainWindow.state.page, shown == id { MainWindow.state.page = .overview }
+        if !on, MainWindow.state.page.module == id { MainWindow.state.page = .overview }
     }
 }
 
@@ -84,13 +113,18 @@ struct ModulePageView: View {
         } else if let page = center.page(module: module, entry: entry), let scene = page.entry.scene {
             ModuleSceneView(manager: center.manager, module: module, scene: scene).id(page.id)
                 .padding(.top, 28)   // Clear of the window's title bar buttons.
-        } else {
-            VStack(spacing: 12) {
-                Image(systemName: "puzzlepiece.extension").font(.system(size: 36, weight: .light)).foregroundStyle(Theme.textSecondary)
-                Text(tr("This feature is switched off.")).font(Theme.heading)
-                Text(tr("Switch it on in Settings to use it.")).font(Theme.body).foregroundStyle(Theme.textSecondary)
-            }.frame(maxWidth: .infinity, maxHeight: .infinity)
-        }
+        } else { ModuleOffView() }
+    }
+}
+
+/// What a page shows when something still leads to a feature that is switched off.
+struct ModuleOffView: View {
+    var body: some View {
+        VStack(spacing: 12) {
+            Image(systemName: "puzzlepiece.extension").font(.system(size: 36, weight: .light)).foregroundStyle(Theme.textSecondary)
+            Text(tr("This feature is switched off.")).font(Theme.heading)
+            Text(tr("Switch it on in Settings to use it.")).font(Theme.body).foregroundStyle(Theme.textSecondary)
+        }.frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 }
 
@@ -121,18 +155,22 @@ struct ModuleSwitches: View {
     @ObservedObject var center: ModuleCenter
     @State private var activity: ModuleManifest?
     var body: some View {
-        ForEach(Array(center.statuses.enumerated()), id: \.element.manifest.id) { index, status in
+        ForEach(Array(center.switches.enumerated()), id: \.element.manifest.id) { index, status in
             if index > 0 { InspectorDivider(inset: 46) }
             HStack(spacing: Theme.Space.m) {
                 Image(systemName: status.manifest.symbol).frame(width: 22).foregroundStyle(Theme.textSecondary)
                 VStack(alignment: .leading, spacing: 2) {
-                    Text(status.manifest.localized(L10n.current.rawValue).name).font(Theme.body)
+                    // Built-in features are worded in the app's own string table.
+                    Text(status.builtin ? tr(status.manifest.name) : status.manifest.localized(L10n.current.rawValue).name).font(Theme.body)
                     if !status.manifest.summary.isEmpty {
-                        Text(status.manifest.localized(L10n.current.rawValue).summary).font(Theme.secondary).foregroundStyle(Theme.textSecondary)
+                        Text(status.builtin ? tr(status.manifest.summary) : status.manifest.localized(L10n.current.rawValue).summary).font(Theme.secondary).foregroundStyle(Theme.textSecondary)
                     }
                 }
                 Spacer()
-                Button(tr("Activity")) { activity = status.manifest.localized(L10n.current.rawValue) }.buttonStyle(PillButtonStyle()).controlSize(.small).fixedSize()
+                // Only a module in its own process goes through the kernel and has a record of it.
+                if !status.builtin {
+                    Button(tr("Activity")) { activity = status.manifest.localized(L10n.current.rawValue) }.buttonStyle(PillButtonStyle()).controlSize(.small).fixedSize()
+                }
                 Toggle("", isOn: Binding(get: { status.enabled }, set: { center.setEnabled(status.manifest.id, $0) }))
                     .labelsHidden().toggleStyle(.switch).accessibilityLabel(status.manifest.name)
             }.padding(.horizontal, Theme.Space.m).padding(.vertical, 8)
