@@ -27,8 +27,9 @@ func uptime() -> Double { ProcessInfo.processInfo.systemUptime }
     // The kernel side of the probe's requests: real file services, a yes to every confirmation, a throwaway log.
     let scratch = "/private/tmp/thermo-probe"
     try? FileManager.default.removeItem(atPath: scratch)
-    try? FileManager.default.createDirectory(atPath: scratch + "/logs", withIntermediateDirectories: true)
-    FileManager.default.createFile(atPath: scratch + "/note.txt", contents: Data("hello".utf8))
+    for folder in ["/logs", "/open", "/bin"] { try? FileManager.default.createDirectory(atPath: scratch + folder, withIntermediateDirectories: true) }
+    FileManager.default.createFile(atPath: scratch + "/open/note.txt", contents: Data("hello".utf8))
+    FileManager.default.createFile(atPath: scratch + "/bin/old.txt", contents: Data("old".utf8))
     let outside = NSHomeDirectory() + "/.thermo-probe-outside.txt"
     FileManager.default.createFile(atPath: outside, contents: Data("private".utf8))
     let log = ModuleAccessLog(home: scratch + "/logs")
@@ -69,21 +70,29 @@ func uptime() -> Double { ProcessInfo.processInfo.systemUptime }
         guard let data = try? await manager.run(a, command: command, arguments: JSONSerialization.data(withJSONObject: arguments)) else { return [:] }
         return (try? JSONSerialization.jsonObject(with: data) as? [String: Any]) ?? [:]
     }
-    let peek = await call("peek", ["path": scratch + "/note.txt"])
-    check(peek["readable"] as? Bool == false, "the sandboxed module cannot read the file by itself")
-    let read = await call("ask", ["capability": "files.read:" + scratch + "/note.txt", "payload": ["op": "read"]])
-    check(((read["answer"] as? [String: Any])?["base64"] as? String).flatMap { Data(base64Encoded: $0) } == Data("hello".utf8), "it reads the file through the kernel, as its manifest allows")
+    // The manifest gives read access to open/ and delete access to bin/.
+    let own = await call("peek", ["path": scratch + "/open/note.txt"])
+    check(own["readable"] as? Bool == true, "the module reads what its manifest lets it read by itself")
+    let poke = await call("poke", ["path": scratch + "/open"])
+    check(poke["writable"] as? Bool == false && poke["listed"] as? Int == 1, "it can list that folder but cannot write into it")
+    let bin = await call("peek", ["path": scratch + "/bin/old.txt"])
+    let away = await call("peek", ["path": outside])
+    check(bin["readable"] as? Bool == false && away["readable"] as? Bool == false, "it cannot read where it may only delete, nor anywhere else")
+    let read = await call("ask", ["capability": "files.read:" + scratch + "/open/note.txt", "payload": ["op": "read"]])
+    check(((read["answer"] as? [String: Any])?["base64"] as? String).flatMap { Data(base64Encoded: $0) } == Data("hello".utf8), "the kernel also reads it for the module, as its manifest allows")
     let stray = await call("ask", ["capability": "files.read:" + outside, "payload": ["op": "read"]])
     check((stray["problem"] as? String)?.hasPrefix("denied") == true && stray["answer"] == nil, "a file its manifest does not cover is refused: \(stray["problem"] ?? "")")
     let end = await call("ask", ["capability": "processes.end", "payload": [:]])
     check((end["problem"] as? String)?.hasPrefix("denied") == true, "a capability it did not declare is refused")
-    let trash = await call("ask", ["capability": "files.delete:" + scratch + "/note.txt", "payload": ["op": "trash"]])
+    let trash = await call("ask", ["capability": "files.delete:" + scratch + "/bin/old.txt", "payload": ["op": "trash"]])
     let trashed = ((trash["answer"] as? [String: Any])?["results"] as? [[String: Any]])?.first
-    check(trashed?["status"] as? String == "done" && !FileManager.default.fileExists(atPath: scratch + "/note.txt"), "a confirmed delete moves the file to the Trash")
+    check(trashed?["status"] as? String == "done" && !FileManager.default.fileExists(atPath: scratch + "/bin/old.txt"), "a confirmed delete moves the file to the Trash")
     if let path = trashed?["trashed"] as? String { try? FileManager.default.removeItem(atPath: path) }
+    let wrong = await call("ask", ["capability": "files.delete:" + scratch + "/open/note.txt", "payload": ["op": "trash"]])
+    check((wrong["problem"] as? String)?.hasPrefix("denied") == true && FileManager.default.fileExists(atPath: scratch + "/open/note.txt"), "it cannot delete where it may only read")
     let summary = log.summary(module: a)
-    check(summary.read == [scratch + "/note.txt"] && summary.deleted == [scratch + "/note.txt"] && summary.denied == 2,
-          "the access log shows what it read and deleted and that two requests were denied")
+    check(summary.read == [scratch + "/open/note.txt"] && summary.deleted == [scratch + "/bin/old.txt"] && summary.denied == 3,
+          "the access log shows what the kernel read and deleted for it and that three requests were denied")
     try? FileManager.default.removeItem(atPath: outside)
 
     // Exploration, not a check: what the module reaches by itself under the entitlements it was signed with.

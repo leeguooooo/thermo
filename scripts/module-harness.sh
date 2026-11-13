@@ -14,6 +14,7 @@ CONFIGURATION="${THERMO_BUILD_CONFIGURATION:-debug}"
 MODULE_VERSION="${THERMO_HARNESS_MODULE_VERSION:-0.1}"
 swift build -c "$CONFIGURATION" --product ModuleHarness 2>&1 | tail -3
 swift build -c "$CONFIGURATION" --product ProbeModule 2>&1 | tail -3
+swift build -c "$CONFIGURATION" --product ModuleCheck 2>&1 | tail -1
 BIN="$(swift build -c "$CONFIGURATION" --show-bin-path)"
 APP="$OUT/ModuleHarness.app"
 LSREGISTER=/System/Library/Frameworks/CoreServices.framework/Frameworks/LaunchServices.framework/Support/lsregister
@@ -36,12 +37,15 @@ for which in a b; do
     sed -e "s/dev\.thermo\.probe\.a/dev.thermo.probe.$which/" -e "s/\"onDemand\"/\"$launch\"/" Sources/ProbeModule/module.json |
         sh scripts/assemble-module.sh "$BIN/ProbeModule" "dev.thermo.probe.$which" "$APP/Contents/Extensions/Probe-$which.appex" - "$MODULE_VERSION" "$MODULE_VERSION"
     [ "$CONFIGURATION" = release ] && strip "$APP/Contents/Extensions/Probe-$which.appex/Contents/MacOS/Probe-$which"
-    codesign --force --options runtime $TS -s "$SIGN_ID" -i "dev.thermo.probe.$which" --entitlements "${THERMO_HARNESS_ENTITLEMENTS:-Resources/Modules/Module.entitlements}" "$APP/Contents/Extensions/Probe-$which.appex"
+    generated="$(mktemp)"
+    "$BIN/ModuleCheck" --entitlements "$APP/Contents/Extensions/Probe-$which.appex/Contents/Resources/module.json" > "$generated"
+    codesign --force --options runtime $TS -s "$SIGN_ID" -i "dev.thermo.probe.$which" --entitlements "${THERMO_HARNESS_ENTITLEMENTS:-$generated}" "$APP/Contents/Extensions/Probe-$which.appex"
+    rm -f "$generated"
 done
 codesign --force --options runtime $TS -s "$SIGN_ID" -i dev.thermo.module-harness "$APP"
 codesign --verify --deep --strict "$APP"
-swift build -c "$CONFIGURATION" --product ModuleCheck 2>&1 | tail -1
 "$BIN/ModuleCheck" "$APP" 2
+[ -n "${THERMO_HARNESS_ENTITLEMENTS:-}" ] || "$BIN/ModuleCheck" --signed "$APP"
 "$LSREGISTER" -f "$APP"
 [ "${THERMO_HARNESS_ASSEMBLE_ONLY:-}" = 1 ] && { echo "assembled $APP"; exit 0; }
 status=0

@@ -166,10 +166,15 @@ sign -i dev.thermo.helper "$C/Helpers/thermo-helper"
 sign -i dev.thermo.capture-script "$C/Helpers/thermo-capture-script"
 for module in "$C"/Extensions/*.appex; do
     [ -d "$module" ] || continue
+    # The sandbox comes from the module's own manifest: sandboxed, read-only where it declared reads.
+    module_entitlements="$(mktemp)"
+    "$BIN/ModuleCheck" --entitlements "$module/Contents/Resources/module.json" > "$module_entitlements"
     sign -i "$(/usr/libexec/PlistBuddy -c 'Print :CFBundleIdentifier' "$module/Contents/Info.plist")" \
-        --entitlements Resources/Modules/Module.entitlements "$module"
+        --entitlements "$module_entitlements" "$module"
+    rm -f "$module_entitlements"
 done
 sign -i dev.thermo.app --entitlements Resources/Thermo.entitlements "$APP"
+"$BIN/ModuleCheck" --signed "$APP"
 scripts/verify-artifacts.sh "$DIST" "$ARCHS"
 
 notarize() {

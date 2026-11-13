@@ -7,7 +7,7 @@
   "version": "0.1.0",
   "launch": "onDemand",
   "enabledByDefault": false,
-  "capabilities": ["files.read:/private/tmp/thermo-probe", "files.delete:/private/tmp/thermo-probe"],
+  "capabilities": ["files.read:/private/tmp/thermo-probe/open", "files.delete:/private/tmp/thermo-probe/bin"],
   "entries": [{"id": "main", "kind": "page", "title": "Probe", "scene": "main"}],
   "commands": [
     {"id": "ping", "title": "Ping", "summary": "Answers with its pid.", "mutates": false, "parameters": [], "capabilities": []},
