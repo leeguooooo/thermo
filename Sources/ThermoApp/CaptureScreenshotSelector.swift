@@ -19,7 +19,11 @@ import ThermoL10n
     /// Saves the marked selection while the selector is hidden; anything but success brings the
     /// same selection and marks back.
     var saveImage: ((CGImage) -> SaveResult)?
-    init(purpose: Purpose = .screenshot(confirm: nil)) { self.purpose = purpose }
+    private let captureDisplays: @MainActor () async throws -> [Frozen]
+    init(purpose: Purpose = .screenshot(confirm: nil),
+         captureDisplays: @escaping @MainActor () async throws -> [Frozen] = CaptureScreenshotSelector.freezeDisplays) {
+        self.purpose = purpose; self.captureDisplays = captureDisplays
+    }
     struct Frozen { let screen: NSScreen; let displayID: CGDirectDisplayID; let image: CGImage; let windows: [CGRect] }
 
     private var panels: [NSPanel] = []
@@ -31,9 +35,10 @@ import ThermoL10n
     func start(completion: @escaping (Result<Outcome, Error>) -> Void) {
         guard self.completion == nil else { return }
         self.completion = completion
+        let captureDisplays = self.captureDisplays
         loading = Task { [weak self] in
             do {
-                let frozen = try await Self.freezeDisplays()
+                let frozen = try await captureDisplays()
                 guard let self, !Task.isCancelled, self.completion != nil else { return }
                 self.present(frozen)
             } catch {
