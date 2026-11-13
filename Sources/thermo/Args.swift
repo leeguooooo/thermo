@@ -1,5 +1,6 @@
 import Foundation
 import AgentDoctor
+import ModuleKit
 
 struct CLIError: Error, CustomStringConvertible {
     let description: String
@@ -10,10 +11,12 @@ struct CLIError: Error, CustomStringConvertible {
 /// Minimal argument parser: positionals plus `--flag`, `--opt value`, `--opt=value`, `-x value`.
 struct Args {
     var positionals: [String] = []
+    // Keeps route words distinct from option values when forwarding to a generated module parser.
+    var positionalIndices: [Int] = []
     var flags: Set<String> = []
     var options: [String: String] = [:]
 
-    static let valueOptions: Set<String> = ["interval", "for", "count", "sensor", "format", "older-than", "root", "budget", "timeout",
+    static let valueOptions: Set<String> = Set(["interval", "for", "count", "sensor", "format", "older-than", "root", "budget", "timeout",
                                             "area", "agent", "action", "encoding", "seconds", "duration", "mode", "timezone", "key-code", "modifiers", "key-label", "keep",
         "to", // space archive: SSH alias:/absolute/archive.tar
         "since",  // pulse history
@@ -22,7 +25,7 @@ struct Args {
         "protocol", // explicit MCP inspection lifecycle; never inferred from a version label
         "code", "file", "control-directory",
         "log-file", // agents usage: one explicitly selected session
-        "watch", "app", "title", "ids", "group", "name", "window", "color"]  // pulse chrome
+        "watch", "app", "title", "ids", "group", "name", "window", "color"]).union(BuiltinModuleManifests.all.flatMap(\.commands).flatMap(\.parameters).filter { $0.kind != .boolean }.map(\.name))  // pulse chrome
     static let aliases: [String: String] = [
         "i": "interval", "n": "count", "s": "sensor", "a": "all", "j": "json",
         "h": "help", "v": "version", "f": "format", "y": "yes",
@@ -40,10 +43,11 @@ struct Args {
     init(_ argv: [String]) throws {
         var i = 0
         while i < argv.count {
+            let sourceIndex = i
             let a = argv[i]
             i += 1
-            if a == "--" { positionals += argv[i...]; break }
-            guard a.hasPrefix("-"), a.count > 1, Double(a) == nil else { positionals.append(a); continue }
+            if a == "--" { positionals += argv[i...]; positionalIndices += Array(i..<argv.count); break }
+            guard a.hasPrefix("-"), a.count > 1, Double(a) == nil else { positionals.append(a); positionalIndices.append(sourceIndex); continue }
 
             var name = a.hasPrefix("--") ? String(a.dropFirst(2)) : String(a.dropFirst())
             var inline: String?

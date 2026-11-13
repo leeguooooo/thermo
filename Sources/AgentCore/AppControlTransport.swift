@@ -40,7 +40,7 @@ public enum AppControlTransport {
     }
     static let limit = 65_536
     // Capture results can contain bounded script logs; requests and all other operations retain 64 KiB.
-    static func responseLimit(_ action:String)->Int { ["capture.run","capture.action","capture.status","capture.cancel","capture.actions"].contains(action) ? 4*1024*1024 : limit }
+    static func responseLimit(_ action:String)->Int { ["capture.run","capture.action","capture.status","capture.cancel","capture.actions","modules.run"].contains(action) ? 4*1024*1024 : limit }
     static func path(_ directory: URL) -> String { directory.appendingPathComponent("app.sock").path }
     static func address(_ path: String) throws -> sockaddr_un {
         var address = sockaddr_un(); address.sun_family = sa_family_t(AF_UNIX)

@@ -44,8 +44,10 @@ public struct ModuleManifest: Codable, Sendable, Equatable {
             public var kind: Kind
             public var required: Bool
             public var summary: String
-            public init(name: String, kind: Kind, required: Bool = false, summary: String) {
-                self.name = name; self.kind = kind; self.required = required; self.summary = summary
+            /// An array of this kind. Missing means one value; required arrays must contain a value.
+            public var repeats: Bool?
+            public init(name: String, kind: Kind, required: Bool = false, summary: String, repeats: Bool? = nil) {
+                self.name = name; self.kind = kind; self.required = required; self.summary = summary; self.repeats = repeats
             }
         }
         public var id: String
@@ -56,10 +58,16 @@ public struct ModuleManifest: Codable, Sendable, Equatable {
         public var parameters: [Parameter]
         /// What running it may ask of the kernel; each must be covered by the module's capabilities.
         public var capabilities: [Capability]
+        /// CLI words, for example ["clean", "run"]. Missing uses the module's short name and command ID.
+        public var cli: [String]?
 
-        public init(id: String, title: String, summary: String, mutates: Bool = false, parameters: [Parameter] = [], capabilities: [Capability] = []) {
+        public init(id: String, title: String, summary: String, mutates: Bool = false, parameters: [Parameter] = [], capabilities: [Capability] = [], cli: [String]? = nil) {
             self.id = id; self.title = title; self.summary = summary; self.mutates = mutates
-            self.parameters = parameters; self.capabilities = capabilities
+            self.parameters = parameters; self.capabilities = capabilities; self.cli = cli
+        }
+
+        public func cliPath(moduleID: String) -> [String] {
+            cli ?? [moduleID.split(separator: ".").last.map(String.init) ?? "", id]
         }
     }
 
@@ -171,10 +179,22 @@ public struct ModuleManifest: Codable, Sendable, Equatable {
         if Set(capabilities).count != capabilities.count { found.append("a capability is listed twice") }
 
         var commandIDs = Set<String>()
+        var cliPaths = Set<[String]>()
         for command in commands {
             if !Self.matches(Self.local, command.id) { found.append("command id \(command.id) must be lowercase letters, digits and hyphens") }
             if !commandIDs.insert(command.id).inserted { found.append("command \(command.id) is defined twice") }
             if command.summary.isEmpty { found.append("command \(command.id) has no summary") }
+            let path = command.cliPath(moduleID: id)
+            if path.isEmpty || path.contains(where: { !Self.matches(Self.local, $0) }) {
+                found.append("command \(command.id) CLI path must contain lowercase words")
+            }
+            if !cliPaths.insert(path).inserted { found.append("CLI path \(path.joined(separator: " ")) is defined twice") }
+            for parameter in command.parameters where parameter.name == "dry-run" && (parameter.kind != .boolean || parameter.repeats == true) {
+                found.append("command \(command.id) dry-run must be a single boolean")
+            }
+            for parameter in command.parameters where !Self.matches(Self.local, parameter.name) {
+                found.append("command \(command.id) parameter \(parameter.name) must be lowercase letters, digits and hyphens")
+            }
             if Set(command.parameters.map(\.name)).count != command.parameters.count { found.append("command \(command.id) repeats a parameter") }
             for needed in command.capabilities where !capabilities.contains(where: { $0.covers(needed, home: "/Users/x") }) {
                 found.append("command \(command.id) uses \(needed), which the module does not declare")

@@ -2,6 +2,27 @@ import XCTest
 import AgentCore
 
 final class CommandRunnerTests: XCTestCase {
+    func testSeparateDiagnosticsKeepsJSONOutputParseable() throws {
+        let result = CommandRunner.run("/bin/sh", arguments: ["-c", "printf '{\"ok\":true}'; printf 'progress\\n' >&2"],
+                                       input: FileHandle.nullDevice, separateError: true)
+        XCTAssertEqual(result.status, 0)
+        XCTAssertEqual(result.errorOutput, "progress\n")
+        let object = try JSONSerialization.jsonObject(with: Data(result.output.utf8)) as? [String: Bool]
+        XCTAssertEqual(object?["ok"], true)
+    }
+    func testAnOpenDescriptorSuppliesInputWithoutArgumentParsing() throws {
+        let file=FileManager.default.temporaryDirectory.appendingPathComponent("thermo-runner-input-"+UUID().uuidString)
+        let text=String(repeating:"{\"value\":\"--yes ; $(not-a-command) 中文\"}\n",count:1000)
+        try Data(text.utf8).write(to:file)
+        let input=try FileHandle(forReadingFrom:file)
+        try FileManager.default.removeItem(at:file)
+        defer {try? input.close()}
+        let result=CommandRunner.run("/bin/cat",arguments:[],timeout:3,input:input)
+        XCTAssertEqual(result.status,0)
+        XCTAssertEqual(result.output,text)
+        XCTAssertFalse(result.truncated)
+    }
+
     func testExplicitEnvironmentIsPassedWithoutChangingParent() {
         let result = CommandRunner.run("/bin/sh", arguments: ["-c", "printf '%s' \"$THERMO_RUNNER_FIXTURE\""],
                                        environment: ["THERMO_RUNNER_FIXTURE": "synthetic value"], timeout: 2)

@@ -26,6 +26,41 @@ final class ModuleManifestTests: XCTestCase {
         XCTAssertTrue(problems.contains("leaves summary empty") && problems.contains("may not redefine the English texts"), problems)
     }
 
+    func testExistingCommandsAndRepeatedArgumentsShareInterfaceOne() throws {
+        var manifest = disk()
+        let old = try ModuleManifest.load(JSONEncoder().encode(manifest))
+        XCTAssertEqual(old.interface, 1)
+        XCTAssertNil(old.commands[0].cli)
+        XCTAssertNil(old.commands[1].parameters[0].repeats)
+        XCTAssertEqual(old.commands[0].cliPath(moduleID: old.id), ["disk", "scan"])
+        manifest.commands[1].cli = ["clean", "run"]
+        manifest.commands[1].parameters[0].repeats = true
+        let loaded = try ModuleManifest.load(JSONEncoder().encode(manifest))
+        XCTAssertEqual(loaded.commands[1].cliPath(moduleID: loaded.id), ["clean", "run"])
+        XCTAssertEqual(loaded.commands[1].parameters[0].repeats, true)
+        XCTAssertEqual(loaded.interface, 1)
+    }
+
+    func testMalformedAndCollidingCommandPathsAreRejectedWhole() throws {
+        for path in [[], ["clean", "../run"], ["Clean"], [""]] {
+            var manifest = disk(); manifest.commands[0].cli = path
+            XCTAssertThrowsError(try ModuleManifest.load(JSONEncoder().encode(manifest)), "\(path)")
+        }
+        var manifest = disk(); manifest.commands[1].cli = ["disk", "scan"]
+        XCTAssertTrue(manifest.problems().contains("CLI path disk scan is defined twice"))
+        manifest.commands[1].cli = ["clean", "run"]
+        manifest.commands[1].parameters[0].name = "bad name"
+        XCTAssertTrue(manifest.problems().contains { $0.contains("parameter bad name must be lowercase") })
+    }
+
+    func testDryRunCannotBeRedefinedAsDataOrARepeatedFlag() {
+        for parameter in [ModuleManifest.Command.Parameter(name:"dry-run",kind:.string,summary:"Wrong"),
+                          .init(name:"dry-run",kind:.boolean,summary:"Wrong",repeats:true)] {
+            var m=disk();m.commands[0].parameters=[parameter]
+            XCTAssertTrue(m.problems().contains("command scan dry-run must be a single boolean"))
+        }
+    }
+
     let home = "/Users/someone"
 
     func disk() -> ModuleManifest {
