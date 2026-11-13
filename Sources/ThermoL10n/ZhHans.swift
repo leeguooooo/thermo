@@ -1,6 +1,8 @@
 // 简体中文. Keys are the English format strings passed to tr(); keep positional arguments (%1$@) intact.
 // Add new sections at the end (e.g. `// Disk`) so parallel work doesn't collide.
 let zhHans: [String: String] = [
+    "Module moved files to the Trash": "模块已将文件移到废纸篓",
+    "Modules": "模块",
     "Space": "空格",
     "Delete": "删除",
     "Discard": "丢弃",

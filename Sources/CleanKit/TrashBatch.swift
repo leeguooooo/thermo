@@ -120,6 +120,20 @@ public enum TrashBatches {
         guard fsync(fd) == 0, currentRecord(fd, at: location) else { throw error("batch journal could not be synchronized") }
     }
 
+    /// Records a move already performed by a trusted kernel service. Unknown size is represented
+    /// as zero in the restore manifest; the operation journal keeps its size nil.
+    public static func recordMoved(original: String, destination: String, id: String,
+                                   home: String = NSHomeDirectory()) throws {
+        guard let identity = FileIdentity.of(destination), let birth = birthIdentity(destination) else {
+            throw error("Trash destination identity could not be read")
+        }
+        var entry = TrashBatch.Entry(original: original, destination: destination, identity: identity, bytes: 0)
+        entry.birthIdentity = birth
+        if let why = refusal(entry, home: home) { throw error(why) }
+        try append(entry, id: id, home: home)
+        try synchronize(id, home: home)
+    }
+
     /// Moves a hand-picked path to the Trash and records where macOS put it in batch `id`. The move
     /// throws; a failed recording comes back as the reason, with the item already in the Trash.
     static func trash(_ path: String, bytes: Int64, id: String, home: String,

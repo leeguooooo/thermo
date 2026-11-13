@@ -7,6 +7,19 @@ final class NativeTrashLocationTests: XCTestCase {
     func entry(_ destination: String, original: String = "/state/Applications/Fixture.app") -> TrashBatch.Entry {
         .init(original: original, destination: destination, identity: "fixture", bytes: 1)
     }
+    func testKernelMoveReceiptCannotAuthorizeAnArbitraryDestination() throws {
+        let root = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString).resolvingSymlinksInPath()
+        defer { try? FileManager.default.removeItem(at: root) }
+        try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
+        let destination = root.appendingPathComponent("not-trash")
+        try Data("keep".utf8).write(to: destination)
+        let id = UUID().uuidString
+        XCTAssertThrowsError(try TrashBatches.recordMoved(original: root.appendingPathComponent("original").path,
+            destination: destination.path, id: id, home: root.path))
+        XCTAssertThrowsError(try TrashBatches.load(id, home: root.path))
+        XCTAssertEqual(try Data(contentsOf: destination), Data("keep".utf8))
+    }
+
     func testNativeLocationMustComeFromOSLookupForTheOriginalParent() {
         let item = entry("/native/.Trash/Fixture.app")
         let root = TrashBatches.trashDirectory(item, home: "/state", currentHome: "/state", nativeTrash: { parent in

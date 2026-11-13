@@ -6,6 +6,7 @@ import ThermoL10n
 extension OperationRecord {
     public var title: String {
         switch (feature, action) {
+        case ("modules", "trash"): return tr("Module moved files to the Trash")
         case ("clean", "trash"): return tr("Cleanup moved files to the Trash")
         case ("clean", "delete"): return tr("Cleanup deleted files")
         case ("clean", "emptyTrash"): return tr("Emptied a Trash batch")

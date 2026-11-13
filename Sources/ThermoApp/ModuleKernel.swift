@@ -20,7 +20,7 @@ enum ModuleKernel {
                        confirm: @escaping CapabilityBroker.Confirm) -> CapabilityBroker {
         CapabilityBroker(manifest: manifest, home: home, log: log, handlers: [
             .filesRead: KernelServices.filesRead,
-            .filesDelete: KernelServices.filesDelete,
+            .filesDelete: { request in try trashFiles(request, home: home) },
             .networkConnect: KernelServices.networkConnect(),
             .processesRead: processesRead,
             .processesEnd: processesEnd,
@@ -28,6 +28,40 @@ enum ModuleKernel {
             .filesDelete: { request in try deletable(request, home: home) },
             .processesEnd: { request in _ = try endable(request) },
         ], confirm: confirm)
+    }
+
+    /// The shared history owns the undo link; the module cannot supply a batch or destination.
+    static func trashFiles(_ request: BrokerRequest, home: String,
+                           move: (String) throws -> URL? = { target in
+                               var destination: NSURL?
+                               try FileManager.default.trashItem(at: URL(fileURLWithPath: target), resultingItemURL: &destination)
+                               return destination as URL?
+                           }) throws -> BrokerAnswer {
+        let batch = UUID().uuidString
+        var items: [OperationRecord.Item] = []
+        var recorded = false
+        defer {
+            if !items.isEmpty {
+                OperationJournal.record(OperationRecord(feature: "modules", action: "trash", subject: request.manifest.id,
+                    items: items, undo: recorded ? .init(kind: "trashBatch", ref: batch) : nil), home: home)
+            }
+        }
+        return try KernelServices.trashFiles(request) { target in
+            let destination: URL?
+            do { destination = try move(target) }
+            catch {
+                items.append(.init(target: target, status: "failed", detail: error.localizedDescription))
+                throw error
+            }
+            var warning: String?
+            do {
+                guard let destination else { throw BrokerError(.failed, "macOS did not return the Trash destination") }
+                try TrashBatches.recordMoved(original: target, destination: destination.path, id: batch, home: home)
+                recorded = true
+            } catch { warning = "Moved to Trash, but undo recording failed: " + error.localizedDescription }
+            items.append(.init(target: target, status: warning == nil ? "done" : "partial", detail: warning))
+            return (destination, warning)
+        }
     }
 
     /// The places disk cleanup never touches are closed to modules too, whatever their manifest

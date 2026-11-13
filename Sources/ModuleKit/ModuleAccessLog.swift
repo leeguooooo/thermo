@@ -13,6 +13,10 @@ public struct ModuleAccessRecord: Codable, Sendable, Equatable {
         /// Allowed, but it did not work.
         case failed
     }
+    /// Assigned on append, so two identical requests remain two distinct events.
+    public var eventID: UUID? = nil
+    /// Full precision append time keeps cross-stream ordering despite legacy second-resolution dates.
+    public var loggedAt: Double? = nil
     public var time: Date
     public var module: String
     /// The capability kind as written in manifests, e.g. `files.delete`. Unknown kinds are kept as sent.
@@ -51,7 +55,7 @@ public final class ModuleAccessLog: @unchecked Sendable {
     }
 
     private let directory: URL
-    private let lock = NSLock()
+    private static let lock = NSLock()
 
     public init(home: String = NSHomeDirectory()) {
         directory = URL(fileURLWithPath: home).appendingPathComponent("Library/Application Support/Thermo/modules")
@@ -64,37 +68,87 @@ public final class ModuleAccessLog: @unchecked Sendable {
     }
     private static func decoder() -> JSONDecoder { let d = JSONDecoder(); d.dateDecodingStrategy = .iso8601; return d }
 
-    public func record(_ record: ModuleAccessRecord) {
-        // The module id becomes a folder name; anything that is not a plain id is not written.
-        guard ModuleManifest.matches(ModuleManifest.identifier, record.module), var line = try? Self.encoder().encode(record) else { return }
-        line.append(10)
-        lock.lock(); defer { lock.unlock() }
-        let file = url(module: record.module)
-        try? FileManager.default.createDirectory(at: file.deletingLastPathComponent(), withIntermediateDirectories: true, attributes: [.posixPermissions: 0o700])
-        if let size = (try? FileManager.default.attributesOfItem(atPath: file.path))?[.size] as? Int, size + line.count > Self.maxBytes {
-            let old = file.deletingLastPathComponent().appendingPathComponent("access.1.jsonl")
-            try? FileManager.default.removeItem(at: old)
-            try? FileManager.default.moveItem(at: file, to: old)
-        }
-        if !FileManager.default.fileExists(atPath: file.path) {
-            FileManager.default.createFile(atPath: file.path, contents: nil, attributes: [.posixPermissions: 0o600])
-        }
-        guard let handle = try? FileHandle(forWritingTo: file) else { return }
-        defer { try? handle.close() }
-        _ = try? handle.seekToEnd()
-        try? handle.write(contentsOf: line)
+    private static func mutation(_ record: ModuleAccessRecord) -> Bool {
+        record.outcome == .allowed && (record.capability == "files.delete" || record.capability == "processes.end")
     }
 
-    /// Oldest first, the rotated file included. Lines that cannot be read are skipped.
-    public func records(module: String) -> [ModuleAccessRecord] {
-        lock.lock(); defer { lock.unlock() }
-        let live = url(module: module)
-        let files = [live.deletingLastPathComponent().appendingPathComponent("access.1.jsonl"), live]
+    private func read(_ files: [URL]) -> [ModuleAccessRecord] {
         let decoder = Self.decoder()
         return files.flatMap { file -> [ModuleAccessRecord] in
             guard let data = FileManager.default.contents(atPath: file.path) else { return [] }
             return data.split(separator: 10).compactMap { try? decoder.decode(ModuleAccessRecord.self, from: Data($0)) }
         }
+    }
+
+    private func append(_ line: Data, to file: URL, synchronize: Bool = false) throws {
+        let fm = FileManager.default
+        if let size = (try? fm.attributesOfItem(atPath: file.path))?[.size] as? Int, size + line.count > Self.maxBytes {
+            let old = file.deletingPathExtension().appendingPathExtension("1.jsonl")
+            if fm.fileExists(atPath: old.path) { try fm.removeItem(at: old) }
+            try fm.moveItem(at: file, to: old)
+        }
+        if !fm.fileExists(atPath: file.path) {
+            guard fm.createFile(atPath: file.path, contents: nil, attributes: [.posixPermissions: 0o600]) else { throw CocoaError(.fileWriteUnknown) }
+        }
+        let handle = try FileHandle(forWritingTo: file)
+        defer { try? handle.close() }
+        _ = try handle.seekToEnd()
+        try handle.write(contentsOf: line)
+        if synchronize { try handle.synchronize() }
+    }
+
+    public func record(_ value: ModuleAccessRecord) {
+        guard ModuleManifest.matches(ModuleManifest.identifier, value.module) else { return }
+        var record = value
+        record.eventID = UUID()
+        record.loggedAt = Date().timeIntervalSince1970
+        guard var line = try? Self.encoder().encode(record), line.count < Self.maxBytes else { return }
+        line.append(10)
+        Self.lock.lock(); defer { Self.lock.unlock() }
+        let file = url(module: record.module)
+        let folder = file.deletingLastPathComponent()
+        do {
+            try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true, attributes: [.posixPermissions: 0o700])
+            // Preserve old-format changes before read traffic can rotate their original stream.
+            let legacy = folder.appendingPathComponent("changes-legacy.jsonl")
+            if !FileManager.default.fileExists(atPath: legacy.path) {
+                var data = Data()
+                for old in read([folder.appendingPathComponent("access.1.jsonl"), file]) where old.eventID == nil && Self.mutation(old) {
+                    data.append(try Self.encoder().encode(old)); data.append(10)
+                }
+                let temporary = folder.appendingPathComponent("changes-legacy." + UUID().uuidString + ".tmp")
+                defer { try? FileManager.default.removeItem(at: temporary) }
+                guard FileManager.default.createFile(atPath: temporary.path, contents: data, attributes: [.posixPermissions: 0o600]) else { return }
+                let handle = try FileHandle(forWritingTo: temporary)
+                do { try handle.synchronize(); try handle.close() }
+                catch { try? handle.close(); throw error }
+                try FileManager.default.moveItem(at: temporary, to: legacy)
+            }
+            // Changes have their own bounded retention; a scan cannot evict them.
+            if Self.mutation(record) { try append(line, to: folder.appendingPathComponent("changes.jsonl"), synchronize: true) }
+            try append(line, to: file)
+        } catch { return } // Logging never changes the result of an already completed request.
+    }
+
+    /// Oldest first. Changes survive read-stream rotation; duplicated stream copies count once.
+    public func records(module: String) -> [ModuleAccessRecord] {
+        guard ModuleManifest.matches(ModuleManifest.identifier, module) else { return [] }
+        Self.lock.lock(); defer { Self.lock.unlock() }
+        let live = url(module: module), folder = live.deletingLastPathComponent()
+        let legacy = folder.appendingPathComponent("changes-legacy.jsonl")
+        let migrated = FileManager.default.fileExists(atPath: legacy.path)
+        let changes = read([legacy, folder.appendingPathComponent("changes.1.jsonl"), folder.appendingPathComponent("changes.jsonl")])
+        let access = read([folder.appendingPathComponent("access.1.jsonl"), live]).filter {
+            !(migrated && $0.eventID == nil && Self.mutation($0))
+        }
+        var seen = Set<UUID>()
+        return (changes + access).enumerated().filter { _, record in
+            record.eventID.map { seen.insert($0).inserted } ?? true
+        }.sorted { a, b in
+            let left = a.element.loggedAt ?? a.element.time.timeIntervalSince1970
+            let right = b.element.loggedAt ?? b.element.time.timeIntervalSince1970
+            return left == right ? a.offset < b.offset : left < right
+        }.map(\.element)
     }
 
     /// What the module read, deleted, reached and ended; each target once, in first-seen order.

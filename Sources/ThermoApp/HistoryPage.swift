@@ -227,6 +227,7 @@ struct HistoryPage: View {
 
     static func featureName(_ f: String) -> String {
         switch f {
+        case "modules": return tr("Modules")
         case "clean": return tr("Disk Cleanup")
         case "apps": return tr("Software")
         case "space": return tr("Space Lens")
@@ -249,6 +250,7 @@ struct HistoryPage: View {
 
     static func symbol(_ r: OperationRecord) -> String {
         switch r.feature {
+        case "modules": return "puzzlepiece.extension"
         case "clean": return "sparkles"
         case "apps": return "square.grid.2x2"
         case "space": return "square.grid.3x3.topleft.filled"

@@ -80,6 +80,17 @@ public enum KernelServices {
     /// Each target is looked at again just before it is moved: if the folder it sits in now resolves
     /// somewhere else than what was checked, it is left alone.
     public static let filesDelete: CapabilityBroker.Handler = { request in
+        try trashFiles(request) { target in
+            var destination: NSURL?
+            try FileManager.default.trashItem(at: URL(fileURLWithPath: target), resultingItemURL: &destination)
+            return (destination as URL?, nil)
+        }
+    }
+
+    /// Synchronous move adapter lets the app journal the actual OS destination in the same request.
+    /// A warning reports failed bookkeeping after a successful move, never a failed move.
+    public static func trashFiles(_ request: BrokerRequest,
+                                  move: (String) throws -> (destination: URL?, warning: String?)) throws -> BrokerAnswer {
         guard request.operation == "trash" else { throw bad("files.delete has no operation \(request.operation.isEmpty ? "(none)" : request.operation)") }
         var results: [[String: Any]] = []
         var moved = 0
@@ -92,10 +103,10 @@ public enum KernelServices {
                 result["status"] = "skipped"; result["detail"] = "not there"
             } else {
                 do {
-                    var trashed: NSURL?
-                    try FileManager.default.trashItem(at: url, resultingItemURL: &trashed)
+                    let movedItem = try move(target)
                     result["status"] = "done"; moved += 1
-                    if let trashed = trashed as URL? { result["trashed"] = trashed.path }
+                    if let trashed = movedItem.destination { result["trashed"] = trashed.path }
+                    if let warning = movedItem.warning { result["detail"] = warning }
                 } catch { result["status"] = "failed"; result["detail"] = error.localizedDescription }
             }
             results.append(result)
