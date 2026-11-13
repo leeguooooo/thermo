@@ -36,7 +36,7 @@ for which in a b; do
     sed -e "s/dev\.thermo\.probe\.a/dev.thermo.probe.$which/" -e "s/\"onDemand\"/\"$launch\"/" Sources/ProbeModule/module.json |
         sh scripts/assemble-module.sh "$BIN/ProbeModule" "dev.thermo.probe.$which" "$APP/Contents/Extensions/Probe-$which.appex" - "$MODULE_VERSION" "$MODULE_VERSION"
     [ "$CONFIGURATION" = release ] && strip "$APP/Contents/Extensions/Probe-$which.appex/Contents/MacOS/Probe-$which"
-    codesign --force --options runtime $TS -s "$SIGN_ID" -i "dev.thermo.probe.$which" --entitlements Resources/Modules/Module.entitlements "$APP/Contents/Extensions/Probe-$which.appex"
+    codesign --force --options runtime $TS -s "$SIGN_ID" -i "dev.thermo.probe.$which" --entitlements "${THERMO_HARNESS_ENTITLEMENTS:-Resources/Modules/Module.entitlements}" "$APP/Contents/Extensions/Probe-$which.appex"
 done
 codesign --force --options runtime $TS -s "$SIGN_ID" -i dev.thermo.module-harness "$APP"
 codesign --verify --deep --strict "$APP"

@@ -15,6 +15,8 @@
      "parameters": [{"name": "ms", "kind": "integer", "required": false, "summary": "How long."}], "capabilities": []},
     {"id": "peek", "title": "Peek", "summary": "Tries to read a file directly.", "mutates": false,
      "parameters": [{"name": "path", "kind": "path", "required": true, "summary": "The file."}], "capabilities": []},
+    {"id": "poke", "title": "Poke", "summary": "Tries to list and write a folder directly.", "mutates": true,
+     "parameters": [{"name": "path", "kind": "path", "required": true, "summary": "The folder."}], "capabilities": []},
     {"id": "ask", "title": "Ask", "summary": "Passes a request to the kernel.", "mutates": true,
      "parameters": [{"name": "capability", "kind": "string", "required": true, "summary": "The capability."}], "capabilities": []},
     {"id": "exit", "title": "Exit", "summary": "Exits at once.", "mutates": false, "parameters": [], "capabilities": []}

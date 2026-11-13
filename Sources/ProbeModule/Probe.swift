@@ -24,6 +24,14 @@ final class ProbeService: NSObject, ModuleXPC {
             // What the module can read by itself, without the kernel.
             let path = input["path"] as? String ?? ""
             reply(try? JSONSerialization.data(withJSONObject: ["readable": FileManager.default.contents(atPath: path) != nil]), nil)
+        case "poke":
+            // Whether the module can list a folder and create a file in it by itself.
+            let path = input["path"] as? String ?? ""
+            let listed = (try? FileManager.default.contentsOfDirectory(atPath: path))?.count
+            let file = path + "/.thermo-probe-write"
+            let wrote = FileManager.default.createFile(atPath: file, contents: Data("x".utf8))
+            if wrote { try? FileManager.default.removeItem(atPath: file) }
+            reply(try? JSONSerialization.data(withJSONObject: ["listed": listed ?? -1, "writable": wrote]), nil)
         case "ask":
             // Passes a request on to the kernel and answers with what the kernel said.
             guard let kernel = connection?.remoteObjectProxyWithErrorHandler({ reply(nil, "\($0)") }) as? KernelXPC else { reply(nil, "no kernel"); return }

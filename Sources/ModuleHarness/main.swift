@@ -86,6 +86,14 @@ func uptime() -> Double { ProcessInfo.processInfo.systemUptime }
           "the access log shows what it read and deleted and that two requests were denied")
     try? FileManager.default.removeItem(atPath: outside)
 
+    // Exploration, not a check: what the module reaches by itself under the entitlements it was signed with.
+    if let folders = ProcessInfo.processInfo.environment["THERMO_HARNESS_POKE"] {
+        for folder in folders.split(separator: ":").map(String.init) {
+            let poke = await call("poke", ["path": folder])
+            note("poke \(folder): listed \(poke["listed"] ?? "?") entries, writable \(poke["writable"] ?? "?")")
+        }
+    }
+
     // Memory and energy.
     if let before = manager.usage(a) {
         _ = try? await manager.run(a, command: "burn", arguments: Data(#"{"ms":400}"#.utf8))
