@@ -93,8 +93,18 @@ public enum ModuleError: Error, CustomStringConvertible, Equatable {
             slots[module.manifest.id] = Slot(module, lifecycle: ModuleLifecycle(launch: module.manifest.launch, enabled: false, timing: timing))
             order.append(module.manifest.id)
         }
-        await identify()
+        // Asking the system which modules it knows can take seconds and is only needed to start one,
+        // so it runs behind: what the modules are and whether they are on is known at once.
+        _ = identification()
         for id in order where enabled(slots[id]!.module.manifest) { setEnabled(id, true) }
+    }
+
+    private var identifying: Task<Void, Never>?
+    private func identification() -> Task<Void, Never> {
+        if let running = identifying { return running }
+        let task = Task { @MainActor in await self.identify() }
+        identifying = task
+        return task
     }
 
     /// The system may know the same module from several copies of the app, so every identity with a
@@ -117,7 +127,8 @@ public enum ModuleError: Error, CustomStringConvertible, Equatable {
         limit.cancel()
         for (id, slot) in slots {
             slot.candidates = all.filter { $0.bundleIdentifier == id }
-            if slot.candidates.isEmpty { problems.append("\(id): not registered with the system") }
+            let problem = "\(id): not registered with the system"
+            if slot.candidates.isEmpty, !problems.contains(problem) { problems.append(problem) }
         }
     }
 
@@ -268,8 +279,10 @@ public enum ModuleError: Error, CustomStringConvertible, Equatable {
 
     private func launch(_ slot: Slot, generation: Int) async throws {
         let id = slot.module.manifest.id
+        if slot.identity == nil, slot.candidates.isEmpty { await identification().value }
         let tries = slot.identity.map { [$0] } ?? slot.candidates
-        guard !tries.isEmpty else { throw ModuleError.notInstalled(id) }
+        // Not known to the system yet: ask again the next time it is started.
+        guard !tries.isEmpty else { identifying = nil; throw ModuleError.notInstalled(id) }
         var refused: ModuleError = .notInstalled(id)
         for identity in tries {
             let process = try await AppExtensionProcess(configuration: .init(appExtensionIdentity: identity, onInterruption: {}))
