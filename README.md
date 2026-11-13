@@ -58,7 +58,7 @@ thermo search settings
 ## 构建
 
 ```sh
-make            # = scripts/build.sh：release 构建 + 打包 dist/Thermo.app + ad-hoc 签名
+make            # = scripts/build.sh：release 构建 + 打包 dist.noindex/Thermo.app + ad-hoc 签名
 make test       # 单元测试（含一个真机 SMC 测试，无 SMC 时自动跳过）
 make install    # CLI 装到 /usr/local/bin，App 拷到 /Applications
 ```
@@ -80,9 +80,9 @@ make release
 # 等价于：
 SIGN_ID="Developer ID Application: LI GUO (6ZPXG4KVVS)" NOTARY_PROFILE=thermo \
 NOTARY_KEYCHAIN=$HOME/Library/Keychains/login.keychain-db scripts/build.sh
-# 产物：dist/Thermo.app（已 staple）、dist/Thermo-<ver>.dmg、dist/Thermo-<ver>.zip
-# CLI：dist/thermo-cli-macos-universal.tar.gz 及 .sha256
-# 公开校验清单：dist/Thermo-<ver>-SHA256SUMS.txt
+# 产物：dist.noindex/Thermo.app（已 staple）、dist.noindex/Thermo-<ver>.dmg、dist.noindex/Thermo-<ver>.zip
+# CLI：dist.noindex/thermo-cli-macos-universal.tar.gz 及 .sha256
+# 公开校验清单：dist.noindex/Thermo-<ver>-SHA256SUMS.txt
 # 通用二进制：再加 ARCHS="arm64 x86_64"
 ```
 
@@ -537,3 +537,5 @@ thermo clean apply PLAN_UUID --yes --json
 `clean run/apply --json` 使用 **schemaVersion 2** 对象，旧版数组位于 `results`。对象另有 `complete`、`outcome`、`scanComplete`、`skipped`、`missingSelectors`、`estimatedDeletedBytes`、`trashedBytes` 和整批 `spaceObservation`。文件估计删除量和实测磁盘变化不同，后者含其他任务的并发写入或删除。清理的部分执行、被截断的扫描和未确认结果返回退出码 **3**；无效参数或拒绝返回 **2**，执行异常返回 **1**。调用方应读取结果和退出状态，不能仅凭命令已返回判断任务完成。
 
 Agent 诊断、列举、检查和修复支持 `--root PROJECT`，与 App 的项目选择使用同一上下文；未指定项目时不带入项目配置。`agents fix/run` 的 `complete` 表示所列操作是否完成，`observedAfter` 是操作后重新读取的诊断，不代表整机或项目的全部问题已解决。
+
+构建输出默认放在 `dist.noindex/`，避免被 Spotlight 当成另一份已安装应用。自定义 `THERMO_DIST_DIR` 时也建议使用 `.noindex` 后缀；历史 `dist/` 内容不会被自动删除。

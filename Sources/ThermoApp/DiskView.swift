@@ -21,6 +21,13 @@ final class DiskModel: ObservableObject {
     @Published var selected: Set<String> = []
     /// Item id → parts (sessions) the user unticked inside a selected item.
     @Published var excluded: [String: Set<String>] = [:]
+    /// The local AI's verdicts on the current results (item id → verdict). It only ticks.
+    @Published private(set) var aiVerdicts: [String: LocalAIAnswer] = [:]
+    @Published private(set) var aiSummaries: [CleanCategory: String] = [:]
+    /// What the last AI pick ticked, per category.
+    @Published private(set) var aiPicked: [CleanCategory: [String]] = [:]
+    @Published private(set) var aiPicking: CleanCategory?
+    @Published private(set) var aiError: String?
     @Published private(set) var sessionRetentionDays: Int?
     /// Everything by default: build output in every project is often the biggest win.
     @Published var scope: Scope = .all {
@@ -195,6 +202,7 @@ final class DiskModel: ObservableObject {
 
     func scan(category: CleanCategory? = nil) {
         guard !scanning, !cleaning else { return }
+        clearAIPick()
         requestNotifications()
         scanning = true
         stopping = false
@@ -464,5 +472,43 @@ struct SafetyTag: View {
         let (text, color): (String, Color) = info ? (tr("info"), Theme.accent)
             : safety == .safe ? (tr("safe"), Theme.good) : safety == .review ? (tr("review"), Theme.caution) : (tr("risky"), Theme.danger)
         StatusTag(text: text, color: color)
+    }
+}
+
+extension DiskModel {
+    /// The items of `category` the AI is asked about: the ones the user could tick.
+    func aiQuestion(_ category: CleanCategory) -> LocalAICleanQuestion {
+        let items = (report?.items ?? []).filter { $0.category == category && isEligible($0) }
+        return LocalAICleanQuestion(category: category.title, items: items.map(LocalAICleanQuestion.Item.init))
+    }
+
+    /// Asks the local AI about every item on the page and ticks the ones it calls safe to delete.
+    /// Never cleans: the user still reviews and presses Clean.
+    @MainActor func aiPick(_ category: CleanCategory, using backend: LocalAIBackend) {
+        guard aiPicking == nil, !scanning, !cleaning else { return }
+        let question = aiQuestion(category)
+        guard !question.items.isEmpty else { return }
+        let asked = report?.started
+        aiPicking = category; aiError = nil
+        Task { @MainActor in
+            defer { self.aiPicking = nil }
+            do {
+                let answer = try await LocalAI.pick(question, using: backend)
+                // A new scan replaced the results while the AI was thinking: its verdicts are for old items.
+                guard self.report?.started == asked, !self.scanning else { return }
+                self.aiVerdicts.merge(answer.verdicts) { _, new in new }
+                self.aiSummaries[category] = answer.summary
+                let current = (self.report?.items ?? []).filter { $0.category == category && self.isEligible($0) }
+                let ids = LocalAI.picks(answer, items: current)
+                for id in ids { self.selected.insert(id); self.excluded[id] = nil }
+                self.aiPicked[category] = ids
+            } catch {
+                self.aiError = error.localizedDescription
+            }
+        }
+    }
+
+    func clearAIPick() {
+        aiVerdicts = [:]; aiSummaries = [:]; aiPicked = [:]; aiError = nil
     }
 }

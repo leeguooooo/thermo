@@ -1,7 +1,7 @@
 #!/bin/sh
 # Read-only validation of a packaged app, CLI and helper. Optional second argument: required architectures.
 set -eu
-DIST="${1:-dist}"
+DIST="${1:-dist.noindex}"
 ARCHS="${2:-}"
 APP="$DIST/Thermo.app"
 MINIMUM="$(/usr/libexec/PlistBuddy -c 'Print :LSMinimumSystemVersion' "$APP/Contents/Info.plist")"
@@ -17,7 +17,10 @@ if [ -n "$SOURCE$TREE" ]; then
     fi
 fi
 codesign --verify --deep --strict "$APP"
-for BIN in "$DIST/thermo" "$DIST/thermo-helper" "$APP/Contents/MacOS/Thermo" "$APP/Contents/Helpers/thermo" "$APP/Contents/Helpers/thermo-helper" "$APP/Contents/Helpers/thermo-capture-script"; do
+for BIN in "$DIST/thermo" "$DIST/thermo-helper" "$APP/Contents/MacOS/Thermo" "$APP/Contents/Helpers/thermo" "$APP/Contents/Helpers/thermo-helper" "$APP/Contents/Helpers/thermo-capture-script" \
+    "$APP"/Contents/Extensions/*.appex/Contents/MacOS/*; do
+    # No modules packed: the pattern stays as written.
+    case "$BIN" in *'*'*) continue ;; esac
     test -f "$BIN" || { echo "missing binary: $BIN" >&2; exit 1; }
     codesign --verify --strict "$BIN"
     for ARCH in $ARCHS; do lipo "$BIN" -verify_arch "$ARCH"; done
@@ -26,6 +29,12 @@ for BIN in "$DIST/thermo" "$DIST/thermo-helper" "$APP/Contents/MacOS/Thermo" "$A
     for TARGET in $TARGETS; do
         test "$TARGET" = "$MINIMUM" || { echo "deployment target $TARGET differs from app minimum $MINIMUM: $BIN" >&2; exit 1; }
     done
+done
+for MODULE in "$APP"/Contents/Extensions/*.appex; do
+    [ -d "$MODULE" ] || continue
+    codesign --verify --strict "$MODULE"
+    codesign -d --entitlements - --xml "$MODULE" 2>/dev/null | grep -q 'com.apple.security.app-sandbox' ||
+        { echo "module is not sandboxed: $MODULE" >&2; exit 1; }
 done
 for ARCH in $ARCHS; do lipo "$APP/Contents/Frameworks/Sparkle.framework/Sparkle" -verify_arch "$ARCH"; done
 echo "Verified signatures, deployment target $MINIMUM and required architectures: ${ARCHS:-not specified}"

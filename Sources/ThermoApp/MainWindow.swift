@@ -57,9 +57,11 @@ enum MainPage: Hashable {
     case connections
     case yunx
     case plugins
+    /// A page drawn by a module: module id, entry id (empty: the module's first page).
+    case module(String, String)
 
     /// `--page` values: overview, checkup, sensors, fans, settings, pages, disk, disk:overview, disk:<category>,
-    /// agents, agents:<area>, apps, apps:leftovers, apps:store, plugins, space, space:large, space:duplicates, memory, cpu, gpu, claude, claude:<accounts|reset|privacy>, claude-cleanup, history, connections.
+    /// module:<id>[:<entry>], agents, agents:<area>, apps, apps:leftovers, apps:store, plugins, space, space:large, space:duplicates, memory, cpu, gpu, claude, claude:<accounts|reset|privacy>, claude-cleanup, history, connections.
     init?(argument: String) {
         let parts = argument.split(separator: ":", maxSplits: 1).map(String.init)
         guard let command = parts.first else { return nil }
@@ -78,6 +80,11 @@ enum MainPage: Hashable {
         case "connections": self = .connections
         case "yunx": self = .yunx
         case "plugins": self = .plugins
+        case "module":
+            // module:<module id>[:<entry id>]
+            guard parts.count > 1 else { return nil }
+            let rest = parts[1].split(separator: ":", maxSplits: 1).map(String.init)
+            self = .module(rest[0], rest.count > 1 ? rest[1] : "")
         case "claude": self = .claude(parts.count > 1 ? (ClaudeTab(rawValue: parts[1]) ?? .accounts) : .accounts)
         case "claude-cleanup": self = .claude(parts.count > 1 && parts[1] == "privacy" ? .privacy : .reset)
         case "cpu": self = .compute(false)
@@ -435,6 +442,8 @@ struct MainView: View {
             PluginsPage(model: models.plugins, open: { page = $0 }).transition(.page)
         case .history:
             HistoryPage(model: HistoryModel.shared, open: { page = $0 }).transition(.page)
+        case let .module(id, entry):
+            ModulePageView(center: .shared, module: id, entry: entry).id(id + ":" + entry).transition(.page)
         case let .space(tab):
             SpacePage(model: SpaceLensModel.shared, tab: Binding(get: { tab }, set: { page = .space($0) })).transition(.page)
         }
@@ -504,6 +513,7 @@ struct MainSidebar: View {
     @ObservedObject var disk: DiskModel
     @ObservedObject var agents: AgentScanner
     @AppStorage(Settings.fahrenheit) private var fahrenheit = false
+    @ObservedObject private var modules = ModuleCenter.shared
 
     var items: [CleanItem] { disk.report?.items ?? [] }
     /// Share of memory in use; refreshed with the sidebar (the monitor ticks while the window is open).
@@ -562,6 +572,11 @@ struct MainSidebar: View {
                         selected: page.appsTab != nil)
                     row(.yunx, tr("YunX Download"), "arrow.down.circle", .blue, trailing: nil)
                     row(.plugins, tr("Plugin marketplace"), "puzzlepiece.extension", .orange, trailing: nil)
+                    // Pages of the modules that are on; a module that is off has no row.
+                    ForEach(modules.pages) { item in
+                        row(item.target, item.entry.title, item.entry.symbol ?? item.module.symbol, .teal, trailing: nil,
+                            selected: { if case let .module(id, entry) = page { return id == item.module.id && (entry.isEmpty ? item.id == modules.pages.first { $0.module.id == id }?.id : entry == item.entry.id) }; return false }())
+                    }
 
                     header(tr("AI Agent Diagnostics"))
                     row(.claude(page.claudeTab ?? .accounts), tr("Claude tools"), "person.2", .orange, trailing: nil,

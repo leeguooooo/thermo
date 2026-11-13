@@ -106,7 +106,9 @@ private struct SearchQuickLookView: NSViewRepresentable {
     let url: URL
     func makeNSView(context: Context) -> NSView {
         if let view = QLPreviewView(frame: .zero, style: .normal) {
-            view.shouldCloseWithWindow = true; return view
+            // dismantleNSView closes it. With `true`, QuickLook also closes it with the window and
+            // the second close aborts the app (-[QLPreviewView deactivate] assertion).
+            view.shouldCloseWithWindow = false; return view
         }
         let message = NSTextField(labelWithString: tr("Unable to preview this document"))
         message.alignment = .center

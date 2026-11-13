@@ -2,7 +2,7 @@
 # Builds release binaries, assembles and signs Thermo.app, and optionally notarizes,
 # packages a DMG and updates the Sparkle appcast.
 #
-#   scripts/build.sh                       ad-hoc signed  -> dist/
+#   scripts/build.sh                       ad-hoc signed  -> dist.noindex/
 #   SIGN_ID="Developer ID Application: Name (TEAMID)" scripts/build.sh
 #                                          Developer ID signed (helper then only trusts this team)
 #   SIGN_ID=… NOTARY_PROFILE=thermo [NOTARY_KEYCHAIN=…] scripts/build.sh
@@ -13,6 +13,7 @@
 #   ARCHS="arm64 x86_64" scripts/build.sh  universal binaries
 #   THERMO_BUILD_CONFIGURATION=debug …    local review using existing debug outputs
 #   THERMO_BUILD_JOBS=1 …                 bound compiler concurrency on constrained hosts
+#   THERMO_PROBE_MODULE=1 …               also pack the test-only probe module (never for a release)
 set -eu
 
 cd "$(dirname "$0")/.."
@@ -39,7 +40,7 @@ read -r SOURCE_COMMIT SOURCE_STATE BUILD <<EOF
 $SOURCE_INFO
 EOF
 VERSION="$(sed -n 's/.*static let string = "\(.*\)"/\1/p' Sources/ThermoKit/Version.swift)"
-DIST="${THERMO_DIST_DIR:-dist}"
+DIST="${THERMO_DIST_DIR:-dist.noindex}"
 RELEASES=releases
 SPARKLE_BIN=.build/artifacts/sparkle/Sparkle/bin
 
@@ -95,6 +96,28 @@ if ! otool -l "$C/MacOS/Thermo" | awk '$1 == "path" && $2 == "@executable_path/.
 fi
 xcrun vtool -show-build "$C/MacOS/Thermo" >/dev/null
 
+# --- Modules ----------------------------------------------------------------
+# One line per module: "<SwiftPM product> <module id> <module.json>". Each becomes a sandboxed
+# ExtensionKit bundle in Contents/Extensions, found by the kernel only inside this app.
+MODULES=""
+if [ "${THERMO_PROBE_MODULE:-}" = 1 ]; then
+    [ -z "$NOTARY_PROFILE" ] || { echo "THERMO_PROBE_MODULE is not for a release" >&2; exit 1; }
+    MODULES="ProbeModule dev.thermo.probe.a Sources/ProbeModule/module.json"
+fi
+MODULE_COUNT=0
+if [ -n "$MODULES" ]; then
+    mkdir -p "$C/Extensions"
+    cp Resources/Modules/dev.thermo.module.appextensionpoint "$C/Extensions/"
+    while read -r product id manifest; do
+        [ -n "$product" ] || continue
+        sh scripts/assemble-module.sh "$BIN/$product" "$id" "$C/Extensions/$product.appex" "$manifest" "$VERSION" "$BUILD"
+        MODULE_COUNT=$((MODULE_COUNT + 1))
+    done <<EOF
+$MODULES
+EOF
+fi
+"$BIN/ModuleCheck" "$APP" "$MODULE_COUNT"
+
 # Release products ship without symbol tables (a third of their size; the DMG has to stay under
 # the 25 MiB Pages limit). The symbols stay in $DIST/symbols as dSYMs for crash reports.
 if [ "$CONFIGURATION" = release ]; then
@@ -104,6 +127,12 @@ if [ "$CONFIGURATION" = release ]; then
     dsymutil "$C/Helpers/thermo-helper" -o "$DIST/symbols/thermo-helper.dSYM"
     dsymutil "$C/Helpers/thermo-capture-script" -o "$DIST/symbols/thermo-capture-script.dSYM"
     strip "$C/MacOS/Thermo" "$C/Helpers/thermo" "$C/Helpers/thermo-helper" "$C/Helpers/thermo-capture-script"
+    for module in "$C"/Extensions/*.appex; do
+        [ -d "$module" ] || continue
+        name="$(basename "$module" .appex)"
+        dsymutil "$module/Contents/MacOS/$name" -o "$DIST/symbols/$name.dSYM"
+        strip "$module/Contents/MacOS/$name"
+    done
     cp "$C/Helpers/thermo" "$C/Helpers/thermo-helper" "$DIST/"
 fi
 
@@ -135,7 +164,17 @@ sign -i dev.thermo.helper "$DIST/thermo-helper"
 sign -i dev.thermo.cli    "$C/Helpers/thermo"
 sign -i dev.thermo.helper "$C/Helpers/thermo-helper"
 sign -i dev.thermo.capture-script "$C/Helpers/thermo-capture-script"
+for module in "$C"/Extensions/*.appex; do
+    [ -d "$module" ] || continue
+    # The sandbox comes from the module's own manifest: sandboxed, read-only where it declared reads.
+    module_entitlements="$(mktemp)"
+    "$BIN/ModuleCheck" --entitlements "$module/Contents/Resources/module.json" > "$module_entitlements"
+    sign -i "$(/usr/libexec/PlistBuddy -c 'Print :CFBundleIdentifier' "$module/Contents/Info.plist")" \
+        --entitlements "$module_entitlements" "$module"
+    rm -f "$module_entitlements"
+done
 sign -i dev.thermo.app --entitlements Resources/Thermo.entitlements "$APP"
+"$BIN/ModuleCheck" --signed "$APP"
 scripts/verify-artifacts.sh "$DIST" "$ARCHS"
 
 notarize() {

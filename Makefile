@@ -1,4 +1,6 @@
 PREFIX ?= /usr/local
+THERMO_DIST_DIR ?= dist.noindex
+export THERMO_DIST_DIR
 
 SIGN_ID ?= Developer ID Application: LI GUO (6ZPXG4KVVS)
 NOTARY_PROFILE ?= thermo
@@ -31,14 +33,14 @@ test:
 	swift test
 
 bench: build
-	dist/thermo bench
+	$(THERMO_DIST_DIR)/thermo bench
 
 # Installs the CLI (+ helper binary next to it, used by `thermo helper install`)
 # and copies Thermo.app to /Applications.
 install: build
 	install -d $(PREFIX)/bin
-	install -m 755 dist/thermo dist/thermo-helper $(PREFIX)/bin/
-	rm -rf /Applications/Thermo.app && cp -R dist/Thermo.app /Applications/
+	install -m 755 $(THERMO_DIST_DIR)/thermo $(THERMO_DIST_DIR)/thermo-helper $(PREFIX)/bin/
+	rm -rf /Applications/Thermo.app && cp -R $(THERMO_DIST_DIR)/Thermo.app /Applications/
 
 uninstall:
 	rm -f $(PREFIX)/bin/thermo $(PREFIX)/bin/thermo-helper
@@ -49,4 +51,4 @@ rules-json:
 	@scripts/export-clean-rules.py
 
 clean:
-	rm -rf .build dist
+	rm -rf .build "$(THERMO_DIST_DIR)"

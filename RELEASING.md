@@ -10,9 +10,9 @@
    make publish      # 上传 releases/ 到 Pages 项目 thermo-updates；对外地址是 app.leeguoo.com/thermo/*（应用中心仓库 leeguooooo/app 的 server/routes/thermo 转发）
    ```
    产物：
-   - `dist/Thermo-<ver>.dmg` —— 官网下载用（已签名、公证、装订）
-   - `dist/Thermo-<ver>.zip` —— 备用
-   - `dist/thermo-cli-<ver>.zip` —— 单独的命令行工具
+   - `dist.noindex/Thermo-<ver>.dmg` —— 官网下载用（已签名、公证、装订）
+   - `dist.noindex/Thermo-<ver>.zip` —— 备用
+   - `dist.noindex/thermo-cli-<ver>.zip` —— 单独的命令行工具
    - `releases/` —— appcast.xml、所有历史 DMG、更新说明；`make publish` 整个上传（`/download` 跳最新版；产品页在应用中心 `pages/thermo.vue`）
    - DMG 设了 immutable 缓存：**同一版本号不要重发**，有改动就升版本。
 4. 打 tag：`git tag v<ver> && git push --tags`。
@@ -73,12 +73,12 @@ security find-generic-password -s https://sparkle-project.org -a dev.thermo -w |
 
 资源紧张时可设置 `THERMO_BUILD_JOBS=1` 限制 Swift 编译并发，Debug / Release 与双架构均适用；未设置时保留 Swift 的默认调度。该值必须是正十进制整数，无效值在构建和替换产物前拒绝。
 
-正式发布前，可以将临时验证包输出到独立目录，保留现有 `dist/` 和历史发布文件：
+正式发布前，可以将临时验证包输出到独立目录，保留现有 `dist.noindex/` 和历史发布文件：
 
 ```sh
-THERMO_DIST_DIR=/tmp/thermo-verification-dist SIGN_ID=- NOTARY_PROFILE= APPCAST_URL= scripts/build.sh
-codesign --verify --deep --strict /tmp/thermo-verification-dist/Thermo.app
-/tmp/thermo-verification-dist/thermo --version
+THERMO_DIST_DIR=/tmp/thermo-verification-dist.noindex SIGN_ID=- NOTARY_PROFILE= APPCAST_URL= scripts/build.sh
+codesign --verify --deep --strict /tmp/thermo-verification-dist.noindex/Thermo.app
+/tmp/thermo-verification-dist.noindex/thermo --version
 ```
 
 这是 ad-hoc 签名的本地验证包，没有公证、在线更新或发布步骤。生产 helper 的签名认证和跨机型验收仍需用正式构建验证。
@@ -100,7 +100,7 @@ scripts/verify-artifacts.sh /tmp/thermo-universal-verification "arm64 x86_64"
 窗口布局可用只读截图核对，`--snapshot-width` 只影响 `--offscreen` 模式，且不读写已保存的窗口位置：
 
 ```sh
-dist/Thermo.app/Contents/MacOS/Thermo --main --offscreen --page overview \
+dist.noindex/Thermo.app/Contents/MacOS/Thermo --main --offscreen --page overview \
   --snapshot-width 800 --snapshot /tmp/thermo-overview-narrow.png
 ```
 
