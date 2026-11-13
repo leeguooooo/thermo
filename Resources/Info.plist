@@ -23,6 +23,8 @@
     <key>NSAppleEventsUsageDescription</key><string>Thermo lists your browser tabs to find duplicates, and closes a tab only when you confirm it.</string>
     <key>NSLocationWhenInUseUsageDescription</key><string>macOS shows Wi-Fi network names only to apps allowed to use Location Services. Thermo uses it to name your network and nearby networks on the Connections page; it never reads where you are.</string>
     <key>NSLocationUsageDescription</key><string>macOS shows Wi-Fi network names only to apps allowed to use Location Services. Thermo uses it to name your network and nearby networks on the Connections page; it never reads where you are.</string>
+    <key>NSLocalNetworkUsageDescription</key><string>Thermo reads nearby devices' advertised model names on your local network to help identify paired computers with custom names.</string>
+    <key>NSBonjourServices</key><array><string>_device-info._tcp</string></array>
     <key>NSBluetoothAlwaysUsageDescription</key><string>Thermo connects and disconnects your paired Bluetooth devices when you click Connect or Disconnect on the Connections page.</string>
     <key>NSCameraUsageDescription</key><string>Thermo records the camera only when you enable its camera layer and start an ordinary recording.</string>
     <key>NSMicrophoneUsageDescription</key><string>Thermo records the microphone only when you enable its microphone track and start an ordinary recording.</string>

@@ -219,9 +219,14 @@ struct ConnectionsPage: View {
         VStack(alignment: .leading, spacing: Theme.Space.s) {
             SectionHeader(title: tr("Bluetooth")) {
                 HStack(spacing: Theme.Space.s) {
-                    InfoButton(text: tr("The list comes from the system Bluetooth report. Connecting or disconnecting asks macOS for Bluetooth access the first time."))
+                    if model.readingBluetooth { ProgressView().controlSize(.small).help(tr("Refreshing Bluetooth devices…")) }
+                    InfoButton(text: tr("The list comes from macOS. Local network model records can help identify custom device names; those matches are marked as inferred. Connecting or disconnecting asks for Bluetooth access the first time."))
                     settingsLink("com.apple.BluetoothSettings")
                 }
+            }
+            if model.computerModelAccessBlocked {
+                Text(tr("Local network access is unavailable. Check System Settings → Privacy & Security → Local Network to identify computers with custom names."))
+                    .font(Theme.secondary).foregroundStyle(Theme.textSecondary)
             }
             if let r = model.bluetooth {
                 if !r.powerOn {
@@ -252,6 +257,10 @@ struct ConnectionsPage: View {
                 .accessibilityHidden(true)
             VStack(alignment: .leading, spacing: 2) {
                 Text(d.name).font(Theme.rowTitle).foregroundStyle(d.connected ? Theme.textPrimary : Theme.textSecondary).lineLimit(1)
+                if let model = d.computerModelHint {
+                    Text(tr("Possible computer · %1$@", model)).font(Theme.caption).foregroundStyle(Theme.textTertiary)
+                        .help(tr("A device on your local network advertises this Mac model under the same name. The type is inferred from that name match."))
+                }
                 if let levels = levelsText(d) {
                     Text(levels).font(Theme.caption.monospacedDigit()).foregroundStyle(Theme.textTertiary).lineLimit(1)
                 }

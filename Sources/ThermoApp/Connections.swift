@@ -151,6 +151,8 @@ struct BluetoothDevice: Identifiable, Equatable, Sendable {
     var kind: Kind
     var levels: [Level]
     var rssi: Int? = nil
+    /// A LAN record under this name, used only as an explicitly inferred display hint.
+    var computerModelHint: String? = nil
 
     var prominent: Bool { rssi != nil || kind == .computer || kind == .phone }
 
@@ -159,9 +161,11 @@ struct BluetoothDevice: Identifiable, Equatable, Sendable {
 
     var symbol: String {
         let n = name.lowercased()
-        if n.contains("airpods max") { return "airpodsmax" }
-        if n.contains("airpods pro") { return "airpodspro" }
-        if n.contains("airpods") { return "airpods" }
+        if kind == .headphones || kind == .speaker || kind == .other {
+            if n.contains("airpods max") { return "airpodsmax" }
+            if n.contains("airpods pro") { return "airpodspro" }
+            if n.contains("airpods") { return "airpods" }
+        }
         switch kind {
         case .headphones: return "headphones"
         case .speaker: return "hifispeaker"
@@ -210,9 +214,42 @@ struct BluetoothReport: Equatable, Sendable {
     var defaultDevices: [BluetoothDevice] {
         let connected = devices.filter(\.connected)
         let remaining = devices.filter { !$0.connected }
-        let prominent = remaining.filter(\.prominent)
+        let prominent = remaining.filter { $0.kind == .computer } + remaining.filter { $0.kind == .phone }
+            + remaining.filter { $0.prominent && $0.kind != .computer && $0.kind != .phone }
         let others = remaining.filter { !$0.prominent }
         return connected + prominent + Array(others.prefix(max(0, 6 - connected.count - prominent.count)))
+    }
+
+    /// One paired identity per name; a LAN record can supply a hint even without Bluetooth RSSI.
+    var computerModelCandidates: [String] {
+        guard powerOn else { return [] }
+        let groups = Dictionary(grouping: devices, by: { BonjourComputerModels.nameKey($0.name) })
+        let eligible = devices.filter { device in
+            device.kind == .other
+                && Set((groups[BonjourComputerModels.nameKey(device.name)] ?? []).map { BluetoothDevice.normalized($0.address) }).count == 1
+        }
+        return (eligible.filter(\.connected) + eligible.filter { !$0.connected && $0.rssi != nil }
+                + eligible.filter { !$0.connected && $0.rssi == nil }).map(\.name)
+    }
+
+    func withComputerModelHints(_ models: [String: String]) -> BluetoothReport {
+        var result = self
+        // A previous hint must not become a confirmed type when its record disappears.
+        result.devices = devices.map { device in
+            var copy = device
+            if copy.computerModelHint != nil { copy.kind = .other; copy.computerModelHint = nil }
+            return copy
+        }
+        let candidates = Set(result.computerModelCandidates.map(BonjourComputerModels.nameKey))
+        result.devices = result.devices.map { device in
+            var copy = device
+            let key = BonjourComputerModels.nameKey(device.name)
+            if candidates.contains(key), let model = models[key], BonjourComputerModels.isMac(model) {
+                copy.kind = .computer; copy.computerModelHint = model
+            }
+            return copy
+        }
+        return result
     }
 
     /// `system_profiler SPBluetoothDataType -json`: each device is a one-key object, its name the key.
@@ -428,10 +465,23 @@ final class ConnectionsModel: NSObject, ObservableObject, CLLocationManagerDeleg
 
     private var timer: Timer?
     private var ticks = 0
-    private var readingBluetooth = false
+    @Published private(set) var readingBluetooth = false
+    @Published private(set) var computerModelAccessBlocked = false
+    private var bluetoothTask: Task<Void, Never>?
+    private var bluetoothGeneration = 0
+    private var bluetoothRefreshPending = false
     private var location: CLLocationManager?
     private var visibility = SamplingLeases()
+    private let bluetoothReader: @Sendable () -> BluetoothReport?
+    private let computerModelResolver: @Sendable ([String]) async -> BonjourComputerModels.Batch
     var samplingActive: Bool { timer != nil }
+
+    init(bluetoothReader: @escaping @Sendable () -> BluetoothReport? = { BluetoothReport.read() },
+         computerModelResolver: @escaping @Sendable ([String]) async -> BonjourComputerModels.Batch = { await BonjourComputerModels.lookup($0) }) {
+        self.bluetoothReader = bluetoothReader
+        self.computerModelResolver = computerModelResolver
+        super.init()
+    }
 
     func setVisible(_ active: Bool, owner: UUID) {
         visibility.set(owner, active: active)
@@ -455,6 +505,9 @@ final class ConnectionsModel: NSObject, ObservableObject, CLLocationManagerDeleg
     func stop() {
         timer?.invalidate()
         timer = nil
+        bluetoothGeneration &+= 1
+        bluetoothRefreshPending = false
+        bluetoothTask?.cancel()
     }
 
     private func tick(force: Bool) {
@@ -475,16 +528,41 @@ final class ConnectionsModel: NSObject, ObservableObject, CLLocationManagerDeleg
     }
 
     func refreshBluetooth() {
-        guard !readingBluetooth else { return }
+        guard !readingBluetooth else { bluetoothRefreshPending = true; return }
         readingBluetooth = true
-        Task.detached(priority: .utility) {
-            let report = BluetoothReport.read()
-            await MainActor.run {
-                let m = ConnectionsModel.shared
-                m.readingBluetooth = false
-                if let report { m.bluetooth = report; m.bluetoothFailed = false } else if m.bluetooth == nil { m.bluetoothFailed = true }
-            }
+        bluetoothGeneration &+= 1
+        let generation = bluetoothGeneration
+        let resolveModels = visibility.active
+        let read = bluetoothReader
+        let resolve = computerModelResolver
+        bluetoothTask = Task.detached(priority: .utility) { [weak self] in
+            let report = read()
+            if let report { await self?.previewBluetooth(report, generation: generation) }
+            let hints: BonjourComputerModels.Batch
+            if let report, resolveModels, !Task.isCancelled {
+                hints = await resolve(report.computerModelCandidates)
+            } else { hints = .init() }
+            await self?.finishBluetooth(report?.withComputerModelHints(hints.models), blocked: hints.accessBlocked, generation: generation)
         }
+    }
+
+    private func previewBluetooth(_ report: BluetoothReport, generation: Int) {
+        guard generation == bluetoothGeneration else { return }
+        // Show the first report promptly; retain an existing report until its replacement is complete.
+        if bluetooth == nil { bluetooth = report; bluetoothFailed = false }
+    }
+
+    private func finishBluetooth(_ report: BluetoothReport?, blocked: Bool, generation: Int) {
+        readingBluetooth = false
+        bluetoothTask = nil
+        if generation == bluetoothGeneration {
+            computerModelAccessBlocked = blocked
+            if let report { bluetooth = report; bluetoothFailed = false }
+            else if bluetooth == nil { bluetoothFailed = true }
+        }
+        let again = bluetoothRefreshPending || generation != bluetoothGeneration
+        bluetoothRefreshPending = false
+        if again && visibility.active { refreshBluetooth() }
     }
 
     func scan() {
@@ -564,10 +642,10 @@ final class ConnectionsModel: NSObject, ObservableObject, CLLocationManagerDeleg
     }
 
     nonisolated func locationManagerDidChangeAuthorization(_ manager: CLLocationManager) {
-        Task { @MainActor in
-            let m = ConnectionsModel.shared
-            m.updateAccess()
-            if m.timer != nil { m.wifi = WiFiStatus.read() }
+        Task { @MainActor [weak self] in
+            guard let self else { return }
+            self.updateAccess()
+            if self.timer != nil { self.wifi = WiFiStatus.read() }
         }
     }
 }
