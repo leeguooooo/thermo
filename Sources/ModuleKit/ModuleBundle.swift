@@ -20,8 +20,14 @@ public enum ModuleBundles {
             let url = folder.appendingPathComponent(name)
             switch read(url) {
             case .success(let module):
-                if modules.contains(where: { $0.manifest.id == module.manifest.id }) { problems.append("\(name): id \(module.manifest.id) is used by another module") }
-                else { modules.append(module) }
+                if (BuiltinModuleManifests.all + modules.map(\.manifest)).contains(where: { $0.id == module.manifest.id }) {
+                    problems.append("\(name): id \(module.manifest.id) is used by another module")
+                } else {
+                    do {
+                        _ = try ModuleCommandCatalog(BuiltinModuleManifests.all + modules.map(\.manifest) + [module.manifest],enabled:{_ in true})
+                        modules.append(module)
+                    } catch { problems.append("\(name): \(error)") }
+                }
             case .failure(let invalid): problems.append("\(name): \(invalid)")
             }
         }

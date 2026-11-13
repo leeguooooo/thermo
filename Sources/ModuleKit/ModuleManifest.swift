@@ -189,6 +189,9 @@ public struct ModuleManifest: Codable, Sendable, Equatable {
                 found.append("command \(command.id) CLI path must contain lowercase words")
             }
             if !cliPaths.insert(path).inserted { found.append("CLI path \(path.joined(separator: " ")) is defined twice") }
+            for parameter in command.parameters where parameter.name == "dry-run" && (parameter.kind != .boolean || parameter.repeats == true) {
+                found.append("command \(command.id) dry-run must be a single boolean")
+            }
             for parameter in command.parameters where !Self.matches(Self.local, parameter.name) {
                 found.append("command \(command.id) parameter \(parameter.name) must be lowercase letters, digits and hyphens")
             }

@@ -53,6 +53,14 @@ final class ModuleManifestTests: XCTestCase {
         XCTAssertTrue(manifest.problems().contains { $0.contains("parameter bad name must be lowercase") })
     }
 
+    func testDryRunCannotBeRedefinedAsDataOrARepeatedFlag() {
+        for parameter in [ModuleManifest.Command.Parameter(name:"dry-run",kind:.string,summary:"Wrong"),
+                          .init(name:"dry-run",kind:.boolean,summary:"Wrong",repeats:true)] {
+            var m=disk();m.commands[0].parameters=[parameter]
+            XCTAssertTrue(m.problems().contains("command scan dry-run must be a single boolean"))
+        }
+    }
+
     let home = "/Users/someone"
 
     func disk() -> ModuleManifest {
