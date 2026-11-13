@@ -6,9 +6,6 @@ import Foundation
 import ThermoL10n
 import CleanKit
 
-@_silgen_name("$s9ThermoApp20installStandardMenusyyF")
-@MainActor func fixtureStandardMenus() {}
-
 @MainActor final class MainReviewDelegate: NSObject, NSApplicationDelegate {
     func applicationShouldTerminate(_ sender: NSApplication) -> NSApplication.TerminateReply { AppExitGuard.reply() }
     func applicationWillTerminate(_ notification: Notification) { print("QA_EXIT"); fflush(stdout) }
@@ -34,7 +31,7 @@ import CleanKit
             var report = ScanReport(items: [], denied: [root.appendingPathComponent("home/unreadable-fixture").path], started: Date(), duration: 0)
             report.categories = [.browsers]; report.language = "zh-Hans"
             AppModels.shared.disk = DiskModel(report: report, requestNotifications: {})
-            MainWindow.show(.disk(.category(.browsers)))
+            MainWindow.show(DiskModule.route(.category(.browsers)))
         } else {
             AppModels.shared.disk = DiskModel(requestNotifications: {})
             MainWindow.show(.overview)

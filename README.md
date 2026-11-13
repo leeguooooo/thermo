@@ -524,6 +524,8 @@ App 命令要求运行兼容版本的 Thermo.app。通道检查当前用户身�
 
 `screen shortcut` 用 `--key-code`、`--modifiers`、`--key-label` 指定与 App 相同的 Carbon 快捷键；至少两个修饰键，其中必须含 Command、Control 或 Option。`screen status` 包含已保存的时长，`screen duration --duration` 可单独设置；`screen start` 未指定时长时采用 App 已保存的选择。`screen start --duration` 接受 `oneMinute`、`twoMinutes`、`fiveMinutes` 或 `manual`。这些修改先用 `--dry-run` 查看，再加 `--yes` 执行。
 
+模块清单和界面入口的格式见[模块接口](docs/module-interface.md)。
+
 **模块 MCP 服务**：将 `thermo mcp` 配为客户端的 stdio 服务。例如，使用已安装 App 随附的 CLI：
 
 ```json
