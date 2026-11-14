@@ -38,11 +38,11 @@ private func text(_ data:Data) throws -> String {
         let probePID=(try JSONSerialization.jsonObject(with:firstProbe) as? [String:Any])?["pid"] as? Int
         check(probePID != nil,"unrelated probe started")
         let source=root.appendingPathComponent("inputs");try FileManager.default.createDirectory(at:source,withIntermediateDirectories:true)
-        let marker="FDPREVIEW"+UUID().uuidString.replacingOccurrences(of:"-",with:"").prefix(8)
+        let marker="FDPREVIEW"+String(UUID().uuidString.replacingOccurrences(of:"-",with:"").prefix(8).map { Character(UnicodeScalar(65 + Int(String($0),radix:16)!)!) })
         let imageName="asset-"+UUID().uuidString+".png",document=source.appendingPathComponent(marker+".md")
         let bitmap=NSBitmapImageRep(bitmapDataPlanes:nil,pixelsWide:32,pixelsHigh:32,bitsPerSample:8,samplesPerPixel:4,hasAlpha:true,isPlanar:false,colorSpaceName:.deviceRGB,bytesPerRow:0,bitsPerPixel:0)!
         try bitmap.representation(using:.png,properties:[:])!.write(to:source.appendingPathComponent(imageName))
-        try Data("# \(marker)\n\nSelected **file input**.\n\n![asset](\(imageName))\n".utf8).write(to:document)
+        try Data("# \(marker)\n\nSandbox document rendered. Selected **file input**.\n\n![asset](\(imageName))\n".utf8).write(to:document)
         let direct=try await manager.run(probe,command:"peek",arguments:JSONSerialization.data(withJSONObject:["path":document.path]))
         check((try JSONSerialization.jsonObject(with:direct) as? [String:Any])?["readable"] as? Bool == false,"sandbox probe cannot directly read the host fixture file")
         let job=UUID(),input=PreviewInput(id:job,kind:.file,name:document.lastPathComponent,originalURL:document.absoluteString,language:"en")
@@ -62,10 +62,19 @@ private func text(_ data:Data) throws -> String {
         let scene=try manager.attach(preview,scene:"preview")
         window.contentViewController=scene.controller;scene.controller.view.frame=NSRect(x:0,y:0,width:820,height:620)
         check(await wait(10){scene.active},"remote preview scene activated")
-        try await Task.sleep(nanoseconds:1_000_000_000)
-        let png=try await scene.snapshot();try png.write(to:root.appendingPathComponent("preview.png"))
-        let visible=try await Task.detached{try text(png)}.value
-        check(visible.uppercased().contains(marker.uppercased()),"remote scene displays the selected input (OCR)")
+        var visible="", sceneReady=false
+        let deadline=Date().addingTimeInterval(12)
+        repeat {
+            do {
+                let png=try await scene.snapshot()
+                try png.write(to:root.appendingPathComponent("preview.png"))
+                visible=try await Task.detached{try text(png)}.value
+                sceneReady=visible.uppercased().contains(marker.uppercased()) && visible.lowercased().contains("sandbox document rendered")
+            } catch { visible=String(describing:error) }
+            if !sceneReady {try await Task.sleep(nanoseconds:250_000_000)}
+        } while !sceneReady && Date()<deadline
+        try visible.write(to:root.appendingPathComponent("preview-ocr.txt"),atomically:true,encoding:.utf8)
+        check(sceneReady,"remote scene displays the selected input and rendered document (OCR)")
         let own=manager.modules.first(where:{$0.manifest.id == preview})?.pid
         let identity=own.flatMap{ProcessTable.identity($0)}
         let expectedPath=app.appendingPathComponent("Contents/Extensions/Preview.appex/Contents/MacOS/Preview").path
