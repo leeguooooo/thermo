@@ -40,9 +40,13 @@ enum SearchModule: BuiltinModule {
         do { try LocalSearchShortcut.shared.deactivate() }
         catch { throw BuiltinModules.StopRefused(description: error.localizedDescription) }
         LocalSearchModel.shared.stop()
+        SearchPreviewController.shared.stop()
         LocalSearchPanel.closeIfOpen()
-        ModuleCenter.shared.manager.setEnabled(previewWorker, false)
-        return { await LocalSearchModel.shared.finishStopping() }
+        return {
+            await LocalSearchModel.shared.finishStopping()
+            await SearchPreviewController.shared.finishStopping()
+            ModuleCenter.shared.manager.setEnabled(previewWorker, false)
+        }
     }
     @MainActor static func appearance(_ page: MainPage) -> (glow: Bool, tint: Color?) { (false, nil) }
     @MainActor static func prepareReview(_ arguments: [String], page: inout MainPage, models: AppModels) {}

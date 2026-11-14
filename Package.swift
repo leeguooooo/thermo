@@ -23,6 +23,7 @@ let package = Package(
         .library(name: "ModuleHost", targets: ["ModuleHost"]),
         .library(name: "ModuleSDK", targets: ["ModuleSDK"]),
         .library(name: "PreviewCore", targets: ["PreviewCore"]),
+        .library(name: "PreviewUI", targets: ["PreviewUI"]),
         .executable(name: "thermo-capture-script", targets: ["CaptureScriptWorker"]),
         .executable(name: "SearchPreviewModule", targets: ["SearchPreviewModule"]),
     ],
@@ -50,7 +51,8 @@ let package = Package(
         .target(name: "AgentCore"),
         .systemLibrary(name: "CSQLite"),
         // Local search runs as the user; never linked into the privileged helper.
-        .target(name: "PreviewCore"),
+        .target(name: "PreviewUI", dependencies: ["PreviewCore", "ThermoL10n"], swiftSettings: [.unsafeFlags(["-application-extension"])], linkerSettings: [.linkedFramework("WebKit")]),
+        .target(name: "PreviewCore", dependencies: [.product(name: "Markdown", package: "swift-markdown")]),
         .target(name: "SearchCore", dependencies: ["CSQLite"], linkerSettings: [.linkedFramework("CoreServices")]),
         .target(name: "CWebPEncoder", dependencies: [.product(name: "libwebp", package: "libwebp-Xcode")]),
         .target(name:"CaptureScriptCore"),
@@ -74,7 +76,7 @@ let package = Package(
         // What a module links: its commands, its scenes and its connection to the kernel.
         .target(name: "ModuleSDK", dependencies: ["ModuleKit"], swiftSettings: [.unsafeFlags(["-application-extension"])],
                 linkerSettings: [.linkedFramework("ExtensionKit"), .linkedFramework("ExtensionFoundation")]),
-        .executableTarget(name: "SearchPreviewModule", dependencies: ["ModuleKit", "ModuleSDK", "PreviewCore", "ThermoL10n"], exclude: ["module.json"],
+        .executableTarget(name: "SearchPreviewModule", dependencies: ["ModuleKit", "ModuleSDK", "PreviewCore", "PreviewUI", "ThermoL10n"], exclude: ["module.json"],
                           swiftSettings: [.unsafeFlags(["-application-extension"])],
                           linkerSettings: [.linkedFramework("QuickLookUI"), .unsafeFlags(["-Xlinker", "-e", "-Xlinker", "_NSExtensionMain"])]),
         .executableTarget(name: "ProbeModule", dependencies: ["ModuleKit", "ModuleSDK"], exclude: ["module.json"],
@@ -87,13 +89,13 @@ let package = Package(
         .executableTarget(name: "ThermoHelper", dependencies: ["ThermoKit"]),
         .executableTarget(
             name: "ThermoApp",
-            dependencies: ["ThermoKit", "AgentDoctor", "CleanKit", "ThermoL10n", "SearchCore", "CaptureCore", "CaptureScriptCore", "MenuBarCore", "CMenuBar", "CloudDriveKit", "DownloadKit", "MediaToolsKit", "VideoKit", "ModuleKit", "ModuleHost", .product(name: "Markdown", package: "swift-markdown"), .product(name: "Sparkle", package: "Sparkle")],
+            dependencies: ["PreviewCore", "ThermoKit", "AgentDoctor", "CleanKit", "ThermoL10n", "SearchCore", "CaptureCore", "CaptureScriptCore", "MenuBarCore", "CMenuBar", "CloudDriveKit", "DownloadKit", "MediaToolsKit", "VideoKit", "ModuleKit", "ModuleHost", .product(name: "Markdown", package: "swift-markdown"), .product(name: "Sparkle", package: "Sparkle")],
             linkerSettings: [.linkedFramework("AppKit"), .linkedFramework("SwiftUI"), .linkedFramework("Charts"), .linkedFramework("AVKit"), .linkedFramework("WebKit"), .linkedFramework("Quartz"),
                              .linkedFramework("CoreWLAN"), .linkedFramework("IOBluetooth"), .linkedFramework("CoreAudio"),
                              .linkedFramework("AudioToolbox"), .linkedFramework("CoreLocation")]
         ),
         .testTarget(name: "ThermoCLITests", dependencies: ["thermo", "ModuleKit", .product(name: "MCP", package: "swift-sdk")]),
-        .testTarget(name: "ThermoAppTests", dependencies: ["ThermoApp", "ModuleKit", "ModuleHost", "ThermoKit", "CleanKit", "AgentCore", "AgentDoctor", "SearchCore", "MenuBarCore", "CloudDriveKit", "DownloadKit", "MediaToolsKit", "VideoKit"]),
+        .testTarget(name: "ThermoAppTests", dependencies: ["PreviewCore", "PreviewUI", "ThermoApp", "ModuleKit", "ModuleHost", "ThermoKit", "CleanKit", "AgentCore", "AgentDoctor", "SearchCore", "MenuBarCore", "CloudDriveKit", "DownloadKit", "MediaToolsKit", "VideoKit"]),
         .testTarget(name: "ThermoKitTests", dependencies: ["ThermoKit", "CSMC"]),
         .testTarget(name: "ThermoHelperTests", dependencies: ["ThermoHelper", "ThermoKit"]),
         .testTarget(name: "AgentDoctorTests", dependencies: ["AgentDoctor", "ThermoL10n", "AgentCore"], exclude: ["Fixtures"]),

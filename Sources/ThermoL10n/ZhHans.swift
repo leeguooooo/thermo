@@ -383,6 +383,7 @@ let zhHans: [String: String] = [
     "The recording timestamp is invalid.": "录制时间戳无效。",
     // Capture workspace
     "Screenshots and pins": "截图与贴图",
+    "File preview stopped. Try previewing the file again.": "文件预览已停止，请重新预览该文件。",
     "Local app and file search, aliases, shortcuts and isolated file previews.": "本机应用与文件搜索、别名、快捷键和隔离的文件预览。",
     "Finish the current search dialog before switching this feature off.": "请先处理当前搜索对话框，再关闭此功能。",
     "Nothing to preview.": "没有可预览的内容。",
