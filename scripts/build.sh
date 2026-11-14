@@ -99,10 +99,11 @@ xcrun vtool -show-build "$C/MacOS/Thermo" >/dev/null
 # --- Modules ----------------------------------------------------------------
 # One line per module: "<SwiftPM product> <module id> <module.json>". Each becomes a sandboxed
 # ExtensionKit bundle in Contents/Extensions, found by the kernel only inside this app.
-MODULES=""
+MODULES="SearchPreviewModule dev.thermo.search-preview Sources/SearchPreviewModule/module.json"
 if [ "${THERMO_PROBE_MODULE:-}" = 1 ]; then
     [ -z "$NOTARY_PROFILE" ] || { echo "THERMO_PROBE_MODULE is not for a release" >&2; exit 1; }
-    MODULES="ProbeModule dev.thermo.probe.a Sources/ProbeModule/module.json"
+    MODULES="$MODULES
+ProbeModule dev.thermo.probe.a Sources/ProbeModule/module.json"
 fi
 MODULE_COUNT=0
 if [ -n "$MODULES" ]; then

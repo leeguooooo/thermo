@@ -38,6 +38,9 @@ import ThermoKit
         seen.insert(request.id)
         let action = request.action
         if action == "modules.run" { return await ModuleCommandHost.handle(request) }
+        if action.hasPrefix("search."), action != "search.giveBackCommandSpace", !SearchModule.enabled {
+            return result([:], "Search apps and files is switched off. Enable it in Thermo Settings before using it.")
+        }
         if action.hasPrefix("capture."){return await (captureHost ?? .shared).handle(request)}
         let reads = ["status","screen.status","login.status","updates.status","helper.status","permissions.status","integration.status","awdl.status","keep-awake.status"]
         let writes = ["screen.start","screen.stop","screen.duration","screen.shortcut","screen.clear-shortcut","login.on","login.off","updates.on","updates.off","updates.check","helper.install","helper.uninstall","permissions.notifications","permissions.accessibility","permissions.login","integration.link","integration.claude","integration.codex","awdl.on","awdl.off","keep-awake.start","keep-awake.stop","search.show","search.settings","search.useCommandSpace","search.giveBackCommandSpace"]

@@ -383,6 +383,10 @@ let zhHans: [String: String] = [
     "The recording timestamp is invalid.": "录制时间戳无效。",
     // Capture workspace
     "Screenshots and pins": "截图与贴图",
+    "Local app and file search, aliases, shortcuts and isolated file previews.": "本机应用与文件搜索、别名、快捷键和隔离的文件预览。",
+    "Finish the current search dialog before switching this feature off.": "请先处理当前搜索对话框，再关闭此功能。",
+    "Nothing to preview.": "没有可预览的内容。",
+    "Preparing preview…": "正在准备预览…",
     "Overview, memory, CPU, GPU, sensors, fan controls and slowdown history.": "概览、内存、CPU、GPU、传感器、风扇控制和卡顿记录。",
     "Wait for fan setup, memory relief or the current process action before switching this feature off.": "请先完成风扇设置、释放内存或当前进程操作，再关闭此功能。",
     "Groups menu bar icons and restores them when switched off.": "分组管理菜单栏图标，关闭功能后恢复显示。",

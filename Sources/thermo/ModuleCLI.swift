@@ -37,6 +37,9 @@ enum ModuleCLI {
     /// Returning fans to system Auto and helper administration remain available for recovery.
     static func requireBuiltinFeature(_ words: [String], defaults: UserDefaults? = nil) throws {
         let root = words.first ?? ""
+        if root == "search", words.dropFirst().first != "give-back-command-space" {
+            try requireEnabled(BuiltinModuleManifests.search, defaults: defaults)
+        }
         if root == "fan", words.dropFirst().first == "auto" { return }
         let performance: Set<String> = ["", "temps", "temp", "t", "fans", "f", "power", "p", "watch", "w", "list", "ls", "get", "fan", "bench", "memory", "activity", "pulse", "status"]
         if performance.contains(root) { try requireEnabled(BuiltinModuleManifests.performance, defaults: defaults) }

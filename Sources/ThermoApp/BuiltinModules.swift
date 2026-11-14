@@ -20,6 +20,7 @@ protocol BuiltinModule: Sendable {
     @MainActor static func start()
     static var legacyMenuEntries: [String: String] { get }
     static var sidebarSections: Set<BuiltinSidebarSection> { get }
+    static var privateWorkers: Set<String> { get }
     static func owns(_ page: MainPage) -> Bool
     static func canonicalArgument(_ argument: String) -> String
     static func target(_ scene: String) -> MainPage?
@@ -35,17 +36,19 @@ protocol BuiltinModule: Sendable {
 }
 
 extension BuiltinModule {
+    static var privateWorkers: Set<String> { [] }
     static var sidebarSections: Set<BuiltinSidebarSection> { [.storage] }
     @MainActor static func start() {}
 }
 
 enum BuiltinModules {
-    static let implementations: [any BuiltinModule.Type] = [DiskModule.self, CaptureModule.self, MenuBarModule.self, PerformanceModule.self]
+    static let implementations: [any BuiltinModule.Type] = [DiskModule.self, SearchModule.self, CaptureModule.self, MenuBarModule.self, PerformanceModule.self]
     static var all: [ModuleManifest] { implementations.map { $0.manifest } }
     static var disk: ModuleManifest { DiskModule.manifest }
     static func manifest(_ id: String) -> ModuleManifest? { all.first { $0.id == id } }
     static func implementation(_ id: String) -> (any BuiltinModule.Type)? { implementations.first { $0.manifest.id == id } }
     static func owner(_ page: MainPage) -> (any BuiltinModule.Type)? { implementations.first { $0.owns(page) } }
+    static func workerOwner(_ id: String) -> (any BuiltinModule.Type)? { implementations.first { $0.privateWorkers.contains(id) } }
 
     struct Page {
         let implementation: any BuiltinModule.Type

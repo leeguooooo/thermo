@@ -111,8 +111,7 @@ private struct SearchPreviewView:View {
         let runtime=ModuleRuntime.shared
         runtime.fileInput { file,metadata in try await PreviewPreparation.shared.prepare(file,metadata:metadata) }
     }
-    var configuration:some AppExtensionConfiguration { ModuleConfiguration() }
-    @AppExtensionSceneBuilder var body:some AppExtensionScene {
-        moduleScene("preview") { SearchPreviewView() }
+    var configuration:AppExtensionSceneConfiguration {
+        AppExtensionSceneConfiguration(moduleScene("preview") { SearchPreviewView() }, configuration:ModuleConfiguration())
     }
 }

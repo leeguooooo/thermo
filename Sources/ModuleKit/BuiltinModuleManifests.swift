@@ -84,7 +84,7 @@ public enum BuiltinModuleManifests {
         entries: [.init(id: "settings", kind: .settingsItem, title: "Search apps and files", symbol: "magnifyingglass", scene: "search-settings"),
                   .init(id: "search", kind: .menuBarItem, title: "Search apps and files", symbol: "magnifyingglass", scene: "search-panel")])
 
-    public static let all = [disk, capture, menuBar, performance]
+    public static let all = [disk, search, capture, menuBar, performance]
 }
 
 public enum ModulePreferences {

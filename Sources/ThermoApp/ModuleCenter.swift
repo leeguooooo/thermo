@@ -26,6 +26,7 @@ import ThermoL10n
     @Published private(set) var changing = Set<String>()
     @Published private(set) var switchIssues: [String: String] = [:]
     @Published private(set) var statuses: [ModuleManager.Status] = []
+    var visibleStatuses: [ModuleManager.Status] { statuses.filter { BuiltinModules.workerOwner($0.manifest.id) == nil } }
     /// Bumped when a built-in feature is switched, so views that show its entries update.
     @Published private(set) var revision = 0
     /// False until the modules inside the app have been read.
@@ -78,7 +79,7 @@ import ThermoL10n
 
     /// The sidebar's module rows: page entries of the modules that are on, in bundle order.
     var pages: [Page] {
-        statuses.filter(\.enabled).flatMap { status in
+        visibleStatuses.filter(\.enabled).flatMap { status in
             let shown = status.manifest.localized(L10n.current.rawValue)
             return shown.entries.filter { $0.kind == .page }.map { Page(module: shown, entry: $0) }
         }
@@ -90,7 +91,7 @@ import ThermoL10n
         var id: String { module.id }
     }
     var pageGroups: [PageGroup] {
-        statuses.filter(\.enabled).compactMap { status in
+        visibleStatuses.filter(\.enabled).compactMap { status in
             let manifest = status.manifest.localized(L10n.current.rawValue)
             let entries = pages.filter { $0.module.id == manifest.id }
             return entries.isEmpty ? nil : .init(module: manifest, pages: entries)
@@ -116,7 +117,7 @@ import ThermoL10n
 
     /// Every module with its switch, built-in features first.
     var switches: [(manifest: ModuleManifest, enabled: Bool, builtin: Bool)] {
-        BuiltinModules.all.map { ($0, isOn($0.id), true) } + statuses.map { ($0.manifest, $0.enabled, false) }
+        BuiltinModules.all.map { ($0, isOn($0.id), true) } + visibleStatuses.map { ($0.manifest, $0.enabled, false) }
     }
 
     struct NavigationPage: Identifiable {
@@ -133,7 +134,7 @@ import ThermoL10n
         var symbol: String { entry.symbol ?? module.symbol }
     }
     var activeManifests: [ModuleManifest] {
-        BuiltinModules.all.filter { isOn($0.id) } + statuses.filter(\.enabled).map(\.manifest)
+        BuiltinModules.all.filter { isOn($0.id) } + visibleStatuses.filter(\.enabled).map(\.manifest)
     }
     var navigationConflicts: [ModuleNavigation.Conflict] { ModuleNavigation.conflicts(activeManifests) }
     func navigationIssue(_ id: String) -> String? {
@@ -227,7 +228,7 @@ struct ModuleOffView: View {
     }
 }
 
-private struct ModuleSceneView: NSViewControllerRepresentable {
+struct ModuleSceneView: NSViewControllerRepresentable {
     let manager: ModuleManager
     let module: String
     let scene: String
@@ -306,7 +307,7 @@ struct ModuleSettingsControls: View {
                 }
             }
         }
-        ForEach(center.statuses.filter(\.enabled), id: \.manifest.id) { status in
+        ForEach(center.visibleStatuses.filter(\.enabled), id: \.manifest.id) { status in
             ForEach(status.manifest.entries.filter { $0.kind == .settingsItem }, id: \.id) { entry in
                 if let scene = entry.scene {
                     InspectorDivider(inset: 46)
