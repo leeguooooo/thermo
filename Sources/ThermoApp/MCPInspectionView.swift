@@ -4,29 +4,36 @@ import ThermoL10n
 
 @MainActor
 final class MCPInspectionModel: ObservableObject {
+    private let ownWork=FeatureTasks()
     @Published var report: MCPInspection?
     @Published var running = false
     private var cancellation: DoctorCancellation?
 
     func inspect(_ item: AgentItem, encoding: TextEncoding = .heuristic, timeout: TimeInterval = 10,
                  protocolMode: MCPInspectionProtocol = .handshake,
-                 completion: (@MainActor (MCPInspection) -> Void)? = nil) {
-        guard !running else { return }
+                 scope:FeatureTasks? = nil, completion: (@MainActor (MCPInspection) -> Void)? = nil) {
+        let work=scope ?? ownWork
+        guard work.acceptsWork,!running else { return }
         let cancellation = DoctorCancellation()
         self.cancellation = cancellation
         report = nil
         running = true
-        Task.detached(priority: .userInitiated) {
+        work.run(priority: .userInitiated,onSkipped:{ [weak self] in
+            guard let self,self.cancellation === cancellation else{return}
+            self.running=false;self.report=nil;self.cancellation=nil
+        }) {
+            await withTaskCancellationHandler(operation:{
             let result = AgentDoctor.inspectMCP(item.id, timeout: timeout,
                                                protocolMode: protocolMode,
                                                env: DoctorEnvironment(tokenEncoding: encoding, cancelled: { cancellation.isCancelled }))
             await MainActor.run {
                 guard self.cancellation === cancellation else { return }
+                self.running=false;self.cancellation=nil
+                guard work.acceptsWork else{self.report=nil;return}
                 self.report = result
                 completion?(result)
-                self.running = false
-                self.cancellation = nil
             }
+            },onCancel:{cancellation.cancel()})
         }
     }
     func cancel() { cancellation?.cancel() }
@@ -80,9 +87,9 @@ struct MCPInspectButton: View {
             }
     }
     @MainActor private func start() {
-        guard !model.running else { return }
+        guard store.work.acceptsWork,!model.running else { return }
         let ticket = store.begin(item.id)
-        model.inspect(item, encoding: encoding, timeout: timeout, protocolMode: protocolMode) { report in
+        model.inspect(item, encoding: encoding, timeout: timeout, protocolMode: protocolMode,scope:store.work) { report in
             store.accept(report, id: item.id, encoding: encoding, ticket: ticket)
         }
     }

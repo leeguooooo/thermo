@@ -3,6 +3,7 @@ import Foundation
 import SwiftUI
 
 @MainActor final class MCPBatchInspectionModel: ObservableObject {
+    private var work:FeatureTasks {store.work}
     struct Request: Sendable {
         let id: String
         let encoding: TextEncoding
@@ -52,7 +53,7 @@ import SwiftUI
 
     @discardableResult func start(items: [AgentItem], encoding: TextEncoding, timeout: TimeInterval = 10,
                                   totalBudget: TimeInterval = 120, protocolMode: MCPInspectionProtocol = .handshake) -> Bool {
-        guard !running, store.pending.isEmpty, timeout.isFinite, timeout > 0, timeout <= 120,
+        guard work.acceptsWork,!running, store.pending.isEmpty, timeout.isFinite, timeout > 0, timeout <= 120,
               totalBudget.isFinite, totalBudget > 0, totalBudget <= 120 else { return false }
         var seen = Set<String>()
         let queue = items.filter { $0.area == .mcp && $0.enabled && seen.insert($0.id).inserted }
@@ -67,7 +68,8 @@ import SwiftUI
         running = true; stopping = false; runningChanged?(true)
         let clock = clock, inspector = inspector
         let started = clock(), deadline = started + totalBudget
-        Task.detached(priority: .userInitiated) {
+        work.run(priority: .userInitiated) {
+            await withTaskCancellationHandler(operation:{
             var end = EndReason.finished
             for item in queue {
                 if cancellation.isCancelled { end = .cancelled; break }
@@ -87,7 +89,7 @@ import SwiftUI
                                                cancelled: { cancellation.isCancelled || clock() >= deadline }))
                 await MainActor.run {
                     self.store.accept(result, id: item.id, encoding: encoding, ticket: ticket)
-                    if !self.discardResults {
+                    if self.work.acceptsWork && !self.discardResults {
                         self.rows.append(Row(id: item.id, name: item.name, agent: item.agent,
                                              complete: result.complete && result.state == .ready && result.definitions != nil && result.instructions != nil,
                                              state: result.state, message: String(Redact.text(result.message).prefix(500))))
@@ -110,9 +112,11 @@ import SwiftUI
                 if self.discardResults { self.clearProgress() }
                 self.runningChanged?(false)
             }
+            },onCancel:{cancellation.cancel()})
         }
         return true
     }
+    func releaseReadings() {running=false;stopping=false;cancellation=nil;clearProgress()}
     func cancel() {
         guard running else { return }
         stopping = true

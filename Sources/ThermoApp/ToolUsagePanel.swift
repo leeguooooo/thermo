@@ -4,27 +4,31 @@ import SwiftUI
 import ThermoL10n
 
 @MainActor final class ToolUsageModel: ObservableObject {
+    let work:FeatureTasks
     @Published private(set) var running = false
     @Published private(set) var stopping = false
     @Published private(set) var report: ToolUsageReport?
     private var cancellation: DoctorCancellation?
 
-    init(report: ToolUsageReport? = nil) { self.report = report }
+    init(work:FeatureTasks? = nil, report: ToolUsageReport? = nil) {self.work=work ?? FeatureTasks();self.report=self.work.acceptsWork ? report:nil}
 
     func analyze(encoding: TextEncoding = .heuristic, logFile: URL? = nil, host: String? = nil, logWindow: ToolUsageLogWindow = .head) {
-        guard !running else { return }
+        guard work.acceptsWork,!running else { return }
         let cancellation = DoctorCancellation()
         self.cancellation = cancellation
         running = true; stopping = false
-        Task.detached(priority: .utility) {
+        work.run(priority: .utility) {
+            await withTaskCancellationHandler(operation:{
             let report = AgentDoctor.usage(host: host, logFile: logFile, logWindow: logWindow, env: DoctorEnvironment(tokenEncoding: encoding, cancelled: { cancellation.isCancelled }))
             await MainActor.run {
-                guard self.cancellation === cancellation else { return }
+                guard self.work.acceptsWork,self.cancellation === cancellation else { return }
                 self.report = report
                 self.running = false; self.stopping = false; self.cancellation = nil
             }
+            },onCancel:{cancellation.cancel()})
         }
     }
+    func releaseReadings() {report=nil;running=false;stopping=false;cancellation=nil}
     func stop() { guard running else { return }; stopping = true; cancellation?.cancel() }
 }
 
