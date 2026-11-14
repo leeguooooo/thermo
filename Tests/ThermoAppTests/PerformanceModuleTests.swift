@@ -64,6 +64,10 @@ import XCTest
         let models=AppModels(makeMonitor:{monitor})
         XCTAssertThrowsError(try PerformanceModule.prepareStop(models:models))
         release.signal();await fulfillment(of:[finished],timeout:2)
+        XCTAssertFalse(monitor.installingHelper)
+        // Finishing the installer still leaves setup waiting for a responding helper.
+        XCTAssertFalse(monitor.canStopFeature)
+        monitor.stopSetup()
         XCTAssertTrue(monitor.canStopFeature)
     }
 }

@@ -66,12 +66,12 @@ final class ComputeModel: ObservableObject {
         if visibility.active { start() } else { stop() }
     }
     func releaseReadingsIfIdle() {
-        guard samplingAllowed(), timer == nil else { return }
+        guard timer == nil else { return }
         if current != nil { current = nil }
         if !history.isEmpty { history = [] }
     }
     func start() {
-        guard timer == nil else { return }
+        guard samplingAllowed(), timer == nil else { return }
         generation = UUID()
         current = nil; history = []
         resetNextReading = true
