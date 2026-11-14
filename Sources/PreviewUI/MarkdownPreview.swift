@@ -65,25 +65,20 @@ struct MarkdownSurface:NSViewRepresentable {
     func updateNSView(_ web:WKWebView,context:Context) {
         guard context.coordinator.source != state.source else{return}
         context.coordinator.source=state.source
-        let url=context.coordinator.root.appendingPathComponent("preview.html")
-        do {
-            try state.document.html(showSource:state.source).write(to:url,atomically:true,encoding:.utf8)
-            web.loadFileURL(url,allowingReadAccessTo:context.coordinator.root)
-        }catch{state.issue=error.localizedDescription}
+        context.coordinator.load(web)
     }
     final class Coordinator:NSObject,WKNavigationDelegate {
         let state:MarkdownPreviewState
-        let root=FileManager.default.temporaryDirectory.appendingPathComponent("thermo-markdown-preview-"+UUID().uuidString)
         var source:Bool?
         let open:(URL)->Void
-        init(state:MarkdownPreviewState,open:@escaping(URL)->Void = {_ in}){self.state=state;self.open=open;super.init();try? FileManager.default.createDirectory(at:root,withIntermediateDirectories:true)}
-        deinit{try? FileManager.default.removeItem(at:root)}
+        init(state:MarkdownPreviewState,open:@escaping(URL)->Void = {_ in}){self.state=state;self.open=open;super.init()}
+        func load(_ web:WKWebView) {web.loadHTMLString(state.document.html(showSource:state.source),baseURL:nil)}
         func webView(_ webView:WKWebView,decidePolicyFor action:WKNavigationAction,decisionHandler:@escaping(WKNavigationActionPolicy)->Void) {
             guard let url=action.request.url else{decisionHandler(.cancel);return}
-            let own=root.appendingPathComponent("preview.html").standardizedFileURL
-            if action.navigationType == .other,url.isFileURL,url.standardizedFileURL == own{decisionHandler(.allow);return}
+            let own=url.scheme == "about" && (url.absoluteString == "about:blank" || url.absoluteString.hasPrefix("about:blank#"))
+            if action.navigationType == .other,own{decisionHandler(.allow);return}
             if action.navigationType == .linkActivated {
-                if url.isFileURL,url.standardizedFileURL == own,url.fragment != nil{decisionHandler(.allow);return}
+                if own,url.fragment != nil{decisionHandler(.allow);return}
                 if ["https","http","mailto","file"].contains(url.scheme?.lowercased() ?? ""){open(url)}
             }
             decisionHandler(.cancel)

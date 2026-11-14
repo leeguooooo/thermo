@@ -68,14 +68,12 @@ final class PreviewMarkdownDocumentTests: XCTestCase {
     @MainActor func testWebKitLoadsGeneratedPreviewAndFindsRenderedText() async throws {
         let model = MarkdownPreviewState(document: PreviewMarkdownDocument.render("# Preview acceptance\n\nReadable **content**."))
         let coordinator = MarkdownSurface.Coordinator(state: model)
-        let page = coordinator.root.appendingPathComponent("preview.html")
-        try PreviewMarkdownDocument.render("# Preview acceptance\n\nReadable **content**.").html().write(to: page, atomically: true, encoding: .utf8)
         let configuration = WKWebViewConfiguration()
         configuration.websiteDataStore = .nonPersistent()
         configuration.defaultWebpagePreferences.allowsContentJavaScript = false
         let web = WKWebView(frame: NSRect(x: 0, y: 0, width: 800, height: 600), configuration: configuration)
         web.navigationDelegate = coordinator; model.web = web
-        web.loadFileURL(page, allowingReadAccessTo: coordinator.root)
+        coordinator.load(web)
         defer { web.stopLoading(); web.navigationDelegate = nil }
         for _ in 0..<100 {
             if let text = try? await web.evaluateJavaScript("document.body.innerText") as? String,
