@@ -24,6 +24,7 @@ let package = Package(
         .library(name: "ModuleSDK", targets: ["ModuleSDK"]),
         .library(name: "PreviewCore", targets: ["PreviewCore"]),
         .executable(name: "thermo-capture-script", targets: ["CaptureScriptWorker"]),
+        .executable(name: "SearchPreviewModule", targets: ["SearchPreviewModule"]),
     ],
     dependencies: [
         .package(url: "https://github.com/sparkle-project/Sparkle", exact: "2.9.6"),
@@ -73,6 +74,9 @@ let package = Package(
         // What a module links: its commands, its scenes and its connection to the kernel.
         .target(name: "ModuleSDK", dependencies: ["ModuleKit"], swiftSettings: [.unsafeFlags(["-application-extension"])],
                 linkerSettings: [.linkedFramework("ExtensionKit"), .linkedFramework("ExtensionFoundation")]),
+        .executableTarget(name: "SearchPreviewModule", dependencies: ["ModuleKit", "ModuleSDK", "PreviewCore", "ThermoL10n"], exclude: ["module.json"],
+                          swiftSettings: [.unsafeFlags(["-application-extension"])],
+                          linkerSettings: [.linkedFramework("QuickLookUI"), .unsafeFlags(["-Xlinker", "-e", "-Xlinker", "_NSExtensionMain"])]),
         .executableTarget(name: "ProbeModule", dependencies: ["ModuleKit", "ModuleSDK"], exclude: ["module.json"],
                           swiftSettings: [.unsafeFlags(["-application-extension"])],
                           linkerSettings: [.unsafeFlags(["-Xlinker", "-e", "-Xlinker", "_NSExtensionMain"])]),

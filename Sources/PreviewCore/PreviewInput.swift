@@ -3,7 +3,7 @@ import Foundation
 
 /// Only a display name and selected input cross to the renderer; no authority to open user paths.
 public struct PreviewInput: Codable, Sendable, Equatable {
-    public enum Kind: String, Codable, Sendable { case file, directory }
+    public enum Kind: String, Codable, Sendable { case file, directory, retire }
     public struct Entry: Codable, Sendable, Equatable {
         public let name: String
         public let directory: Bool
