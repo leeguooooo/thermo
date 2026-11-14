@@ -64,7 +64,7 @@ final class AppModels {
         let model=makeConnections {ModulePreferences.isEnabled(BuiltinModuleManifests.connections,in:defaults)}
         storedConnections=model;return model
     }
-    func stopConnectionViews() {storedConnections?.stop()}
+    func stopConnectionViews() {storedConnections?.retireVisibility()}
     func connectionsExitBlocker()->MainPage? {storedConnections?.busy.isEmpty == false ? .connections:nil}
     func prepareConnectionsStop() throws->BuiltinModules.FinishStop? {
         guard let model=storedConnections else{return nil}

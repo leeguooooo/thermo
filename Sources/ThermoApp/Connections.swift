@@ -664,8 +664,9 @@ final class ConnectionsModel: NSObject, ObservableObject, CLLocationManagerDeleg
             if self.timer != nil { self.wifi = WiFiStatus.read() }
         }
     }
+    func retireVisibility() {visibility=SamplingLeases();stop()}
     func stopFeature() {
-        stop();work.stop();visibility=SamplingLeases()
+        retireVisibility();work.stop()
         location?.delegate=nil;location=nil
     }
     func finishFeatureStop() async {
