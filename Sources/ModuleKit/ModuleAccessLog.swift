@@ -156,7 +156,7 @@ public final class ModuleAccessLog: @unchecked Sendable {
 
     /// A feature may own private workers; its activity panel includes their records.
     public func summary(modules: [String]) -> Summary {
-        let records = Set(modules).sorted().flatMap { records(module: $0) }.enumerated().sorted { a, b in
+        let records = Set(modules).sorted().flatMap { self.records(module: $0) }.enumerated().sorted { a, b in
             let left = a.element.loggedAt ?? a.element.time.timeIntervalSince1970
             let right = b.element.loggedAt ?? b.element.time.timeIntervalSince1970
             return left == right ? a.offset < b.offset : left < right
