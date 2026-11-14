@@ -3,20 +3,6 @@ import AppKit
 import SwiftUI
 import ThermoL10n
 
-/// Timer callbacks run on a worker queue; lifetime changes and publication run
-/// on the UI thread. A new visible session must reject an old session's result.
-private final class PulseSamplingLifetime: @unchecked Sendable {
-    private let lock = NSLock()
-    private var token: UUID?
-    func start() -> UUID {
-        lock.lock(); defer { lock.unlock() }
-        let value = UUID(); token = value; return value
-    }
-    func stop() { lock.lock(); token = nil; lock.unlock() }
-    func current() -> UUID? { lock.lock(); defer { lock.unlock() }; return token }
-    func accepts(_ value: UUID) -> Bool { lock.lock(); defer { lock.unlock() }; return token == value }
-}
-
 /// Samples `MachinePulse` every 3 s while the panel is open on the Overview tab; nothing runs otherwise.
 final class SystemPulse: ObservableObject {
     typealias Hog = MachinePulse.Hog
@@ -32,7 +18,7 @@ final class SystemPulse: ObservableObject {
     private var timer: DispatchSourceTimer?
     /// Confined to `queue`. Kept across start/stop so reopening shows fresh numbers in one cheap pass.
     private let sampler = PulseSampler()
-    private let lifetime = PulseSamplingLifetime()
+    private let lifetime = FeatureSamplingLifetime()
     private let readSample: (@Sendable () -> MachinePulse)?
 
     init(readSample: (@Sendable () -> MachinePulse)? = nil, samplingQueue: DispatchQueue? = nil) {
