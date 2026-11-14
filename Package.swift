@@ -22,6 +22,7 @@ let package = Package(
         .library(name: "ModuleKit", targets: ["ModuleKit"]),
         .library(name: "ModuleHost", targets: ["ModuleHost"]),
         .library(name: "ModuleSDK", targets: ["ModuleSDK"]),
+        .library(name: "PreviewCore", targets: ["PreviewCore"]),
         .executable(name: "thermo-capture-script", targets: ["CaptureScriptWorker"]),
     ],
     dependencies: [
@@ -48,6 +49,7 @@ let package = Package(
         .target(name: "AgentCore"),
         .systemLibrary(name: "CSQLite"),
         // Local search runs as the user; never linked into the privileged helper.
+        .target(name: "PreviewCore"),
         .target(name: "SearchCore", dependencies: ["CSQLite"], linkerSettings: [.linkedFramework("CoreServices")]),
         .target(name: "CWebPEncoder", dependencies: [.product(name: "libwebp", package: "libwebp-Xcode")]),
         .target(name:"CaptureScriptCore"),
@@ -101,6 +103,7 @@ let package = Package(
         .testTarget(name: "DownloadKitTests", dependencies: ["DownloadKit"]),
         .testTarget(name: "MediaToolsKitTests", dependencies: ["MediaToolsKit"]),
         .testTarget(name: "VideoKitTests", dependencies: ["VideoKit"]),
+        .testTarget(name: "PreviewCoreTests", dependencies: ["PreviewCore"]),
         .testTarget(name: "ModuleKitTests", dependencies: ["ModuleKit"]),
         .testTarget(name: "ModuleHostTests", dependencies: ["ModuleHost", "ModuleKit"]),
     ],
