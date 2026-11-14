@@ -19,9 +19,7 @@ import ThermoL10n
         if let rendered{return rendered}
         // This importer produces native text/attachments in the sandbox. A WKWebView
         // requires direct network rights even for local HTML; modules do not get those.
-        let value=try NSMutableAttributedString(data:Data(document.html(includeOutline:false).utf8),
-            options:[.documentType:NSAttributedString.DocumentType.html,.characterEncoding:String.Encoding.utf8.rawValue],documentAttributes:nil)
-        value.addAttribute(.foregroundColor,value:NSColor.labelColor,range:NSRange(location:0,length:value.length))
+        let value=try NativeMarkdownContent.render(document)
         rendered=value;return value
     }
     func find(backwards:Bool=false) {
