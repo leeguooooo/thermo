@@ -76,12 +76,17 @@ private func text(_ data:Data) throws -> String {
         } while !sceneReady && Date()<deadline
         try visible.write(to:root.appendingPathComponent("preview-ocr.txt"),atomically:true,encoding:.utf8)
         check(sceneReady,"remote scene displays the selected input and rendered document (OCR)")
-        var imagePixels=0
+        var imagePixels=0,bestScore:CGFloat = -10,bestColor:[CGFloat]=[]
         if let png=try? Data(contentsOf:root.appendingPathComponent("preview.png")),let bitmap=NSBitmapImageRep(data:png) {
             for y in stride(from:0,to:bitmap.pixelsHigh,by:4) {for x in stride(from:0,to:bitmap.pixelsWide,by:4) {
-                if let color=bitmap.colorAt(x:x,y:y)?.usingColorSpace(.deviceRGB),color.redComponent>0.8,color.blueComponent>0.8,color.greenComponent<0.2 {imagePixels += 1}
+                if let color=bitmap.colorAt(x:x,y:y)?.usingColorSpace(.sRGB) {
+                    let score=color.redComponent+color.blueComponent-color.greenComponent
+                    if score>bestScore{bestScore=score;bestColor=[color.redComponent,color.greenComponent,color.blueComponent]}
+                    if color.redComponent>0.8,color.blueComponent>0.8,color.greenComponent<0.2 {imagePixels += 1}
+                }
             }}
         }
+        try JSONSerialization.data(withJSONObject:["matchingSamples":imagePixels,"bestRGB":bestColor],options:.prettyPrinted).write(to:root.appendingPathComponent("image-inspection.json"))
         check(imagePixels>5,"associated image is visible in the sandboxed remote scene")
         let own=manager.modules.first(where:{$0.manifest.id == preview})?.pid
         let identity=own.flatMap{ProcessTable.identity($0)}
