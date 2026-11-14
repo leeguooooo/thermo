@@ -46,4 +46,14 @@ import XCTest
         XCTAssertFalse(lifetime.accepts(first))
         XCTAssertTrue(lifetime.accepts(second))
     }
+    func testClosedRecorderNeverLoadsHistoryEvenWhenAskedToStart() async {
+        let reader = Reader(XCTestExpectation(description: "unused history reader"))
+        reader.release.signal()
+        let queue = DispatchQueue(label: "thermo-closed-recorder")
+        let recorder = PulseRecorder(queue: queue, readHistory: { reader.records() }, samplingAllowed: { false })
+        recorder.start(); recorder.start()
+        await recorder.stop(); await drain(queue)
+        XCTAssertEqual(reader.count, 0)
+        XCTAssertTrue(recorder.recent.isEmpty)
+    }
 }

@@ -5,12 +5,13 @@ import SwiftUI
 import ThermoKit
 import ThermoL10n
 import UserNotifications
+import ModuleKit
 
 /// Records the pulse in the background — once a minute on power, every five minutes on battery,
 /// panel open or not — so a slowdown can be looked at afterwards, and tells the user about one
 /// before they feel it. One cheap incremental pass per tick (PulseSampler).
 final class PulseRecorder: ObservableObject {
-    static let shared = PulseRecorder()
+    static let shared = PulseRecorder(samplingAllowed: { ModulePreferences.isEnabled(BuiltinModuleManifests.performance, in: .standard) })
     static let alertsKey = "slowdownAlerts"
     /// Posted (on main) when a slowdown notification is clicked; userInfo["program"] is who to show.
     static let showProgram = Notification.Name("dev.thermo.showPulseProgram")
@@ -29,6 +30,7 @@ final class PulseRecorder: ObservableObject {
     private let queue: DispatchQueue
     private let lifetime = FeatureSamplingLifetime()
     private let readHistory: (@Sendable () -> [PulseRecord])?
+    private let samplingAllowed: @Sendable () -> Bool
     private let sampler = PulseSampler()
     /// Confined to `queue`; its previous pass turns CPU and disk counters into rates and busy streaks.
     private let slowdown = SlowdownSampler()
@@ -37,13 +39,15 @@ final class PulseRecorder: ObservableObject {
     private var interval: TimeInterval = 0
     private var memory: [PulseRecord] = []
 
-    init(queue: DispatchQueue? = nil, readHistory: (@Sendable () -> [PulseRecord])? = nil) {
+    init(queue: DispatchQueue? = nil, readHistory: (@Sendable () -> [PulseRecord])? = nil,
+         samplingAllowed: @escaping @Sendable () -> Bool = { true }) {
         self.queue = queue ?? DispatchQueue(label: "dev.thermo.app.pulse-history", qos: .utility)
         self.readHistory = readHistory
+        self.samplingAllowed = samplingAllowed
     }
 
     @MainActor func start() {
-        guard lifetime.current() == nil else { return }
+        guard samplingAllowed(), lifetime.current() == nil else { return }
         let token = lifetime.start()
         queue.async {
             guard self.lifetime.accepts(token) else { return }
@@ -61,14 +65,16 @@ final class PulseRecorder: ObservableObject {
         await withCheckedContinuation { done in
             queue.async {
                 self.timer?.cancel(); self.timer = nil; self.interval = 0
+                self.memory = []
                 done.resume()
             }
         }
+        if lifetime.current() == nil { recent = []; diagnosis = nil }
     }
 
     /// Every 60 s on power, 300 s on battery.
     private func reschedule() {
-        guard let token = lifetime.current() else { return }
+        guard samplingAllowed(), let token = lifetime.current() else { return }
         let onBattery = Battery.read().map { !$0.externalPower } ?? false
         let every: TimeInterval = onBattery ? 300 : 60
         guard every != interval else { return }
@@ -82,7 +88,7 @@ final class PulseRecorder: ObservableObject {
     }
 
     private func tick(token: UUID) {
-        guard lifetime.accepts(token) else { return }
+        guard samplingAllowed(), lifetime.accepts(token) else { return }
         let pulse = sampler.sample()
         let record = PulseRecord(pulse)
         history.append(record)

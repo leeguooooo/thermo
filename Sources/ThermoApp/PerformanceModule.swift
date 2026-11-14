@@ -18,6 +18,7 @@ enum PerformanceModule: BuiltinModule {
     }
     @MainActor static func endOperation(_ id: UUID) { operations.remove(id) }
     @MainActor static func start() {
+        guard enabled else { return }
         retiring = false
         AppModels.shared.monitor.startFeature()
         PulseRecorder.shared.start()
@@ -86,6 +87,7 @@ enum PerformanceModule: BuiltinModule {
             }
             ComputeModel.cpu.releaseReadingsIfIdle(); ComputeModel.shared.releaseReadingsIfIdle(); MemoryModel.shared.releaseReadingsIfIdle()
             models.monitor.onMenuUpdate?()
+            retiring = false
         }
     }
     @MainActor static func appearance(_ page: MainPage) -> (glow: Bool, tint: Color?) {
