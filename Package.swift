@@ -83,6 +83,7 @@ let package = Package(
                           swiftSettings: [.unsafeFlags(["-application-extension"])],
                           linkerSettings: [.unsafeFlags(["-Xlinker", "-e", "-Xlinker", "_NSExtensionMain"])]),
         .executableTarget(name: "ModuleHarness", dependencies: ["ModuleHost", "ModuleKit"]),
+        .executableTarget(name: "PreviewHarness", dependencies: ["ModuleHost", "ModuleKit", "PreviewCore", "AgentCore"], linkerSettings: [.linkedFramework("AppKit"), .linkedFramework("Vision")]),
         // Build-time check of the modules packed into the app; run by scripts/build.sh, not shipped.
         .executableTarget(name: "ModuleCheck", dependencies: ["ModuleKit"]),
         .executableTarget(name: "thermo", dependencies: ["CaptureScriptCore", "ThermoKit", "AgentCore", "AgentDoctor", "CleanKit", "ThermoL10n", "SearchCore", "ModuleKit", .product(name: "MCP", package: "swift-sdk")]),
