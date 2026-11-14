@@ -68,7 +68,9 @@ import SwiftUI
         running = true; stopping = false; runningChanged?(true)
         let clock = clock, inspector = inspector
         let started = clock(), deadline = started + totalBudget
-        work.run(priority: .userInitiated) {
+        work.run(priority: .userInitiated,onSkipped:{ [weak self] in
+            self?.releaseReadings();self?.runningChanged?(false)
+        }) {
             await withTaskCancellationHandler(operation:{
             var end = EndReason.finished
             for item in queue {

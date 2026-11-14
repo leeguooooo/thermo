@@ -19,10 +19,14 @@ import UniformTypeIdentifiers
         self.generation = generation
         loading = true; report = nil; error = nil
         let reader=self.reader
-        work.run(priority: .utility) {
+        work.run(priority: .utility,onSkipped:{ [weak self] in
+            if self?.generation==generation {self?.loading=false}
+        }) {
             let result = Result { try reader(url) }
             await MainActor.run {
-                guard self.work.acceptsWork,self.generation == generation else { return }
+                guard self.generation == generation else { return }
+                self.loading=false
+                guard self.work.acceptsWork else{self.report=nil;self.error=nil;return}
                 switch result {
                 case .success(let report): self.report = report
                 case .failure(let error): self.error = (error as? TaskComparison.InvalidRecords)?.description ?? "Cannot read local evaluation file"

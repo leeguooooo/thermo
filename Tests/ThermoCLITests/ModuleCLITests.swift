@@ -25,6 +25,15 @@ final class ModuleCLITests: XCTestCase {
         XCTAssertThrowsError(try ModuleCLI.commandLease(["watch"],defaults:defaults,home:home.path))
         XCTAssertTrue(try FileManager.default.contentsOfDirectory(atPath:home.path).isEmpty)
     }
+    func testDisabledAgentDiagnosticsRefusesAllAliasesWithoutDisablingCleanup() throws {
+        let name="thermo-agents-cli-"+UUID().uuidString,defaults=UserDefaults(suiteName:name)!
+        defer{defaults.removePersistentDomain(forName:name)}
+        defaults.set(false,forKey:ModulePreferences.key(BuiltinModuleManifests.agents.id))
+        for root in ["agents","agent","doctor"] {
+            XCTAssertThrowsError(try ModuleCLI.requireBuiltinFeature([root],defaults:defaults))
+        }
+        XCTAssertNoThrow(try ModuleCLI.requireBuiltinFeature(["clean","overview"],defaults:defaults))
+    }
     func testDisabledHistoryRefusesItsCommandsWithoutDisablingCleanup() throws {
         let name="thermo-history-cli-"+UUID().uuidString,defaults=UserDefaults(suiteName:name)!
         defer{defaults.removePersistentDomain(forName:name)}

@@ -50,8 +50,9 @@ private struct AgentSidebar:View {
     var body:some View {
         ForEach(AgentDiagnosticsModule.manifest.entries.filter{$0.parent==nil || AgentDiagnosticsModule.owns(selection)},id:\.id) {entry in
             if let page=entry.scene.flatMap(AgentDiagnosticsModule.target) {
+                let tint:Color = {if case let .agents(.area(area))=page{return AgentStyle.tint(area)};return .purple}()
                 let badge:Int = {if case let .agents(.area(area))=page{return scanner.report?.problemCount(in:area) ?? 0};return scanner.report?.problemCount ?? 0}()
-                row(.init(entry:entry,target:page,tint:.purple,badge:badge,selected:selection==page || BuiltinModules.page(selection)?.target==page))
+                row(.init(entry:entry,target:page,tint:tint,badge:badge,selected:selection==page || BuiltinModules.page(selection)?.target==page))
             }
         }
     }

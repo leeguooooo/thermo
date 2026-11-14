@@ -4,26 +4,33 @@ import SwiftUI
 import ThermoL10n
 
 @MainActor final class ToolUsageModel: ObservableObject {
+    typealias Analyzer = @Sendable (TextEncoding,URL?,String?,ToolUsageLogWindow,DoctorCancellation)->ToolUsageReport
+    private let analyzer:Analyzer
     let work:FeatureTasks
     @Published private(set) var running = false
     @Published private(set) var stopping = false
     @Published private(set) var report: ToolUsageReport?
     private var cancellation: DoctorCancellation?
 
-    init(work:FeatureTasks? = nil, report: ToolUsageReport? = nil) {self.work=work ?? FeatureTasks();self.report=self.work.acceptsWork ? report:nil}
+    init(work:FeatureTasks? = nil, report: ToolUsageReport? = nil,analyzer:@escaping Analyzer = {encoding,file,host,window,cancellation in AgentDoctor.usage(host:host,logFile:file,logWindow:window,env:DoctorEnvironment(tokenEncoding:encoding,cancelled:{cancellation.isCancelled}))}) {self.work=work ?? FeatureTasks();self.analyzer=analyzer;self.report=self.work.acceptsWork ? report:nil}
 
     func analyze(encoding: TextEncoding = .heuristic, logFile: URL? = nil, host: String? = nil, logWindow: ToolUsageLogWindow = .head) {
         guard work.acceptsWork,!running else { return }
         let cancellation = DoctorCancellation()
         self.cancellation = cancellation
         running = true; stopping = false
-        work.run(priority: .utility) {
+        let analyzer=self.analyzer
+        work.run(priority: .utility,onSkipped:{ [weak self] in
+            guard let self,self.cancellation === cancellation else{return}
+            self.running=false;self.stopping=false;self.cancellation=nil
+        }) {
             await withTaskCancellationHandler(operation:{
-            let report = AgentDoctor.usage(host: host, logFile: logFile, logWindow: logWindow, env: DoctorEnvironment(tokenEncoding: encoding, cancelled: { cancellation.isCancelled }))
+            let report = analyzer(encoding,logFile,host,logWindow,cancellation)
             await MainActor.run {
-                guard self.work.acceptsWork,self.cancellation === cancellation else { return }
+                guard self.cancellation === cancellation else { return }
+                self.running=false;self.stopping=false;self.cancellation=nil
+                guard self.work.acceptsWork else{self.report=nil;return}
                 self.report = report
-                self.running = false; self.stopping = false; self.cancellation = nil
             }
             },onCancel:{cancellation.cancel()})
         }
