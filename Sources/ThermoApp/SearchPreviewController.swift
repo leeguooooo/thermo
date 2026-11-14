@@ -11,7 +11,7 @@ private struct SearchPreviewSource: @unchecked Sendable {
     let input:PreviewInput
     let file:FileHandle?
     let scope:PreviewResourceScope?
-    static func open(_ item:SearchItem,id:UUID,roots:[String],language:String,cancelled:@Sendable()->Bool) throws -> Self {
+    static func open(_ item:SearchItem,id:UUID,roots:[String],language:String,sequence:UInt64,cancelled:@Sendable()->Bool) throws -> Self {
         if cancelled(){throw PreviewFailure.cancelled}
         let url=URL(fileURLWithPath:item.path).resolvingSymlinksInPath().standardizedFileURL
         if item.kind == .folder {
@@ -27,12 +27,12 @@ private struct SearchPreviewSource: @unchecked Sendable {
                 var info=stat();let known=fstatat(dirfd(directory),name,&info,AT_SYMLINK_NOFOLLOW)==0
                 entries.append(.init(name:name,directory:known && info.st_mode & S_IFMT == S_IFDIR,bytes:known && info.st_mode & S_IFMT == S_IFREG ? info.st_size:nil))
             }
-            return .init(input:.init(id:id,kind:.directory,name:item.name,entries:entries,originalURL:url.absoluteString,language:language),file:nil,scope:nil)
+            return .init(input:.init(id:id,kind:.directory,name:item.name,entries:entries,originalURL:url.absoluteString,language:language,sequence:sequence),file:nil,scope:nil)
         }
         let allowed=roots.map(SearchPaths.canonical).filter{SearchPaths.isWithin(url.path,root:$0)}.max{$0.count < $1.count}
         let scope=try PreviewResourceScope(root:allowed.map{URL(fileURLWithPath:$0,isDirectory:true)} ?? url.deletingLastPathComponent())
         let file=try scope.openFile(url)
-        return .init(input:.init(id:id,kind:.file,name:item.name,originalURL:url.absoluteString,language:language),file:file,scope:scope)
+        return .init(input:.init(id:id,kind:.file,name:item.name,originalURL:url.absoluteString,language:language,sequence:sequence),file:file,scope:scope)
     }
 }
 
@@ -41,9 +41,11 @@ private struct SearchPreviewSource: @unchecked Sendable {
     enum State:Equatable {case idle,preparing,ready(UUID),failed(String)}
     @Published private(set) var state=State.idle
     private static var owners:[ObjectIdentifier:UUID]=[:]
+    private static var sequences:[ObjectIdentifier:UInt64]=[:]
     let center:ModuleCenter
     let worker:String
     private var current:UUID?
+    private var currentSequence:UInt64?
     private var cancellation:SearchCancellation?
     private var tasks:[UUID:Task<Void,Never>]=[:]
     private var cleanups:[UUID:Task<Void,Never>]=[:]
@@ -56,11 +58,12 @@ private struct SearchPreviewSource: @unchecked Sendable {
         guard !AppInstallationMonitor.shared.needsRestart else{state = .failed(tr("An update is installed. Restart Thermo to use it."));return}
         stop()
         let id=request,cancel=SearchCancellation();current=id;Self.owners[key]=id;cancellation=cancel;state = .preparing
+        let sequence=(Self.sequences[key] ?? 0)+1;Self.sequences[key]=sequence;currentSequence=sequence
         let language=L10n.current.rawValue
         let task=Task{[weak self] in
             defer{self?.tasks[id]=nil}
             do {
-                let source=try await Task.detached(priority:.userInitiated){try SearchPreviewSource.open(item,id:id,roots:roots,language:language,cancelled:{cancel.isCancelled})}.value
+                let source=try await Task.detached(priority:.userInitiated){try SearchPreviewSource.open(item,id:id,roots:roots,language:language,sequence:sequence,cancelled:{cancel.isCancelled})}.value
                 defer{try? source.file?.close()}
                 try Task.checkCancellation();guard let self,self.owns(id) else{throw PreviewFailure.cancelled}
                 let deadline=Date().addingTimeInterval(10)
@@ -88,12 +91,12 @@ private struct SearchPreviewSource: @unchecked Sendable {
                             defer{try? file.close()}
                             var info=stat();guard fstat(file.fileDescriptor,&info)==0,bytes+info.st_size<=24*1024*1024 else{continue}
                             bytes += info.st_size
-                            let input=PreviewInput(id:id,kind:.asset,name:url.lastPathComponent,resourceURL:name)
+                            let input=PreviewInput(id:id,kind:.asset,name:url.lastPathComponent,resourceURL:name,sequence:sequence)
                             _=try await center.manager.prepareInput(worker,file:file,metadata:input.data(),timeout:15)
                             ModuleKernel.log.record(ModuleAccessRecord(module:worker,capability:Capability.Kind.filesRead.rawValue,operation:"preview-resource",targets:[url.path],outcome:.allowed,detail:"Read-only associated image supplied within the selected preview scope."))
                         }
                     }
-                    let final=try await center.manager.prepareInput(worker,file:nil,metadata:PreviewInput(id:id,kind:.render,name:source.input.name).data(),timeout:30)
+                    let final=try await center.manager.prepareInput(worker,file:nil,metadata:PreviewInput(id:id,kind:.render,name:source.input.name,sequence:sequence).data(),timeout:30)
                     guard try Self.receipt(final,id:id)["ready"] as? Bool == true else{throw PreviewFailure.invalidInput}
                 }
                 try Task.checkCancellation();guard owns(id) else{throw PreviewFailure.cancelled}
@@ -121,18 +124,18 @@ private struct SearchPreviewSource: @unchecked Sendable {
         cancellation?.cancel();for task in tasks.values{task.cancel()}
         if let id=current,Self.owners[key] == id {
             Self.owners[key]=nil
-            let cleanupID=UUID(),owner=key
+            let cleanupID=UUID(),owner=key,sequence=currentSequence
             let cleanup=Task{[self] in
                 defer{cleanups[cleanupID]=nil}
                 if center.statuses.first(where:{$0.manifest.id == worker})?.phase == .running {
-                    let input=PreviewInput(id:id,kind:.retire,name:"Preview")
+                    let input=PreviewInput(id:id,kind:.retire,name:"Preview",sequence:sequence)
                     _=try? await center.manager.prepareInput(worker,file:nil,metadata:input.data(),timeout:3)
                 }
                 if Self.owners[owner] == nil{center.manager.setEnabled(worker,false)}
             }
             cleanups[cleanupID]=cleanup
         }
-        current=nil;state = .idle
+        current=nil;currentSequence=nil;state = .idle
     }
     func finishStopping() async {
         for task in Array(tasks.values){await task.value}

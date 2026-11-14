@@ -17,10 +17,11 @@ public struct PreviewInput: Codable, Sendable, Equatable {
     public let originalURL: String?
     public let resourceURL: String?
     public let language: String?
+    public let sequence: UInt64?
     public init(id: UUID = UUID(), kind: Kind, name: String, entries: [Entry] = [], originalURL: String? = nil,
-                resourceURL: String? = nil, language: String? = nil) {
+                resourceURL: String? = nil, language: String? = nil, sequence: UInt64? = nil) {
         self.id = id; self.kind = kind; self.name = name; self.entries = entries
-        self.originalURL = originalURL; self.resourceURL = resourceURL; self.language = language
+        self.originalURL = originalURL; self.resourceURL = resourceURL; self.language = language; self.sequence = sequence
     }
     public func data() throws -> Data {
         let data = try JSONEncoder().encode(self)

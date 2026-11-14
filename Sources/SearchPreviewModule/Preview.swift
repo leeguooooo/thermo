@@ -14,10 +14,18 @@ private final class PreviewPreparation: @unchecked Sendable {
     private struct Pending { let input:PreviewInput;let file:URL?;var assets:[String:URL];let expected:Set<String> }
     private let lock = NSLock()
     private var current: UUID?
+    private var latestSequence: UInt64 = 0
     private var pending: Pending?
     private let root = FileManager.default.temporaryDirectory.appendingPathComponent("thermo-search-preview-"+UUID().uuidString,isDirectory:true)
     func accepts(_ id:UUID) -> Bool { lock.lock();defer{lock.unlock()};return current == id }
-    private func begin(_ id:UUID) { lock.lock();current=id;pending=nil;lock.unlock() }
+    private func begin(_ input:PreviewInput) throws {
+        lock.lock();defer{lock.unlock()}
+        if let sequence=input.sequence {
+            guard sequence>latestSequence else{throw PreviewFailure.cancelled}
+            latestSequence=sequence
+        }
+        current=input.id;pending=nil
+    }
     private func save(_ value:Pending) throws { lock.lock();defer{lock.unlock()};guard current == value.input.id else{throw PreviewFailure.cancelled};pending=value }
     private func snapshot(_ id:UUID) throws -> Pending { lock.lock();defer{lock.unlock()};guard current == id,let pending else{throw PreviewFailure.cancelled};return pending }
     private func saveAsset(_ url:URL,resource:String,id:UUID) throws { lock.lock();defer{lock.unlock()};guard current == id,pending?.expected.contains(resource) == true else{throw PreviewFailure.cancelled};pending?.assets[resource]=url }
@@ -47,7 +55,7 @@ private final class PreviewPreparation: @unchecked Sendable {
     }
     func prepare(_ file:FileHandle?,metadata:Data) async throws -> Data {
         let input=try PreviewInput.decode(metadata)
-        if input.kind == .retire {guard file == nil else{throw PreviewFailure.invalidInput};await retire(input.id);return try receipt(input.id,ready:false)}
+        if input.kind == .retire {guard file == nil else{throw PreviewFailure.invalidInput};await retire(input.id,sequence:input.sequence);return try receipt(input.id,ready:false)}
         if input.kind == .asset {
             let value=try snapshot(input.id)
             guard let resource=input.resourceURL,value.expected.contains(resource) else{throw PreviewFailure.invalidInput}
@@ -62,7 +70,7 @@ private final class PreviewPreparation: @unchecked Sendable {
             let markdown=try await Task.detached(priority:.userInitiated){try self.document(value)}.value
             try await publish(value,markdown:markdown);return try receipt(input.id,ready:true)
         }
-        begin(input.id)
+        try begin(input)
         let url=try await Task.detached(priority:.userInitiated){try PreviewInputCache(root:self.root.appendingPathComponent(input.id.uuidString)).prepare(input,file:file,cancelled:{!self.accepts(input.id)})}.value
         var value=Pending(input:input,file:url,assets:[:],expected:[])
         if let url,PreviewMarkdownDocument.supports(url) {
@@ -78,13 +86,14 @@ private final class PreviewPreparation: @unchecked Sendable {
         }
         try save(value);try await publish(value,markdown:nil);return try receipt(input.id,ready:true)
     }
-    func retire(_ id:UUID) async {
-        retireState(id)
+    func retire(_ id:UUID,sequence:UInt64?) async {
+        retireState(id,sequence:sequence)
         await MainActor.run {PreviewModel.shared.retire(id)}
         try? FileManager.default.removeItem(at:root.appendingPathComponent(id.uuidString))
     }
-    private func retireState(_ id:UUID) {
+    private func retireState(_ id:UUID,sequence:UInt64?) {
         lock.lock();defer{lock.unlock()}
+        if let sequence{latestSequence=max(latestSequence,sequence)}
         if current == id {current=nil}
         if pending?.input.id == id {pending=nil}
     }

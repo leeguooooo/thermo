@@ -92,6 +92,14 @@ private func text(_ data:Data) throws -> String {
         }
         try JSONSerialization.data(withJSONObject:["matchingSamples":imagePixels,"bestRGB":bestColor],options:.prettyPrinted).write(to:root.appendingPathComponent("image-inspection.json"))
         check(imagePixels>5,"associated image is visible in the sandboxed remote scene")
+        let newest=PreviewInput(kind:.directory,name:"Newer selection",sequence:20)
+        _=try await manager.prepareInput(preview,file:nil,metadata:newest.data())
+        do {_=try await manager.prepareInput(preview,file:nil,metadata:PreviewInput(kind:.directory,name:"Late older selection",sequence:19).data());check(false,"late older input cannot replace the latest selection")}
+        catch{check(true,"late older input cannot replace the latest selection")}
+        let retired=UUID()
+        _=try await manager.prepareInput(preview,file:nil,metadata:PreviewInput(id:retired,kind:.retire,name:"Closed before loading",sequence:21).data())
+        do {_=try await manager.prepareInput(preview,file:nil,metadata:PreviewInput(id:retired,kind:.directory,name:"Late closed input",sequence:21).data());check(false,"closed input cannot be revived by a late arrival")}
+        catch{check(true,"closed input cannot be revived by a late arrival")}
         let own=manager.modules.first(where:{$0.manifest.id == preview})?.pid
         let identity=own.flatMap{ProcessTable.identity($0)}
         let expectedPath=app.appendingPathComponent("Contents/Extensions/Preview.appex/Contents/MacOS/Preview").path
