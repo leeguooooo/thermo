@@ -38,7 +38,7 @@ import XCTest
         let apps=AppsModel(inventory:{_ in calls.hit();return []},reviewPlan:{app,_,_,_ in calls.hit();return .init(app:app,paths:[],bytes:0)},remove:{_ in calls.hit();return CleanResult(id:"fixture",trashed:true)},readOrphans:{_ in calls.hit();return []})
         let startup=StartupItemsModel(read:{calls.hit();return .init(items:[],issues:[])},change:{_,_ in calls.hit()},readBackground:{calls.hit();return .requiresAuthorization})
         let updates=AppUpdatesModel(read:{_ in calls.hit();return .init()},install:{item in calls.hit();return .init(token:item.token,outcome:"failed",message:"fixture")})
-        let native=NativeUpdatesModel(discovery:{_ in calls.hit();return .init()},checker:{source in calls.hit();return .init(source:source,status:"cancelled",message:"fixture")},installer:{_ in calls.hit();return .init(outcome:"failed",message:"fixture")},recoveryReader:{calls.hit();return .init()})
+        let native=NativeUpdatesModel(discovery:{_ in calls.hit();return .init(sources:[])},checker:{source in calls.hit();return .init(source:source,status:"cancelled",message:"fixture")},installer:{_ in calls.hit();return .init(outcome:"failed",message:"fixture")},recoveryReader:{calls.hit();return .init()})
         let home=FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
         defer{try? FileManager.default.removeItem(at:home)}
         let store=AppStoreModel(cache:StoreCache(home:home.path),fetch:{calls.hit();return nil})
