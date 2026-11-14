@@ -3,6 +3,15 @@ import XCTest
 
 @MainActor final class StatusMenuLayoutTests: XCTestCase {
     
+    func testDisabledHistoryHidesItsMenuEntryAndKeepsSettings() {
+        let context=StatusMenuLayout.RuntimeContext(historyEnabled:false,hasBattery:false,keepAwakeActive:false,focusTimerActive:false,
+            configuredCaptureEntriesAppear:false,menuBarQuickControlsAppear:false,updatesCanCheck:false,
+            moreToolsActiveStates:.init(cleanScreenActive:false,lowLatencyActive:false,batteryProtectionActive:false))
+        let layout=StatusMenuLayout.make(context:context,captureShortcutSuffix:"",pinShortcutSuffix:"",configuredCaptureEntries:[])
+        XCTAssertFalse(layout.productItems.contains{if case .history=$0{return true};return false})
+        XCTAssertTrue(layout.productItems.contains{if case .settings=$0{return true};return false})
+    }
+
     func testDisabledConnectionsHidesOnlyItsQuickMenuEntry() {
         let context=StatusMenuLayout.RuntimeContext(connectionsEnabled:false,hasBattery:false,keepAwakeActive:false,focusTimerActive:false,
             configuredCaptureEntriesAppear:false,menuBarQuickControlsAppear:false,updatesCanCheck:false,

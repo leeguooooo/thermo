@@ -93,4 +93,12 @@ import XCTest
         XCTAssertEqual(Set(fresh.records.map(\.id)),Set([first.id,second.id]))
         if let finish=try HistoryModule.prepareStop(models:models){await finish()}
     }
+    func testOffNavigationDoesNotCreateHistoryModel() {
+        let defaults=defaults();var creations=0
+        let models=AppModels(defaults:defaults,makeHistory:{gate in creations += 1;return HistoryModel(enabled:gate,reader:{.init(records:[])})})
+        let center=ModuleCenter(defaults:defaults,prepareBuiltinStop:{_ in try HistoryModule.prepareStop(models:models)})
+        center.setEnabled(HistoryModule.manifest.id,false)
+        XCTAssertFalse(center.shows(.history));XCTAssertFalse(models.historyLoaded);XCTAssertEqual(creations,0)
+    }
+
 }

@@ -25,6 +25,15 @@ final class ModuleCLITests: XCTestCase {
         XCTAssertThrowsError(try ModuleCLI.commandLease(["watch"],defaults:defaults,home:home.path))
         XCTAssertTrue(try FileManager.default.contentsOfDirectory(atPath:home.path).isEmpty)
     }
+    func testDisabledHistoryRefusesItsCommandsWithoutDisablingCleanup() throws {
+        let name="thermo-history-cli-"+UUID().uuidString,defaults=UserDefaults(suiteName:name)!
+        defer{defaults.removePersistentDomain(forName:name)}
+        defaults.set(false,forKey:ModulePreferences.key(BuiltinModuleManifests.history.id))
+        for words in [["history"],["history","show","fixture"],["history","undo","fixture"]] {
+            XCTAssertThrowsError(try ModuleCLI.requireBuiltinFeature(words,defaults:defaults))
+        }
+        XCTAssertNoThrow(try ModuleCLI.requireBuiltinFeature(["clean","overview"],defaults:defaults))
+    }
     func testDisabledSpaceRefusesItsCommandsAndKeepsTheDiskFeatureIndependent() throws {
         let name="thermo-space-cli-"+UUID().uuidString,defaults=UserDefaults(suiteName:name)!
         defer{defaults.removePersistentDomain(forName:name)}
