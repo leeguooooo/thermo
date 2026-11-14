@@ -85,8 +85,8 @@ final class PreviewMarkdownDocumentTests: XCTestCase {
         XCTAssertTrue(text.string.contains("**content**"))
     }
     @MainActor func testNativePreviewKeepsEmbeddedImagesTablesAndInterceptsLinks() throws {
-        let context=try XCTUnwrap(CGContext(data:nil,width:8,height:8,bitsPerComponent:8,bytesPerRow:32,space:CGColorSpaceCreateDeviceRGB(),bitmapInfo:CGImageAlphaInfo.premultipliedLast.rawValue))
-        context.setFillColor(CGColor(red:1,green:0,blue:1,alpha:1));context.fill(CGRect(x:0,y:0,width:8,height:8))
+        let context=try XCTUnwrap(CGContext(data:nil,width:8,height:8,bitsPerComponent:8,bytesPerRow:32,space:try XCTUnwrap(CGColorSpace(name:CGColorSpace.sRGB)),bitmapInfo:CGImageAlphaInfo.premultipliedLast.rawValue))
+        context.setFillColor(CGColor(srgbRed:1,green:0,blue:1,alpha:1));context.fill(CGRect(x:0,y:0,width:8,height:8))
         let image=try XCTUnwrap(context.makeImage()),png=try XCTUnwrap(NSBitmapImageRep(cgImage:image).representation(using:.png,properties:[:]))
         let document=PreviewMarkdownDocument.render("![local](image.png)\n\n| Alpha | Beta |\n| --- | --- |\n| One | Two |\n\n[Website](https://example.test)",baseURL:URL(fileURLWithPath:"/fixture"),readImage:{_,_ in png})
         let model=MarkdownPreviewState(document:document),content=try model.content()
@@ -95,7 +95,7 @@ final class PreviewMarkdownDocumentTests: XCTestCase {
         XCTAssertEqual(attachments.count,1)
         let actual=try XCTUnwrap((attachments.first?.attachmentCell as? NSTextAttachmentCell)?.image)
         let pixels=try XCTUnwrap(actual.tiffRepresentation.flatMap(NSBitmapImageRep.init(data:)))
-        let color=try XCTUnwrap(pixels.colorAt(x:0,y:0)?.usingColorSpace(.deviceRGB))
+        let color=try XCTUnwrap(pixels.colorAt(x:0,y:0)?.usingColorSpace(.sRGB))
         XCTAssertGreaterThan(color.redComponent,0.9);XCTAssertGreaterThan(color.blueComponent,0.9);XCTAssertLessThan(color.greenComponent,0.1)
         XCTAssertTrue(content.string.contains("Alpha"));XCTAssertTrue(content.string.contains("Two"))
         var opened:[URL]=[]
