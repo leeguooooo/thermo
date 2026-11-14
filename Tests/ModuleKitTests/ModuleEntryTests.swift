@@ -48,11 +48,18 @@ final class ModuleNavigationTests: XCTestCase {
         ])
     }
     func testCoreSlotsCannotBeClaimedByAModule() {
-        let m = feature("com.example.one", "1")
+        let m = feature("com.example.one", "4")
         let conflict = ModuleNavigation.conflicts([m]).first
-        XCTAssertEqual(conflict?.key, "1")
+        XCTAssertEqual(conflict?.key, "4")
         XCTAssertNil(conflict?.owner)
         XCTAssertEqual(conflict?.module, m.id)
+    }
+    func testPerformanceOwnsItsOldCoreSlotsOnlyWhileEnabled() {
+        let m = feature("com.example.navigation", "1")
+        let conflict = ModuleNavigation.conflicts([BuiltinModuleManifests.performance, m]).first
+        XCTAssertEqual(conflict?.owner, BuiltinModuleManifests.performance.id)
+        XCTAssertEqual(conflict?.key, "1")
+        XCTAssertTrue(ModuleNavigation.conflicts([m]).isEmpty)
     }
     func testOnlyTheProvidedActiveSetClaimsSlots() {
         let one = feature("com.example.one", "5"), two = feature("com.example.two", "5")
