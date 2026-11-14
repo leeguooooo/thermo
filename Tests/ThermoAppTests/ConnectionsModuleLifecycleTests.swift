@@ -80,4 +80,16 @@ import XCTest
         XCTAssertFalse(old === fresh);XCTAssertEqual(creations,2)
         if let finish=try ConnectionsModule.prepareStop(models:models){await finish()}
     }
+    func testCancellingQueuedBluetoothReadAllowsALaterRefreshWithoutPollingHardware() async {
+        let entered=expectation(description:"replacement read")
+        let model=ConnectionsModel(bluetoothReader:{entered.fulfill();return nil})
+        model.refreshBluetooth();model.stop()
+        await model.work.finish()
+        XCTAssertFalse(model.readingBluetooth)
+        model.refreshBluetooth();await fulfillment(of:[entered],timeout:2)
+        await model.work.finish()
+        XCTAssertFalse(model.readingBluetooth)
+        model.stopFeature();await model.finishFeatureStop()
+    }
+
 }

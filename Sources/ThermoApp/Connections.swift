@@ -544,7 +544,9 @@ final class ConnectionsModel: NSObject, ObservableObject, CLLocationManagerDeleg
         let resolveModels = visibility.active
         let read = bluetoothReader
         let resolve = computerModelResolver
-        bluetoothTask = work.run(priority: .utility) { [weak self] in
+        bluetoothTask = work.run(priority: .utility,onSkipped:{ [weak self] in
+            self?.finishBluetooth(nil,blocked:false,generation:generation)
+        }) { [weak self] in
             let report = read()
             if let report { await self?.previewBluetooth(report, generation: generation) }
             let hints: BonjourComputerModels.Batch
