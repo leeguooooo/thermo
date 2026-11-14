@@ -33,6 +33,14 @@ enum ModuleCLI {
         let settings = try supplied ?? defaults()
         guard ModulePreferences.isEnabled(manifest,in:settings) else { throw CLIError("\(manifest.name) is switched off. Enable it in Thermo Settings before using its commands.") }
     }
+    /// Existing native CLI routes keep their contracts; a disabled feature cannot start readers or fan writes.
+    /// Returning fans to system Auto and helper administration remain available for recovery.
+    static func requireBuiltinFeature(_ words: [String], defaults: UserDefaults? = nil) throws {
+        let root = words.first ?? ""
+        if root == "fan", words.dropFirst().first == "auto" { return }
+        let performance: Set<String> = ["", "temps", "temp", "t", "fans", "f", "power", "p", "watch", "w", "list", "ls", "get", "fan", "bench", "memory", "activity", "pulse", "status"]
+        if performance.contains(root) { try requireEnabled(BuiltinModuleManifests.performance, defaults: defaults) }
+    }
     static func normalized(_ path: [String]) -> [String] {
         var result = path
         if let root = result.first { result[0] = HostCommandSpecification.aliases[root] ?? root }

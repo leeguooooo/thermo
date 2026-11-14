@@ -6,6 +6,20 @@ import XCTest
 @testable import thermo
 
 final class ModuleCLITests: XCTestCase {
+    func testDisabledPerformanceRefusesLegacyReadersAndFanWritesButKeepsRecoveryAvailable() throws {
+        let name = "thermo-performance-cli-" + UUID().uuidString
+        let defaults = UserDefaults(suiteName: name)!
+        defer { defaults.removePersistentDomain(forName: name) }
+        defaults.set(false, forKey: ModulePreferences.key(BuiltinModuleManifests.performance.id))
+        for words in [[], ["temps"], ["t"], ["watch"], ["memory"], ["activity"], ["pulse"], ["status"], ["fan", "set", "all", "max"], ["fan", "curve", "0", "40:1000,80:4000"]] {
+            XCTAssertThrowsError(try ModuleCLI.requireBuiltinFeature(words, defaults: defaults), words.joined(separator: " "))
+        }
+        for words in [["fan", "auto"], ["helper", "status"], ["helper", "uninstall"], ["battery"], ["history"], ["capabilities"]] {
+            XCTAssertNoThrow(try ModuleCLI.requireBuiltinFeature(words, defaults: defaults))
+        }
+        defaults.set(true, forKey: ModulePreferences.key(BuiltinModuleManifests.performance.id))
+        XCTAssertNoThrow(try ModuleCLI.requireBuiltinFeature(["memory"], defaults: defaults))
+    }
     func testSharedDiskDeclarationIsValidAndAllRoutesAreUnique() throws {
         let catalog=try ModuleCommandCatalog(BuiltinModuleManifests.all,enabled:{_ in true})
         XCTAssertEqual(catalog.entries.count,10)
