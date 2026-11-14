@@ -160,7 +160,7 @@ struct DiskPages: View {
                 if let target = DiskModule.route(category.map(DiskPage.category) ?? .home) { page = target }
             }, cleanupDisabled: disk.scanning || disk.cleaning, openInSpaceLens: { path in
                 SpaceOverviewModel.shared.stop()
-                SpaceLensModel.shared.reveal(path)
+                AppModels.shared.revealInSpace(path)
                 page = .space(.browse)
             }).transition(.page)
         case let .category(c):

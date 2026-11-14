@@ -4533,4 +4533,6 @@ let zhHans: [String: String] = [
     "Preview was cancelled.": "预览已取消。",
     "Installed apps, leftovers, startup items and reviewed software updates.": "已安装应用、残留数据、启动项和经过核对的软件更新。",
     "Wait for app removal, startup changes or updates before switching this feature off.": "请等待应用移除、启动项变更或更新完成，再关闭此功能。",
+    "Folder sizes, large files and duplicate comparisons with reviewed removal.": "目录大小、大文件和重复文件比较，移除前逐项核对。",
+    "Wait for file removal or the current AI request before switching this feature off.": "请等待文件移除或当前 AI 请求完成，再关闭此功能。",
 ]

@@ -92,7 +92,13 @@ public enum BuiltinModuleManifests {
                  .init(id:"startup",kind:.page,title:"Startup items",scene:"apps:startup",parent:"installed"),
                  .init(id:"updates",kind:.page,title:"Updates",scene:"apps:updates",parent:"installed"),
                  .init(id:"store",kind:.page,title:"Store",scene:"apps:store",parent:"installed")])
-    public static let all = [disk, search, capture, menuBar, performance, apps]
+    public static let space = ModuleManifest(
+        id:"dev.thermo.space",name:"Space Lens",summary:"Folder sizes, large files and duplicate comparisons with reviewed removal.",
+        symbol:"square.grid.3x3.topleft.filled",version:"1.0.0",launch:.onDemand,enabledByDefault:true,
+        entries:[.init(id:"browse",kind:.page,title:"Space Lens",symbol:"square.grid.3x3.topleft.filled",scene:"space"),
+                 .init(id:"large",kind:.page,title:"Large files",scene:"space:large",parent:"browse"),
+                 .init(id:"duplicates",kind:.page,title:"Duplicates",scene:"space:duplicates",parent:"browse")])
+    public static let all = [disk, search, capture, menuBar, performance, apps, space]
 }
 
 public enum ModulePreferences {

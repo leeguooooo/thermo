@@ -40,6 +40,7 @@ enum ModuleCLI {
         if root == "search", words.dropFirst().first != "give-back-command-space" {
             try requireEnabled(BuiltinModuleManifests.search, defaults: defaults)
         }
+        if root == "space" {try requireEnabled(BuiltinModuleManifests.space,defaults:defaults)}
         if root == "apps" || root == "app" { try requireEnabled(BuiltinModuleManifests.apps,defaults:defaults) }
         if root == "fan", words.dropFirst().first == "auto" { return }
         let performance: Set<String> = ["", "temps", "temp", "t", "fans", "f", "power", "p", "watch", "w", "list", "ls", "get", "fan", "bench", "memory", "activity", "pulse", "status"]

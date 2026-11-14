@@ -6,6 +6,15 @@ import XCTest
 @testable import thermo
 
 final class ModuleCLITests: XCTestCase {
+    func testDisabledSpaceRefusesItsCommandsAndKeepsTheDiskFeatureIndependent() throws {
+        let name="thermo-space-cli-"+UUID().uuidString,defaults=UserDefaults(suiteName:name)!
+        defer{defaults.removePersistentDomain(forName:name)}
+        defaults.set(false,forKey:ModulePreferences.key(BuiltinModuleManifests.space.id))
+        for words in [["space"],["space","large"],["space","duplicates"],["space","trash"]] {
+            XCTAssertThrowsError(try ModuleCLI.requireBuiltinFeature(words,defaults:defaults))
+        }
+        XCTAssertNoThrow(try ModuleCLI.requireBuiltinFeature(["clean","overview"],defaults:defaults))
+    }
     func testDisabledSoftwareRefusesBothLegacyCommandAliases() throws {
         let name="thermo-apps-cli-"+UUID().uuidString,defaults=UserDefaults(suiteName:name)!
         defer{defaults.removePersistentDomain(forName:name)}
