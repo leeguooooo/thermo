@@ -38,9 +38,10 @@ private func text(_ data:Data) throws -> String {
         let probePID=(try JSONSerialization.jsonObject(with:firstProbe) as? [String:Any])?["pid"] as? Int
         check(probePID != nil,"unrelated probe started")
         let source=root.appendingPathComponent("inputs");try FileManager.default.createDirectory(at:source,withIntermediateDirectories:true)
-        let marker="FDPREVIEW"+String(UUID().uuidString.replacingOccurrences(of:"-",with:"").prefix(8).map { Character(UnicodeScalar(65 + Int(String($0),radix:16)!)!) })
+        let marker="FDPREVIEW"+String(UUID().uuidString.replacingOccurrences(of:"-",with:"").prefix(8).map { Character(UnicodeScalar(65 + Int(String($0),radix:16)! % 8)!) })
         let imageName="asset-"+UUID().uuidString+".png",document=source.appendingPathComponent(marker+".md")
         let bitmap=NSBitmapImageRep(bitmapDataPlanes:nil,pixelsWide:32,pixelsHigh:32,bitsPerSample:8,samplesPerPixel:4,hasAlpha:true,isPlanar:false,colorSpaceName:.deviceRGB,bytesPerRow:0,bitsPerPixel:0)!
+        for y in 0..<32 {for x in 0..<32 {bitmap.setColor(.magenta,atX:x,y:y)}}
         try bitmap.representation(using:.png,properties:[:])!.write(to:source.appendingPathComponent(imageName))
         try Data("# \(marker)\n\nSandbox document rendered. Selected **file input**.\n\n![asset](\(imageName))\n".utf8).write(to:document)
         let direct=try await manager.run(probe,command:"peek",arguments:JSONSerialization.data(withJSONObject:["path":document.path]))
@@ -75,6 +76,13 @@ private func text(_ data:Data) throws -> String {
         } while !sceneReady && Date()<deadline
         try visible.write(to:root.appendingPathComponent("preview-ocr.txt"),atomically:true,encoding:.utf8)
         check(sceneReady,"remote scene displays the selected input and rendered document (OCR)")
+        var imagePixels=0
+        if let png=try? Data(contentsOf:root.appendingPathComponent("preview.png")),let bitmap=NSBitmapImageRep(data:png) {
+            for y in stride(from:0,to:bitmap.pixelsHigh,by:4) {for x in stride(from:0,to:bitmap.pixelsWide,by:4) {
+                if let color=bitmap.colorAt(x:x,y:y)?.usingColorSpace(.deviceRGB),color.redComponent>0.8,color.blueComponent>0.8,color.greenComponent<0.2 {imagePixels += 1}
+            }}
+        }
+        check(imagePixels>5,"associated image is visible in the sandboxed remote scene")
         let own=manager.modules.first(where:{$0.manifest.id == preview})?.pid
         let identity=own.flatMap{ProcessTable.identity($0)}
         let expectedPath=app.appendingPathComponent("Contents/Extensions/Preview.appex/Contents/MacOS/Preview").path
