@@ -84,7 +84,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate, UNU
         applyDockPreference()
         installMainMenu()
         // Keep existing shortcut priority and prepare recovery UI before optional presets.
-        MenuBarManager.shared.start()
         // macOS hides status items that do not fit next to the notch, without telling anyone.
         // Check once the item has been laid out; if nobody can see it, open the panel ourselves.
         DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) { [weak self] in

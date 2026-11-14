@@ -1161,10 +1161,6 @@ struct SettingsView: View {
             section(tr("Features")) { ModuleSwitches(center: modules) }
             // Features with their own panel: one group of rows, each opening its panel.
             section(tr("Tools")) {
-                Button { MenuBarManagerPanel.shared.show() } label: {
-                    FeatureRow(title: tr("Manage menu bar"), symbol: "menubar.rectangle")
-                }.buttonStyle(.plain)
-                InspectorDivider(inset: 46)
                 Button { LocalSearchPanel.shared.show(settings: true) } label: {
                     FeatureRow(title: tr("Search apps and files"), symbol: "magnifyingglass")
                 }.buttonStyle(.plain)

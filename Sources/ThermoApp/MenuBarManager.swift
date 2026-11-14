@@ -4,6 +4,7 @@ import CMenuBar
 import MenuBarCore
 import SwiftUI
 import ThermoL10n
+import ModuleKit
 
 @MainActor private final class NativeMenuBarSession: MenuBarVisibilitySession {
     private let handle: TMMenuBarSession
@@ -59,7 +60,7 @@ enum MenuBarAppDiscovery {
 }
 
 @MainActor final class MenuBarManager: ObservableObject {
-    static let shared = MenuBarManager()
+    static let shared = MenuBarManager(featureEnabled: { ModuleCenter.shared.isOn(BuiltinModuleManifests.menuBar.id) })
     static let enabledKey = "menuBarManagementEnabled"
     static let autoCollapseKey = "menuBarAutoCollapseSeconds"
     @Published private(set) var enabled = false
@@ -75,6 +76,8 @@ enum MenuBarAppDiscovery {
     var autoCollapsePending: Bool { autoCollapse.isScheduled }
     private let autoCollapse = MenuBarAutoCollapse()
     private let defaults: UserDefaults
+    private let featureEnabled: @MainActor () -> Bool
+    private let providedController: MenuBarSessionController?
     private let accessibilityTrusted: @MainActor () -> Bool
     private let shortcutBackend: (any CleanScreenHotkeyBackend)?
     private let store: MenuBarSectionStore
@@ -91,7 +94,7 @@ enum MenuBarAppDiscovery {
     private var known: [String: ManagedMenuBarApp] = [:]
     private let ownBundle: String
     private lazy var controller: MenuBarSessionController = {
-        let controller = MenuBarSessionController { try NativeMenuBarSession(configuration: $0) }
+        let controller = providedController ?? MenuBarSessionController { try NativeMenuBarSession(configuration: $0) }
         controller.didChange = { [weak self] state in
             self?.handleVisibilityState(state)
         }
@@ -100,12 +103,16 @@ enum MenuBarAppDiscovery {
 
     var available: Bool { TMMenuBarSession.isAvailable() }
     var hasHiddenAssignments: Bool { !sections.assignments.isEmpty }
-    var canEdit: Bool { settingsReadable && available }
+    var featureOn: Bool { featureEnabled() }
+    var canEdit: Bool { featureOn && settingsReadable && available }
 
     init(defaults: UserDefaults = .standard, initialApps: [ManagedMenuBarApp] = [],
          accessibilityTrusted: @escaping @MainActor () -> Bool = { AXIsProcessTrusted() },
-         shortcutBackend: (any CleanScreenHotkeyBackend)? = nil) {
+         shortcutBackend: (any CleanScreenHotkeyBackend)? = nil,
+         featureEnabled: @escaping @MainActor () -> Bool = { true }, controller: MenuBarSessionController? = nil) {
         self.defaults = defaults
+        self.featureEnabled = featureEnabled
+        self.providedController = controller
         self.accessibilityTrusted = accessibilityTrusted
         self.shortcutBackend = shortcutBackend
         self.store = MenuBarSectionStore(defaults: defaults)
@@ -125,6 +132,7 @@ enum MenuBarAppDiscovery {
     /// Normal app startup only. Start fully visible after relaunch so login-time
     /// apps can register before a user explicitly collapses the sections.
     func start() {
+        guard featureOn else { return }
         terminating = false
         if defaults.bool(forKey: Self.enabledKey), settingsReadable, available, accessibilityTrusted() {
             enabled = true; trusted = true; observe()
@@ -133,6 +141,7 @@ enum MenuBarAppDiscovery {
     }
 
     func setPanelOpen(_ open: Bool) {
+        guard !open || featureOn else { return }
         panelOpen = open
         updateAutoCollapse()
         if open { refresh() }
@@ -187,7 +196,7 @@ enum MenuBarAppDiscovery {
     }
 
     func setReveal(_ reveal: MenuBarReveal) {
-        guard enabled else { return }
+        guard featureOn, enabled else { return }
         self.reveal = reveal
         error = nil
         apply()
@@ -282,6 +291,23 @@ enum MenuBarAppDiscovery {
         enabled = false; reveal = .all
         scanGeneration &+= 1
         controller.restore(); stopObserving()
+    }
+
+    /// Restore native visibility before retiring shortcuts or persisting the module switch.
+    func stopFeature() throws {
+        autoCollapse.cancel()
+        reveal = .all
+        scanGeneration &+= 1; loading = false
+        controller.restore()
+        guard state == .visible else {
+            throw BuiltinModules.StopRefused(description:error ?? tr("Menu bar restoration could not be confirmed. Try Restore all icons before switching this feature off."))
+        }
+        shortcuts.shutdown()
+        guard !shortcuts.uncertain else {
+            throw BuiltinModules.StopRefused(description:shortcuts.issue ?? tr("Menu bar shortcut release could not be confirmed. Restart Thermo."))
+        }
+        enabled = false; panelOpen = false
+        stopObserving()
     }
 
     private func apply() {
