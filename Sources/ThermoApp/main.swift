@@ -43,9 +43,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate, UNU
         Settings.register()
         AppInstallationMonitor.shared.start()
         AppControlHost.shared.start()
-        ModuleCenter.shared.start()
         CleanScreenShortcutModel.enableLive()
         LocalSearchShortcut.shared.activate()
+        ModuleCenter.shared.start()
         LocalSearchModel.shared.start()
         if CommandLine.arguments.contains("--search") { DispatchQueue.main.async { LocalSearchPanel.shared.show() } }
         BatteryCareModel.shared.restoreSavedPreference()
@@ -666,7 +666,7 @@ if let i = CommandLine.arguments.firstIndex(of: "--render-preview"), i + 1 < Com
         BatteryCareModel.shared.restoreSavedPreference()
     }
     installStandardMenus()
-    ModuleCenter.shared.start()
+    ModuleCenter.shared.start(prewarmBuiltins: false)
     let models = AppModels.shared
     func value(after flag: String) -> String? { args.firstIndex(of: flag).flatMap { $0 + 1 < args.count ? args[$0 + 1] : nil } }
     var page = value(after: "--page").flatMap(MainPage.init(argument:)) ?? .overview

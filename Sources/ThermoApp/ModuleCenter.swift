@@ -51,10 +51,12 @@ import ThermoL10n
     }
 
     /// Reads the modules and starts the ones that are on and meant to run in the background.
-    func start() {
+    func start(prewarmBuiltins: Bool = true) {
         guard !started else { return }
         started = true
-        for manifest in BuiltinModules.all where isOn(manifest.id) { startBuiltin(manifest.id) }
+        if prewarmBuiltins {
+            for manifest in BuiltinModules.all where isOn(manifest.id) { startBuiltin(manifest.id) }
+        }
         manager.onChange = { [weak self] _ in self?.refresh() }
         manager.kernel = { ModuleKernel.make(for: $0) }
         Task { @MainActor in

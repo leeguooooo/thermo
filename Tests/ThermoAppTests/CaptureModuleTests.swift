@@ -103,6 +103,16 @@ import XCTest
         center.setEnabled(CaptureModule.manifest.id, false)
         XCTAssertFalse(center.isOn(CaptureModule.manifest.id))
     }
+    func testOffscreenStartupDoesNotWarmNativeFeatures() {
+        let name = "thermo-capture-offscreen-" + UUID().uuidString
+        let defaults = UserDefaults(suiteName: name)!
+        defer { defaults.removePersistentDomain(forName: name) }
+        var starts: [String] = []
+        let center = ModuleCenter(defaults: defaults, startBuiltin: { starts.append($0) })
+        center.start(prewarmBuiltins: false)
+        XCTAssertTrue(starts.isEmpty)
+        XCTAssertTrue(center.isOn(CaptureModule.manifest.id))
+    }
     func testDisablingCaptureRemovesBothMenuGroups() {
         let context = StatusMenuLayout.RuntimeContext(captureEnabled: false, hasBattery: true, keepAwakeActive: false,
             focusTimerActive: false, configuredCaptureEntriesAppear: true, menuBarQuickControlsAppear: false,

@@ -8,6 +8,24 @@ final class CapturePinSessionTests:XCTestCase {
         _=NSApplication.shared
         let ctx=try XCTUnwrap(CGContext(data:nil,width:80,height:60,bitsPerComponent:8,bytesPerRow:0,space:CGColorSpaceCreateDeviceRGB(),bitmapInfo:CGImageAlphaInfo.premultipliedLast.rawValue));return try XCTUnwrap(ctx.makeImage())
     }
+    @MainActor func testFeatureSuspensionPreservesOpenPinsAndEditsForReenable() throws {
+        let root=FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        defer { try? FileManager.default.removeItem(at:root) }
+        let session=CapturePinSession(store:.init(root:root)),id=try session.open(image())
+        let editor=try XCTUnwrap(session.windows[id])
+        editor.model.pinTitle="Kept through module switch"
+        try session.flushForQuit()
+        session.suspendWindows()
+        XCTAssertTrue(session.windows.isEmpty)
+        XCTAssertEqual(session.count,1)
+        XCTAssertNil(session.library.pins.first { $0.id == id }?.closedAt)
+        let saved=try session.store.load(defaultName:"Default")
+        XCTAssertEqual(saved.pins.first { $0.id == id }?.title,"Kept through module switch")
+        XCTAssertNil(saved.pins.first { $0.id == id }?.closedAt)
+        session.restoreWindows()
+        XCTAssertEqual(session.windows[id]?.model.pinTitle,"Kept through module switch")
+        session.closeAll()
+    }
     @MainActor func testSwitchMoveCloseAndRestoreKeepGroupsIndependent() throws {
         let root=FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString);defer { try? FileManager.default.removeItem(at:root) }
         let session=CapturePinSession(store:.init(root:root)),firstGroup=session.library.currentGroupID
