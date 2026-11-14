@@ -4527,4 +4527,8 @@ let zhHans: [String: String] = [
     "More tools": "更多工具",
     "Nearby": "附近",
     "Signal reported by macOS; it may be cached and does not mean this device is connected.": "macOS 报告的信号可能来自缓存，不表示这台设备已连接。",
+    "Spotlight's shortcut could not be restored.": "未能恢复 Spotlight 快捷键。",
+    "Invalid preview input.": "预览输入无效。",
+    "Preview requires a read-only regular file.": "预览需要只读的普通文件。",
+    "Preview was cancelled.": "预览已取消。",
 ]
