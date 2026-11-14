@@ -1,0 +1,27 @@
+{
+  "interface": 1,
+  "id": "dev.thermo.search-preview",
+  "name": "File preview",
+  "summary": "Renders only input selected for Search. Managed by Search.",
+  "symbol": "eye",
+  "version": "1.0.0",
+  "launch": "onDemand",
+  "enabledByDefault": false,
+  "capabilities": [],
+  "entries": [
+    {
+      "id": "preview",
+      "kind": "page",
+      "title": "File preview",
+      "scene": "preview"
+    }
+  ],
+  "commands": [],
+  "localizations": {
+    "zh-Hans": {
+      "name": "文件预览",
+      "summary": "仅渲染搜索选中的输入，由搜索功能管理。",
+      "entry.preview.title": "文件预览"
+    }
+  }
+}

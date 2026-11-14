@@ -22,7 +22,7 @@ final class ModuleBundleTests: XCTestCase {
     func testOnlyWellFormedModulesInsideTheAppAreListed() throws {
         try add("Disk", id: "com.example.disk")
         try add("Builtin", id: "dev.thermo.disk")
-        try add("Search", id: "dev.thermo.search")
+        try add("Search", id: "com.example.search")
         try add("Renamed", id: "dev.thermo.capture", bundleID: "dev.thermo.other")
         try add("Elsewhere", id: "dev.thermo.fans", point: "com.example.point")
         try add("Empty", id: "dev.thermo.empty", manifest: false)
@@ -32,7 +32,7 @@ final class ModuleBundleTests: XCTestCase {
         try Data().write(to: app.appendingPathComponent("Contents/Extensions/dev.thermo.module.appextensionpoint"))
 
         let found = ModuleBundles.installed(in: app)
-        XCTAssertEqual(found.modules.map(\.manifest.id), ["com.example.disk", "dev.thermo.search"])
+        XCTAssertEqual(found.modules.map(\.manifest.id), ["com.example.disk", "com.example.search"])
         XCTAssertEqual(found.problems.count, 6, "\(found.problems)")
         let text = found.problems.joined(separator: "\n")
         XCTAssertTrue(text.contains("Renamed.appex: bundle id dev.thermo.other differs from manifest id dev.thermo.capture"), text)

@@ -228,6 +228,44 @@ public enum ModuleError: Error, CustomStringConvertible, Equatable {
     }
 
     /// Embeds one of the module's scenes. The module stays running until `detach`.
+    public func prepareInput(_ id: String, file: FileHandle?, metadata: Data, timeout: TimeInterval = 15) async throws -> Data {
+        guard metadata.count <= 262_144, timeout.isFinite, timeout > 0, timeout <= 120 else { throw ModuleError.failed("invalid module input") }
+        if let file {
+            let flags = fcntl(file.fileDescriptor, F_GETFL)
+            var info = stat()
+            guard flags >= 0, flags & O_ACCMODE == O_RDONLY, fstat(file.fileDescriptor, &info) == 0,
+                  info.st_mode & S_IFMT == S_IFREG else { throw ModuleError.failed("module input must be a read-only regular file") }
+        }
+        guard let slot = slots[id] else { throw ModuleError.unknown(id) }
+        guard slot.lifecycle.enabled else { throw ModuleError.off(id) }
+        send(.acquire, to: slot)
+        defer { send(.release, to: slot) }
+        try await ready(slot)
+        guard let connection = slot.connection else { throw ModuleError.exited(id) }
+        return try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Data, Error>) in
+            let once = Once()
+            let deadline = Task {
+                try? await Task.sleep(nanoseconds: UInt64(timeout * 1e9))
+                guard !Task.isCancelled else { return }
+                once.run { continuation.resume(throwing: ModuleError.failed("module input timed out")) }
+            }
+            let proxy = connection.remoteObjectProxyWithErrorHandler { _ in
+                deadline.cancel(); once.run { continuation.resume(throwing: ModuleError.exited(id)) }
+            } as? ModuleXPC
+            guard let receive = proxy?.prepareInput else {
+                deadline.cancel(); once.run { continuation.resume(throwing: ModuleError.failed("module does not accept file inputs")) }; return
+            }
+            receive(file, metadata) { data, issue in
+                deadline.cancel()
+                once.run {
+                    if let data, data.count <= 262_144 { continuation.resume(returning: data) }
+                    else { continuation.resume(throwing: ModuleError.failed(issue ?? "invalid module input receipt")) }
+                }
+            }
+        }
+    }
+
+    /// Embeds one of the module's scenes. The module stays running until `detach`.
     public func attach(_ id: String, scene name: String) throws -> Scene {
         guard let slot = slots[id] else { throw ModuleError.unknown(id) }
         guard slot.lifecycle.enabled else { throw ModuleError.off(id) }

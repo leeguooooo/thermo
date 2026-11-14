@@ -44,9 +44,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate, UNU
         AppInstallationMonitor.shared.start()
         AppControlHost.shared.start()
         CleanScreenShortcutModel.enableLive()
-        LocalSearchShortcut.shared.activate()
         ModuleCenter.shared.start()
-        LocalSearchModel.shared.start()
         if CommandLine.arguments.contains("--search") { DispatchQueue.main.async { LocalSearchPanel.shared.show() } }
         BatteryCareModel.shared.restoreSavedPreference()
         _ = AppModels.shared.updates  // Sparkle starts checking with the app
@@ -175,7 +173,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate, UNU
         main.addItem(appItem)
         let appMenu = NSMenu()
         appMenu.addItem(withTitle: tr("Open Console"), action: #selector(openFromMenu), keyEquivalent: "o").target = self
-        appMenu.addItem(withTitle: tr("Search apps and files"), action: #selector(openSearchFromMenu), keyEquivalent: "").target = self
+        let searchItem = appMenu.addItem(withTitle: tr("Search apps and files"), action: #selector(openSearchFromMenu), keyEquivalent: "")
+        searchItem.target = self; searchItem.representedObject = SearchModule.manifest.id
         appMenu.addItem(withTitle: tr("Capture screen…"), action: #selector(captureFromMenu), keyEquivalent: "").target = self
         appMenu.addItem(withTitle: tr("Pin clipboard"), action: #selector(pinFromMenu), keyEquivalent: "").target = self
         appMenu.addItem(withTitle: tr("Open image…"), action: #selector(openImageFromMenu), keyEquivalent: "").target = self
@@ -200,8 +199,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate, UNU
 
     @objc private func openSearchFromMenu() { LocalSearchPanel.shared.show() }
     func menuNeedsUpdate(_ menu: NSMenu) {
-        for item in menu.items where item.representedObject as? String == CaptureModule.manifest.id {
-            item.isHidden = !CaptureModule.enabled
+        for item in menu.items {
+            if let id = item.representedObject as? String, BuiltinModules.manifest(id) != nil {
+                item.isHidden = !ModuleCenter.shared.isOn(id)
+            }
         }
     }
     @objc private func captureFromMenu() { CaptureWorkspace.shared.capture() }

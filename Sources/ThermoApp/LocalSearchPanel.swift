@@ -5,7 +5,12 @@ import SwiftUI
 import ThermoL10n
 
 @MainActor final class LocalSearchPanel: NSWindowController, NSWindowDelegate {
-    static let shared = LocalSearchPanel()
+    private static var panel: LocalSearchPanel?
+    static var shared: LocalSearchPanel {
+        if let panel { return panel }
+        let value = LocalSearchPanel(); panel = value; return value
+    }
+    static func closeIfOpen() { panel?.hide(restoreFocus: false); panel?.window?.close(); panel = nil }
     private var previousApplication: NSRunningApplication?
     private var preview: NSWindow?
     private var presentingPreview = false
@@ -36,6 +41,7 @@ import ThermoL10n
     required init?(coder: NSCoder) { fatalError("init(coder:) is not used") }
     func toggle() { window?.isVisible == true ? hide() : show() }
     func show(settings: Bool = false) {
+        guard model.enabled else { return }
         model.start()
         model.applyDefaultFoldersOnce()
         model.refreshApplications()

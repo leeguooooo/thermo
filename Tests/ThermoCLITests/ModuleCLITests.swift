@@ -6,6 +6,16 @@ import XCTest
 @testable import thermo
 
 final class ModuleCLITests: XCTestCase {
+    func testDisabledSearchRejectsQueriesIndexingAndTakeoverButAllowsGivingSpotlightBack() throws {
+        let name="thermo-search-cli-"+UUID().uuidString
+        let defaults=UserDefaults(suiteName:name)!
+        defer{defaults.removePersistentDomain(forName:name)}
+        defaults.set(false,forKey:ModulePreferences.key(BuiltinModuleManifests.search.id))
+        for words in [["search"],["search","query","selected"],["search","index"],["search","open"],["search","use-command-space"]] {
+            XCTAssertThrowsError(try ModuleCLI.requireBuiltinFeature(words,defaults:defaults))
+        }
+        XCTAssertNoThrow(try ModuleCLI.requireBuiltinFeature(["search","give-back-command-space"],defaults:defaults))
+    }
     func testDisabledPerformanceRefusesLegacyReadersAndFanWritesButKeepsRecoveryAvailable() throws {
         let name = "thermo-performance-cli-" + UUID().uuidString
         let defaults = UserDefaults(suiteName: name)!

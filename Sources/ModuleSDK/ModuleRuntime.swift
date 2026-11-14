@@ -62,9 +62,11 @@ public struct Kernel: Sendable {
 public final class ModuleRuntime: @unchecked Sendable {
     public static let shared = ModuleRuntime()
     public typealias Command = @Sendable (_ arguments: [String: Any], _ kernel: Kernel) async throws -> Any
+    public typealias FileInput = @Sendable (_ file: FileHandle?, _ metadata: Data) async throws -> Data
 
     private let lock = NSLock()
     private var commands: [String: Command] = [:]
+    private var input: FileInput?
     private var kernelConnection: NSXPCConnection?
 
     public var kernel: Kernel { Kernel(connection: { [weak self] in self?.current() }) }
@@ -75,9 +77,26 @@ public final class ModuleRuntime: @unchecked Sendable {
     public func command(_ id: String, _ run: @escaping Command) {
         lock.lock(); commands[id] = run; lock.unlock()
     }
+    /// Receives only descriptors already opened by the host. This adds no filesystem or network rights.
+    public func fileInput(_ receive: @escaping FileInput) {
+        lock.lock(); input = receive; lock.unlock()
+    }
+    private func inputHandler() -> FileInput? { lock.lock(); defer { lock.unlock() }; return input }
+    private func commandHandler(_ id: String) -> Command? { lock.lock(); defer { lock.unlock() }; return commands[id] }
+    private func receive(_ file: FileHandle?, metadata: Data) async -> (Data?, String?) {
+        defer { try? file?.close() }
+        guard metadata.count <= 262_144 else { return (nil, "input metadata is too large") }
+        let handler = inputHandler()
+        guard let handler else { return (nil, "this module does not accept file inputs") }
+        do {
+            let answer = try await handler(file, metadata)
+            guard answer.count <= 262_144 else { return (nil, "input receipt is too large") }
+            return (answer, nil)
+        } catch { return (nil, String(describing: error)) }
+    }
 
     func run(_ id: String, arguments: Data) async -> (Data?, String?) {
-        lock.lock(); let command = commands[id]; lock.unlock()
+        let command = commandHandler(id)
         guard let command else { return (nil, "unknown command \(id)") }
         let input = ((try? JSONSerialization.jsonObject(with: arguments)) as? [String: Any]) ?? [:]
         do {
@@ -110,6 +129,9 @@ public final class ModuleRuntime: @unchecked Sendable {
         func interface(reply: @escaping @Sendable (Int) -> Void) { reply(ModuleManifest.currentInterface) }
         func run(_ command: String, arguments: Data, reply: @escaping @Sendable (Data?, String?) -> Void) {
             Task { let (data, problem) = await runtime.run(command, arguments: arguments); reply(data, problem) }
+        }
+        func prepareInput(_ file: FileHandle?, metadata: Data, reply: @escaping @Sendable (Data?, String?) -> Void) {
+            Task { let (data, problem) = await runtime.receive(file, metadata: metadata); reply(data, problem) }
         }
     }
 }

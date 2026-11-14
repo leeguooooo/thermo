@@ -3,6 +3,7 @@ import AppKit
 import Carbon
 import SwiftUI
 import ThermoL10n
+import ModuleKit
 
 extension CleanScreenKeyBinding {
     var validForSearch: Bool {
@@ -13,7 +14,7 @@ extension CleanScreenKeyBinding {
 }
 
 @MainActor final class LocalSearchShortcut: ObservableObject {
-    static let shared = LocalSearchShortcut()
+    static let shared = LocalSearchShortcut(module: BuiltinModuleManifests.search)
     static let key = "dev.thermo.search.shortcut"
     static let commandSpace = CleanScreenKeyBinding(keyCode: 49, modifiers: UInt32(cmdKey), keyLabel: "Space")
     static let optionSpace = CleanScreenKeyBinding(keyCode: 49, modifiers: UInt32(optionKey), keyLabel: "Space")
@@ -24,14 +25,18 @@ extension CleanScreenKeyBinding {
     @Published private(set) var spotlightReleased = false
     /// Another app already using ⌘Space, shown before the user tries to take it over.
     @Published private(set) var commandSpaceHolder: SpotlightShortcut.Holder?
-    @Published private(set) var commandSpaceOfferDismissed = UserDefaults.standard.bool(forKey: offerDismissedKey)
+    @Published private(set) var commandSpaceOfferDismissed: Bool
+    private static let resumeCommandSpaceKey = "dev.thermo.search.resumeCommandSpace"
+    private let defaults: UserDefaults
+    private let module: ModuleManifest?
+    private var featureOn: Bool { module.map { ModulePreferences.isEnabled($0, in: defaults) } ?? true }
     private static let offerDismissedKey = "dev.thermo.search.commandSpaceOfferDismissed"
     /// The one-time ⌘Space offer at the top of the search panel; settings keep the same choice afterwards.
     var offersCommandSpace: Bool {
         !commandSpaceOfferDismissed && !spotlightReleased && binding?.sameGesture(Self.commandSpace) != true
     }
     func dismissCommandSpaceOffer() {
-        commandSpaceOfferDismissed = true; UserDefaults.standard.set(true, forKey: Self.offerDismissedKey)
+        commandSpaceOfferDismissed = true; defaults.set(true, forKey: Self.offerDismissedKey)
     }
     private let backend: CleanScreenHotkeyBackend
     private let spotlight: SpotlightShortcut
@@ -40,15 +45,18 @@ extension CleanScreenKeyBinding {
     private var lease: CleanScreenHotkeyLease?
     private var retained: [CleanScreenHotkeyLease] = []
     private var held = false, active = false, uncertain = false
-    init(backend: CleanScreenHotkeyBackend? = nil, spotlight: SpotlightShortcut? = nil, action: (@MainActor () -> Void)? = nil,
+    private var shortcutGeneration = UUID()
+    init(backend: CleanScreenHotkeyBackend? = nil, spotlight: SpotlightShortcut? = nil, defaults: UserDefaults = .standard, module: ModuleManifest? = nil, action: (@MainActor () -> Void)? = nil,
          record: @escaping (OperationRecord) -> Void = { OperationJournal.record($0) }) {
         self.record = record
+        self.defaults = defaults; self.module = module
+        self.commandSpaceOfferDismissed = defaults.bool(forKey: Self.offerDismissedKey)
         self.backend = backend ?? CarbonCleanScreenHotkeys(validate: { $0.validForSearch }, shared: { $0.sameGesture(Self.commandSpace) })
         self.spotlight = spotlight ?? .system
         self.action = action ?? { LocalSearchPanel.shared.toggle() }
     }
     func activate() {
-        guard !active else { return }; active = true
+        guard featureOn, !active, !uncertain else { return }; active = true
         spotlightReleased = spotlight.released()
         defer {
             refreshCommandSpaceHolder()
@@ -56,26 +64,30 @@ extension CleanScreenKeyBinding {
                 issue = tr("Spotlight is using ⌘Space again. Let Thermo take it over or record another shortcut.")
             }
         }
-        let defaults = UserDefaults.standard
         if defaults.bool(forKey: Self.key + ".disabled") { return }
         if let data = defaults.data(forKey: Self.key) {
             guard data.count <= 1024, let saved = try? JSONDecoder().decode(CleanScreenKeyBinding.self, from: data), saved.validForSearch else {
                 issue = tr("The saved shortcut is invalid. Record it again."); return
             }
-            apply(saved, persist: false)
+            if saved.sameGesture(Self.commandSpace), defaults.bool(forKey: Self.resumeCommandSpaceKey) {
+                takeOverSpotlight()
+                if binding?.sameGesture(Self.commandSpace) == true { defaults.removeObject(forKey: Self.resumeCommandSpaceKey) }
+            } else { apply(saved, persist: false) }
         } else { apply(Self.optionSpace, persist: false) }
     }
     func apply(_ value: CleanScreenKeyBinding?, persist: Bool = true) {
+        guard featureOn else { issue = tr("This feature is switched off."); return }
         guard !uncertain else { return }
         guard value?.validForSearch ?? true else { issue = tr("Include Command, Control or Option in the shortcut."); return }
         recording = false
         if binding == value { return }
         if let value, binding?.sameGesture(value) == true { binding = value; save(value, persist: persist); return }
+        let registration = UUID()
         let next: CleanScreenHotkeyLease?
         do {
             next = try value.map { candidate in
                 try backend.register(candidate) { [weak self] down in
-                    guard let self else { return }
+                    guard let self, self.active, self.featureOn, self.shortcutGeneration == registration else { return }
                     if !down { self.held = false }
                     else if !self.held, !self.recording, !self.uncertain { self.held = true; self.action() }
                 }
@@ -90,7 +102,7 @@ extension CleanScreenKeyBinding {
             return
         }
         let previous = binding
-        lease = next; binding = value; held = false; issue = nil; save(value, persist: persist)
+        lease = next; binding = value; held = false; active = true; shortcutGeneration = registration; issue = nil; save(value, persist: persist)
         // Moving off ⌘Space hands it back to Spotlight so it is never left without a shortcut.
         if previous?.sameGesture(Self.commandSpace) == true, value?.sameGesture(Self.commandSpace) != true, spotlight.released() {
             restoreSpotlight()
@@ -102,6 +114,7 @@ extension CleanScreenKeyBinding {
         commandSpaceHolder = ours ? nil : spotlight.otherHolder()
     }
     func takeOverSpotlight() {
+        guard featureOn else { issue = tr("This feature is switched off."); return }
         guard !uncertain else { return }
         refreshCommandSpaceHolder()
         if let holder = commandSpaceHolder { issue = Self.heldMessage(holder); return }
@@ -118,6 +131,8 @@ extension CleanScreenKeyBinding {
     /// Gives ⌘Space back to Spotlight; search falls back to ⌥Space when it was using ⌘Space.
     func giveBackToSpotlight() {
         guard restoreSpotlight() else { return }
+        defaults.removeObject(forKey: Self.resumeCommandSpaceKey)
+        if !featureOn { save(Self.optionSpace, persist: true); return }
         if binding?.sameGesture(Self.commandSpace) == true { apply(Self.optionSpace) }
         refreshCommandSpaceHolder()
     }
@@ -135,14 +150,28 @@ extension CleanScreenKeyBinding {
     }
     private func save(_ value: CleanScreenKeyBinding?, persist: Bool) {
         guard persist else { return }
-        UserDefaults.standard.set(value == nil, forKey: Self.key + ".disabled")
-        if let value { UserDefaults.standard.set(try? JSONEncoder().encode(value), forKey: Self.key) }
-        else { UserDefaults.standard.removeObject(forKey: Self.key) }
+        defaults.set(value == nil, forKey: Self.key + ".disabled")
+        if let value { defaults.set(try? JSONEncoder().encode(value), forKey: Self.key) }
+        else { defaults.removeObject(forKey: Self.key) }
     }
-    func shutdown() {
-        do { try lease?.release(); lease = nil } catch { issue = tr("Shortcut release could not be confirmed.") }
-        for item in retained { try? item.release() }; retained.removeAll()
+    func deactivate(restoringSpotlight: Bool = true) throws {
+        let ownedCommandSpace = binding?.sameGesture(Self.commandSpace) == true && spotlight.released()
+        if restoringSpotlight, spotlight.released() {
+            guard restoreSpotlight() else { throw SpotlightShortcut.Failure(message: issue ?? tr("Spotlight's shortcut could not be restored.")) }
+            if ownedCommandSpace { defaults.set(true, forKey: Self.resumeCommandSpaceKey) }
+        }
+        active = false; held = false; recording = false; shortcutGeneration = UUID()
+        var failed: [CleanScreenHotkeyLease] = []
+        for item in (lease.map { [$0] } ?? []) + retained {
+            do { try item.release() } catch { failed.append(item) }
+        }
+        lease = nil; retained = failed; binding = nil; uncertain = !failed.isEmpty
+        if uncertain {
+            issue = tr("Shortcut release could not be confirmed.")
+            throw SpotlightShortcut.Failure(message: issue!)
+        }
     }
+    func shutdown() { try? deactivate(restoringSpotlight: false) }
 }
 
 struct SearchShortcutRecorder: NSViewRepresentable {

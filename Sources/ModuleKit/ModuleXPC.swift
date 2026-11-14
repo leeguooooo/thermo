@@ -17,6 +17,8 @@ import Foundation
     func interface(reply: @escaping @Sendable (Int) -> Void)
     /// Runs one of the manifest's commands. `arguments` is a JSON object keyed by parameter name.
     func run(_ command: String, arguments: Data, reply: @escaping @Sendable (Data?, String?) -> Void)
+    /// Host-supplied input, not permission to open paths. Optional so existing interface-1 modules remain usable.
+    @objc optional func prepareInput(_ file: FileHandle?, metadata: Data, reply: @escaping @Sendable (Data?, String?) -> Void)
 }
 
 /// Scene-specific connection, separate from commands and from privileged kernel requests.

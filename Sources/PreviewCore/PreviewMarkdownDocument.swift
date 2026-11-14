@@ -1,31 +1,31 @@
 import Foundation
 @_implementationOnly import Markdown
 
-struct SearchMarkdownDocument: Sendable {
-    struct Heading: Sendable { let level: Int; let title: String; let anchor: String }
-    let source: String
-    let body: String
-    let headings: [Heading]
+public struct PreviewMarkdownDocument: Sendable {
+    public struct Heading: Sendable { public let level: Int; public let title: String; public let anchor: String }
+    public let source: String
+    public let body: String
+    public let headings: [Heading]
 
-    static func supports(_ url: URL) -> Bool { ["md", "markdown", "mdown", "mkd", "mdx"].contains(url.pathExtension.lowercased()) }
+    public static func supports(_ url: URL) -> Bool { ["md", "markdown", "mdown", "mkd", "mdx"].contains(url.pathExtension.lowercased()) }
 
-    static func load(_ url: URL) throws -> SearchMarkdownDocument {
+    public static func load(_ url: URL, baseURL: URL? = nil, readImage: ((URL, Int) -> Data?)? = nil) throws -> PreviewMarkdownDocument {
         let handle = try FileHandle(forReadingFrom: url)
         defer { try? handle.close() }
         let data = try handle.read(upToCount: 2 * 1024 * 1024 + 1) ?? Data()
         guard data.count <= 2 * 1024 * 1024 else { throw PreviewError.tooLarge }
         guard let source = String(data: data, encoding: .utf8) ?? String(data: data, encoding: .utf16) else { throw PreviewError.encoding }
-        return render(source, baseURL: url.deletingLastPathComponent())
+        return render(source, baseURL: baseURL ?? url.deletingLastPathComponent(), readImage: readImage)
     }
 
-    static func render(_ source: String, baseURL: URL? = nil) -> SearchMarkdownDocument {
-        var renderer = Renderer(baseURL: baseURL.map { URL(fileURLWithPath: $0.path, isDirectory: true).standardizedFileURL })
+    public static func render(_ source: String, baseURL: URL? = nil, readImage: ((URL, Int) -> Data?)? = nil) -> PreviewMarkdownDocument {
+        var renderer = Renderer(baseURL: baseURL.map { URL(fileURLWithPath: $0.path, isDirectory: true).standardizedFileURL }, readImage: readImage)
         let body = renderer.visit(Document(parsing: source))
         return .init(source: source, body: body, headings: renderer.headings)
     }
 
-    func html(showSource: Bool = false) -> String {
-        let outline = headings.count < 3 || showSource ? "" : "<nav aria-label=\"Contents\">" + headings.map {
+    public func html(showSource: Bool = false, includeOutline: Bool = true) -> String {
+        let outline = !includeOutline || headings.count < 3 || showSource ? "" : "<nav aria-label=\"Contents\">" + headings.map {
             "<a class=\"depth-\($0.level)\" href=\"#\($0.anchor)\">\(Self.escape($0.title))</a>"
         }.joined() + "</nav>"
         return """
@@ -35,14 +35,14 @@ struct SearchMarkdownDocument: Sendable {
         """
     }
 
-    static func escape(_ text: String) -> String {
+    public static func escape(_ text: String) -> String {
         text.replacingOccurrences(of: "&", with: "&amp;").replacingOccurrences(of: "<", with: "&lt;")
             .replacingOccurrences(of: ">", with: "&gt;").replacingOccurrences(of: "\"", with: "&quot;").replacingOccurrences(of: "'", with: "&#39;")
     }
 
-    enum PreviewError: LocalizedError {
+    public enum PreviewError: LocalizedError {
         case tooLarge, encoding
-        var errorDescription: String? {
+        public var errorDescription: String? {
             switch self {
             case .tooLarge: return "This document is too large to preview. Open it in its default app."
             case .encoding: return "This document's text encoding is not supported. Open it in its default app."
@@ -57,9 +57,10 @@ struct SearchMarkdownDocument: Sendable {
         var images: [URL: String] = [:]
         var imageBytes = 0
         var baseURL: URL?
+        var readImage: ((URL, Int) -> Data?)?
         mutating func defaultVisit(_ markup: Markup) -> String { markup.children.map { visit($0) }.joined() }
         mutating func wrapped(_ node: Markup, _ tag: String) -> String { "<\(tag)>" + defaultVisit(node) + "</\(tag)>" }
-        mutating func visitText(_ text: Markdown.Text) -> String { SearchMarkdownDocument.escape(text.string) }
+        mutating func visitText(_ text: Markdown.Text) -> String { PreviewMarkdownDocument.escape(text.string) }
         mutating func visitParagraph(_ paragraph: Paragraph) -> String { wrapped(paragraph, "p") }
         mutating func visitHeading(_ heading: Markdown.Heading) -> String {
             let slug = heading.plainText.lowercased().unicodeScalars.filter {
@@ -84,20 +85,20 @@ struct SearchMarkdownDocument: Sendable {
         mutating func visitThematicBreak(_ node: ThematicBreak) -> String { "<hr>" }
         mutating func visitLineBreak(_ node: LineBreak) -> String { "<br>" }
         mutating func visitSoftBreak(_ node: SoftBreak) -> String { "\n" }
-        mutating func visitInlineCode(_ node: InlineCode) -> String { "<code>" + SearchMarkdownDocument.escape(node.code) + "</code>" }
+        mutating func visitInlineCode(_ node: InlineCode) -> String { "<code>" + PreviewMarkdownDocument.escape(node.code) + "</code>" }
         mutating func visitCodeBlock(_ node: CodeBlock) -> String {
-            let language = SearchMarkdownDocument.escape(node.language ?? "")
-            return "<section class=\"code-block\"><div class=\"code-language\">\(language)</div><pre><code>" + SearchMarkdownDocument.escape(node.code) + "</code></pre></section>"
+            let language = PreviewMarkdownDocument.escape(node.language ?? "")
+            return "<section class=\"code-block\"><div class=\"code-language\">\(language)</div><pre><code>" + PreviewMarkdownDocument.escape(node.code) + "</code></pre></section>"
         }
         mutating func visitLink(_ node: Markdown.Link) -> String {
             guard let destination = node.destination, Self.allowedLink(destination) else { return defaultVisit(node) }
             let resolved = destination.hasPrefix("#") ? destination : URL(string: destination, relativeTo: baseURL)?.absoluteString ?? destination
-            return "<a href=\"\(SearchMarkdownDocument.escape(resolved))\">" + defaultVisit(node) + "</a>"
+            return "<a href=\"\(PreviewMarkdownDocument.escape(resolved))\">" + defaultVisit(node) + "</a>"
         }
         mutating func visitImage(_ node: Markdown.Image) -> String {
-            let alt = SearchMarkdownDocument.escape(node.plainText)
+            let alt = PreviewMarkdownDocument.escape(node.plainText)
             guard let source = node.source, let data = imageSource(source) else { return "<span class=\"image-placeholder\">\(alt)</span>" }
-            return "<img src=\"\(SearchMarkdownDocument.escape(data))\" alt=\"\(alt)\" loading=\"lazy\">"
+            return "<img src=\"\(PreviewMarkdownDocument.escape(data))\" alt=\"\(alt)\" loading=\"lazy\">"
         }
         mutating func visitHTMLBlock(_ node: HTMLBlock) -> String { safeHTML(node.rawHTML) }
         mutating func visitInlineHTML(_ node: InlineHTML) -> String { safeHTML(node.rawHTML) }
@@ -118,7 +119,7 @@ struct SearchMarkdownDocument: Sendable {
             var result = "", cursor = 0
             let tags: Set<String> = ["p", "div", "span", "br", "hr", "strong", "b", "em", "i", "s", "del", "code", "pre", "kbd", "sub", "sup", "ul", "ol", "li", "blockquote", "table", "thead", "tbody", "tr", "th", "td", "details", "summary", "h1", "h2", "h3", "h4", "h5", "h6", "a", "img"]
             func text(_ value: String) -> String {
-                SearchMarkdownDocument.escape(value).replacingOccurrences(of: #"&amp;((?:amp|lt|gt|quot|apos|#[0-9]+|#x[0-9a-fA-F]+);)"#, with: "&$1", options: .regularExpression)
+                PreviewMarkdownDocument.escape(value).replacingOccurrences(of: #"&amp;((?:amp|lt|gt|quot|apos|#[0-9]+|#x[0-9a-fA-F]+);)"#, with: "&$1", options: .regularExpression)
             }
             for match in expression.matches(in: raw, range: NSRange(location: 0, length: ns.length)) {
                 result += text(ns.substring(with: NSRange(location: cursor, length: match.range.location - cursor)))
@@ -129,16 +130,16 @@ struct SearchMarkdownDocument: Sendable {
                 if ns.substring(with: match.range).hasPrefix("</") { result += "</" + name + ">"; continue }
                 let attributes = Self.attributes(ns.substring(with: match.range(at: 2)))
                 if name == "img" {
-                    let alt = SearchMarkdownDocument.escape(attributes["alt"] ?? "")
+                    let alt = PreviewMarkdownDocument.escape(attributes["alt"] ?? "")
                     if let source = attributes["src"], let data = imageSource(source) {
-                        result += "<img src=\"" + SearchMarkdownDocument.escape(data) + "\" alt=\"" + alt + "\">"
+                        result += "<img src=\"" + PreviewMarkdownDocument.escape(data) + "\" alt=\"" + alt + "\">"
                     } else { result += "<span class=\"image-placeholder\">" + alt + "</span>" }
                     continue
                 }
                 result += "<" + name
                 if name == "a", let href = attributes["href"], Self.allowedLink(href) {
                     let resolved = href.hasPrefix("#") ? href : URL(string: href, relativeTo: baseURL)?.absoluteString ?? href
-                    result += " href=\"" + SearchMarkdownDocument.escape(resolved) + "\""
+                    result += " href=\"" + PreviewMarkdownDocument.escape(resolved) + "\""
                 }
                 if ["left", "center", "right"].contains(attributes["align"] ?? "") { result += " align=\"" + attributes["align"]! + "\"" }
                 result += ">"
@@ -175,10 +176,17 @@ struct SearchMarkdownDocument: Sendable {
             case "svg": mime = "image/svg+xml"
             default: return nil
             }
-            guard let handle = try? FileHandle(forReadingFrom: url) else { return nil }
-            defer { try? handle.close() }
             let limit = min(8 * 1024 * 1024, 24 * 1024 * 1024 - imageBytes)
-            guard let data = try? handle.read(upToCount: limit + 1), data.count <= limit else { return nil }
+            let data: Data
+            if let readImage {
+                guard let found = readImage(url, limit), found.count <= limit else { return nil }
+                data = found
+            } else {
+                guard let handle = try? FileHandle(forReadingFrom: url) else { return nil }
+                defer { try? handle.close() }
+                guard let found = try? handle.read(upToCount: limit + 1), found.count <= limit else { return nil }
+                data = found
+            }
             imageBytes += data.count
             let result = "data:" + mime + ";base64," + data.base64EncodedString()
             images[url] = result

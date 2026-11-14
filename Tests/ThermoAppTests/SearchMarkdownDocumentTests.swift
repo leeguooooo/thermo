@@ -1,9 +1,11 @@
 import XCTest
-import WebKit
+import AppKit
 import SearchCore
+import PreviewCore
+@testable import PreviewUI
 @testable import ThermoApp
 
-final class SearchMarkdownDocumentTests: XCTestCase {
+final class PreviewMarkdownDocumentTests: XCTestCase {
     func testDocumentRendersStructureAndUniqueHeadingAnchors() {
         let source = """
         # 项目 **说明**
@@ -27,7 +29,7 @@ final class SearchMarkdownDocumentTests: XCTestCase {
 
         ## 安装
         """
-        let doc = SearchMarkdownDocument.render(source)
+        let doc = PreviewMarkdownDocument.render(source)
         XCTAssertEqual(doc.headings.map(\.anchor), ["项目-说明", "安装", "安装-1"])
         XCTAssertTrue(doc.body.contains("<strong>说明</strong>"))
         XCTAssertTrue(doc.body.contains("<table>")); XCTAssertTrue(doc.body.contains("<th>名称</th>"))
@@ -39,7 +41,7 @@ final class SearchMarkdownDocumentTests: XCTestCase {
         XCTAssertTrue(original.contains("# 项目 **说明**")); XCTAssertFalse(original.contains("<nav"))
     }
     func testHTMLFormattingIsRetainedButActiveContentAndUnsafeLinksAreRemoved() {
-        let doc = SearchMarkdownDocument.render("""
+        let doc = PreviewMarkdownDocument.render("""
         <p align="center"><strong>标题</strong><br><img src="https://example.com/tracker.png" onerror="bad()" alt="logo"></p>
         <script>bad()</script><style>body{display:none}</style>
 
@@ -58,35 +60,52 @@ final class SearchMarkdownDocumentTests: XCTestCase {
         defer { try? FileManager.default.removeItem(at: directory) }
         let bytes = Data([0x89, 0x50, 0x4e, 0x47])
         try bytes.write(to: directory.appendingPathComponent("picture.png"))
-        let doc = SearchMarkdownDocument.render("![图](picture.png)\n\n[下一页](next.md)", baseURL: directory.appendingPathComponent("", isDirectory: true))
+        let doc = PreviewMarkdownDocument.render("![图](picture.png)\n\n[下一页](next.md)", baseURL: directory.appendingPathComponent("", isDirectory: true))
         XCTAssertTrue(doc.body.contains("src=\"data:image/png;base64," + bytes.base64EncodedString()))
         XCTAssertTrue(doc.body.contains(directory.appendingPathComponent("next.md").absoluteString), doc.body)
         XCTAssertFalse(doc.body.contains("src=\"file:"))
     }
-    @MainActor func testWebKitLoadsGeneratedPreviewAndFindsRenderedText() async throws {
-        let model = SearchFilePreviewModel(item: SearchItem(path: "/tmp/preview-test.md", name: "preview-test.md", kind: .file))
-        let coordinator = SearchMarkdownWebView.Coordinator(model: model)
-        let page = coordinator.directory.appendingPathComponent("preview.html")
-        try SearchMarkdownDocument.render("# Preview acceptance\n\nReadable **content**.").html().write(to: page, atomically: true, encoding: .utf8)
-        let configuration = WKWebViewConfiguration()
-        configuration.websiteDataStore = .nonPersistent()
-        configuration.defaultWebpagePreferences.allowsContentJavaScript = false
-        let web = WKWebView(frame: NSRect(x: 0, y: 0, width: 800, height: 600), configuration: configuration)
-        web.navigationDelegate = coordinator; model.webView = web
-        web.loadFileURL(page, allowingReadAccessTo: coordinator.directory)
-        defer { web.stopLoading(); web.navigationDelegate = nil }
-        for _ in 0..<100 {
-            if let text = try? await web.evaluateJavaScript("document.body.innerText") as? String,
-               text.contains("Readable content.") {
-                let result = try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Bool, Error>) in
-                    web.find("Readable", configuration: WKFindConfiguration()) { continuation.resume(returning: $0.matchFound) }
-                }
-                XCTAssertTrue(result)
-                return
-            }
-            try await Task.sleep(nanoseconds: 50_000_000)
-        }
-        XCTFail("Generated document did not load: " + (model.issue ?? web.url?.absoluteString ?? "no URL"))
+    @MainActor func testNativePreviewRendersFormattedTextAndFindsBothDirections() throws {
+        let model = MarkdownPreviewState(document: PreviewMarkdownDocument.render("# Preview acceptance\n\nReadable **content**. Another readable line."))
+        let coordinator = MarkdownSurface.Coordinator(state: model)
+        let text = NSTextView(frame:NSRect(x:0,y:0,width:800,height:600))
+        coordinator.load(text)
+        XCTAssertNil(model.issue)
+        XCTAssertTrue(text.string.contains("Readable content."))
+        let boldRange=(text.string as NSString).range(of:"content")
+        let boldFont=try XCTUnwrap(text.textStorage?.attribute(.font,at:boldRange.location,effectiveRange:nil) as? NSFont)
+        XCTAssertTrue(boldFont.fontDescriptor.symbolicTraits.contains(.bold))
+        model.query="readable";model.find()
+        let first=text.selectedRange()
+        XCTAssertEqual(model.found,true)
+        model.find();XCTAssertGreaterThan(text.selectedRange().location,first.location)
+        model.find(backwards:true);XCTAssertEqual(text.selectedRange(),first)
+        model.query="";model.find();XCTAssertNil(model.found)
+        model.source=true;coordinator.load(text)
+        XCTAssertTrue(text.string.contains("**content**"))
+    }
+    @MainActor func testNativePreviewKeepsEmbeddedImagesTablesAndInterceptsLinks() throws {
+        let context=try XCTUnwrap(CGContext(data:nil,width:8,height:8,bitsPerComponent:8,bytesPerRow:32,space:try XCTUnwrap(CGColorSpace(name:CGColorSpace.sRGB)),bitmapInfo:CGImageAlphaInfo.premultipliedLast.rawValue))
+        context.setFillColor(CGColor(srgbRed:1,green:0,blue:1,alpha:1));context.fill(CGRect(x:0,y:0,width:8,height:8))
+        let image=try XCTUnwrap(context.makeImage()),png=try XCTUnwrap(NSBitmapImageRep(cgImage:image).representation(using:.png,properties:[:]))
+        let document=PreviewMarkdownDocument.render("![local](image.png)\n\n| Alpha | Beta |\n| --- | --- |\n| One | Two |\n\n[Website](https://example.test)",baseURL:URL(fileURLWithPath:"/fixture"),readImage:{_,_ in png})
+        let model=MarkdownPreviewState(document:document),content=try model.content()
+        var attachments:[NSTextAttachment]=[]
+        content.enumerateAttribute(.attachment,in:NSRange(location:0,length:content.length)){value,_,_ in if let attachment=value as? NSTextAttachment {attachments.append(attachment)}}
+        XCTAssertEqual(attachments.count,1)
+        let actual=try XCTUnwrap((attachments.first?.attachmentCell as? NSTextAttachmentCell)?.image)
+        let pixels=try XCTUnwrap(actual.tiffRepresentation.flatMap(NSBitmapImageRep.init(data:)))
+        let color=try XCTUnwrap(pixels.colorAt(x:0,y:0)?.usingColorSpace(.sRGB))
+        XCTAssertGreaterThan(color.redComponent,0.6);XCTAssertGreaterThan(color.blueComponent,0.6)
+        XCTAssertGreaterThan(min(color.redComponent,color.blueComponent)-color.greenComponent,0.3,"expected the purple image, not a blue missing-image icon")
+        XCTAssertTrue(content.string.contains("Alpha"));XCTAssertTrue(content.string.contains("Two"))
+        var opened:[URL]=[]
+        let coordinator=MarkdownSurface.Coordinator(state:model,open:{opened.append($0)})
+        let text=NSTextView();coordinator.load(text)
+        XCTAssertTrue(coordinator.textView(text,clickedOnLink:URL(string:"https://example.test")!,at:0))
+        XCTAssertEqual(opened.map(\.absoluteString),["https://example.test"])
+        XCTAssertTrue(coordinator.textView(text,clickedOnLink:"javascript:alert(1)",at:0))
+        XCTAssertEqual(opened.count,1)
     }
     func testBoundedReadingReportsLargeAndUnsupportedDocuments() throws {
         let directory = FileManager.default.temporaryDirectory.appendingPathComponent("thermo-markdown-test-" + UUID().uuidString)
@@ -94,10 +113,10 @@ final class SearchMarkdownDocumentTests: XCTestCase {
         defer { try? FileManager.default.removeItem(at: directory) }
         let url = directory.appendingPathComponent("large.md")
         try Data(repeating: 65, count: 2 * 1024 * 1024 + 1).write(to: url)
-        XCTAssertThrowsError(try SearchMarkdownDocument.load(url))
+        XCTAssertThrowsError(try PreviewMarkdownDocument.load(url))
         try Data("# 中文\n\n内容".utf8).write(to: url)
-        XCTAssertEqual(try SearchMarkdownDocument.load(url).headings.first?.title, "中文")
-        XCTAssertTrue(SearchMarkdownDocument.supports(URL(fileURLWithPath: "/tmp/README.MDX")))
-        XCTAssertFalse(SearchMarkdownDocument.supports(URL(fileURLWithPath: "/tmp/report.pdf")))
+        XCTAssertEqual(try PreviewMarkdownDocument.load(url).headings.first?.title, "中文")
+        XCTAssertTrue(PreviewMarkdownDocument.supports(URL(fileURLWithPath: "/tmp/README.MDX")))
+        XCTAssertFalse(PreviewMarkdownDocument.supports(URL(fileURLWithPath: "/tmp/report.pdf")))
     }
 }

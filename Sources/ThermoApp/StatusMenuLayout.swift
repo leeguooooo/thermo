@@ -12,6 +12,7 @@ struct StatusMenuLayout {
         var captureEnabled: Bool = true
         var menuBarEnabled: Bool = true
         var performanceEnabled: Bool = true
+        var searchEnabled: Bool = true
         let hasBattery: Bool
         let keepAwakeActive: Bool
         let focusTimerActive: Bool
@@ -147,7 +148,7 @@ struct StatusMenuLayout {
         productItems.append(.openThermo)
         
         // 2. Search apps and files
-        productItems.append(.searchAppsAndFiles)
+        if context.searchEnabled { productItems.append(.searchAppsAndFiles) }
         
         // 3. Capture & record (Menu Group)
         var captureLeaves: [LeafAction] = [

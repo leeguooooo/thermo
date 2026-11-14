@@ -1,11 +1,12 @@
 import AppKit
 import Combine
 import SearchCore
+import ModuleKit
 import ThermoL10n
 import UniformTypeIdentifiers
 
 @MainActor final class LocalSearchModel: ObservableObject {
-    static let shared = LocalSearchModel()
+    static let shared = LocalSearchModel(module: BuiltinModuleManifests.search)
     @Published var query = "" { didSet { if query != oldValue { error = nil; submit() } } }
     @Published private(set) var response = SearchResponse(query: "", items: [])
     @Published private(set) var searching = false
@@ -23,24 +24,41 @@ import UniformTypeIdentifiers
     private var cancellation: SearchCancellation?
     private var generation: UInt64 = 0
     private var started = false
+    private var suspended = false
+    private var lifecycle = UUID()
+    private let directory: URL
+    private let module: ModuleManifest?
+    private let defaults: UserDefaults
+    private var featureOn: Bool { module.map { ModulePreferences.isEnabled($0, in: defaults) } ?? true }
+    private var queries: [UUID: Task<Void, Never>] = [:]
+    private var retiringIndexers: [SearchIndexer] = []
     private var appObservers: [NSObjectProtocol] = []
     private let executeQuery: (@Sendable (String, SearchCancellation) throws -> SearchResponse)?
     var selected: SearchItem? {
         guard response.query == query else { return nil }
         return response.items.first { $0.id == selection }
     }
-    init(directory: URL = SearchStore.defaultDirectory, executeQuery: (@Sendable (String, SearchCancellation) throws -> SearchResponse)? = nil) {
+    init(directory: URL = SearchStore.defaultDirectory, module: ModuleManifest? = nil, defaults: UserDefaults = .standard, executeQuery: (@Sendable (String, SearchCancellation) throws -> SearchResponse)? = nil) {
         self.executeQuery = executeQuery
+        self.directory = directory
+        self.module = module; self.defaults = defaults
         do {
             let store = try SearchStore(directory: directory)
             self.store = store; preferences = try store.preferences()
         } catch { self.error = String(describing: error) }
     }
     func start() {
-        guard !started, let store else { return }; started = true
+        guard featureOn, !started else { return }
+        if store == nil {
+            do { store = try SearchStore(directory: directory); preferences = try store!.preferences() }
+            catch { self.error = String(describing: error); return }
+        }
+        guard let store else { return }
+        started = true; suspended = false; lifecycle = UUID()
+        let epoch = lifecycle
         let indexer = SearchIndexer(store: store) { [weak self] busy, issue in
             Task { @MainActor in
-                guard let self else { return }
+                guard let self, self.started, self.lifecycle == epoch else { return }
                 self.indexing = busy
                 if let issue { self.error = issue }
                 if !busy {
@@ -52,22 +70,36 @@ import UniformTypeIdentifiers
         self.indexer = indexer; indexer.start()
         appObservers.append(DistributedNotificationCenter.default().addObserver(forName: Notification.Name("dev.thermo.search.configurationChanged"), object: nil, queue: .main) { [weak self] _ in
             Task { @MainActor in
-                guard let self, let prefs = try? self.store?.preferences() else { return }
+                guard let self, self.started, self.lifecycle == epoch, let prefs = try? self.store?.preferences() else { return }
                 self.preferences = prefs; self.indexer?.configure(prefs)
             }
         })
         for name in [NSWorkspace.didMountNotification, NSWorkspace.didUnmountNotification, NSWorkspace.didWakeNotification] {
             appObservers.append(NSWorkspace.shared.notificationCenter.addObserver(forName: name, object: nil, queue: .main) { [weak self] _ in
-                Task { @MainActor in self?.indexer?.refresh() }
+                Task { @MainActor in if self?.started == true, self?.lifecycle == epoch { self?.indexer?.refresh() } }
             })
         }
     }
     func stop() {
-        cancellation?.cancel(); queryTask?.cancel(); indexer?.stop()
+        suspended = true; started = false; lifecycle = UUID(); generation &+= 1
+        cancellation?.cancel(); queryTask?.cancel()
+        for task in queries.values { task.cancel() }
+        if let indexer { indexer.stop(); retiringIndexers.append(indexer); self.indexer = nil }
+        searching = false; indexing = false; selection = nil; directPath = nil
+        response = SearchResponse(query: query, items: [])
         for observer in appObservers { NSWorkspace.shared.notificationCenter.removeObserver(observer); DistributedNotificationCenter.default().removeObserver(observer) }
         appObservers.removeAll()
     }
-    func refresh() { error = nil; indexer?.refresh() }
+    func finishStopping() async {
+        let pending = Array(queries.values), indexers = retiringIndexers
+        for task in pending { await task.value }
+        for indexer in indexers { await indexer.finishStopping() }
+        retiringIndexers.removeAll()
+        if suspended { store = nil; queryTask = nil }
+    }
+    var enabled: Bool { featureOn }
+    var activeQueries: Int { queries.count }
+    func refresh() { guard featureOn, !suspended else { return };error = nil; indexer?.refresh() }
     private var applicationsRefreshed: Date?
     /// Called each time the panel opens. Installs and removals are already caught by the app-folder
     /// watcher, so this safety-net rescan runs at most every five minutes.
@@ -90,13 +122,15 @@ import UniformTypeIdentifiers
         open(selected, using: app)
     }
     func submit() {
-        guard let store else { return }
+        guard featureOn, !suspended, let store else { return }
         generation &+= 1
         let current = generation, term = query, oldSelection = selection
         directPath = nil
         cancellation?.cancel(); queryTask?.cancel()
         let token = SearchCancellation(); cancellation = token; searching = true
-        queryTask = Task { [weak self] in
+        let taskID = UUID()
+        let task = Task { [weak self] in
+            defer { self?.queries.removeValue(forKey: taskID) }
             do {
                 if !term.isEmpty { try await Task.sleep(nanoseconds: 25_000_000) }
                 let executeQuery = self?.executeQuery
@@ -112,6 +146,7 @@ import UniformTypeIdentifiers
                 self.error = String(describing: error); self.searching = false
             }
         }
+        queries[taskID] = task; queryTask = task
     }
     func move(_ delta: Int) {
         guard response.query == query, !response.items.isEmpty else { return }
