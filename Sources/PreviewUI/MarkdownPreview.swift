@@ -2,7 +2,6 @@ import AppKit
 import PreviewCore
 import SwiftUI
 import ThermoL10n
-import WebKit
 
 @MainActor final class MarkdownPreviewState:ObservableObject {
     let document:PreviewMarkdownDocument
@@ -10,15 +9,37 @@ import WebKit
     @Published var query=""
     @Published var found:Bool?
     @Published var issue:String?
-    weak var web:WKWebView?
+    weak var text:NSTextView?
+    private var rendered:NSAttributedString?
     init(document:PreviewMarkdownDocument){self.document=document}
-    func find(backwards:Bool=false) {
-        guard !query.isEmpty else {found=nil;web?.find("",configuration:WKFindConfiguration()){_ in};return}
-        let config=WKFindConfiguration();config.backwards=backwards;config.wraps=true
-        let expected=query
-        web?.find(query,configuration:config){[weak self] result in
-            guard self?.query == expected else{return};self?.found=result.matchFound
+    func content() throws -> NSAttributedString {
+        if source {
+            return NSAttributedString(string:document.source,attributes:[.font:NSFont.monospacedSystemFont(ofSize:13,weight:.regular),.foregroundColor:NSColor.labelColor])
         }
+        if let rendered{return rendered}
+        // This importer produces native text/attachments in the sandbox. A WKWebView
+        // requires direct network rights even for local HTML; modules do not get those.
+        let value=try NSMutableAttributedString(data:Data(document.html(includeOutline:false).utf8),
+            options:[.documentType:NSAttributedString.DocumentType.html,.characterEncoding:String.Encoding.utf8.rawValue],documentAttributes:nil)
+        value.addAttribute(.foregroundColor,value:NSColor.labelColor,range:NSRange(location:0,length:value.length))
+        rendered=value;return value
+    }
+    func find(backwards:Bool=false) {
+        guard !query.isEmpty,let text else {found=nil;return}
+        let value=text.string as NSString,selected=text.selectedRange(),length=value.length
+        var options:NSString.CompareOptions=[.caseInsensitive,.diacriticInsensitive]
+        if backwards{options.insert(.backwards)}
+        let start=min(selected.location,length),end=min(NSMaxRange(selected),length)
+        let first=backwards ? NSRange(location:0,length:start) : NSRange(location:end,length:length-end)
+        var range=value.range(of:query,options:options,range:first)
+        if range.location == NSNotFound {range=value.range(of:query,options:options)}
+        found=range.location != NSNotFound
+        if found == true{text.setSelectedRange(range);text.scrollRangeToVisible(range)}
+    }
+    func heading(_ title:String) {
+        guard let text else{return}
+        let range=(text.string as NSString).range(of:title)
+        if range.location != NSNotFound{text.setSelectedRange(range);text.scrollRangeToVisible(range)}
     }
 }
 
@@ -43,8 +64,18 @@ public struct MarkdownPreviewPane:View {
                 }
                 Button(tr("Find")){finding=true}.keyboardShortcut("f",modifiers:.command).hidden().frame(width:0,height:0)
             }.buttonStyle(.plain)
-            if let issue=state.issue { Text(issue).foregroundStyle(.secondary).textSelection(.enabled) }
-            MarkdownSurface(state:state,open:{openURL($0)})
+            if let issue=state.issue {Text(issue).foregroundStyle(.secondary).textSelection(.enabled)}
+            HStack(alignment:.top,spacing:12) {
+                if !state.source,state.document.headings.count >= 3 {
+                    ScrollView {VStack(alignment:.leading,spacing:8) {
+                        ForEach(Array(state.document.headings.enumerated()),id:\.offset) {_,heading in
+                            Button(heading.title){state.heading(heading.title)}.buttonStyle(.plain)
+                                .padding(.leading,CGFloat(max(0,heading.level-1)*8)).multilineTextAlignment(.leading)
+                        }
+                    }.padding(8)}.frame(width:164)
+                }
+                MarkdownSurface(state:state,open:{openURL($0)})
+            }
         }
     }
 }
@@ -53,39 +84,37 @@ struct MarkdownSurface:NSViewRepresentable {
     @ObservedObject var state:MarkdownPreviewState
     var open:(URL)->Void = {_ in}
     func makeCoordinator()->Coordinator{Coordinator(state:state,open:open)}
-    func makeNSView(context:Context)->WKWebView {
-        let configuration=WKWebViewConfiguration();configuration.websiteDataStore = .nonPersistent()
-        configuration.defaultWebpagePreferences.allowsContentJavaScript=false
-        configuration.preferences.javaScriptCanOpenWindowsAutomatically=false
-        let web=WKWebView(frame:.zero,configuration:configuration)
-        web.navigationDelegate=context.coordinator;web.allowsMagnification=true
-        web.underPageBackgroundColor=NSColor(calibratedRed:22/255,green:25/255,blue:31/255,alpha:1)
-        state.web=web;return web
+    func makeNSView(context:Context)->NSScrollView {
+        let scroll=NSScrollView();scroll.hasVerticalScroller=true;scroll.drawsBackground=false
+        let text=NSTextView(frame:.zero)
+        text.isEditable=false;text.isSelectable=true;text.isRichText=true;text.importsGraphics=true
+        text.isVerticallyResizable=true;text.isHorizontallyResizable=false;text.autoresizingMask=[.width]
+        text.maxSize=NSSize(width:CGFloat.greatestFiniteMagnitude,height:CGFloat.greatestFiniteMagnitude)
+        text.textContainer?.widthTracksTextView=true;text.textContainerInset=NSSize(width:24,height:24)
+        text.backgroundColor=NSColor(calibratedRed:22/255,green:25/255,blue:31/255,alpha:1)
+        text.linkTextAttributes=[.foregroundColor:NSColor.systemBlue,.underlineStyle:NSUnderlineStyle.single.rawValue]
+        text.delegate=context.coordinator;scroll.documentView=text
+        scroll.appearance=NSAppearance(named:.darkAqua);state.text=text;return scroll
     }
-    func updateNSView(_ web:WKWebView,context:Context) {
-        guard context.coordinator.source != state.source else{return}
-        context.coordinator.source=state.source
-        context.coordinator.load(web)
+    func updateNSView(_ scroll:NSScrollView,context:Context) {
+        guard context.coordinator.source != state.source,let text=scroll.documentView as? NSTextView else{return}
+        context.coordinator.source=state.source;context.coordinator.load(text)
     }
-    final class Coordinator:NSObject,WKNavigationDelegate {
+    final class Coordinator:NSObject,NSTextViewDelegate {
         let state:MarkdownPreviewState
         var source:Bool?
         let open:(URL)->Void
         init(state:MarkdownPreviewState,open:@escaping(URL)->Void = {_ in}){self.state=state;self.open=open;super.init()}
-        func load(_ web:WKWebView) {web.loadHTMLString(state.document.html(showSource:state.source),baseURL:nil)}
-        func webView(_ webView:WKWebView,decidePolicyFor action:WKNavigationAction,decisionHandler:@escaping(WKNavigationActionPolicy)->Void) {
-            guard let url=action.request.url else{decisionHandler(.cancel);return}
-            let own=url.scheme == "about" && (url.absoluteString == "about:blank" || url.absoluteString.hasPrefix("about:blank#"))
-            if action.navigationType == .other,own{decisionHandler(.allow);return}
-            if action.navigationType == .linkActivated {
-                if own,url.fragment != nil{decisionHandler(.allow);return}
-                if ["https","http","mailto","file"].contains(url.scheme?.lowercased() ?? ""){open(url)}
-            }
-            decisionHandler(.cancel)
+        func load(_ text:NSTextView) {
+            do {text.textStorage?.setAttributedString(try state.content());state.issue=nil;state.text=text;state.find()}
+            catch{state.issue=error.localizedDescription}
         }
-        func webView(_ webView:WKWebView,didFinish navigation:WKNavigation!){state.issue=nil;if !state.query.isEmpty{state.find()}}
-        func webView(_ webView:WKWebView,didFail navigation:WKNavigation!,withError error:Error){state.issue=error.localizedDescription}
-        func webView(_ webView:WKWebView,didFailProvisionalNavigation navigation:WKNavigation!,withError error:Error){state.issue=error.localizedDescription}
-        func webViewWebContentProcessDidTerminate(_ webView:WKWebView){state.issue=tr("File preview stopped. Try previewing the file again.")}
+        func textView(_ textView:NSTextView,clickedOnLink link:Any,at charIndex:Int)->Bool {
+            let url=(link as? URL) ?? (link as? String).flatMap(URL.init(string:))
+            guard let url else{return true}
+            if let fragment=url.fragment,let heading=state.document.headings.first(where:{$0.anchor==fragment}){state.heading(heading.title);return true}
+            if ["https","http","mailto","file"].contains(url.scheme?.lowercased() ?? ""){open(url)}
+            return true
+        }
     }
 }

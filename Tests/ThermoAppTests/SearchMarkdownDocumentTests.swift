@@ -1,5 +1,5 @@
 import XCTest
-import WebKit
+import AppKit
 import SearchCore
 import PreviewCore
 @testable import PreviewUI
@@ -65,28 +65,21 @@ final class PreviewMarkdownDocumentTests: XCTestCase {
         XCTAssertTrue(doc.body.contains(directory.appendingPathComponent("next.md").absoluteString), doc.body)
         XCTAssertFalse(doc.body.contains("src=\"file:"))
     }
-    @MainActor func testWebKitLoadsGeneratedPreviewAndFindsRenderedText() async throws {
-        let model = MarkdownPreviewState(document: PreviewMarkdownDocument.render("# Preview acceptance\n\nReadable **content**."))
+    @MainActor func testNativePreviewRendersFormattedTextAndFindsBothDirections() throws {
+        let model = MarkdownPreviewState(document: PreviewMarkdownDocument.render("# Preview acceptance\n\nReadable **content**. Another readable line."))
         let coordinator = MarkdownSurface.Coordinator(state: model)
-        let configuration = WKWebViewConfiguration()
-        configuration.websiteDataStore = .nonPersistent()
-        configuration.defaultWebpagePreferences.allowsContentJavaScript = false
-        let web = WKWebView(frame: NSRect(x: 0, y: 0, width: 800, height: 600), configuration: configuration)
-        web.navigationDelegate = coordinator; model.web = web
-        coordinator.load(web)
-        defer { web.stopLoading(); web.navigationDelegate = nil }
-        for _ in 0..<100 {
-            if let text = try? await web.evaluateJavaScript("document.body.innerText") as? String,
-               text.contains("Readable content.") {
-                let result = try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Bool, Error>) in
-                    web.find("Readable", configuration: WKFindConfiguration()) { continuation.resume(returning: $0.matchFound) }
-                }
-                XCTAssertTrue(result)
-                return
-            }
-            try await Task.sleep(nanoseconds: 50_000_000)
-        }
-        XCTFail("Generated document did not load: " + (model.issue ?? web.url?.absoluteString ?? "no URL"))
+        let text = NSTextView(frame:NSRect(x:0,y:0,width:800,height:600))
+        coordinator.load(text)
+        XCTAssertNil(model.issue)
+        XCTAssertTrue(text.string.contains("Readable content."))
+        model.query="readable";model.find()
+        let first=text.selectedRange()
+        XCTAssertEqual(model.found,true)
+        model.find();XCTAssertGreaterThan(text.selectedRange().location,first.location)
+        model.find(backwards:true);XCTAssertEqual(text.selectedRange(),first)
+        model.query="";model.find();XCTAssertNil(model.found)
+        model.source=true;coordinator.load(text)
+        XCTAssertTrue(text.string.contains("**content**"))
     }
     func testBoundedReadingReportsLargeAndUnsupportedDocuments() throws {
         let directory = FileManager.default.temporaryDirectory.appendingPathComponent("thermo-markdown-test-" + UUID().uuidString)

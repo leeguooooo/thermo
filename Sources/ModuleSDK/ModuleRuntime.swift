@@ -182,8 +182,18 @@ public struct ModuleConfiguration: AppExtensionConfiguration {
             guard let view = self.view, view.window != nil, !view.bounds.isEmpty else {
                 reply(nil, "scene has no attached view"); return
             }
-            do { reply(try await SceneSnapshotCapture.capture(view), nil) }
-            catch { reply(nil, String(describing: error as NSError)) }
+            view.layoutSubtreeIfNeeded()
+            guard let rep = view.bitmapImageRepForCachingDisplay(in: view.bounds),
+                  rep.pixelsWide > 0, rep.pixelsHigh > 0,
+                  rep.pixelsWide <= ModuleSnapshot.maxDimension, rep.pixelsHigh <= ModuleSnapshot.maxDimension,
+                  rep.pixelsWide * rep.pixelsHigh <= ModuleSnapshot.maxPixels else {
+                reply(nil, "scene snapshot exceeds pixel limits"); return
+            }
+            view.cacheDisplay(in: view.bounds, to: rep)
+            guard let png = rep.representation(using: .png, properties: [:]), ModuleSnapshot.dimensions(png) != nil else {
+                reply(nil, "scene could not be rendered"); return
+            }
+            reply(png, nil)
         }
     }
 }

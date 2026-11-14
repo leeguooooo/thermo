@@ -24,8 +24,8 @@ public struct PreviewMarkdownDocument: Sendable {
         return .init(source: source, body: body, headings: renderer.headings)
     }
 
-    public func html(showSource: Bool = false) -> String {
-        let outline = headings.count < 3 || showSource ? "" : "<nav aria-label=\"Contents\">" + headings.map {
+    public func html(showSource: Bool = false, includeOutline: Bool = true) -> String {
+        let outline = !includeOutline || headings.count < 3 || showSource ? "" : "<nav aria-label=\"Contents\">" + headings.map {
             "<a class=\"depth-\($0.level)\" href=\"#\($0.anchor)\">\(Self.escape($0.title))</a>"
         }.joined() + "</nav>"
         return """
