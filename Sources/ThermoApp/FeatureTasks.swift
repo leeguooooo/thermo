@@ -12,6 +12,7 @@ import Foundation
         let task = Task.detached(priority: priority) { [weak self] in
             await operation()
             await self?.finished(id)
+            return ()
         }
         pending[id] = task
         return task

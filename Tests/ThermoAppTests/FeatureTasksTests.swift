@@ -20,7 +20,7 @@ import XCTest
         let tasks=FeatureTasks(),entered=expectation(description:"second reader entered"),release=DispatchSemaphore(value:0)
         defer{release.signal()}
         tasks.run {
-            await MainActor.run {tasks.run {entered.fulfill();_ = release.wait(timeout:.now()+5)}}
+            _ = await MainActor.run {tasks.run {entered.fulfill();_ = release.wait(timeout:.now()+5)}}
         }
         await fulfillment(of:[entered],timeout:2)
         var drained=false
