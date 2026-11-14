@@ -41,7 +41,7 @@ private final class PreviewPreparation: @unchecked Sendable {
     private func publish(_ value:Pending,markdown:PreviewMarkdownDocument?) async throws {
         try await MainActor.run {
             guard self.accepts(value.input.id) else{throw PreviewFailure.cancelled}
-            if let language=value.input.language { _=L10n.apply(preference:language) }
+            if let language=value.input.language { L10n.apply(preference:language) }
             PreviewModel.shared.markdown=markdown;PreviewModel.shared.url=value.file;PreviewModel.shared.input=value.input
         }
     }

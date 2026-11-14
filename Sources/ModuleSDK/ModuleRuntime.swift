@@ -81,10 +81,12 @@ public final class ModuleRuntime: @unchecked Sendable {
     public func fileInput(_ receive: @escaping FileInput) {
         lock.lock(); input = receive; lock.unlock()
     }
+    private func inputHandler() -> FileInput? { lock.lock(); defer { lock.unlock() }; return input }
+    private func commandHandler(_ id: String) -> Command? { lock.lock(); defer { lock.unlock() }; return commands[id] }
     private func receive(_ file: FileHandle?, metadata: Data) async -> (Data?, String?) {
         defer { try? file?.close() }
         guard metadata.count <= 262_144 else { return (nil, "input metadata is too large") }
-        lock.lock(); let handler = input; lock.unlock()
+        let handler = inputHandler()
         guard let handler else { return (nil, "this module does not accept file inputs") }
         do {
             let answer = try await handler(file, metadata)
@@ -94,7 +96,7 @@ public final class ModuleRuntime: @unchecked Sendable {
     }
 
     func run(_ id: String, arguments: Data) async -> (Data?, String?) {
-        lock.lock(); let command = commands[id]; lock.unlock()
+        let command = commandHandler(id)
         guard let command else { return (nil, "unknown command \(id)") }
         let input = ((try? JSONSerialization.jsonObject(with: arguments)) as? [String: Any]) ?? [:]
         do {

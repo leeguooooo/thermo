@@ -41,7 +41,7 @@ private func text(_ data:Data) throws -> String {
         let marker="FDPREVIEW"+String(UUID().uuidString.replacingOccurrences(of:"-",with:"").prefix(8).map { Character(UnicodeScalar(65 + Int(String($0),radix:16)! % 8)!) })
         let imageName="asset-"+UUID().uuidString+".png",document=source.appendingPathComponent(marker+".md")
         let bitmap=NSBitmapImageRep(bitmapDataPlanes:nil,pixelsWide:32,pixelsHigh:32,bitsPerSample:8,samplesPerPixel:4,hasAlpha:true,isPlanar:false,colorSpaceName:.deviceRGB,bytesPerRow:0,bitsPerPixel:0)!
-        for y in 0..<32 {for x in 0..<32 {bitmap.setColor(.magenta,atX:x,y:y)}}
+        for y in 0..<32 {for x in 0..<32 {bitmap.setColor(NSColor(deviceRed:1,green:0,blue:1,alpha:1),atX:x,y:y)}}
         try bitmap.representation(using:.png,properties:[:])!.write(to:source.appendingPathComponent(imageName))
         try Data("# \(marker)\n\nSandbox document rendered. Selected **file input**.\n\n![asset](\(imageName))\n".utf8).write(to:document)
         let direct=try await manager.run(probe,command:"peek",arguments:JSONSerialization.data(withJSONObject:["path":document.path]))
