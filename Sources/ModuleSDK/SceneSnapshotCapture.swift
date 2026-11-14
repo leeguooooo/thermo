@@ -48,10 +48,29 @@ import WebKit
             configuration.rect = rect
             configuration.afterScreenUpdates = false
             configuration.snapshotWidth = NSNumber(value: Double(rect.width))
-            let image = try await web.takeSnapshot(configuration: configuration)
+            let pixels: CGImage
+            do {
+                let image = try await web.takeSnapshot(configuration: configuration)
+                guard let image = image.cgImage(forProposedRect: nil, context: nil, hints: nil) else { throw Failure.unavailable }
+                pixels = image
+            } catch {
+                // An offscreen remote scene may have no WindowServer-backed surface.
+                // WebKit can still render the same viewport without that surface.
+                let pdfConfiguration = WKPDFConfiguration(); pdfConfiguration.rect = rect
+                let data = try await web.pdf(configuration: pdfConfiguration)
+                guard data.count <= ModuleSnapshot.maxBytes,
+                      let provider = CGDataProvider(data: data as CFData), let document = CGPDFDocument(provider),
+                      let page = document.page(at: 1),
+                      let bitmap = CGContext(data: nil, width: Int(ceil(rect.width * sx)), height: Int(ceil(rect.height * sy)),
+                                             bitsPerComponent: 8, bytesPerRow: 0, space: CGColorSpaceCreateDeviceRGB(),
+                                             bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue) else { throw Failure.unavailable }
+                bitmap.concatenate(page.getDrawingTransform(.mediaBox, rect: CGRect(x: 0, y: 0, width: bitmap.width, height: bitmap.height), rotate: 0, preserveAspectRatio: false))
+                bitmap.drawPDFPage(page)
+                guard let image = bitmap.makeImage() else { throw Failure.unavailable }
+                pixels = image
+            }
             guard root.window === window, root.bounds == bounds, web.isDescendant(of: root),
                   root.convert(rect, from: web) == frame else { throw Failure.changed }
-            guard let pixels = image.cgImage(forProposedRect: nil, context: nil, hints: nil) else { throw Failure.unavailable }
             let y = root.isFlipped ? bounds.maxY - frame.maxY : frame.minY - bounds.minY
             context.draw(pixels, in: CGRect(x: (frame.minX - bounds.minX) * sx, y: y * sy,
                                            width: frame.width * sx, height: frame.height * sy))
