@@ -5,7 +5,12 @@ import ThermoL10n
 import UniformTypeIdentifiers
 
 @MainActor final class MenuBarManagerPanel: NSWindowController, NSWindowDelegate {
-    static let shared = MenuBarManagerPanel(model: .shared)
+    private static var panel: MenuBarManagerPanel?
+    static var shared: MenuBarManagerPanel {
+        if let panel { return panel }
+        let value = MenuBarManagerPanel(model: .shared); panel = value; return value
+    }
+    static func closeIfOpen() { panel?.close(); panel = nil }
     private let model: MenuBarManager
     init(model: MenuBarManager) {
         self.model = model
@@ -22,6 +27,7 @@ import UniformTypeIdentifiers
     }
     required init?(coder: NSCoder) { fatalError("init(coder:) is not used") }
     func show() {
+        guard model.featureOn else { return }
         (NSApp.delegate as? AppDelegate)?.closeMenuPanel()
         model.setPanelOpen(true)
         if window?.isVisible != true { window?.center() }

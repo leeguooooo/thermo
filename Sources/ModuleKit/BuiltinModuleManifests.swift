@@ -58,7 +58,14 @@ public enum BuiltinModuleManifests {
             .init(id: "saving", kind: .settingsItem, title: "Capture saving and after-actions", symbol: "square.and.arrow.down", scene: "capture-saving"),
             .init(id: "shortcuts", kind: .settingsItem, title: "Capture shortcuts and actions", symbol: "keyboard", scene: "capture-shortcuts")])
 
-    public static let all = [disk, capture]
+    public static let menuBar = ModuleManifest(
+        id: "dev.thermo.menu-bar", name: "Manage menu bar",
+        summary: "Groups menu bar icons and restores them when switched off.",
+        symbol: "menubar.rectangle", version: "1.0.0", launch: .always, enabledByDefault: true,
+        entries: [.init(id: "management", kind: .settingsItem, title: "Manage menu bar", symbol: "menubar.rectangle", scene: "menu-bar-management"),
+                  .init(id: "tools", kind: .menuBarItem, title: "Manage menu bar…", symbol: "menubar.rectangle", scene: "menu-bar-management")])
+
+    public static let all = [disk, capture, menuBar]
 }
 
 public enum ModulePreferences {

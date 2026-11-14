@@ -10,6 +10,7 @@ struct StatusMenuLayout {
     
     struct RuntimeContext {
         var captureEnabled: Bool = true
+        var menuBarEnabled: Bool = true
         let hasBattery: Bool
         let keepAwakeActive: Bool
         let focusTimerActive: Bool
@@ -245,7 +246,7 @@ struct StatusMenuLayout {
         )))
         
         // 10. Manage menu bar…
-        productItems.append(.manageMenuBar)
+        if context.menuBarEnabled { productItems.append(.manageMenuBar) }
         
         // 11. History
         productItems.append(.history)

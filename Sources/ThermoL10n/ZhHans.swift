@@ -383,6 +383,8 @@ let zhHans: [String: String] = [
     "The recording timestamp is invalid.": "录制时间戳无效。",
     // Capture workspace
     "Screenshots and pins": "截图与贴图",
+    "Groups menu bar icons and restores them when switched off.": "分组管理菜单栏图标，关闭功能后恢复显示。",
+    "Menu bar restoration could not be confirmed. Try Restore all icons before switching this feature off.": "尚未确认菜单栏已恢复。请先点“恢复所有图标”，再关闭此功能。",
     "Screenshots, pins, scrolling capture, recording and capture scripts.": "截图、贴图、长截图、录屏和截图脚本。",
     "Finish the current capture, recording or export before switching this feature off.": "请先完成当前截图、录屏或导出，再关闭此功能。",
     "Capture screen…": "截图…",
