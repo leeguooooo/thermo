@@ -80,7 +80,7 @@ public struct MarkdownPreviewPane:View {
     }
 }
 
-struct MarkdownSurface:NSViewRepresentable {
+@MainActor struct MarkdownSurface:NSViewRepresentable {
     @ObservedObject var state:MarkdownPreviewState
     var open:(URL)->Void = {_ in}
     func makeCoordinator()->Coordinator{Coordinator(state:state,open:open)}
@@ -100,7 +100,7 @@ struct MarkdownSurface:NSViewRepresentable {
         guard context.coordinator.source != state.source,let text=scroll.documentView as? NSTextView else{return}
         context.coordinator.source=state.source;context.coordinator.load(text)
     }
-    final class Coordinator:NSObject,NSTextViewDelegate {
+    @MainActor final class Coordinator:NSObject,NSTextViewDelegate {
         let state:MarkdownPreviewState
         var source:Bool?
         let open:(URL)->Void
