@@ -84,7 +84,9 @@ private func text(_ data:Data) throws -> String {
                 if let color=bitmap.colorAt(x:x,y:y)?.usingColorSpace(.sRGB) {
                     let score=color.redComponent+color.blueComponent-color.greenComponent
                     if score>bestScore{bestScore=score;bestColor=[color.redComponent,color.greenComponent,color.blueComponent]}
-                    if color.redComponent>0.8,color.blueComponent>0.8,color.greenComponent<0.2 {imagePixels += 1}
+                    // Native cache-display applies the host display profile. Purple
+                    // remains distinct from neutral text and the blue missing-image icon.
+                    if color.redComponent>0.6,color.blueComponent>0.6,min(color.redComponent,color.blueComponent)-color.greenComponent>0.3 {imagePixels += 1}
                 }
             }}
         }

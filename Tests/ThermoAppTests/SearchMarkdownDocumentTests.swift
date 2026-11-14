@@ -96,7 +96,8 @@ final class PreviewMarkdownDocumentTests: XCTestCase {
         let actual=try XCTUnwrap((attachments.first?.attachmentCell as? NSTextAttachmentCell)?.image)
         let pixels=try XCTUnwrap(actual.tiffRepresentation.flatMap(NSBitmapImageRep.init(data:)))
         let color=try XCTUnwrap(pixels.colorAt(x:0,y:0)?.usingColorSpace(.sRGB))
-        XCTAssertGreaterThan(color.redComponent,0.9);XCTAssertGreaterThan(color.blueComponent,0.9);XCTAssertLessThan(color.greenComponent,0.1)
+        XCTAssertGreaterThan(color.redComponent,0.6);XCTAssertGreaterThan(color.blueComponent,0.6)
+        XCTAssertGreaterThan(min(color.redComponent,color.blueComponent)-color.greenComponent,0.3,"expected the purple image, not a blue missing-image icon")
         XCTAssertTrue(content.string.contains("Alpha"));XCTAssertTrue(content.string.contains("Two"))
         var opened:[URL]=[]
         let coordinator=MarkdownSurface.Coordinator(state:model,open:{opened.append($0)})
