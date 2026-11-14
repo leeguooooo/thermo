@@ -4536,4 +4536,6 @@ let zhHans: [String: String] = [
     "Folder sizes, large files and duplicate comparisons with reviewed removal.": "目录大小、大文件和重复文件比较，移除前逐项核对。",
     "Wait for file removal or the current AI request before switching this feature off.": "请等待文件移除或当前 AI 请求完成，再关闭此功能。",
     "Wait for this feature’s current command to finish before switching it off.": "请等待此功能正在执行的命令结束，再关闭它。",
+    "Browser tab checks, reviewed closing, saved batches and native grouping.": "浏览器标签检查、经确认后关闭、保存批次和原生分组。",
+    "Wait for browser changes or tab grouping to finish before switching this feature off.": "请等待浏览器变更或标签分组完成，再关闭此功能。",
 ]

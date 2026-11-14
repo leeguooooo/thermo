@@ -11,6 +11,9 @@ struct BrowserPageActions: Sendable {
     var close: @Sendable ([ChromeInspector.Tab], String) -> [ChromeInspector.TabCloseResult]
     var reading: @Sendable (String) -> BrowserCloseReading
     var wait: @Sendable () async -> Void
+    var diagnose: @Sendable (String,Bool,TimeInterval?,Int?,Int?,@escaping @Sendable (ChromeInspector.Phase)->Void) async -> ChromeInspector.Diagnosis = {app,measure,watch,memory,gpu,progress in
+        await ChromeInspector.diagnose(app:app,measure:measure,watch:watch,appMemoryKB:memory,gpuKB:gpu,progress:progress)
+    }
     static var live: Self {
         .init(tabs: { ChromeInspector.tabs(app: $0) }, close: { ChromeInspector.closeTabs($0, app: $1) },
               reading: { BrowserCloseReading.sample(app: $0) }, wait: { try? await Task.sleep(nanoseconds: 5_000_000_000) })
@@ -19,6 +22,7 @@ struct BrowserPageActions: Sendable {
 
 @MainActor
 final class ChromePagesModel: ObservableObject {
+    let work=FeatureTasks()
     let app: String
     var appMemoryKB: Int?
     var gpuKB: Int?
@@ -37,9 +41,10 @@ final class ChromePagesModel: ObservableObject {
     private var generation = UUID()
     @Published private(set) var stopped = false
 
-    init(app: String, appMemoryKB: Int?, gpuKB: Int?, actions: BrowserPageActions = .live) {
+    init(enabled:@escaping ()->Bool = {true}, app: String, appMemoryKB: Int?, gpuKB: Int?, actions: BrowserPageActions = .live) {
         self.app = app; self.appMemoryKB = appMemoryKB; self.gpuKB = gpuKB
-        self.actions = actions
+        self.actions = actions;work.enabled=enabled
+        guard enabled() else{return}
         // Test bundles can start with saved samples without querying the user's live browser.
         if let samples = Bundle.main.object(forInfoDictionaryKey: "ThermoBrowserFixtureSamples") as? [String], samples.count == 2 {
             loadFixture(before: samples[0], after: samples[1])
@@ -47,6 +52,7 @@ final class ChromePagesModel: ObservableObject {
     }
 
     func loadFixture(before: String, after: String) {
+        guard work.acceptsWork else{return}
         func read(_ path: String) -> ChromeInspector.Snapshot? {
             guard let data = FS.head(path, limit: 1_048_576) else { return nil }
             return try? JSONDecoder().decode(ChromeInspector.Snapshot.self, from: data)
@@ -77,10 +83,11 @@ final class ChromePagesModel: ObservableObject {
     }
     var selectedPages: [ChromeInspector.PageChoice] { pages.filter { selected.contains($0.id) && $0.tab.canSelect } }
     var recommendedPages: [ChromeInspector.PageChoice] { inventoryStale ? [] : pages.filter(\.recommended) }
-    var busy: Bool { running || closing != nil }
+    var busy: Bool { running || closing != nil || work.count>0 }
     var canCloseSelected: Bool { !busy && !inventoryStale && !selectedPages.isEmpty }
-    func selectRecommended() { guard !busy else { return }; selected.formUnion(recommendedPages.map(\.id)) }
+    func selectRecommended() { guard work.acceptsWork else{return};guard !busy else { return }; selected.formUnion(recommendedPages.map(\.id)) }
     func accept(_ diagnosis: ChromeInspector.Diagnosis, tabs: [ChromeInspector.Tab]?) {
+        guard work.acceptsWork else{return}
         self.diagnosis = diagnosis
         tabsSnapshot = tabs ?? diagnosis.tabs
         inventoryStale = false
@@ -91,11 +98,12 @@ final class ChromePagesModel: ObservableObject {
     /// Whether the running (or last) check measures pages, rather than only listing tabs.
     @Published private(set) var measuring = false
     /// Memory per page is possible (chrome-use or a debugging port).
-    var canMeasure: Bool { ChromeInspector.endpoint(app: app) != nil }
+    var canMeasure: Bool { work.acceptsWork && ChromeInspector.endpoint(app: app) != nil }
 
     /// Without `measure`, only the tab list: nothing is attached. Measuring attaches to each page
     /// (Chrome shows "is being debugged" briefly), so it starts only from the user's button.
     func start(measure: Bool = false, watch: TimeInterval = 60) {
+        guard work.acceptsWork else{return}
         guard closing == nil else { return }
         stop()
         let generation = UUID()
@@ -104,9 +112,9 @@ final class ChromePagesModel: ObservableObject {
         phase = .listingTabs
         measuring = measure
         let app = app, memory = appMemoryKB, gpu = gpuKB, model = self, actions = actions
-        task = Task { [weak self] in
+        task = work.runOnMain { [weak self] in
             async let tabs = Task.detached { actions.tabs(app) }.value
-            let d = await ChromeInspector.diagnose(app: app, measure: measure, watch: measure ? watch : nil, appMemoryKB: memory, gpuKB: gpu) { phase in
+            let d = await actions.diagnose(app,measure,measure ? watch:nil,memory,gpu) { phase in
                 Task { @MainActor in
                     guard model.generation == generation, !model.stopped else { return }
                     model.phase = phase
@@ -132,13 +140,21 @@ final class ChromePagesModel: ObservableObject {
         stopped = true
     }
 
+    func stopFeature() {work.stop();stop()}
+    func finishFeatureStop() async {
+        await work.finish()
+        phase=nil;diagnosis=nil;tabsSnapshot=nil;selected=[];closeResults=[];closeReview=nil;closeFailed=nil
+        resultsStale=false;inventoryStale=false
+    }
+
     /// The plan is captured by the confirmation sheet; changing the selection later cannot expand it.
     func close(_ plan: [ChromeInspector.Tab]) {
+        guard work.acceptsWork else{return}
         guard !busy, !inventoryStale, !plan.isEmpty else { return }
         closing = tr("Closing selected pages…")
         closeFailed = nil; closeReview = nil; closeResults = []
         let actions = actions, app = app
-        Task { [weak self] in
+        work.runOnMain { [weak self] in
             let before = await Task.detached { actions.reading(app) }.value
             let result = await Task.detached { actions.close(plan, app) }.value
             guard let self else { return }

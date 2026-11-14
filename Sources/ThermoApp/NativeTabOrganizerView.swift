@@ -9,6 +9,7 @@ struct NativeTabOrganizerView: View {
     var renameProfiles: [String] = []
     @Binding var working: Bool
     var previewOnly = false
+    var scope:FeatureTasks? = nil
     let refresh: () -> Void
     @State private var config = TabOrganizer.Configuration()
     @State private var review: TabOrganizer.Plan?
@@ -168,14 +169,17 @@ struct NativeTabOrganizerView: View {
         }
     }
     func load() {
+        guard scope?.acceptsWork != false else{return}
         if previewOnly { return }
         do { config = try TabOrganizer.configuration(); records = try TabOrganizer.batches().filter { $0.app == app } }
         catch { self.error = error.localizedDescription }
     }
     func organize(_ plan: TabOrganizer.Plan) {
         guard !previewOnly else { return }
+        guard let operation=scope.map({$0.beginOperation()}) ?? UUID() else{return}
         working = true; error = nil
         Task {
+            defer{scope?.endOperation(operation)}
             do {
                 let batch = try await Task.detached { try await TabOrganizer.organize(plan) }.value
                 notice = tr("Verified %1$@ native group assignments.", String(batch.grouped))
@@ -192,8 +196,10 @@ struct NativeTabOrganizerView: View {
     }
     func rename(_ list: [TabOrganizer.Rename]) {
         guard !previewOnly, !list.isEmpty else { return }
+        guard let operation=scope.map({$0.beginOperation()}) ?? UUID() else{return}
         working = true; error = nil
         Task {
+            defer{scope?.endOperation(operation)}
             do {
                 let count = try await Task.detached { try await TabOrganizer.rename(list, app: app) }.value
                 notice = tr("Renamed %1$@ groups.", String(count))
@@ -203,8 +209,10 @@ struct NativeTabOrganizerView: View {
     }
     func undo(_ batch: TabOrganizer.Batch) {
         guard !previewOnly else { return }
+        guard let operation=scope.map({$0.beginOperation()}) ?? UUID() else{return}
         working = true; error = nil
         Task {
+            defer{scope?.endOperation(operation)}
             do {
                 let value = try await Task.detached { try await TabOrganizer.undo(batch.id) }.value
                 notice = tr("Verified %1$@ tabs returned to their previous positions.", String(value.restored))

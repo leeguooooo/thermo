@@ -338,8 +338,8 @@ struct MainView: View {
             WindowPage(title: tr("Settings"), subtitle: "Thermo \(AppInfo.version)") {
                 SettingsView(monitor: monitor, updates: models.updates)
             }.transition(.page)
-        case let .browser(app):
-            ChromePagesView(model: models.browser(app), embedded: true).id(app).transition(.page)
+        case .browser:
+            ModuleOffView().transition(.page)
         case .agents(.home):
             DiagnosticsHome(scanner: agents, open: { a in page = .agents(.area(a)) }).transition(.page)
         case let .agents(.area(a)):
@@ -465,7 +465,6 @@ struct MainSidebar: View {
 
                     header(tr("Resources"))
                     moduleRows(.resources)
-                    row(.browser("Google Chrome"), tr("Tab organizer"), "rectangle.stack", .teal, trailing: nil)
 
                     if !BuiltinModules.implementations.contains(where: { modules.isOn($0.manifest.id) && $0.sidebarSections.contains(.storage) && $0.manifest.entries.contains(where: { $0.kind == .page }) }) {
                         header(tr("Storage & apps"))

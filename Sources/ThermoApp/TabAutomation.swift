@@ -5,16 +5,29 @@ import CleanKit
 /// also covers CLI/manual operations. Each cycle reads fresh metadata and native group state.
 @MainActor
 final class TabAutomation: ObservableObject {
-    static let shared = TabAutomation()
+    private static var instance:TabAutomation?
+    static var shared:TabAutomation {
+        if let instance{return instance}
+        let model=TabAutomation(enabled:{BrowserModule.enabled});instance=model;return model
+    }
+    static var current:TabAutomation? {instance}
+    static func stopIfStarted() {instance?.stop();instance=nil}
+    private let enabled:()->Bool
+    private let configuration:()->TabOrganizer.Configuration?
+    private var active=false
+    init(enabled:@escaping ()->Bool={true},configuration:@escaping ()->TabOrganizer.Configuration?={try? TabOrganizer.configuration()}) {
+        self.enabled=enabled;self.configuration=configuration
+    }
     @Published private(set) var running = false
     @Published private(set) var lastResult: String?
     private var timer: Timer?
     func start() {
-        guard timer == nil else { return }
+        guard enabled(),timer == nil else { return }
+        active=true
         timer = Timer.scheduledTimer(withTimeInterval: 60, repeats: true) { _ in Task { @MainActor in self.tick() } }
     }
     func tick() {
-        guard !running, let config = try? TabOrganizer.configuration(), config.enabled else { return }
+        guard active,enabled(),!running,let config=configuration(),config.enabled else{return}
         running = true
         Task {
             defer { running = false }
@@ -29,4 +42,6 @@ final class TabAutomation: ObservableObject {
             } catch { lastResult = error.localizedDescription }
         }
     }
+    func stop() {active=false;timer?.invalidate();timer=nil}
+
 }

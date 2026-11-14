@@ -8,14 +8,28 @@ enum TabQuickAction {
     static var requested = false
     static let notification = Notification.Name("dev.thermo.archiveBackgroundTabs")
     static func request() {
+        guard BrowserModule.enabled else{return}
         requested = true
         MainWindow.show(.browser("Google Chrome"))
         NotificationCenter.default.post(name: notification, object: nil)
     }
 }
 
+struct TabWorkspaceActions: Sendable {
+    var inventory:@Sendable (String) async throws->TabWorkspace.Inventory = {try await TabWorkspace.inventory(app:$0)}
+    var archives:@Sendable () throws->[TabWorkspace.Archive] = {try TabWorkspace.archives()}
+    var assign:@Sendable ([TabWorkspace.Page],String?) throws->Void = {try TabWorkspace.assign($0,name:$1)}
+    var archive:@Sendable ([TabWorkspace.Page],String,String) async throws->TabWorkspace.Archive = {try await TabWorkspace.archive($0,app:$1,name:$2)}
+    var remove:@Sendable (UUID) throws->Void = {_ = try TabWorkspace.removeArchive($0)}
+    var restore:@Sendable (UUID,Int?) async throws->TabWorkspace.Archive = {try await TabWorkspace.restore($0,destinationWindow:$1)}
+}
 @MainActor
 final class TabWorkspaceModel: ObservableObject {
+    let work=FeatureTasks()
+    private let actions:TabWorkspaceActions
+    @Published private(set) var mutating=false
+    private var generation=UUID()
+    private var pendingRefresh=false
     let app: String
     @Published var inventory: TabWorkspace.Inventory?
     @Published var saved: [TabWorkspace.Archive] = []
@@ -28,8 +42,9 @@ final class TabWorkspaceModel: ObservableObject {
     static var loadedApps = Set<String>()
     struct Preview: Codable { var inventory: TabWorkspace.Inventory; var saved: [TabWorkspace.Archive] }
     private(set) var isPreview = false
-    init(app: String, preview: Preview? = nil) {
-        self.app = app
+    init(enabled:@escaping ()->Bool = {true}, app: String, preview: Preview? = nil, actions:TabWorkspaceActions = .init()) {
+        self.app = app;self.actions=actions;work.enabled=enabled
+        guard enabled() else{return}
         if let preview {
             inventory = preview.inventory; saved = preview.saved; isPreview = true; Self.loadedApps.insert(app); return
         }
@@ -59,65 +74,97 @@ final class TabWorkspaceModel: ObservableObject {
     func selectAllWindows(_ value: Bool) { allWindows = value; selected = [] }
     /// `keepError`: after an action, its failure must stay on screen while the list reloads.
     func refresh(keepError: Bool = false) {
-        guard !busy, !isPreview else { return }; busy = true
+        guard work.acceptsWork else{return}
+        guard !isPreview else{return}
+        if busy {
+            if !mutating && !work.hasOperations {pendingRefresh=true}
+            return
+        }
+        busy = true
         if !keepError { error = nil }
-        let app = app
-        Task {
+        let app = app,token=generation
+        work.runOnMain {
+            let actions=self.actions
             do {
-                let inv = try await Task.detached { try await TabWorkspace.inventory(app: app) }.value
-                let records = try await Task.detached { try TabWorkspace.archives() }.value
+                let inv = try await Task.detached { try await actions.inventory(app) }.value
+                try Task.checkCancellation()
+                guard self.work.acceptsWork else{self.finishRefresh();return}
+                let records = try await Task.detached { try actions.archives() }.value
+                guard self.work.acceptsWork,self.generation==token else{self.finishRefresh();return}
                 Self.loadedApps.insert(app)
                 inventory = inv; saved = records.filter { $0.app == app }
                 selected.formIntersection(Set(inv.pages.map(\.id)))
             } catch {
+                guard self.work.acceptsWork,self.generation==token else{self.finishRefresh();return}
                 // A failed reload keeps the old list on screen; say so, since it may be out of date.
                 self.error = tr(error.localizedDescription) + (inventory != nil ? "\n" + tr("This is the previous list. Refresh before taking action.") : "")
                 Self.loadedApps.insert(app)
             }
-            busy = false
+            finishRefresh()
         }
     }
+    private func finishRefresh() {
+        busy=false
+        let pending=pendingRefresh;pendingRefresh=false
+        if pending && work.acceptsWork {refresh()}
+    }
     func group(_ name: String?) {
+        guard work.acceptsWork else{return}
         let selection = name == nil ? pages : chosen
-        guard !selection.isEmpty, !busy, !isPreview else { return }; busy = true; error = nil
-        Task {
-            do { try await Task.detached { try TabWorkspace.assign(selection, name: name) }.value }
+        guard !selection.isEmpty, !busy, !isPreview else { return }; busy = true; mutating=true; error = nil
+        work.runOnMain {
+            let actions=self.actions
+            do { try await Task.detached { try actions.assign(selection,name) }.value }
             catch { self.error = tr(error.localizedDescription) }
-            busy = false; refresh(keepError: true)
+            busy = false; mutating=false; refresh(keepError: true)
         }
     }
     func archive(_ selection: [TabWorkspace.Page], name: String) {
-        guard !busy, !isPreview else { return }; busy = true; error = nil; let app = app
-        Task {
+        guard work.acceptsWork else{return}
+        guard !busy, !isPreview else { return }; busy = true; mutating=true; error = nil; let app = app
+        work.runOnMain {
+            let actions=self.actions
             do {
-                let record = try await Task.detached { try await TabWorkspace.archive(selection, app: app, name: name) }.value
+                let record = try await Task.detached { try await actions.archive(selection,app,name) }.value
                 notice = tr("Saved %1$@ pages; closed %2$@. Skipped or unconfirmed pages remain listed in the saved batch.", String(record.entries.count), String(record.closed))
                 selected.subtract(selection.map(\.id))
             } catch { self.error = tr(error.localizedDescription) }
-            busy = false; refresh(keepError: true)
+            busy = false; mutating=false; refresh(keepError: true)
         }
     }
     func forget(_ record: TabWorkspace.Archive) {
-        guard !busy, !isPreview else { return }; busy = true; error = nil
-        Task {
+        guard work.acceptsWork else{return}
+        guard !busy, !isPreview else { return }; busy = true; mutating=true; error = nil
+        work.runOnMain {
+            let actions=self.actions
             do {
-                try await Task.detached { try TabWorkspace.removeArchive(record.id) }.value
+                try await Task.detached { try actions.remove(record.id) }.value
                 notice = tr("Moved the saved batch to the Trash.")
             } catch { self.error = tr(error.localizedDescription) }
-            busy = false; refresh(keepError: true)
+            busy = false; mutating=false; refresh(keepError: true)
         }
     }
     func restore(_ record: TabWorkspace.Archive, destinationWindow: Int? = nil) {
-        guard !busy, !isPreview else { return }; busy = true; error = nil
-        Task {
+        guard work.acceptsWork else{return}
+        guard !busy, !isPreview else { return }; busy = true; mutating=true; error = nil
+        work.runOnMain {
+            let actions=self.actions
             do {
-                let result = try await Task.detached { try TabWorkspace.restore(record.id, destinationWindow: destinationWindow) }.value
+                let result = try await Task.detached { try await actions.restore(record.id,destinationWindow) }.value
                 let restored = result.entries.filter { $0.restoreState == "restored" }.count
                 notice = tr("%1$@ pages reopened. Unconfirmed operations are not retried automatically.", String(restored))
             } catch { self.error = Self.restoreFailure(error.localizedDescription, chosenWindow: destinationWindow != nil) }
-            busy = false; refresh(keepError: true)
+            busy = false; mutating=false; refresh(keepError: true)
         }
     }
+    func retireRead() {if !mutating && !work.hasOperations {generation=UUID();pendingRefresh=false;work.cancel()}}
+    func stopFeature() {work.stop();generation=UUID();pendingRefresh=false}
+    func finishFeatureStop() async {
+        await work.finish()
+        inventory=nil;saved=[];selected=[];busy=false;error=nil;notice=nil
+        Self.loadedApps.remove(app)
+    }
+
 }
 
 extension TabWorkspaceModel {
@@ -168,7 +215,7 @@ struct TabWorkspaceView: View {
         var forget = false
     }
     init(app: String, task: Binding<TabWorkspaceTask>) {
-        _model = StateObject(wrappedValue: TabWorkspaceModel(app: app))
+        _model = StateObject(wrappedValue: AppModels.shared.workspace(app))
         _task = task
     }
     var groupNames: [String] { Array(Set(filtered.map(\.group))).sorted() }
@@ -210,7 +257,7 @@ struct TabWorkspaceView: View {
                     NativeTabOrganizerView(app: model.app, pages: model.pages, nativeGroups: model.inventory?.nativeGroups ?? [],
                                            renameProfiles: model.inventory?.renameProfiles ?? [],
                                            working: $model.busy,
-                                           previewOnly: model.isPreview, refresh: { model.refresh() })
+                                           previewOnly: model.isPreview, scope:model.work, refresh: { model.refresh() })
                         .padding(.horizontal, Theme.pagePadding).padding(.bottom, Theme.Space.xl)
                         .frame(maxWidth: Theme.pageWidth, alignment: .leading)
                         .frame(maxWidth: .infinity, alignment: .leading)

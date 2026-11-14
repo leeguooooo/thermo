@@ -22,6 +22,7 @@ protocol BuiltinModule: Sendable {
     static var sidebarSections: Set<BuiltinSidebarSection> { get }
     static var privateWorkers: Set<String> { get }
     static func owns(_ page: MainPage) -> Bool
+    static func entry(for page:MainPage)->ModuleManifest.Entry?
     static func canonicalArgument(_ argument: String) -> String
     static func target(_ scene: String) -> MainPage?
     static func supports(_ entry: ModuleManifest.Entry) -> Bool
@@ -36,13 +37,16 @@ protocol BuiltinModule: Sendable {
 }
 
 extension BuiltinModule {
+    static func entry(for page:MainPage)->ModuleManifest.Entry? {
+        manifest.entries.first{$0.kind == .page && $0.scene.flatMap(target)==page}
+    }
     static var privateWorkers: Set<String> { [] }
     static var sidebarSections: Set<BuiltinSidebarSection> { [.storage] }
     @MainActor static func start() {}
 }
 
 enum BuiltinModules {
-    static let implementations: [any BuiltinModule.Type] = [DiskModule.self, SearchModule.self, CaptureModule.self, MenuBarModule.self, PerformanceModule.self, AppsModule.self, SpaceModule.self]
+    static let implementations: [any BuiltinModule.Type] = [DiskModule.self, SearchModule.self, CaptureModule.self, MenuBarModule.self, PerformanceModule.self, AppsModule.self, SpaceModule.self, BrowserModule.self]
     static var all: [ModuleManifest] { implementations.map { $0.manifest } }
     static var disk: ModuleManifest { DiskModule.manifest }
     static func manifest(_ id: String) -> ModuleManifest? { all.first { $0.id == id } }
@@ -61,7 +65,7 @@ enum BuiltinModules {
         let entry: ModuleManifest.Entry?
         if case let .module(_, id) = page {
             entry = owner.manifest.entries.first { $0.kind == .page && (id.isEmpty ? $0.parent == nil : $0.id == id) }
-        } else { entry = owner.manifest.entries.first { $0.kind == .page && $0.scene.flatMap { owner.target($0) } == page } }
+        } else { entry = owner.entry(for:page) }
         return entry.map { .init(implementation: owner, entry: $0) }
     }
     static func argument(_ argument: String) -> MainPage? {
