@@ -114,7 +114,8 @@ private struct PerformanceSidebarRows: View {
         ForEach(PerformanceModule.manifest.entries.filter { PerformanceModule.section($0) == section }, id: \.id) { entry in
             if let target = entry.scene.flatMap(PerformanceModule.target) {
                 let selected = (BuiltinModules.page(selection)?.target ?? selection) == target
-                row(.init(entry: entry, target: target, tint: tint(entry.id), trailing: trailing(entry.id), selected: selected))
+                let color = entry.id == "overview" ? monitor.snapshot.map { heatColor($0.maximumKnownTemperature) } : nil
+                row(.init(entry: entry, target: target, tint: tint(entry.id), trailing: trailing(entry.id), trailingColor: color, selected: selected))
             }
         }
     }

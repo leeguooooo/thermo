@@ -12,7 +12,8 @@ import XCTest
             XCTAssertEqual(MainPage(argument:name),page)
             XCTAssertEqual(page.module,PerformanceModule.manifest.id)
             XCTAssertEqual(BuiltinModules.page(page)?.target,page)
-            XCTAssertEqual(BuiltinModules.argument("module:"+PerformanceModule.manifest.id+":"+name),nil)
+            let generic=MainPage(argument:"module:"+PerformanceModule.manifest.id+":"+name)
+            XCTAssertEqual(generic.flatMap {BuiltinModules.page($0)?.target},page)
             XCTAssertFalse(HostPageSpecification.pages.contains {$0.argument == name})
         }
         XCTAssertEqual(PerformanceModule.manifest.launch,.always)
@@ -24,7 +25,7 @@ import XCTest
         var held=0,read=0
         let panel=PanelModel(readSample:{read += 1;return .init()},holdPulse:{held += 1},releasePulse:{held -= 1},samplingAllowed:{false})
         cpu.start();cpu.setVisible(true,owner:UUID());memory.start();memory.setVisible(true,owner:UUID());pulse.start();panel.setActive(true)
-        XCTAssertFalse(cpu.samplingActive || memory.samplingActive || panel.samplingActive)
+        XCTAssertFalse(cpu.samplingActive || memory.samplingActive || panel.samplingActive || pulse.samplingActive)
         XCTAssertEqual(held,0);XCTAssertEqual(read,0)
         XCTAssertFalse(pulse.sampled)
         pulse.stop();cpu.stop();memory.stop();panel.setActive(false)

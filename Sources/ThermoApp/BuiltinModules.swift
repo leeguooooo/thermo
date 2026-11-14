@@ -7,6 +7,7 @@ struct BuiltinSidebarItem: Identifiable {
     let target: MainPage
     let tint: Color
     var trailing: String?
+    var trailingColor: Color?
     var selected: Bool
     var id: String { entry.id }
 }

@@ -445,7 +445,7 @@ struct MainSidebar: View {
                 if titled { header(tr(feature.manifest.name)) }
                 BuiltinSidebarGroup(implementation: feature, section: section, selection: $page, row: { item in
                     AnyView(row(item.target, tr(item.entry.title), item.entry.symbol ?? feature.manifest.symbol,
-                        item.tint, trailing: item.trailing, indent: item.entry.parent != nil, selected: item.selected)
+                        item.tint, trailing: item.trailing, trailingColor: item.trailingColor, indent: item.entry.parent != nil, selected: item.selected)
                         .padding(.leading, CGFloat(max(0, feature.manifest.depth(of: item.entry.id) - 1)) * 14))
                 })
             }
