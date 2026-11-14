@@ -72,6 +72,9 @@ final class PreviewMarkdownDocumentTests: XCTestCase {
         coordinator.load(text)
         XCTAssertNil(model.issue)
         XCTAssertTrue(text.string.contains("Readable content."))
+        let boldRange=(text.string as NSString).range(of:"content")
+        let boldFont=try XCTUnwrap(text.textStorage?.attribute(.font,at:boldRange.location,effectiveRange:nil) as? NSFont)
+        XCTAssertTrue(boldFont.fontDescriptor.symbolicTraits.contains(.bold))
         model.query="readable";model.find()
         let first=text.selectedRange()
         XCTAssertEqual(model.found,true)
@@ -87,9 +90,13 @@ final class PreviewMarkdownDocumentTests: XCTestCase {
         let image=try XCTUnwrap(context.makeImage()),png=try XCTUnwrap(NSBitmapImageRep(cgImage:image).representation(using:.png,properties:[:]))
         let document=PreviewMarkdownDocument.render("![local](image.png)\n\n| Alpha | Beta |\n| --- | --- |\n| One | Two |\n\n[Website](https://example.test)",baseURL:URL(fileURLWithPath:"/fixture"),readImage:{_,_ in png})
         let model=MarkdownPreviewState(document:document),content=try model.content()
-        var attachments=0
-        content.enumerateAttribute(.attachment,in:NSRange(location:0,length:content.length)){value,_,_ in if value is NSTextAttachment {attachments += 1}}
-        XCTAssertEqual(attachments,1)
+        var attachments:[NSTextAttachment]=[]
+        content.enumerateAttribute(.attachment,in:NSRange(location:0,length:content.length)){value,_,_ in if let attachment=value as? NSTextAttachment {attachments.append(attachment)}}
+        XCTAssertEqual(attachments.count,1)
+        let actual=try XCTUnwrap((attachments.first?.attachmentCell as? NSTextAttachmentCell)?.image)
+        let pixels=try XCTUnwrap(actual.tiffRepresentation.flatMap(NSBitmapImageRep.init(data:)))
+        let color=try XCTUnwrap(pixels.colorAt(x:0,y:0)?.usingColorSpace(.deviceRGB))
+        XCTAssertGreaterThan(color.redComponent,0.9);XCTAssertGreaterThan(color.blueComponent,0.9);XCTAssertLessThan(color.greenComponent,0.1)
         XCTAssertTrue(content.string.contains("Alpha"));XCTAssertTrue(content.string.contains("Two"))
         var opened:[URL]=[]
         let coordinator=MarkdownSurface.Coordinator(state:model,open:{opened.append($0)})
