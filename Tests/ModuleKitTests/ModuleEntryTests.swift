@@ -48,11 +48,16 @@ final class ModuleNavigationTests: XCTestCase {
         ])
     }
     func testCoreSlotsCannotBeClaimedByAModule() {
-        let m = feature("com.example.one", "4")
+        let m = feature("com.example.one", "6")
         let conflict = ModuleNavigation.conflicts([m]).first
-        XCTAssertEqual(conflict?.key, "4")
+        XCTAssertEqual(conflict?.key, "6")
         XCTAssertNil(conflict?.owner)
         XCTAssertEqual(conflict?.module, m.id)
+    }
+    func testBrowserOwnsCommandFourOnlyWhileEnabled() {
+        let other=feature("com.example.browser-navigation","4")
+        XCTAssertEqual(ModuleNavigation.conflicts([BuiltinModuleManifests.browser,other]).first?.owner,BuiltinModuleManifests.browser.id)
+        XCTAssertTrue(ModuleNavigation.conflicts([other]).isEmpty)
     }
     func testPerformanceOwnsItsOldCoreSlotsOnlyWhileEnabled() {
         let m = feature("com.example.navigation", "1")

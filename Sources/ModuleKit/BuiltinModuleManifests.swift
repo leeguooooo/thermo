@@ -98,7 +98,12 @@ public enum BuiltinModuleManifests {
         entries:[.init(id:"browse",kind:.page,title:"Space Lens",symbol:"square.grid.3x3.topleft.filled",scene:"space"),
                  .init(id:"large",kind:.page,title:"Large files",scene:"space:large",parent:"browse"),
                  .init(id:"duplicates",kind:.page,title:"Duplicates",scene:"space:duplicates",parent:"browse")])
-    public static let all = [disk, search, capture, menuBar, performance, apps, space]
+    public static let browser=ModuleManifest(
+        id:"dev.thermo.tabs",name:"Tab organizer",summary:"Browser tab checks, reviewed closing, saved batches and native grouping.",
+        symbol:"rectangle.stack",version:"1.0.0",launch:.onDemand,enabledByDefault:true,
+        entries:[.init(id:"home",kind:.page,title:"Browser pages",symbol:"rectangle.stack",scene:"pages",navigationKey:"4"),
+                 .init(id:"archive",kind:.menuBarItem,title:"Save and close background tabs",symbol:"archivebox",scene:"archive-tabs")])
+    public static let all = [disk, search, capture, menuBar, performance, apps, space, browser]
 }
 
 public enum ModulePreferences {

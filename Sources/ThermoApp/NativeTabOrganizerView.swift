@@ -9,6 +9,7 @@ struct NativeTabOrganizerView: View {
     var renameProfiles: [String] = []
     @Binding var working: Bool
     var previewOnly = false
+    var scope:FeatureTasks? = nil
     let refresh: () -> Void
     @State private var config = TabOrganizer.Configuration()
     @State private var review: TabOrganizer.Plan?
@@ -86,7 +87,7 @@ struct NativeTabOrganizerView: View {
             VStack(alignment: .leading, spacing: 0) {
                 HStack(spacing: Theme.Space.s) {
                     Toggle(tr("Automatically group new tabs"), isOn: Binding(get: { config.enabled }, set: { enabled in
-                        guard !previewOnly else { return }
+                        guard !previewOnly,scope?.acceptsWork != false else { return }
                         var updated = config; updated.enabled = enabled
                         do { try TabOrganizer.configure(updated); config = updated }
                         catch { self.error = error.localizedDescription }
@@ -168,14 +169,17 @@ struct NativeTabOrganizerView: View {
         }
     }
     func load() {
+        guard scope?.acceptsWork != false else{return}
         if previewOnly { return }
         do { config = try TabOrganizer.configuration(); records = try TabOrganizer.batches().filter { $0.app == app } }
         catch { self.error = error.localizedDescription }
     }
     func organize(_ plan: TabOrganizer.Plan) {
         guard !previewOnly else { return }
+        guard let operation=scope.map({$0.beginOperation()}) ?? UUID() else{return}
         working = true; error = nil
         Task {
+            defer{scope?.endOperation(operation)}
             do {
                 let batch = try await Task.detached { try await TabOrganizer.organize(plan) }.value
                 notice = tr("Verified %1$@ native group assignments.", String(batch.grouped))
@@ -192,8 +196,10 @@ struct NativeTabOrganizerView: View {
     }
     func rename(_ list: [TabOrganizer.Rename]) {
         guard !previewOnly, !list.isEmpty else { return }
+        guard let operation=scope.map({$0.beginOperation()}) ?? UUID() else{return}
         working = true; error = nil
         Task {
+            defer{scope?.endOperation(operation)}
             do {
                 let count = try await Task.detached { try await TabOrganizer.rename(list, app: app) }.value
                 notice = tr("Renamed %1$@ groups.", String(count))
@@ -203,8 +209,10 @@ struct NativeTabOrganizerView: View {
     }
     func undo(_ batch: TabOrganizer.Batch) {
         guard !previewOnly else { return }
+        guard let operation=scope.map({$0.beginOperation()}) ?? UUID() else{return}
         working = true; error = nil
         Task {
+            defer{scope?.endOperation(operation)}
             do {
                 let value = try await Task.detached { try await TabOrganizer.undo(batch.id) }.value
                 notice = tr("Verified %1$@ tabs returned to their previous positions.", String(value.restored))
@@ -232,6 +240,7 @@ struct NativeTabOrganizerView: View {
                 TextField(tr("Group name"), text: $name).textFieldStyle(.roundedBorder)
                 Picker(tr("Color"), selection: $color) { ForEach(TabOrganizer.colors, id: \.self) { Text(tr($0)).tag($0) } }.frame(width: 120)
                 Button(tr("Add rule")) {
+                    guard scope?.acceptsWork != false else{return}
                     var updated = config; updated.rules.append(.init(domain: domain, name: name, color: color))
                     do { if !previewOnly { try TabOrganizer.configure(updated) }; config = updated; domain = ""; name = "" }
                     catch { self.error = error.localizedDescription }
@@ -244,6 +253,7 @@ struct NativeTabOrganizerView: View {
                             Text(rule.domain + " → " + rule.name)
                             Spacer()
                             Button(tr("Remove rule")) {
+                                guard scope?.acceptsWork != false else{return}
                                 var updated = config; updated.rules.removeAll { $0.id == rule.id }
                                 do { if !previewOnly { try TabOrganizer.configure(updated) }; config = updated }
                                 catch { self.error = error.localizedDescription }

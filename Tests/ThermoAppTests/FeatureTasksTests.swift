@@ -40,4 +40,17 @@ import XCTest
         XCTAssertTrue(drained);XCTAssertFalse(tasks.hasOperations)
     }
 
+    func testStopRejectsQueuedMainActorAndDetachedWorkBeforeItsBodyStarts() async {
+        let tasks=FeatureTasks()
+        var mainCalls=0
+        let detached=expectation(description:"detached body must not enter")
+        detached.isInverted=true
+        tasks.runOnMain {mainCalls += 1}
+        tasks.run {detached.fulfill()}
+        tasks.stop()
+        await tasks.finish()
+        XCTAssertEqual(mainCalls,0);XCTAssertEqual(tasks.count,0)
+        await fulfillment(of:[detached],timeout:0.05)
+    }
+
 }

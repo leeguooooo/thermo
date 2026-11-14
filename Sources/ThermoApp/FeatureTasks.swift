@@ -16,12 +16,24 @@ import Foundation
         guard acceptsWork else { return Task {} }
         let id = UUID()
         let task = Task.detached(priority: priority) { [weak self] in
-            await operation()
+            let admitted=await self?.acceptsWork ?? false
+            if !Task.isCancelled && admitted {await operation()}
             await self?.finished(id)
             return ()
         }
         pending[id] = task
         return task
+    }
+    @discardableResult
+    func runOnMain(operation:@escaping @MainActor () async -> Void)->Task<Void,Never> {
+        guard acceptsWork else{return Task {}}
+        let id=UUID()
+        let task=Task { [weak self] in
+            defer{self?.finished(id)}
+            guard !Task.isCancelled,self?.acceptsWork == true else{return}
+            await operation()
+        }
+        pending[id]=task;return task
     }
     func beginOperation() -> UUID? {
         guard acceptsWork else {return nil}

@@ -15,6 +15,7 @@ struct StatusMenuLayout {
         var searchEnabled: Bool = true
         var appsEnabled: Bool = true
         var spaceEnabled: Bool = true
+        var browserEnabled:Bool = true
         let hasBattery: Bool
         let keepAwakeActive: Bool
         let focusTimerActive: Bool
@@ -200,6 +201,7 @@ struct StatusMenuLayout {
         ].filter { item in
             switch item {
             case .overview, .sensors, .fans, .cpuUsage, .gpuUsage, .memoryUsage: return context.performanceEnabled
+            case .tabOrganizer:return context.browserEnabled
             default: return true
             }
         }

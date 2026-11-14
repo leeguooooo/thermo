@@ -50,7 +50,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate, UNU
         _ = AppModels.shared.updates  // Sparkle starts checking with the app
         // Slowdown history and alerts, in the background whether or not the panel is open.
         // PerformanceModule owns background slowdown history.
-        TabAutomation.shared.start()
         YunXClipboardPrompt.shared.refresh()
         Task { await YunXChromeUseSetup.shared.offerOnLaunch() }
         if Bundle.main.bundleIdentifier != nil { UNUserNotificationCenter.current().delegate = self }
@@ -187,8 +186,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate, UNU
         let panelItem = appMenu.addItem(withTitle: tr("Open Menu Panel"), action: #selector(openPanelFromMenu), keyEquivalent: "p")
         panelItem.target = self
         panelItem.keyEquivalentModifierMask = [.command, .shift]
-        appMenu.addItem(withTitle: tr("Save and close background tabs"), action: #selector(archiveTabsFromMenu), keyEquivalent: "s").target = self
-        appMenu.items.last?.keyEquivalentModifierMask = [.command, .shift]
+        if BrowserModule.enabled {
+            let archive=appMenu.addItem(withTitle:tr("Save and close background tabs"),action:#selector(archiveTabsFromMenu),keyEquivalent:"s")
+            archive.target=self;archive.keyEquivalentModifierMask=[.command,.shift]
+        }
         appMenu.addItem(.separator())
         appMenu.addItem(withTitle: tr("Hide Thermo"), action: #selector(NSApplication.hide(_:)), keyEquivalent: "h")
         appMenu.addItem(withTitle: tr("Quit Thermo"), action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q")
@@ -682,15 +683,6 @@ if let i = CommandLine.arguments.firstIndex(of: "--render-preview"), i + 1 < Com
         page = .agents(value(after: "--agents").flatMap(Area.init(rawValue:)).map { .area($0) } ?? .home)
         models.agents.scan()
     }
-    if args.contains("--chrome-pages") {
-        let name = value(after: "--app") ?? "Google Chrome"
-        let hog = MachinePulse.sample().hogs.first { $0.name == name }
-        let model = models.browser(name, memoryKB: hog?.memoryKB, gpuKB: hog?.parts?.first { $0.role == "GPU" }?.memoryKB)
-        if let i = args.firstIndex(of: "--fixture"), i + 2 < args.count {
-            model.loadFixture(before: args[i + 1], after: args[i + 2])
-        }
-        page = .browser(name)
-    }
     if page == .checkup, let i = args.firstIndex(of: "--fixture"), i + 1 < args.count {
         CheckupModel.shared.loadFixture(answer: args[i + 1])
     }
@@ -717,7 +709,6 @@ if let i = CommandLine.arguments.firstIndex(of: "--render-preview"), i + 1 < Com
         case .claude(.accounts): return ClaudeAccountsModel.shared.loaded
         case .claude: return models.claudeCleanup.loaded && !models.claudeCleanup.busy
         case .history: return HistoryModel.shared.loaded
-        case let .browser(app): return TabWorkspaceModel.loadedApps.contains(app)
         case .plugins: return models.plugins.loaded && !models.plugins.checkingUpdates
         case let .module(id, _):
             // Worth a picture once the module's process is up, or once it is known to be off.
