@@ -5,12 +5,16 @@ import Foundation
 public final class PreviewResourceScope: @unchecked Sendable {
     public let root:URL
     private let directory:FileHandle
+    private let aliases:[String]
     public init(root:URL) throws {
-        self.root=root.resolvingSymlinksInPath().standardizedFileURL
+        guard let resolved=realpath(root.path,nil) else{throw PreviewFailure.copyFailed(errno)}
+        let physical=String(cString:resolved);free(resolved)
+        self.root=URL(fileURLWithPath:physical,isDirectory:true)
+        self.aliases=Array(Set([physical,root.path,root.resolvingSymlinksInPath().path])).sorted{$0.count > $1.count}
         var descriptor=open("/",O_RDONLY|O_DIRECTORY|O_CLOEXEC)
         guard descriptor>=0 else{throw PreviewFailure.copyFailed(errno)}
         do {
-            for component in self.root.pathComponents.dropFirst() {
+            for component in physical.split(separator:"/").map(String.init) {
                 let next=openat(descriptor,component,O_RDONLY|O_DIRECTORY|O_CLOEXEC|O_NOFOLLOW|O_NONBLOCK)
                 guard next>=0 else{throw PreviewFailure.copyFailed(errno)}
                 close(descriptor);descriptor=next
@@ -20,10 +24,17 @@ public final class PreviewResourceScope: @unchecked Sendable {
     }
     public func openFile(_ url:URL, imageOnly:Bool=false, maxBytes:Int64?=nil) throws -> FileHandle {
         guard url.isFileURL else{throw PreviewFailure.invalidInput}
-        let path=url.standardizedFileURL.path,prefix=root.path == "/" ? "/" : root.path+"/"
-        guard path.hasPrefix(prefix),path != root.path else{throw PreviewFailure.invalidInput}
-        let parts=String(path.dropFirst(prefix.count)).split(separator:"/",omittingEmptySubsequences:false).map(String.init)
-        guard !parts.isEmpty,parts.allSatisfy({!$0.isEmpty && $0 != "." && $0 != ".." && !$0.utf8.contains(0)}) else{throw PreviewFailure.invalidInput}
+        let path=url.path
+        guard let base=aliases.first(where:{path.hasPrefix($0 == "/" ? "/" : $0+"/") && path != $0}) else{throw PreviewFailure.invalidInput}
+        let prefix=base == "/" ? "/" : base+"/"
+        var parts:[String]=[]
+        for part in path.dropFirst(prefix.count).split(separator:"/",omittingEmptySubsequences:false).map(String.init) {
+            guard !part.isEmpty,!part.utf8.contains(0) else{throw PreviewFailure.invalidInput}
+            if part == "."{continue}
+            if part == ".."{guard !parts.isEmpty else{throw PreviewFailure.invalidInput};parts.removeLast()}
+            else{parts.append(part)}
+        }
+        guard !parts.isEmpty else{throw PreviewFailure.invalidInput}
         if imageOnly,!Set(["png","jpg","jpeg","gif","webp","svg"]).contains(url.pathExtension.lowercased()){throw PreviewFailure.invalidInput}
         var descriptor=dup(directory.fileDescriptor)
         guard descriptor>=0 else{throw PreviewFailure.copyFailed(errno)}
