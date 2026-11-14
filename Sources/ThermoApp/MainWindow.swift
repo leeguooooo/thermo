@@ -348,9 +348,8 @@ struct MainView: View {
             DiagnosticsHome(scanner: agents, open: { a in page = .agents(.area(a)) }).transition(.page)
         case let .agents(.area(a)):
             AreaPage(scanner: agents, area: a).id(a).transition(.page)
-        case let .apps(tab):
-            AppsPage(model: models.apps, startup: models.startup, updates: models.softwareUpdates, native: models.nativeUpdates, store: models.appStore,
-                     tab: Binding(get: { tab }, set: { page = .apps($0) })).transition(.page)
+        case .apps:
+            ModuleOffView().transition(.page)
         case .claude(.accounts):
             ClaudeAccountsPage(model: ClaudeAccountsModel.shared).transition(.page)
         case let .claude(tab):
@@ -479,8 +478,7 @@ struct MainSidebar: View {
 
                     row(.space(page.spaceTab ?? .browse), tr("Space Lens"), "square.grid.3x3.topleft.filled", .cyan, trailing: nil,
                         selected: page.spaceTab != nil)
-                    row(.apps(page.appsTab ?? .installed), tr("Software"), "square.grid.2x2", .indigo, trailing: nil,
-                        selected: page.appsTab != nil)
+                    moduleRows(.software)
                     row(.yunx, tr("YunX Download"), "arrow.down.circle", .blue, trailing: nil)
                     row(.plugins, tr("Plugin marketplace"), "puzzlepiece.extension", .orange, trailing: nil)
                     // Pages of the modules that are on; a module that is off has no row.

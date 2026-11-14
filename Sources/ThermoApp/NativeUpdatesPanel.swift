@@ -6,6 +6,8 @@ import ThermoL10n
 
 @MainActor
 final class NativeUpdatesModel: ObservableObject {
+    let work = FeatureTasks()
+    var otherUpdateInProgress: () -> Bool = { false }
     @Published private(set) var sources: [NativeUpdateSource] = []
     @Published private(set) var discoveryReport: NativeUpdateSourcesReport?
     @Published private(set) var loading = false
@@ -58,6 +60,7 @@ final class NativeUpdatesModel: ObservableObject {
     }
 
     func load(preservingMessage: Bool = false) {
+        guard work.acceptsWork else { return }
         guard !installing else { return }
         if loadInFlight { pendingLoad = true; loading = true; return }
         generation = UUID()
@@ -65,7 +68,7 @@ final class NativeUpdatesModel: ObservableObject {
         pending = []; results = [:]; if !preservingMessage { message = nil }; loading = true; loaded = false; discoveryReport = nil; loadInFlight = true
         let token = ScanCancellation(); loadToken = token
         let read = self.read
-        Task.detached(priority: .utility) {
+        work.run(priority: .utility) {
             let found = read(token)
             await MainActor.run {
                 self.loadInFlight = false
@@ -79,11 +82,13 @@ final class NativeUpdatesModel: ObservableObject {
     }
 
     func check(_ source: NativeUpdateSource) {
+        guard work.acceptsWork else { return }
         guard !loading, !installing, source.canCheck, !checking.contains(source.id), checking.count < Self.maximumChecks else { return }
         start(source)
     }
 
     func checkAll(_ sources: [NativeUpdateSource]) {
+        guard work.acceptsWork else { return }
         guard !loading, !installing else { return }
         var queued = Set(pending.map(\.id)).union(checking)
         pending += sources.filter { $0.canCheck && queued.insert($0.id).inserted }
@@ -91,15 +96,17 @@ final class NativeUpdatesModel: ObservableObject {
     }
 
     private func pump() {
+        guard work.acceptsWork else { return }
         while !loading, checking.count < Self.maximumChecks, let index = pending.firstIndex(where: { !checking.contains($0.id) }) {
             start(pending.remove(at: index))
         }
     }
 
     private func start(_ source: NativeUpdateSource) {
+        guard work.acceptsWork else { return }
         let token = generation, checker = self.checker
         checking.insert(source.id)
-        tasks[source.id] = Task.detached(priority: .utility) {
+        tasks[source.id] = work.run(priority: .utility) {
             let result = await checker(source)
             await MainActor.run {
                 self.tasks[source.id] = nil
@@ -125,6 +132,14 @@ final class NativeUpdatesModel: ObservableObject {
         recoveryLoading = false; recoveryLoaded = false
     }
 
+    func stopFeature() { work.stop(); retire();backupRemovalReview=nil }
+    func finishFeatureStop() async {
+        await work.finish()
+        sources=[];discoveryReport=nil;results=[:];checking=[];tasks=[:];loaded=false
+        installResult=nil;message=nil;recoveryRecords=[];recoveryBackups=[]
+        preservedWorkspaces=[];recoveryIssues=[];backupCleanupResult=nil;showRecovery=false
+    }
+
     func stop(_ source: NativeUpdateSource) { tasks[source.id]?.cancel() }
 
     func stopAll() {
@@ -133,6 +148,7 @@ final class NativeUpdatesModel: ObservableObject {
     }
 
     func openUpdater(_ source: NativeUpdateSource) {
+        guard work.acceptsWork else { return }
         guard NativeAppUpdates.unchanged(source, requireFeed: false) else {
             message = tr(source.blocked ?? "The app changed since the inventory; refresh the app list and review again"); return
         }
@@ -149,14 +165,15 @@ final class NativeUpdatesModel: ObservableObject {
     }
 
     func install(_ reviewed: NativeUpdateCheck) {
-        guard !installing, !loading, checking.isEmpty, !AppModels.shared.softwareUpdates.working else {
+        guard work.acceptsWork else { return }
+        guard !installing, !loading, checking.isEmpty, !otherUpdateInProgress() else {
             message = tr("Wait for the current update or checks to finish"); return
         }
         installing = true; exitRequested = false
         recoveryGeneration = UUID(); pendingRecovery = false
         recoveryLoaded = false
         let installer = self.installer
-        Task.detached(priority: .utility) {
+        work.run(priority: .utility) {
             let result = await installer(reviewed)
             await MainActor.run {
                 self.installResult = result; self.message = tr(result.message)
@@ -168,13 +185,14 @@ final class NativeUpdatesModel: ObservableObject {
     }
 
     func refreshRecovery() {
+        guard work.acceptsWork else { return }
         guard !installing else { pendingRecovery = true; recoveryLoading = true; return }
         if recoveryInFlight { pendingRecovery = true; recoveryLoading = true; return }
         recoveryInFlight = true; pendingRecovery = false
         recoveryLoading = true
         let token = recoveryGeneration
         let recovery = self.recoveryReader
-        Task.detached(priority: .utility) {
+        work.run(priority: .utility) {
             let report = recovery()
             await MainActor.run {
                 self.recoveryInFlight = false
@@ -198,25 +216,29 @@ final class NativeUpdatesModel: ObservableObject {
     }
 
     func inspect(_ record: NativePreservedWorkspace) {
+        guard work.acceptsWork else { return }
         do { NSWorkspace.shared.open(try NativeUpdateTransaction.preservedWorkspaceURL(record)) }
         catch { message = tr(error.localizedDescription) }
     }
 
     func openRecoveryFolder() {
+        guard work.acceptsWork else { return }
         do { NSWorkspace.shared.open(try NativeUpdateTransaction.recoveryFolderURL()) }
         catch { message = tr(error.localizedDescription) }
     }
 
     func inspectBackup(_ record: NativeUpdateReceipt) {
+        guard work.acceptsWork else { return }
         do { NSWorkspace.shared.activateFileViewerSelecting([try NativeUpdateTransaction.backupURL(record)]) }
         catch { message = tr(error.localizedDescription) }
     }
 
     func reviewBackupRemoval(_ record: NativeUpdateReceipt) {
-        guard !installing, !AppModels.shared.softwareUpdates.working else { message = tr("Wait for the current update or checks to finish"); return }
+        guard work.acceptsWork else { return }
+        guard !installing, !otherUpdateInProgress() else { message = tr("Wait for the current update or checks to finish"); return }
         stopAll(); installing = true; backupRemovalReview = nil; backupCleanupResult = nil
         let reviewer = backupReviewer
-        Task.detached(priority: .utility) {
+        work.run(priority: .utility) {
             do {
                 let review = try reviewer(record)
                 await MainActor.run { self.installing = false; self.backupRemovalReview = review }
@@ -228,11 +250,12 @@ final class NativeUpdatesModel: ObservableObject {
     }
 
     func trashBackup(_ review: NativeBackupRemovalReview) {
-        guard !installing, !AppModels.shared.softwareUpdates.working else { message = tr("Wait for the current update or checks to finish"); return }
+        guard work.acceptsWork else { return }
+        guard !installing, !otherUpdateInProgress() else { message = tr("Wait for the current update or checks to finish"); return }
         stopAll(); installing = true; exitRequested = false; backupRemovalReview = nil
         recoveryGeneration = UUID(); pendingRecovery = false; recoveryLoaded = false
         let remove = backupRemover
-        Task.detached(priority: .utility) {
+        work.run(priority: .utility) {
             let result = remove(review)
             await MainActor.run {
                 self.backupCleanupResult = result
@@ -245,12 +268,13 @@ final class NativeUpdatesModel: ObservableObject {
     }
 
     func restore(_ record: NativeUpdateReceipt) {
-        guard !installing, !AppModels.shared.softwareUpdates.working else { message = tr("Wait for the current update or checks to finish"); return }
+        guard work.acceptsWork else { return }
+        guard !installing, !otherUpdateInProgress() else { message = tr("Wait for the current update or checks to finish"); return }
         stopAll(); installing = true; exitRequested = false
         recoveryGeneration = UUID(); pendingRecovery = false
         recoveryLoaded = false
         let restore = self.restorer
-        Task.detached(priority: .utility) {
+        work.run(priority: .utility) {
             let result = restore(record)
             await MainActor.run {
                 self.installResult = result; self.message = tr(result.message)

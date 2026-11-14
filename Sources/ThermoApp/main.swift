@@ -677,7 +677,6 @@ if let i = CommandLine.arguments.firstIndex(of: "--render-preview"), i + 1 < Com
     let models = AppModels.shared
     func value(after flag: String) -> String? { args.firstIndex(of: flag).flatMap { $0 + 1 < args.count ? args[$0 + 1] : nil } }
     var page = value(after: "--page").flatMap(MainPage.init(argument:)) ?? .overview
-    if value(after: "--page") == "apps:feeds" { models.softwareUpdates.channel = "native" }
     for feature in BuiltinModules.implementations { feature.prepareReview(args, page: &page, models: models) }
     if args.contains("--agents") {
         page = .agents(value(after: "--agents").flatMap(Area.init(rawValue:)).map { .area($0) } ?? .home)
@@ -719,13 +718,6 @@ if let i = CommandLine.arguments.firstIndex(of: "--render-preview"), i + 1 < Com
         case .claude: return models.claudeCleanup.loaded && !models.claudeCleanup.busy
         case .history: return HistoryModel.shared.loaded
         case let .browser(app): return TabWorkspaceModel.loadedApps.contains(app)
-        case .apps(.installed): return !models.apps.loading && !models.apps.apps.isEmpty
-        case .apps(.leftovers): return models.apps.orphans != nil
-        case .apps(.startup): return models.startup.report != nil && !models.startup.busy
-        case .apps(.updates): return models.softwareUpdates.channel == "native"
-            ? models.nativeUpdates.loaded && !models.nativeUpdates.loading
-            : models.softwareUpdates.report != nil && !models.softwareUpdates.busy
-        case .apps(.store): return models.appStore.loaded
         case .plugins: return models.plugins.loaded && !models.plugins.checkingUpdates
         case let .module(id, _):
             // Worth a picture once the module's process is up, or once it is known to be off.

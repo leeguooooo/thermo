@@ -5,13 +5,15 @@ import ThermoL10n
 
 @MainActor
 final class AppUpdatesModel: ObservableObject {
+    let work = FeatureTasks()
+    var otherUpdateInProgress: () -> Bool = { false }
     @Published var channel = "homebrew"
     @Published private(set) var report: AppUpdateReport?
     @Published private(set) var loading = false
     @Published private(set) var working = false
     @Published private(set) var result: AppUpdateResult?
     @Published var exitRequested = false
-    var busy: Bool { loading || working || AppModels.shared.nativeUpdates.installing }
+    var busy: Bool { loading || working || otherUpdateInProgress() }
     private var generation = UUID()
     private var inFlight = false
     private var pending: Bool?
@@ -24,12 +26,13 @@ final class AppUpdatesModel: ObservableObject {
     }
 
     func refresh(catalog: Bool = false) {
+        guard work.acceptsWork else { return }
         guard !working else { return }
         if inFlight { pending = (pending ?? false) || catalog; loading = true; return }
         inFlight = true; loading = true
         let token = UUID(); generation = token
         let read = self.read
-        Task.detached(priority: .utility) {
+        work.run(priority: .utility) {
             let report = read(catalog)
             await MainActor.run {
                 self.inFlight = false
@@ -42,11 +45,15 @@ final class AppUpdatesModel: ObservableObject {
 
     func retire() { generation = UUID(); pending = nil; loading = false }
 
+    func stopFeature() { work.stop(); retire() }
+    func finishFeatureStop() async { await work.finish(); report=nil;result=nil }
+
     func apply(_ item: AppUpdate) {
+        guard work.acceptsWork else { return }
         guard !busy, item.blocked == nil else { return }
         working = true; result = nil; exitRequested = false
         let install = self.install, read = self.read
-        Task.detached(priority: .utility) {
+        work.run(priority: .utility) {
             let result = install(item)
             let report = read(false)
             await MainActor.run {

@@ -5,6 +5,7 @@ import ThermoL10n
 
 @MainActor
 final class StartupItemsModel: ObservableObject {
+    let work = FeatureTasks()
     @Published private(set) var report: StartupReport?
     @Published private(set) var loading = false
     @Published private(set) var working = false
@@ -27,6 +28,7 @@ final class StartupItemsModel: ObservableObject {
     }
 
     func refresh() {
+        guard work.acceptsWork else { return }
         guard !working else { return }
         if refreshInFlight { restartAfterCurrent = true; loading = true; return }
         refreshInFlight = true
@@ -34,7 +36,7 @@ final class StartupItemsModel: ObservableObject {
         let token = UUID()
         generation = token
         let read = self.read
-        Task.detached(priority: .utility) {
+        work.run(priority: .utility) {
             let report = read()
             await MainActor.run {
                 self.refreshInFlight = false
@@ -53,22 +55,29 @@ final class StartupItemsModel: ObservableObject {
 
     func retire() { generation = UUID(); restartAfterCurrent = false; loading = false }
 
+    func stopFeature() { work.stop(); retire() }
+    func finishFeatureStop() async {
+        await work.finish();report=nil;message=nil;background = .requiresAuthorization
+    }
+
     func inspectBackground() {
+        guard work.acceptsWork else { return }
         guard !busy else { return }
         working = true; authorizing = true; exitRequested = false; message = nil
         let reader = readBackground
-        Task.detached(priority: .utility) {
+        work.run(priority: .utility) {
             let result = reader()
             await MainActor.run { self.background = result; self.authorizing = false; self.working = false }
         }
     }
 
     func apply(_ item: StartupItem) {
+        guard work.acceptsWork else { return }
         guard !busy, let enabled = item.enabled else { return }
         working = true
         exitRequested = false
         let change = self.change, read = self.read
-        Task.detached(priority: .utility) {
+        work.run(priority: .utility) {
             let message: String
             do {
                 try change(!enabled, item)

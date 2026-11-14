@@ -4531,4 +4531,6 @@ let zhHans: [String: String] = [
     "Invalid preview input.": "预览输入无效。",
     "Preview requires a read-only regular file.": "预览需要只读的普通文件。",
     "Preview was cancelled.": "预览已取消。",
+    "Installed apps, leftovers, startup items and reviewed software updates.": "已安装应用、残留数据、启动项和经过核对的软件更新。",
+    "Wait for app removal, startup changes or updates before switching this feature off.": "请等待应用移除、启动项变更或更新完成，再关闭此功能。",
 ]
