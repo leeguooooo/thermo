@@ -1,4 +1,4 @@
-import CleanKit
+@testable import CleanKit
 import Foundation
 import XCTest
 @testable import ThermoApp
