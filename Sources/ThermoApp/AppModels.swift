@@ -2,12 +2,14 @@ import AgentDoctor
 import AppKit
 import CleanKit
 import Foundation
+import ModuleKit
 
 /// What the app keeps once: the menu bar panel and the main window show the same models.
 @MainActor
 final class AppModels {
     static let shared = AppModels()
-    lazy var monitor = Monitor()
+    lazy var monitor = makeMonitor()
+    private let makeMonitor: () -> Monitor
     lazy var updates = Updates()
     /// Whether disk cleanup's model exists. It is created on first use and never while the feature is off.
     private var storedDisk: DiskModel?
@@ -21,8 +23,10 @@ final class AppModels {
         set { storedDisk = newValue }
     }
 
-    init(makeDisk: @escaping () -> DiskModel = { DiskModel(retentionPreferences:.stored(in:.standard)) }) {
+    init(makeDisk: @escaping () -> DiskModel = { DiskModel(retentionPreferences:.stored(in:.standard)) },
+         makeMonitor: @escaping () -> Monitor = { Monitor(samplingAllowed: { ModulePreferences.isEnabled(BuiltinModuleManifests.performance, in: .standard) }) }) {
         self.makeDisk = makeDisk
+        self.makeMonitor = makeMonitor
     }
 
     func prepareDiskStop() throws -> BuiltinModules.FinishStop? {

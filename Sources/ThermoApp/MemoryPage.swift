@@ -3,12 +3,13 @@ import Charts
 import CleanKit
 import SwiftUI
 import ThermoL10n
+import ModuleKit
 
 /// The Memory page's readings: the breakdown, every program by memory, and the ones that look
 /// like they leak. Sampled every 5 s while the page is open; nothing runs otherwise.
 @MainActor
 final class MemoryModel: ObservableObject {
-    static let shared = MemoryModel()
+    static let shared = MemoryModel(samplingAllowed: { ModulePreferences.isEnabled(BuiltinModuleManifests.performance, in: .standard) })
 
     @Published private(set) var activity: MemoryActivity?
     @Published private(set) var breakdown: MemoryBreakdown?
@@ -24,6 +25,7 @@ final class MemoryModel: ObservableObject {
     private var liveReadings: [ProgramMemoryRecord] = []
     private var historyReadings: [ProgramMemoryRecord] = []
     private var timer: Timer?
+    private let samplingAllowed: () -> Bool
     private var sampling = false
     private var dayLoaded = Date.distantPast
     private var generation = UUID()
@@ -41,8 +43,10 @@ final class MemoryModel: ObservableObject {
          readHistory: @escaping @Sendable (ScanCancellation) -> [ProgramMemoryRecord] = { token in
              token.isCancelled ? [] : PulseRecorder.shared.programHistory.records(since: Date().addingTimeInterval(-PulseHistory.keep))
          },
-         readDay: @escaping @Sendable () -> [PulseRecord] = { PulseRecorder.shared.history.records(since: Date().addingTimeInterval(-PulseHistory.keep)) }) {
+         readDay: @escaping @Sendable () -> [PulseRecord] = { PulseRecorder.shared.history.records(since: Date().addingTimeInterval(-PulseHistory.keep)) },
+         samplingAllowed: @escaping () -> Bool = { true }) {
         self.read = read; self.readHistory = readHistory; self.readDay = readDay
+        self.samplingAllowed = samplingAllowed
     }
     nonisolated private static func readLive(_ cancellation: ScanCancellation) -> Reading {
         let b = MemoryBreakdown.read()
@@ -57,7 +61,7 @@ final class MemoryModel: ObservableObject {
     }
 
     func start() {
-        guard timer == nil else { return }
+        guard samplingAllowed(), timer == nil else { return }
         generation = UUID()
         timer = Timer.scheduledTimer(withTimeInterval: 5, repeats: true) { [weak self] _ in
             MainActor.assumeIsolated { self?.sample() }
@@ -66,6 +70,12 @@ final class MemoryModel: ObservableObject {
     }
 
     func stop() { timer?.invalidate(); timer = nil; generation = UUID(); cancellation?.cancel() }
+
+    func releaseReadingsIfIdle() {
+        guard timer == nil, !sampling else { return }
+        activity = nil; breakdown = nil; programs = []; suspects = []; day = []; programReadings = []
+        liveReadings = []; historyReadings = []; sampled = nil; inventoryAvailable = false
+    }
 
     func sample() {
         guard timer != nil, !sampling else { return }

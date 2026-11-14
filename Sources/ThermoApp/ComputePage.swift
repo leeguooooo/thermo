@@ -4,6 +4,7 @@ import AppKit
 import CleanKit
 import SwiftUI
 import ThermoL10n
+import ModuleKit
 
 /// The unchecked boundary owns a serial queue; the mutable sampler never leaves it.
 private final class ComputeWorker: @unchecked Sendable {
@@ -32,8 +33,8 @@ private final class ComputeWorker: @unchecked Sendable {
 
 @MainActor
 final class ComputeModel: ObservableObject {
-    static let shared = ComputeModel()
-    static let cpu = ComputeModel(includeGPU: false)
+    static let shared = ComputeModel(samplingAllowed: { ModulePreferences.isEnabled(BuiltinModuleManifests.performance, in: .standard) })
+    static let cpu = ComputeModel(includeGPU: false, samplingAllowed: { ModulePreferences.isEnabled(BuiltinModuleManifests.performance, in: .standard) })
     struct Point: Identifiable {
         let id = UUID()
         let time: Date
@@ -44,6 +45,7 @@ final class ComputeModel: ObservableObject {
     @Published private(set) var history: [Point] = []
     private let worker: ComputeWorker
     private let refreshInterval: TimeInterval
+    private let samplingAllowed: () -> Bool
     private var timer: Timer?
     private var sampling = false
     private var generation = UUID()
@@ -51,9 +53,10 @@ final class ComputeModel: ObservableObject {
     private var resetNextReading = true
     private var visibility = SamplingLeases()
     init(includeGPU: Bool = true, readSample: (@Sendable (ScanCancellation) -> ComputeActivity)? = nil,
-         samplingQueue: DispatchQueue? = nil, refreshInterval: TimeInterval = 2) {
+         samplingQueue: DispatchQueue? = nil, refreshInterval: TimeInterval = 2, samplingAllowed: @escaping () -> Bool = { true }) {
         precondition(refreshInterval.isFinite && refreshInterval > 0)
         self.refreshInterval = refreshInterval
+        self.samplingAllowed = samplingAllowed
         worker = ComputeWorker(includeGPU: includeGPU, readSample: readSample, queue: samplingQueue)
     }
     var samplingActive: Bool { timer != nil }
@@ -63,7 +66,7 @@ final class ComputeModel: ObservableObject {
         if visibility.active { start() } else { stop() }
     }
     func releaseReadingsIfIdle() {
-        guard timer == nil else { return }
+        guard samplingAllowed(), timer == nil else { return }
         if current != nil { current = nil }
         if !history.isEmpty { history = [] }
     }
@@ -437,6 +440,7 @@ struct ComputePage: View {
 
     /// Re-checks each process is the one that was read (same PID, owner and start time) before signalling it.
     func stop(_ target: ComputeStopTarget) {
+        guard PerformanceModule.enabled else { stopProblem = tr("This feature is switched off."); return }
         stopProblem = nil
         if let path = target.app {
             guard let app = NSWorkspace.shared.runningApplications.first(where: {

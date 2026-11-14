@@ -18,7 +18,7 @@ enum MenuBarModule: BuiltinModule {
         default: return false
         }
     }
-    @MainActor static func sidebar(page: Binding<MainPage>, models: AppModels,
+    @MainActor static func sidebar(section: BuiltinSidebarSection, page: Binding<MainPage>, models: AppModels,
                                   row: @escaping @MainActor (BuiltinSidebarItem) -> AnyView) -> AnyView { AnyView(EmptyView()) }
     @MainActor static func page(_ entry: ModuleManifest.Entry, selection: Binding<MainPage>, models: AppModels) -> AnyView { AnyView(ModuleOffView()) }
     @MainActor static func settings(_ entry: ModuleManifest.Entry, models: AppModels) -> AnyView {
@@ -38,6 +38,6 @@ enum MenuBarModule: BuiltinModule {
     }
     @MainActor static func appearance(_ page: MainPage) -> (glow: Bool, tint: Color?) { (false, nil) }
     @MainActor static func prepareReview(_ arguments: [String], page: inout MainPage, models: AppModels) {}
-    @MainActor static func snapshotReady(_ arguments: [String], models: AppModels) -> Bool { true }
+    @MainActor static func snapshotReady(_ arguments: [String], models: AppModels, started: Date) -> Bool { true }
 }
 

@@ -334,16 +334,10 @@ struct MainView: View {
 
     @ViewBuilder var coreContent: some View {
         switch page {
-        case .overview:
-            OverviewPage(monitor: monitor, open: { page = $0 }).transition(.page)
+        case .overview, .sensors, .fans, .memory, .compute:
+            ModuleOffView().transition(.page)
         case .checkup:
             CheckupPage(monitor: monitor, open: { page = $0 }).transition(.page)
-        case .sensors:
-            SensorsPage(monitor: monitor).transition(.page)
-        case .fans:
-            WindowPage(title: tr("Fans"), subtitle: tr("Choose how fast each fan runs. Settings stay when Thermo quits or updates.")) {
-                FansView(monitor: monitor)
-            }.transition(.page)
         case .settings:
             WindowPage(title: tr("Settings"), subtitle: "Thermo \(AppInfo.version)") {
                 SettingsView(monitor: monitor, updates: models.updates)
@@ -357,10 +351,6 @@ struct MainView: View {
         case let .apps(tab):
             AppsPage(model: models.apps, startup: models.startup, updates: models.softwareUpdates, native: models.nativeUpdates, store: models.appStore,
                      tab: Binding(get: { tab }, set: { page = .apps($0) })).transition(.page)
-        case let .compute(gpu):
-            ComputePage(gpu: gpu).id(gpu).transition(.page)
-        case .memory:
-            MemoryPage(model: MemoryModel.shared, open: { page = $0 }).transition(.page)
         case .claude(.accounts):
             ClaudeAccountsPage(model: ClaudeAccountsModel.shared).transition(.page)
         case let .claude(tab):
@@ -445,14 +435,22 @@ struct MainSidebar: View {
     @AppStorage(Settings.fahrenheit) private var fahrenheit = false
     @ObservedObject private var modules = ModuleCenter.shared
 
-    /// Share of memory in use; refreshed with the sidebar (the monitor ticks while the window is open).
-    var memoryTrailing: String? {
-        guard monitor.snapshot != nil, let m = SystemStats.memory() else { return nil }
-        return String(format: "%.0f%%", Double(m.usedBytes) / Double(max(1, m.totalBytes)) * 100)
-    }
-
     @Namespace private var selectionSpace
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
+    @ViewBuilder func moduleRows(_ section: BuiltinSidebarSection, titled: Bool = false) -> some View {
+        ForEach(BuiltinModules.implementations.indices, id: \.self) { index in
+            let feature = BuiltinModules.implementations[index]
+            if modules.isOn(feature.manifest.id), feature.sidebarSections.contains(section), feature.manifest.entries.contains(where: { $0.kind == .page }) {
+                if titled { header(tr(feature.manifest.name)) }
+                BuiltinSidebarGroup(implementation: feature, section: section, selection: $page, row: { item in
+                    AnyView(row(item.target, tr(item.entry.title), item.entry.symbol ?? feature.manifest.symbol,
+                        item.tint, trailing: item.trailing, indent: item.entry.parent != nil, selected: item.selected)
+                        .padding(.leading, CGFloat(max(0, feature.manifest.depth(of: item.entry.id) - 1)) * 14))
+                })
+            }
+        }
+    }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
@@ -465,35 +463,19 @@ struct MainSidebar: View {
             ScrollViewReader { scroller in
             ScrollView(showsIndicators: false) {
                 VStack(alignment: .leading, spacing: 1) {
-                    row(.overview, tr("Overview"), "gauge.with.dots.needle.67percent", .orange,
-                        trailing: monitor.snapshot.map { tempText($0.maximumKnownTemperature, fahrenheit: fahrenheit) },
-                        trailingColor: monitor.snapshot.map { heatColor($0.maximumKnownTemperature) })
+                    moduleRows(.overview)
                     row(.checkup, tr("AI Check-up"), "waveform.path.ecg", .mint, trailing: nil)
-                    row(.sensors, tr("Sensors"), "thermometer.medium", .red, trailing: nil)
-                    row(.fans, tr("Fans"), "fan", .blue,
-                        trailing: monitor.snapshot.flatMap { FanControlPresentation.speedSummary($0.fans, stopped: monitor.stoppedFans) })
+                    moduleRows(.machine)
                     row(.connections, tr("Connections"), "wifi", .blue, trailing: nil)
 
                     header(tr("Resources"))
-                    row(.compute(false), tr("CPU usage"), "cpu", .cyan, trailing: nil)
-                    row(.compute(true), tr("GPU usage"), "square.stack.3d.up", .purple, trailing: nil)
-                    row(.memory, tr("Memory usage"), "memorychip", .green, trailing: memoryTrailing)
+                    moduleRows(.resources)
                     row(.browser("Google Chrome"), tr("Tab organizer"), "rectangle.stack", .teal, trailing: nil)
 
-                    if !BuiltinModules.implementations.contains(where: { modules.isOn($0.manifest.id) && $0.manifest.entries.contains(where: { $0.kind == .page }) }) {
+                    if !BuiltinModules.implementations.contains(where: { modules.isOn($0.manifest.id) && $0.sidebarSections.contains(.storage) && $0.manifest.entries.contains(where: { $0.kind == .page }) }) {
                         header(tr("Storage & apps"))
                     }
-                    ForEach(BuiltinModules.implementations.indices, id: \.self) { index in
-                        let feature = BuiltinModules.implementations[index]
-                        if modules.isOn(feature.manifest.id), feature.manifest.entries.contains(where: { $0.kind == .page }) {
-                            header(tr(feature.manifest.name))
-                            BuiltinSidebarGroup(implementation: feature, selection: $page, row: { item in
-                                AnyView(row(item.target, tr(item.entry.title), item.entry.symbol ?? feature.manifest.symbol,
-                                            item.tint, trailing: item.trailing, indent: item.entry.parent != nil, selected: item.selected)
-                                    .padding(.leading, CGFloat(max(0, feature.manifest.depth(of: item.entry.id) - 1)) * 14))
-                            })
-                        }
-                    }
+                    moduleRows(.storage, titled: true)
 
                     row(.space(page.spaceTab ?? .browse), tr("Space Lens"), "square.grid.3x3.topleft.filled", .cyan, trailing: nil,
                         selected: page.spaceTab != nil)

@@ -51,7 +51,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate, UNU
         BatteryCareModel.shared.restoreSavedPreference()
         _ = AppModels.shared.updates  // Sparkle starts checking with the app
         // Slowdown history and alerts, in the background whether or not the panel is open.
-        PulseRecorder.shared.start()
+        // PerformanceModule owns background slowdown history.
         TabAutomation.shared.start()
         YunXClipboardPrompt.shared.refresh()
         Task { await YunXChromeUseSetup.shared.offerOnLaunch() }
@@ -378,6 +378,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate, UNU
 
     private func updateTitle(_ s: Snapshot?) {
         guard let button = statusItem.button else { return }
+        if !PerformanceModule.enabled {
+            let awake = IdleAwakeModel.shared.state
+            let marker = awake.phase == .active ? "☕︎" : awake.phase == .ending ? "☕︎?" : awake.requested ? "☕︎⏸" : ""
+            button.title = marker.isEmpty ? "" : " " + marker
+            lastTitle = nil
+            return
+        }
         let d = UserDefaults.standard
         // Redrawing the status item costs ~2 ms; skip it when nothing visible changed.
         let awake = IdleAwakeModel.shared.state
@@ -704,7 +711,7 @@ if let i = CommandLine.arguments.firstIndex(of: "--render-preview"), i + 1 < Com
         }
         // Give each page what it needs to be worth a picture, but never wait more than 90 s.
         if Date().timeIntervalSince(started) > 90 { return true }
-        if let ready = BuiltinModules.snapshotReady(page, arguments: args, models: models, center: .shared) { return ready }
+        if let ready = BuiltinModules.snapshotReady(page, arguments: args, models: models, center: .shared, started: started) { return ready }
         switch page {
         case .agents: return models.agents.report != nil && !models.agents.scanning
         case .claude(.accounts): return ClaudeAccountsModel.shared.loaded
@@ -731,7 +738,7 @@ if let i = CommandLine.arguments.firstIndex(of: "--render-preview"), i + 1 < Com
         case .space: return SpaceLensModel.shared.tree != nil && !SpaceLensModel.shared.scanning
         case .checkup: return Date().timeIntervalSince(started) > 2
         case .overview: return models.monitor.snapshot != nil && SystemPulse.shared.sampled && PulseRecorder.shared.diagnosis != nil && Date().timeIntervalSince(started) > 4
-        default: return models.monitor.snapshot != nil
+        default: return models.monitor.snapshot != nil || !PerformanceModule.enabled
         }
     }
 }

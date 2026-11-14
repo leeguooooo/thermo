@@ -249,7 +249,7 @@ final class Monitor: ObservableObject {
     var samplingActive: Bool { timer != nil }
     var canStopFeature: Bool { !helperBusy && !settingUp && pendingPolicies.isEmpty }
     func startFeature() {
-        guard samplingAllowed() else { return }
+        guard samplingAllowed(), timer == nil else { return }
         if samplingLifetime.current() == nil { _ = samplingLifetime.start() }
         refreshSamplingDemand(); reschedule()
     }

@@ -4,6 +4,7 @@ import IOKit.ps
 import SwiftUI
 import ThermoKit
 import ThermoL10n
+import ModuleKit
 
 private final class PanelReadingWorker: @unchecked Sendable {
     private let queue: DispatchQueue
@@ -38,7 +39,7 @@ private final class PanelReadingWorker: @unchecked Sendable {
 /// only while the panel is open.
 @MainActor
 final class PanelModel: ObservableObject {
-    static let shared = PanelModel()
+    static let shared = PanelModel(samplingAllowed: { ModulePreferences.isEnabled(BuiltinModuleManifests.performance, in: .standard) })
     static let length = 60
 
     struct Reading: Sendable {
@@ -67,6 +68,7 @@ final class PanelModel: ObservableObject {
     let memoryTotal = ProcessInfo.processInfo.physicalMemory
 
     private var timer: Timer?
+    private let samplingAllowed: () -> Bool
     private let worker: PanelReadingWorker
     private var generation = UUID()
     private var cancellation: ScanCancellation?
@@ -79,8 +81,10 @@ final class PanelModel: ObservableObject {
     init(readSample: (@MainActor () -> Reading)? = nil,
          readBackground: (@Sendable () -> Reading)? = nil, samplingQueue: DispatchQueue? = nil,
          holdPulse: @escaping @MainActor () -> Void = { SystemPulse.shared.hold() },
-         releasePulse: @escaping @MainActor () -> Void = { SystemPulse.shared.release() }) {
+         releasePulse: @escaping @MainActor () -> Void = { SystemPulse.shared.release() },
+         samplingAllowed: @escaping () -> Bool = { true }) {
         self.readSample = readSample; self.holdPulse = holdPulse; self.releasePulse = releasePulse
+        self.samplingAllowed = samplingAllowed
         worker = PanelReadingWorker(queue: samplingQueue, read: readBackground)
     }
     var samplingActive: Bool { timer != nil }
@@ -88,7 +92,8 @@ final class PanelModel: ObservableObject {
     /// Hidden panels do not retain periodic CPU, memory, GPU or network reads.
     private var interval: TimeInterval = 0
 
-    func setActive(_ on: Bool) {
+    func setActive(_ requested: Bool) {
+        let on = requested && samplingAllowed()
         let wanted: TimeInterval = on ? 2 : 0
         if on, !holding { holdPulse(); holding = true }
         if !on, holding { releasePulse(); holding = false }
