@@ -25,7 +25,9 @@ struct ManualRemovalReview: Identifiable, Sendable {
 /// the Trash only after a confirmation that lists every path.
 @MainActor
 final class SpaceLensModel: ObservableObject {
-    static let shared = SpaceLensModel()
+    static var shared: SpaceLensModel { AppModels.shared.space }
+    let work=FeatureTasks()
+    var canStopFeature: Bool { !working && !work.hasOperations }
 
     /// Where measuring starts: the whole disk, so the folders add up to what the disk uses.
     let root: String
@@ -71,7 +73,7 @@ final class SpaceLensModel: ObservableObject {
     /// Same contract as `remove`, but deletes for good instead of moving to the Trash.
     private let delete: @Sendable ([String], [String: Int64], String, Set<String>, [String: String], [String: String]) -> CleanResult
 
-    init(root: String = "/", home: String? = nil, cache: URL = SpaceLens.cacheURL,
+    init(enabled: @escaping () -> Bool = {true}, root: String = "/", home: String? = nil, cache: URL = SpaceLens.cacheURL,
          measure: @escaping @Sendable (String, ScanCancellation, ((SpaceLens.Progress) -> Void)?) -> SpaceTree = { SpaceLens.scan($0, cancellation: $1, progress: $2) },
          remove: @escaping @Sendable ([String], [String: Int64], String, Set<String>, [String: String], [String: String]) -> CleanResult = {
              ManualRemoval.trash($0, sizes: $1, home: $2, incompletePaths: $3, reviewIdentities: $4, requiredIdentities: $5, allowGitMetadata: true)
@@ -86,7 +88,8 @@ final class SpaceLensModel: ObservableObject {
         self.cache = cache; self.measure = measure; self.remove = remove; self.delete = delete
         self.searchDuplicates = searchDuplicates
         path = root
-        tree = SpaceLens.cached(root: root, from: cache)
+        work.enabled=enabled
+        tree = enabled() ? SpaceLens.cached(root: root, from: cache) : nil
     }
 
     var folder: SpaceFolder? { tree?.folder(path) }
@@ -105,6 +108,7 @@ final class SpaceLensModel: ObservableObject {
         .map { NSHomeDirectory() + "/" + $0 }
 
     func scan() {
+        guard work.acceptsWork else {return}
         guard !working else { return }
         if scanning {
             if needsRestoreRefresh { pendingRestoreRefresh = true }
@@ -122,7 +126,7 @@ final class SpaceLensModel: ObservableObject {
         removedDuringScan = []
         let root = root
         let measure = self.measure, cache = self.cache
-        Task.detached(priority: .userInitiated) {
+        work.run(priority: .userInitiated) {
             let tree = measure(root, token) { p in
                 Task { @MainActor in if self.cancellation === token && self.scanGeneration == generation && !token.isCancelled { self.progress = p } }
             }
@@ -158,6 +162,18 @@ final class SpaceLensModel: ObservableObject {
         stopping = true
     }
 
+    func stopFeature() {
+        work.stop();scanGeneration=UUID();stop();stopDuplicates()
+        lastOpenedGeneration=UUID();pendingRestoreRefresh=false
+    }
+    func finishFeatureStop() async {
+        await work.finish()
+        tree=nil;progress=nil;basket=[:];lastOpened=[:];duplicates=nil;duplicateReport=nil
+        selectionIdentities=[:];selectionSizeStates=[:];selectionRequirements=[:];removedDuringScan=[]
+        scanning=false;stopping=false;findingDuplicates=false;stoppingDuplicates=false;loadingLastOpened=false
+        duplicateProgress=nil;outcome=nil;outcomeIsWarning=false;path=root
+    }
+
     func invalidateAfterRestore(_ paths: [String]) {
         guard paths.contains(where: { $0 == root || $0.hasPrefix(root == "/" ? "/" : root + "/") }) else { return }
         scanGeneration = UUID(); needsRestoreRefresh = true; pendingRestoreRefresh = false
@@ -170,11 +186,12 @@ final class SpaceLensModel: ObservableObject {
         if !SpaceLens.invalidateCache(at: cache) { outcomeIsWarning = true; outcome = tr("The old space cache could not be cleared; scan again before using saved results") }
     }
 
-    func open(_ path: String) { if tree?.folder(path) != nil { self.path = path } }
+    func open(_ path: String) { guard work.acceptsWork else{return};if tree?.folder(path) != nil { self.path = path } }
 
     /// Show `path` in the folder browser, from another page: the folder itself, or the nearest folder
     /// holding it. Before the first measurement the path waits for the tree.
     func reveal(_ path: String) {
+        guard work.acceptsWork else {return}
         guard let tree else { self.path = path; return }
         self.path = Self.nearestFolder(path, in: tree)
     }
@@ -186,11 +203,13 @@ final class SpaceLensModel: ObservableObject {
     }
 
     func refusal(_ path: String) -> String? {
+        guard work.acceptsWork else{return tr("This feature is switched off.")}
         if SpaceLens.isVirtual(path) { return tr("Not a folder: this space is a separate volume or could not be read") }
         return ManualRemoval.refusal(path, home: home, allowGitMetadata: true)
     }
 
     func toggle(_ path: String, bytes: Int64) {
+        guard work.acceptsWork else {return}
         guard !working else { return }
         if basket[path] != nil { basket[path] = nil; selectionIdentities[path] = nil; selectionRequirements[path] = nil; selectionSizeStates[path] = nil; return }
         guard refusal(path) == nil else { return }
@@ -212,6 +231,7 @@ final class SpaceLensModel: ObservableObject {
     }
 
     func removalReview() -> ManualRemovalReview? {
+        guard work.acceptsWork else{return nil}
         guard !working, !stopping, !basket.isEmpty else { return nil }
         return ManualRemovalReview(selection: basket,
             measured: basket.filter { sizeState($0.key) != .unavailable && sizeState($0.key) != .unmeasured },
@@ -223,6 +243,7 @@ final class SpaceLensModel: ObservableObject {
     }
 
     func trash(review: ManualRemovalReview? = nil, permanent: Bool = false) {
+        guard work.acceptsWork else {return}
         guard !working else { return }
         guard let current = removalReview() else {
             if review != nil { outcomeIsWarning = true; outcome = tr("Selection changed after review; review the items again.") }
@@ -238,7 +259,7 @@ final class SpaceLensModel: ObservableObject {
         stopDuplicates()
         working = true; exitRequested = false
         let lease = AppExitGuard.beginManualRemoval { self.exitRequested = true }
-        Task.detached(priority: .userInitiated) {
+        work.run(priority: .userInitiated) {
             let result = remove(picked.keys.sorted(), measured, home, incomplete, identities, required)
             await MainActor.run { self.afterTrash(result); AppExitGuard.endManualRemoval(lease) }
         }
@@ -280,13 +301,14 @@ final class SpaceLensModel: ObservableObject {
 
     /// Keep one physical metadata reader until it returns, including after cancellation.
     func loadLastOpened() {
+        guard work.acceptsWork else {return}
         wantsLastOpened = true
         guard !loadingLastOpened, !scanning, !working else { return }
         let files = (tree?.large ?? []).prefix(3000).map(\.path).filter { lastOpened[$0] == nil }
         guard !files.isEmpty else { return }
         let generation = lastOpenedGeneration, token = ScanCancellation(), read = readLastOpened
         lastOpenedCancellation = token; loadingLastOpened = true
-        Task.detached(priority: .utility) {
+        work.run(priority: .utility) {
             var found: [String: Date?] = [:]
             for file in files {
                 if token.isCancelled { break }
@@ -318,6 +340,7 @@ final class SpaceLensModel: ObservableObject {
     }
 
     func findDuplicates() {
+        guard work.acceptsWork else {return}
         guard !working else { return }
         if duplicateInFlight {
             pendingDuplicate = true; duplicateCancellation?.cancel(); stoppingDuplicates = true
@@ -333,7 +356,7 @@ final class SpaceLensModel: ObservableObject {
         duplicateProgress = nil
         let roots = Duplicates.defaultRoots(home: home)
         let search = searchDuplicates
-        Task.detached(priority: .userInitiated) {
+        work.run(priority: .userInitiated) {
             let report = search(roots, token) { p in
                 Task { @MainActor in if self.duplicateCancellation === token && !token.isCancelled { self.duplicateProgress = p } }
             }
@@ -419,24 +442,27 @@ final class SpaceLensModel: ObservableObject {
 
     /// Review every choice first, including files already selected on another page.
     func pickAllButOldest() {
+        guard work.acceptsWork else {return}
         guard !working, let choices = duplicateChoices(in: duplicates ?? []) else { return }
         applyDuplicateChoices(choices)
     }
 
     func toggleDuplicate(_ path: String, group: DuplicateGroup) {
+        guard work.acceptsWork else {return}
         guard !working else { return }
         if basket[path] != nil { toggle(path, bytes: 0); return }
         guard let choices = duplicateChoices(in: [group], only: path) else { return }
         applyDuplicateChoices(choices)
     }
 
-    func clearBasket() { guard !working else { return }; basket = [:]; selectionIdentities = [:]; selectionRequirements = [:]; selectionSizeStates = [:] }
+    func clearBasket() { guard work.acceptsWork else{return};guard !working else { return }; basket = [:]; selectionIdentities = [:]; selectionRequirements = [:]; selectionSizeStates = [:] }
 
     /// Whether `path` can be ticked by a select-all: not refused, not inside a picked folder.
-    func pickable(_ path: String) -> Bool { refusal(path) == nil && !isCovered(path) }
+    func pickable(_ path: String) -> Bool { work.acceptsWork && refusal(path) == nil && !isCovered(path) }
 
     /// Adds what the user accepted from an AI review; never removes a pick, never overrides a lock.
     func pick(_ chosen: [String: Int64]) {
+        guard work.acceptsWork else {return}
         for (path, bytes) in chosen.sorted(by: { $0.key.count < $1.key.count }) where basket[path] == nil && pickable(path) {
             toggle(path, bytes: bytes)
         }
@@ -444,18 +470,21 @@ final class SpaceLensModel: ObservableObject {
 
     /// Picks every listed path that is not picked yet, each through the same checks as one tick.
     func pick(_ files: [(path: String, bytes: Int64)]) {
+        guard work.acceptsWork else {return}
         guard !working else { return }
         for file in files where basket[file.path] == nil && pickable(file.path) { toggle(file.path, bytes: file.bytes) }
     }
 
     /// Unpicks every listed path that is picked.
     func unpick(_ paths: [String]) {
+        guard work.acceptsWork else {return}
         guard !working else { return }
         for path in paths where basket[path] != nil { toggle(path, bytes: 0) }
     }
 
     /// Picks every copy but the kept one in `group`, with the same review as "Keep the oldest of each".
     func pickAllButOldest(in group: DuplicateGroup) {
+        guard work.acceptsWork else {return}
         guard !working, let choices = duplicateChoices(in: [group]) else { return }
         applyDuplicateChoices(choices)
     }
@@ -500,7 +529,7 @@ struct SpacePage: View {
             if t != .duplicates { model.stopDuplicates() }
         }
         .onDisappear { model.stopLastOpened(); model.stopDuplicates() }
-        .sheet(item: $asking) { q in AskAISheet(question: q) { asking = nil } }
+        .sheet(item: $asking) { q in AskAISheet(question: q, scope:model.work) { asking = nil } }
         .sheet(item: $tidying) { q in AIFolderReviewSheet(question: q, model: model) { tidying = nil } }
         .onAppear { ai.discover() }
         .sheet(item: $confirming) { review in
@@ -1192,8 +1221,10 @@ struct AIFolderReviewSheet: View {
     }
 
     func ask(_ backend: LocalAIBackend) {
+        guard let operation=model.work.beginOperation() else{return}
         phase = .asking
         Task {
+            defer{model.work.endOperation(operation)}
             do {
                 let a = try await LocalAI.review(question, using: backend)
                 // Start with what the AI says can go and Thermo allows; the user changes the rest.

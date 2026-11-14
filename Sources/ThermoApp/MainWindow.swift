@@ -190,8 +190,7 @@ enum MainWindow {
                     models.stopBrowserChecks()
                     models.retireSoftwareViews()
                     SpaceOverviewModel.shared.stop()
-                    SpaceLensModel.shared.stop()
-                    SpaceLensModel.shared.stopDuplicates()
+                    models.stopSpaceViews()
                     MemoryModel.shared.stop()
                     ConnectionsModel.shared.stop()
                     ComputeModel.shared.stop()
@@ -361,8 +360,8 @@ struct MainView: View {
             HistoryPage(model: HistoryModel.shared, open: { page = $0 }).transition(.page)
         case let .module(id, entry):
             ModulePageView(center: .shared, module: id, entry: entry).id(id + ":" + entry).transition(.page)
-        case let .space(tab):
-            SpacePage(model: SpaceLensModel.shared, tab: Binding(get: { tab }, set: { page = .space($0) })).transition(.page)
+        case .space:
+            ModuleOffView().transition(.page)
         }
     }
 }
@@ -473,8 +472,6 @@ struct MainSidebar: View {
                     }
                     moduleRows(.storage, titled: true)
 
-                    row(.space(page.spaceTab ?? .browse), tr("Space Lens"), "square.grid.3x3.topleft.filled", .cyan, trailing: nil,
-                        selected: page.spaceTab != nil)
                     moduleRows(.software)
                     row(.yunx, tr("YunX Download"), "arrow.down.circle", .blue, trailing: nil)
                     row(.plugins, tr("Plugin marketplace"), "puzzlepiece.extension", .orange, trailing: nil)

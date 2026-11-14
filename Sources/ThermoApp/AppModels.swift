@@ -12,6 +12,34 @@ final class AppModels {
     private let makeMonitor: () -> Monitor
     private let makeApps: @MainActor () -> AppsFeatureModels
     private let defaults: UserDefaults
+    typealias SpaceFactory = @MainActor (@escaping () -> Bool) -> SpaceLensModel
+    private let makeSpace: SpaceFactory
+    private var storedSpace: SpaceLensModel?
+    private var spaceInvalidated = false
+    var spaceLoaded: Bool { storedSpace != nil }
+    var space: SpaceLensModel {
+        if let storedSpace {return storedSpace}
+        let defaults=self.defaults
+        let created=makeSpace {ModulePreferences.isEnabled(BuiltinModuleManifests.space,in:defaults)}
+        if spaceInvalidated {created.invalidateAfterRestore([created.root]);spaceInvalidated=false}
+        storedSpace=created;return created
+    }
+    func stopSpaceViews() {storedSpace?.stop();storedSpace?.stopDuplicates()}
+    func invalidateSpaceAfterRestore(_ paths:[String]) {
+        if let storedSpace {storedSpace.invalidateAfterRestore(paths)}
+        else if !paths.isEmpty {spaceInvalidated=true;SpaceLens.invalidateCache()}
+    }
+    func prepareSpaceStop() throws -> BuiltinModules.FinishStop? {
+        guard let model=storedSpace else{return nil}
+        guard model.canStopFeature else {
+            throw BuiltinModules.StopRefused(description:tr("Wait for file removal or the current AI request before switching this feature off."))
+        }
+        model.stopFeature()
+        return { [weak self] in
+            await model.finishFeatureStop()
+            if self?.storedSpace === model {self?.storedSpace=nil}
+        }
+    }
     private var storedApps: AppsFeatureModels?
     var appsLoaded: Bool { storedApps != nil }
     private var software: AppsFeatureModels {
@@ -33,9 +61,9 @@ final class AppModels {
         set { storedDisk = newValue }
     }
 
-    init(defaults: UserDefaults = .standard, makeApps: @escaping @MainActor () -> AppsFeatureModels = { AppsFeatureModels() }, makeDisk: @escaping () -> DiskModel = { DiskModel(retentionPreferences:.stored(in:.standard)) },
+    init(defaults: UserDefaults = .standard, makeApps: @escaping @MainActor () -> AppsFeatureModels = { AppsFeatureModels() }, makeSpace: @escaping SpaceFactory = { SpaceLensModel(enabled:$0) }, makeDisk: @escaping () -> DiskModel = { DiskModel(retentionPreferences:.stored(in:.standard)) },
          makeMonitor: @escaping () -> Monitor = { Monitor(samplingAllowed: { ModulePreferences.isEnabled(BuiltinModuleManifests.performance, in: .standard) }) }) {
-        self.makeDisk = makeDisk;self.makeApps=makeApps;self.defaults=defaults
+        self.makeDisk = makeDisk;self.makeApps=makeApps;self.makeSpace=makeSpace;self.defaults=defaults
         self.makeMonitor = makeMonitor
     }
 

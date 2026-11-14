@@ -28,12 +28,13 @@ import ThermoL10n
 struct AskAIPanel: View {
     /// Built on the first tap: it may list a folder on disk.
     let make: () -> LocalAIQuestion
+    let scope: FeatureTasks?
     @ObservedObject private var store = LocalAIStore.shared
     @State private var phase: Phase = .idle
     @State private var built: LocalAIQuestion?
 
-    init(_ make: @escaping () -> LocalAIQuestion) { self.make = make }
-    init(question: LocalAIQuestion) { self.make = { question } }
+    init(_ make: @escaping () -> LocalAIQuestion) { self.make = make;self.scope=nil }
+    init(question: LocalAIQuestion, scope: FeatureTasks? = nil) { self.make = { question };self.scope=scope }
 
     var question: LocalAIQuestion { built ?? make() }
 
@@ -117,8 +118,12 @@ struct AskAIPanel: View {
     }
 
     func ask(_ backend: LocalAIBackend) {
+        let operation:UUID?
+        if let scope {guard let acquired=scope.beginOperation() else{return};operation=acquired}
+        else {operation=nil}
         phase = .asking
         Task {
+            defer{if let operation{scope?.endOperation(operation)}}
             do { phase = .answered(try await LocalAI.ask(question, using: backend)) }
             catch { phase = .failed(error.localizedDescription) }
         }
@@ -136,6 +141,7 @@ struct AskAIPanel: View {
 /// The 空间透视 context menu opens this for one row.
 struct AskAISheet: View {
     let question: LocalAIQuestion
+    var scope: FeatureTasks? = nil
     let close: () -> Void
 
     var body: some View {
@@ -153,7 +159,7 @@ struct AskAISheet: View {
                 Spacer()
                 if let b = question.bytes { Text(ByteFormat.string(b)).font(Theme.figure(.metric)).foregroundStyle(Theme.textPrimary) }
             }
-            AskAIPanel(question: question)
+            AskAIPanel(question: question,scope:scope)
             HStack { Spacer(); Button(tr("Done"), action: close).keyboardShortcut(.defaultAction) }
         }
         .padding(Theme.Space.xl)

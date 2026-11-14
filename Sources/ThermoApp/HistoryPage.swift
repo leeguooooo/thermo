@@ -33,7 +33,7 @@ final class HistoryModel: ObservableObject {
          },
          didRestore: @escaping @MainActor ([String]) -> Void = {
              AppModels.shared.invalidateAppsAfterRestore()
-             SpaceLensModel.shared.invalidateAfterRestore($0)
+             AppModels.shared.invalidateSpaceAfterRestore($0)
          }) {
         self.reader = reader; self.reviewBatch = reviewBatch; self.restoreBatch = restoreBatch; self.didRestore = didRestore
     }
