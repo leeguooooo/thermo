@@ -41,8 +41,10 @@ final class PresentationTests: XCTestCase {
         XCTAssertEqual(panel.title, "Open Menu Panel")
         XCTAssertTrue(panel.target === target)
         let items = view?.submenu?.items ?? []
-        XCTAssertEqual(items.map(\.keyEquivalent), ["1", "2", "3", "4", "5", "6", "7", "8", "9", "0", "", "", ","])
-        for page in [MainPage.apps(.installed), .memory, .compute(false), .compute(true), .space(.browse), .claude(.accounts)] {
+        XCTAssertEqual(items.map(\.keyEquivalent).filter{!$0.isEmpty}, ["1", "2", "3", "4", "5", "6", "7", "8", "9", "0", ","])
+        let destinations=items.compactMap{$0.representedObject as? MainPage}
+        XCTAssertEqual(Set(destinations).count,destinations.count,"View menu destinations must not be duplicated")
+        for page in [MainPage.apps(.installed), .memory, .compute(false), .compute(true), .space(.browse), .claude(.accounts), .connections] {
             XCTAssertEqual(items.filter { ($0.representedObject as? MainPage) == page }.count, 1)
         }
         XCTAssertEqual(items.first?.representedObject as? MainPage, .overview)

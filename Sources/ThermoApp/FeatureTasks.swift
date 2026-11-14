@@ -12,12 +12,13 @@ import Foundation
     var acceptsWork: Bool { !stopping && enabled() }
 
     @discardableResult
-    func run(priority: TaskPriority? = nil, operation: @escaping @Sendable () async -> Void) -> Task<Void, Never> {
+    func run(priority: TaskPriority? = nil, onSkipped:@escaping @MainActor ()->Void = {}, operation: @escaping @Sendable () async -> Void) -> Task<Void, Never> {
         guard acceptsWork else { return Task {} }
         let id = UUID()
         let task = Task.detached(priority: priority) { [weak self] in
             let admitted=await self?.acceptsWork ?? false
             if !Task.isCancelled && admitted {await operation()}
+            else {await onSkipped()}
             await self?.finished(id)
             return ()
         }

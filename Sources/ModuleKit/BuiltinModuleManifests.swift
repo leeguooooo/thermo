@@ -103,7 +103,11 @@ public enum BuiltinModuleManifests {
         symbol:"rectangle.stack",version:"1.0.0",launch:.onDemand,enabledByDefault:true,
         entries:[.init(id:"home",kind:.page,title:"Browser pages",symbol:"rectangle.stack",scene:"pages",navigationKey:"4"),
                  .init(id:"archive",kind:.menuBarItem,title:"Save and close background tabs",symbol:"archivebox",scene:"archive-tabs")])
-    public static let all = [disk, search, capture, menuBar, performance, apps, space, browser]
+    public static let connections=ModuleManifest(
+        id:"dev.thermo.connections",name:"Connections",summary:"Wi-Fi status, nearby Bluetooth computers and reviewed device and sound controls.",
+        symbol:"wifi",version:"1.0.0",launch:.onDemand,enabledByDefault:true,
+        entries:[.init(id:"home",kind:.page,title:"Connections",symbol:"wifi",scene:"connections")])
+    public static let all = [disk, search, capture, menuBar, performance, apps, space, browser, connections]
 }
 
 public enum ModulePreferences {

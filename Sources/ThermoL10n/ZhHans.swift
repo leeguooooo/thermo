@@ -4538,4 +4538,6 @@ let zhHans: [String: String] = [
     "Wait for this feature’s current command to finish before switching it off.": "请等待此功能正在执行的命令结束，再关闭它。",
     "Browser tab checks, reviewed closing, saved batches and native grouping.": "浏览器标签检查、经确认后关闭、保存批次和原生分组。",
     "Wait for browser changes or tab grouping to finish before switching this feature off.": "请等待浏览器变更或标签分组完成，再关闭此功能。",
+    "Wi-Fi status, nearby Bluetooth computers and reviewed device and sound controls.": "Wi-Fi 状态、附近的蓝牙电脑，以及经确认的设备和声音控制。",
+    "Wait for the Bluetooth connection change before switching this feature off.": "请等待蓝牙连接变更完成，再关闭此功能。",
 ]

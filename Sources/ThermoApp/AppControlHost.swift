@@ -199,7 +199,7 @@ import ThermoKit
                            "cpuPageSampling":String(ComputeModel.cpu.samplingActive),
                            "gpuPageSampling":String(ComputeModel.shared.samplingActive),
                            "memoryPageSampling":String(MemoryModel.shared.samplingActive),
-                           "connectionsSampling":String(ConnectionsModel.shared.samplingActive),
+                           "connectionsSampling":String(AppModels.shared.connectionsSampling),
                            "menuPanelOpen":String(AppModels.shared.monitor.popoverOpen),
                            "menuPanelSampling":String(PanelModel.shared.samplingActive),
                            "pulseSampling":String(SystemPulse.shared.samplingActive),

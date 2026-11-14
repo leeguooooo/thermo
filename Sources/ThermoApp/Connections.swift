@@ -441,7 +441,8 @@ enum AudioOutputs {
 /// open, the Bluetooth report every fifteen; nothing here asks for a permission until a click does.
 @MainActor
 final class ConnectionsModel: NSObject, ObservableObject, CLLocationManagerDelegate {
-    static let shared = ConnectionsModel()
+    static var shared:ConnectionsModel {AppModels.shared.connections}
+    let work=FeatureTasks()
 
     enum NameAccess: Equatable { case unknown, allowed, denied, asked }
 
@@ -472,24 +473,30 @@ final class ConnectionsModel: NSObject, ObservableObject, CLLocationManagerDeleg
     private var bluetoothRefreshPending = false
     private var location: CLLocationManager?
     private var visibility = SamplingLeases()
+    private let wifiScanner:@Sendable () throws->[WiFiNetwork]
+    private let connector:@Sendable (Bool,String)->Bool
+    private let connectionWait:@Sendable () async->Void
     private let bluetoothReader: @Sendable () -> BluetoothReport?
     private let computerModelResolver: @Sendable ([String]) async -> BonjourComputerModels.Batch
     var samplingActive: Bool { timer != nil }
 
-    init(bluetoothReader: @escaping @Sendable () -> BluetoothReport? = { BluetoothReport.read() },
+    init(enabled:@escaping ()->Bool = {true}, wifiScanner:@escaping @Sendable () throws->[WiFiNetwork] = {try WiFiNetwork.scan()}, connector:@escaping @Sendable (Bool,String)->Bool = {BluetoothReport.setConnected($0,address:$1)}, connectionWait:@escaping @Sendable () async->Void = {try? await Task.sleep(nanoseconds:1_200_000_000)}, bluetoothReader: @escaping @Sendable () -> BluetoothReport? = { BluetoothReport.read() },
          computerModelResolver: @escaping @Sendable ([String]) async -> BonjourComputerModels.Batch = { await BonjourComputerModels.lookup($0) }) {
+        self.wifiScanner=wifiScanner;self.connector=connector;self.connectionWait=connectionWait
         self.bluetoothReader = bluetoothReader
         self.computerModelResolver = computerModelResolver
         super.init()
+        work.enabled=enabled
     }
 
     func setVisible(_ active: Bool, owner: UUID) {
+        guard work.acceptsWork else{return}
         visibility.set(owner, active: active)
         if visibility.active { start() } else { stop() }
     }
 
     func start() {
-        guard timer == nil else { return }
+        guard work.acceptsWork,timer == nil else { return }
         if location == nil {
             let manager = CLLocationManager()
             manager.delegate = self
@@ -511,6 +518,7 @@ final class ConnectionsModel: NSObject, ObservableObject, CLLocationManagerDeleg
     }
 
     private func tick(force: Bool) {
+        guard work.acceptsWork else{return}
         wifi = WiFiStatus.read()
         wifiRead = true
         readSound()
@@ -528,6 +536,7 @@ final class ConnectionsModel: NSObject, ObservableObject, CLLocationManagerDeleg
     }
 
     func refreshBluetooth() {
+        guard work.acceptsWork else{return}
         guard !readingBluetooth else { bluetoothRefreshPending = true; return }
         readingBluetooth = true
         bluetoothGeneration &+= 1
@@ -535,7 +544,9 @@ final class ConnectionsModel: NSObject, ObservableObject, CLLocationManagerDeleg
         let resolveModels = visibility.active
         let read = bluetoothReader
         let resolve = computerModelResolver
-        bluetoothTask = Task.detached(priority: .utility) { [weak self] in
+        bluetoothTask = work.run(priority: .utility,onSkipped:{ [weak self] in
+            self?.finishBluetooth(nil,blocked:false,generation:generation)
+        }) { [weak self] in
             let report = read()
             if let report { await self?.previewBluetooth(report, generation: generation) }
             let hints: BonjourComputerModels.Batch
@@ -547,7 +558,7 @@ final class ConnectionsModel: NSObject, ObservableObject, CLLocationManagerDeleg
     }
 
     private func previewBluetooth(_ report: BluetoothReport, generation: Int) {
-        guard generation == bluetoothGeneration else { return }
+        guard work.acceptsWork,generation == bluetoothGeneration else { return }
         // Show the first report promptly; retain an existing report until its replacement is complete.
         if bluetooth == nil { bluetooth = report; bluetoothFailed = false }
     }
@@ -555,25 +566,27 @@ final class ConnectionsModel: NSObject, ObservableObject, CLLocationManagerDeleg
     private func finishBluetooth(_ report: BluetoothReport?, blocked: Bool, generation: Int) {
         readingBluetooth = false
         bluetoothTask = nil
-        if generation == bluetoothGeneration {
+        if work.acceptsWork,generation == bluetoothGeneration {
             computerModelAccessBlocked = blocked
             if let report { bluetooth = report; bluetoothFailed = false }
             else if bluetooth == nil { bluetoothFailed = true }
         }
         let again = bluetoothRefreshPending || generation != bluetoothGeneration
         bluetoothRefreshPending = false
-        if again && visibility.active { refreshBluetooth() }
+        if again && visibility.active && work.acceptsWork { refreshBluetooth() }
     }
 
     func scan() {
-        guard !scanning else { return }
+        guard work.acceptsWork,!scanning else { return }
         scanning = true
         scanError = nil
-        Task.detached(priority: .userInitiated) {
-            let result = Result { try WiFiNetwork.scan() }
+        let scan=wifiScanner
+        work.run(priority: .userInitiated) { [weak self] in
+            let result = Result { try scan() }
             await MainActor.run {
-                let m = ConnectionsModel.shared
+                guard let m=self else{return}
                 m.scanning = false
+                guard m.work.acceptsWork else{return}
                 switch result {
                 case let .success(networks): m.nearby = WiFiNetwork.merge(networks, current: m.wifi?.ssid)
                 case let .failure(error): m.scanError = error.localizedDescription
@@ -583,17 +596,18 @@ final class ConnectionsModel: NSObject, ObservableObject, CLLocationManagerDeleg
     }
 
     func setConnected(_ connect: Bool, _ device: BluetoothDevice) {
-        guard !busy.contains(device.address) else { return }
+        guard work.acceptsWork,!busy.contains(device.address) else { return }
         busy.insert(device.address)
         actionError = nil
         let address = device.address, name = device.name
-        Task.detached(priority: .userInitiated) {
-            let ok = BluetoothReport.setConnected(connect, address: address)
+        let connector=self.connector,wait=connectionWait,read=bluetoothReader
+        work.run(priority: .userInitiated) { [weak self] in
+            let ok = connector(connect,address)
             // The report lags the link by a moment.
-            try? await Task.sleep(nanoseconds: 1_200_000_000)
-            let report = BluetoothReport.read()
+            await wait()
+            let report = read()
             await MainActor.run {
-                let m = ConnectionsModel.shared
+                guard let m=self else{return}
                 m.busy.remove(address)
                 if let report { m.bluetooth = report }
                 if !ok { m.actionError = connect ? tr("Could not connect %1$@.", name) : tr("Could not disconnect %1$@.", name) }
@@ -602,6 +616,7 @@ final class ConnectionsModel: NSObject, ObservableObject, CLLocationManagerDeleg
     }
 
     func setVolume(_ v: Float) {
+        guard work.acceptsWork else{return}
         guard let id = defaultOutput else { return }
         volume = v
         AudioOutputs.setVolume(id, v)
@@ -609,18 +624,21 @@ final class ConnectionsModel: NSObject, ObservableObject, CLLocationManagerDeleg
     }
 
     func toggleMute() {
+        guard work.acceptsWork else{return}
         guard let id = defaultOutput else { return }
         AudioOutputs.setMuted(id, !muted)
         muted = AudioOutputs.muted(id) ?? !muted
     }
 
     func select(_ output: AudioOutput) {
+        guard work.acceptsWork else{return}
         if !AudioOutputs.setDefault(output.id) { actionError = tr("Could not switch to %1$@.", output.name) }
         readSound()
     }
 
     /// The first click asks; after that (or once refused) the only way is System Settings.
     func requestNames() {
+        guard work.acceptsWork else{return}
         switch nameAccess {
         case .unknown:
             nameAccess = .asked
@@ -643,9 +661,22 @@ final class ConnectionsModel: NSObject, ObservableObject, CLLocationManagerDeleg
 
     nonisolated func locationManagerDidChangeAuthorization(_ manager: CLLocationManager) {
         Task { @MainActor [weak self] in
-            guard let self else { return }
+            guard let self,self.work.acceptsWork else { return }
             self.updateAccess()
             if self.timer != nil { self.wifi = WiFiStatus.read() }
         }
     }
+    func retireVisibility() {visibility=SamplingLeases();stop()}
+    func stopFeature() {
+        retireVisibility();work.stop()
+        location?.delegate=nil;location=nil
+    }
+    func finishFeatureStop() async {
+        await work.finish()
+        wifi=nil;wifiRead=false;nearby=nil;scanning=false;scanError=nil;bluetooth=nil
+        bluetoothFailed=false;readingBluetooth=false;bluetoothTask=nil;outputs=[];defaultOutput=nil
+        volume=nil;volumeSettable=false;muted=false;actionError=nil;nameAccess = .unknown
+        computerModelAccessBlocked=false;draggingVolume=false;busy=[]
+    }
+
 }

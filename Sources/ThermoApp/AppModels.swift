@@ -53,6 +53,28 @@ final class AppModels {
         created.setEnabled { ModulePreferences.isEnabled(BuiltinModuleManifests.apps,in:defaults) }
         storedApps=created;return created
     }
+    typealias ConnectionsFactory = @MainActor (@escaping ()->Bool)->ConnectionsModel
+    private let makeConnections:ConnectionsFactory
+    private var storedConnections:ConnectionsModel?
+    var connectionsLoaded:Bool {storedConnections != nil}
+    var connectionsSampling:Bool {storedConnections?.samplingActive ?? false}
+    var connections:ConnectionsModel {
+        if let storedConnections{return storedConnections}
+        let defaults=self.defaults
+        let model=makeConnections {ModulePreferences.isEnabled(BuiltinModuleManifests.connections,in:defaults)}
+        storedConnections=model;return model
+    }
+    func stopConnectionViews() {storedConnections?.retireVisibility()}
+    func connectionsExitBlocker()->MainPage? {storedConnections?.busy.isEmpty == false ? .connections:nil}
+    func prepareConnectionsStop() throws->BuiltinModules.FinishStop? {
+        guard let model=storedConnections else{return nil}
+        guard model.busy.isEmpty else{throw BuiltinModules.StopRefused(description:tr("Wait for the Bluetooth connection change before switching this feature off."))}
+        model.stopFeature()
+        return { [weak self] in
+            await model.finishFeatureStop()
+            if self?.storedConnections === model {self?.storedConnections=nil}
+        }
+    }
     lazy var updates = Updates()
     /// Whether disk cleanup's model exists. It is created on first use and never while the feature is off.
     private var storedDisk: DiskModel?
@@ -66,9 +88,9 @@ final class AppModels {
         set { storedDisk = newValue }
     }
 
-    init(defaults: UserDefaults = .standard, makeApps: @escaping @MainActor () -> AppsFeatureModels = { AppsFeatureModels() }, makeSpace: @escaping SpaceFactory = { SpaceLensModel(enabled:$0) }, invalidateSpaceCache: @escaping @MainActor () -> Void = { SpaceLens.invalidateCache() }, makeBrowser: @escaping BrowserFactory = {ChromePagesModel(enabled:$0,app:$1,appMemoryKB:$2,gpuKB:$3)}, makeWorkspace: @escaping WorkspaceFactory = {TabWorkspaceModel(enabled:$0,app:$1)}, makeDisk: @escaping () -> DiskModel = { DiskModel(retentionPreferences:.stored(in:.standard)) },
+    init(defaults: UserDefaults = .standard, makeApps: @escaping @MainActor () -> AppsFeatureModels = { AppsFeatureModels() }, makeSpace: @escaping SpaceFactory = { SpaceLensModel(enabled:$0) }, invalidateSpaceCache: @escaping @MainActor () -> Void = { SpaceLens.invalidateCache() }, makeBrowser: @escaping BrowserFactory = {ChromePagesModel(enabled:$0,app:$1,appMemoryKB:$2,gpuKB:$3)}, makeWorkspace: @escaping WorkspaceFactory = {TabWorkspaceModel(enabled:$0,app:$1)}, makeConnections:@escaping ConnectionsFactory = {ConnectionsModel(enabled:$0)}, makeDisk: @escaping () -> DiskModel = { DiskModel(retentionPreferences:.stored(in:.standard)) },
          makeMonitor: @escaping () -> Monitor = { Monitor(samplingAllowed: { ModulePreferences.isEnabled(BuiltinModuleManifests.performance, in: .standard) }) }) {
-        self.makeDisk = makeDisk;self.makeApps=makeApps;self.makeSpace=makeSpace;self.invalidateSpaceCache=invalidateSpaceCache;self.makeBrowser=makeBrowser;self.makeWorkspace=makeWorkspace;self.defaults=defaults
+        self.makeConnections=makeConnections;self.makeDisk = makeDisk;self.makeApps=makeApps;self.makeSpace=makeSpace;self.invalidateSpaceCache=invalidateSpaceCache;self.makeBrowser=makeBrowser;self.makeWorkspace=makeWorkspace;self.defaults=defaults
         self.makeMonitor = makeMonitor
     }
 

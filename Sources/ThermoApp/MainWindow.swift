@@ -192,7 +192,7 @@ enum MainWindow {
                     SpaceOverviewModel.shared.stop()
                     models.stopSpaceViews()
                     MemoryModel.shared.stop()
-                    ConnectionsModel.shared.stop()
+                    models.stopConnectionViews()
                     ComputeModel.shared.stop()
                     ComputeModel.cpu.stop()
                     ComputeModel.shared.releaseReadingsIfIdle()
@@ -351,7 +351,7 @@ struct MainView: View {
         case let .claude(tab):
             ClaudeCleanupPage(model: models.claudeCleanup, tab: tab).id(tab).transition(.page)
         case .connections:
-            ConnectionsPage(model: ConnectionsModel.shared).transition(.page)
+            ModuleOffView().transition(.page)
         case .yunx:
             YunXDownloadPage(model: YunXDownloadModel.shared).transition(.page)
         case .plugins:
@@ -461,7 +461,6 @@ struct MainSidebar: View {
                     moduleRows(.overview)
                     row(.checkup, tr("AI Check-up"), "waveform.path.ecg", .mint, trailing: nil)
                     moduleRows(.machine)
-                    row(.connections, tr("Connections"), "wifi", .blue, trailing: nil)
 
                     header(tr("Resources"))
                     moduleRows(.resources)
