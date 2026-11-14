@@ -181,6 +181,7 @@ import ThermoL10n
 @available(macOS 14, *)
 @MainActor final class ScrollCaptureWindow: NSWindowController, NSWindowDelegate {
     private let model: ScrollCaptureModel
+    var captureRunning: Bool { model.running }
     init(region: CaptureRegionSelector.Region) {
         model = ScrollCaptureModel(region: region)
         let panel = NSPanel(contentRect: NSRect(x: 0,y: 0,width: 340,height: 480), styleMask: [.titled,.closable,.resizable], backing: .buffered, defer: false)

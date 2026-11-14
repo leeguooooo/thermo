@@ -49,7 +49,16 @@ public enum BuiltinModuleManifests {
             .init(id:"repair-worktrees",title:"Repair worktree registrations",summary:"Review or repair Git worktree registrations for one repository.",mutates:true,parameters:
                 [P(name:"root",kind:.path,required:true,summary:"Repository path."),dryRun,yes,json],cli:["clean","repair-worktrees"])
         ])
-    public static let all = [disk]
+    public static let capture = ModuleManifest(
+        id: "dev.thermo.capture", name: "Screenshots and pins",
+        summary: "Screenshots, pins, scrolling capture, recording and capture scripts.",
+        symbol: "viewfinder", version: "1.0.0", launch: .prewarm, enabledByDefault: true,
+        entries: [
+            .init(id: "tools", kind: .menuBarItem, title: "Screenshots and pins", symbol: "viewfinder", scene: "capture-menu"),
+            .init(id: "saving", kind: .settingsItem, title: "Capture saving and after-actions", symbol: "square.and.arrow.down", scene: "capture-saving"),
+            .init(id: "shortcuts", kind: .settingsItem, title: "Capture shortcuts and actions", symbol: "keyboard", scene: "capture-shortcuts")])
+
+    public static let all = [disk, capture]
 }
 
 public enum ModulePreferences {

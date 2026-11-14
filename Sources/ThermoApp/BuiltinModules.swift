@@ -14,6 +14,7 @@ struct BuiltinSidebarItem: Identifiable {
 /// Metadata and argument resolution never instantiate a feature. UI and lifetime callbacks run on main.
 protocol BuiltinModule: Sendable {
     static var manifest: ModuleManifest { get }
+    @MainActor static func start()
     static var legacyMenuEntries: [String: String] { get }
     static func owns(_ page: MainPage) -> Bool
     static func canonicalArgument(_ argument: String) -> String
@@ -29,8 +30,12 @@ protocol BuiltinModule: Sendable {
     @MainActor static func snapshotReady(_ arguments: [String], models: AppModels) -> Bool
 }
 
+extension BuiltinModule {
+    @MainActor static func start() {}
+}
+
 enum BuiltinModules {
-    static let implementations: [any BuiltinModule.Type] = [DiskModule.self]
+    static let implementations: [any BuiltinModule.Type] = [DiskModule.self, CaptureModule.self]
     static var all: [ModuleManifest] { implementations.map { $0.manifest } }
     static var disk: ModuleManifest { DiskModule.manifest }
     static func manifest(_ id: String) -> ModuleManifest? { all.first { $0.id == id } }
@@ -85,6 +90,7 @@ enum BuiltinModules {
     @MainActor static func prepareStop(_ id: String) throws -> FinishStop? {
         try implementation(id)?.prepareStop(models: .shared)
     }
+    @MainActor static func start(_ id: String) { implementation(id)?.start() }
 }
 
 extension MainPage {

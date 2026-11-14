@@ -8,7 +8,7 @@ import ThermoL10n
 /// The app's one module manager and what the UI is built from: the pages of the modules that are on.
 /// Which modules are on is remembered per module; a new module starts as its manifest says.
 @MainActor final class ModuleCenter: ObservableObject {
-    static let shared = ModuleCenter(updatesAppMenu: true)
+    static let shared = ModuleCenter(startBuiltin: BuiltinModules.start, updatesAppMenu: true)
 
     struct Page: Identifiable, Equatable {
         var module: ModuleManifest
@@ -22,6 +22,7 @@ import ThermoL10n
     private let defaults: UserDefaults
     private let updatesAppMenu: Bool
     private let prepareBuiltinStop: @MainActor (String) throws -> BuiltinModules.FinishStop?
+    private let startBuiltin: @MainActor (String) -> Void
     @Published private(set) var changing = Set<String>()
     @Published private(set) var switchIssues: [String: String] = [:]
     @Published private(set) var statuses: [ModuleManager.Status] = []
@@ -33,9 +34,11 @@ import ThermoL10n
 
     init(manager: ModuleManager? = nil, defaults: UserDefaults = .standard,
          prepareBuiltinStop: @escaping @MainActor (String) throws -> BuiltinModules.FinishStop? = BuiltinModules.prepareStop,
+         startBuiltin: @escaping @MainActor (String) -> Void = { _ in },
          updatesAppMenu: Bool = false) {
         self.manager = manager ?? ModuleManager(); self.defaults = defaults
         self.prepareBuiltinStop = prepareBuiltinStop
+        self.startBuiltin = startBuiltin
         self.updatesAppMenu = updatesAppMenu
     }
 
@@ -48,9 +51,12 @@ import ThermoL10n
     }
 
     /// Reads the modules and starts the ones that are on and meant to run in the background.
-    func start() {
+    func start(prewarmBuiltins: Bool = true) {
         guard !started else { return }
         started = true
+        if prewarmBuiltins {
+            for manifest in BuiltinModules.all where isOn(manifest.id) { startBuiltin(manifest.id) }
+        }
         manager.onChange = { [weak self] _ in self?.refresh() }
         manager.kernel = { ModuleKernel.make(for: $0) }
         Task { @MainActor in
@@ -177,6 +183,7 @@ import ThermoL10n
         if finish != nil { changing.insert(id) }
         defaults.set(on, forKey: Self.key(id))
         if BuiltinModules.manifest(id) != nil {
+            if on { startBuiltin(id) }
             revision += 1
             // The View menu and its shortcuts list pages too.
             if updatesAppMenu, NSApp != nil { installStandardMenus(center: self) }

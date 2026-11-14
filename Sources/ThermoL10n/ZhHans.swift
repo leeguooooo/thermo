@@ -383,6 +383,8 @@ let zhHans: [String: String] = [
     "The recording timestamp is invalid.": "录制时间戳无效。",
     // Capture workspace
     "Screenshots and pins": "截图与贴图",
+    "Screenshots, pins, scrolling capture, recording and capture scripts.": "截图、贴图、长截图、录屏和截图脚本。",
+    "Finish the current capture, recording or export before switching this feature off.": "请先完成当前截图、录屏或导出，再关闭此功能。",
     "Capture screen…": "截图…",
     "Pin clipboard": "将剪贴板钉在桌面",
     "Open image…": "打开图片…",

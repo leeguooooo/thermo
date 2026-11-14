@@ -5,6 +5,7 @@ import Carbon
 import SwiftUI
 import ThermoL10n
 import UniformTypeIdentifiers
+import ModuleKit
 
 func captureFailureMessage(_ error:Error) -> String {
     if case CaptureWordFailure.unsupported(let item)=error { return String(format:tr("Word math export does not support: %@"),item) }
@@ -13,12 +14,14 @@ func captureFailureMessage(_ error:Error) -> String {
 }
 
 @MainActor final class CaptureWorkspace: ObservableObject {
-    static let shared = CaptureWorkspace()
+    static let shared = CaptureWorkspace(featureEnabled: { ModuleCenter.shared.isOn(BuiltinModuleManifests.capture.id) })
     @Published var issue: String?
     @Published var capturing = false
     @Published var pinCount = 0
     let pinSession:CapturePinSession
     private let screenCaptureAccess:()->Bool
+    private let featureEnabled:()->Bool
+    private let providedShortcuts:CaptureShortcutModel?
     /// nil uses Thermo's own selector on macOS 14+, and the system `screencapture -i` before that.
     private let makeCaptureProcess:((URL)->Process)?
     static func systemCaptureProcess(_ output:URL) -> Process {
@@ -29,8 +32,11 @@ func captureFailureMessage(_ error:Error) -> String {
     }
     init(pinSession:CapturePinSession? = nil,
          screenCaptureAccess:@escaping()->Bool={CGPreflightScreenCaptureAccess() || CGRequestScreenCaptureAccess()},
-         makeCaptureProcess:((URL)->Process)? = nil) {
+         makeCaptureProcess:((URL)->Process)? = nil,
+         featureEnabled:@escaping()->Bool={ true }, shortcuts:CaptureShortcutModel?=nil) {
         self.screenCaptureAccess=screenCaptureAccess;self.makeCaptureProcess=makeCaptureProcess
+        self.featureEnabled=featureEnabled
+        self.providedShortcuts=shortcuts
         self.pinSession=pinSession ?? CapturePinSession();self.pinSession.onCountChange={ [weak self] in self?.pinCount=$0 }
         self.pinSession.configureEditor={ [weak self] model in
             model.saveOptions={ [weak self] in try self?.saving.snapshot() ?? CaptureSaveSettings() }
@@ -38,7 +44,7 @@ func captureFailureMessage(_ error:Error) -> String {
             model.showSaveSettings={ [weak self] in self?.showSavingSettings() }
         }
     }
-    lazy var shortcuts=CaptureShortcutModel(backend:CaptureShortcutModel.backend(),read:{ UserDefaults.standard.data(forKey:CaptureShortcutModel.preferenceKey) },write:{ data in UserDefaults.standard.set(data,forKey:CaptureShortcutModel.preferenceKey) },pinFocused:{ [weak self] in self?.pinSession.focusedEditor() != nil },execute:{ [weak self] action in try self?.perform(action) }).withScriptExecutor(onIssue:{ [weak self] in self?.showActionSettings() }) { [weak self] source in guard let self else {throw CaptureScriptFailure.unavailable};return try await self.executeScript(source) }
+    lazy var shortcuts=providedShortcuts ?? CaptureShortcutModel(backend:CaptureShortcutModel.backend(),read:{ UserDefaults.standard.data(forKey:CaptureShortcutModel.preferenceKey) },write:{ data in UserDefaults.standard.set(data,forKey:CaptureShortcutModel.preferenceKey) },pinFocused:{ [weak self] in self?.pinSession.focusedEditor() != nil },execute:{ [weak self] action in try self?.perform(action) }).withScriptExecutor(onIssue:{ [weak self] in self?.showActionSettings() }) { [weak self] source in guard let self else {throw CaptureScriptFailure.unavailable};return try await self.executeScript(source) }
     lazy var saving=CaptureSaveModel()
     private var savingWindow:NSWindowController?
     private var afterTask:Task<Void,Never>?
@@ -58,11 +64,40 @@ func captureFailureMessage(_ error:Error) -> String {
     private var scrollWindow: NSWindowController?
     private var recordingWindow: CaptureRecordingWindow?
     func activate() {
+        guard featureEnabled() else { return }
         guard !activated else { return };activated=true;shuttingDown=false
         pinSession.restoreWindows();shortcuts.activate()
     }
+    var enabled:Bool { featureEnabled() }
+    func requireEnabled() throws {
+        guard featureEnabled() else { throw CaptureScriptFailure.execution(tr("This feature is switched off.")) }
+    }
+    private func allowUse() -> Bool {
+        do { try requireEnabled();return true }
+        catch { issue=captureFailureMessage(error);return false }
+    }
+    func stopFeature() throws {
+        guard !captureBusy,!scriptRunning,!shortcuts.scriptRunning,!recordingActive,
+              !pinSession.batchExport.running,!pinSession.windows.values.contains(where: { $0.model.recognizing }) else {
+            throw BuiltinModules.StopRefused(description:tr("Finish the current capture, recording or export before switching this feature off."))
+        }
+        if #available(macOS 14, *), let scrolling=scrollWindow as? ScrollCaptureWindow, scrolling.captureRunning {
+            throw BuiltinModules.StopRefused(description:tr("Finish the current capture, recording or export before switching this feature off."))
+        }
+        do {
+            try pinSession.flushForQuit()
+            try shortcuts.deactivate()
+        } catch {
+            throw BuiltinModules.StopRefused(description:captureFailureMessage(error))
+        }
+        pinSession.suspendWindows()
+        savingWindow?.close();savingWindow=nil;actionsWindow?.close();actionsWindow=nil
+        recordingWindow?.close();recordingWindow=nil
+        shutdown()
+    }
     func shortcutSuffix(for action:CaptureAction) -> String { let value=shortcuts.label(for:action);return value.isEmpty ? "" : "  "+value }
     func showActionSettings(model:CaptureShortcutModel? = nil) {
+        guard allowUse() else { return }
         let selectedModel=model ?? shortcuts;selectedModel.activate()
         if actionsWindow == nil {
             let window=NSWindow(contentRect:NSRect(x:0,y:0,width:940,height:620),styleMask:[.titled,.closable,.resizable],backing:.buffered,defer:false)
@@ -72,6 +107,7 @@ func captureFailureMessage(_ error:Error) -> String {
         actionsWindow?.showWindow(nil);NSApp.activate(ignoringOtherApps:true);actionsWindow?.window?.makeKeyAndOrderFront(nil)
     }
     func showSavingSettings() {
+        guard allowUse() else { return }
         if savingWindow == nil {
             let window=NSWindow(contentRect:NSRect(x:0,y:0,width:820,height:760),styleMask:[.titled,.closable,.resizable],backing:.buffered,defer:false)
             window.title=tr("Capture saving and after-actions");window.isReleasedWhenClosed=false
@@ -90,6 +126,7 @@ func captureFailureMessage(_ error:Error) -> String {
         shortcuts.shutdown();activated=false
     }
     func capture(after override:[CaptureAfterStep]?=nil,id:UUID=UUID(),completion:((Result<Bool,Error>)->Void)?=nil) {
+        do { try requireEnabled() } catch { issue=captureFailureMessage(error);completion?(.failure(error));return }
         guard !captureBusy else {completion?(.failure(CaptureSaveFailure.busy));return}
         var options:CaptureSaveSettings
         do { options=try saving.snapshot();if let override {options.after=override};guard options.valid else {throw CaptureSaveFailure.invalidSettings} }
@@ -205,6 +242,7 @@ func captureFailureMessage(_ error:Error) -> String {
         },recognize:{ image in if let recognizedText {return recognizedText};return try await CaptureSaveModel.recognizeText(image) })
     }
     func importImage() {
+        guard allowUse() else { return }
         let panel = NSOpenPanel(); panel.allowedContentTypes = [.image]; panel.allowsMultipleSelection = true
         guard panel.runModal() == .OK else { return }
         for url in panel.urls {
@@ -212,6 +250,7 @@ func captureFailureMessage(_ error:Error) -> String {
         }
     }
     func captureScrolling() {
+        guard allowUse() else { return }
         if #available(macOS 14, *) {
             if let scrollWindow, scrollWindow.window?.isVisible == true { scrollWindow.showWindow(nil); return }
             selectRegion(confirmTitle: tr("Start scrolling capture")) { [weak self] region in
@@ -221,6 +260,7 @@ func captureFailureMessage(_ error:Error) -> String {
         } else { issue = tr("Scrolling capture requires macOS 14 or later."); showIssue() }
     }
     func recordScreen(draftsOnly: Bool = false) {
+        guard allowUse() else { return }
         if let recordingWindow, recordingWindow.model.active || recordingWindow.model.exporting {
             recordingWindow.showWindow(nil); return
         }
@@ -275,20 +315,23 @@ func captureFailureMessage(_ error:Error) -> String {
         return !model.active
     }
     func pinClipboard(asText:Bool=false,asLaTeX:Bool=false) {
+        guard allowUse() else { return }
         do { switch try CapturePinClipboard.read(.general,asText:asText,asLaTeX:asLaTeX) {
             case .image(let image):try pinSession.open(image)
             case .content(let content):try pinSession.open(content)
         } } catch { report(error) }
     }
     func open(_ image: CGImage) {
+        guard allowUse() else { return }
         do { try pinSession.open(image) } catch { report(error) }
     }
-    func showPinLibrary() { pinSession.showLibrary() }
-    func restoreLastPin() { do { try pinSession.restore() } catch { report(error) } }
-    func showAll() { do { try pinSession.setAllHidden(false) } catch { report(error) } }
-    func hideAll() { do { try pinSession.setAllHidden(true) } catch { report(error) } }
-    func closeAll() { pinSession.closeAll() }
+    func showPinLibrary() { guard allowUse() else { return };pinSession.showLibrary() }
+    func restoreLastPin() { guard allowUse() else { return };do { try pinSession.restore() } catch { report(error) } }
+    func showAll() { guard allowUse() else { return };do { try pinSession.setAllHidden(false) } catch { report(error) } }
+    func hideAll() { guard allowUse() else { return };do { try pinSession.setAllHidden(true) } catch { report(error) } }
+    func closeAll() { guard allowUse() else { return };pinSession.closeAll() }
     func perform(_ action:CaptureAction) throws {
+        try requireEnabled()
         switch action {
         case .script:throw CaptureScriptFailure.execution("Run a configured script entry with its source.")
         case .restoreMouseInteraction:pinSession.restoreMouseInteraction()
