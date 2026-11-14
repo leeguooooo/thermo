@@ -77,6 +77,13 @@ public enum BuiltinModuleManifests {
             .init(id: "gpu", kind: .page, title: "GPU usage", symbol: "square.stack.3d.up", scene: "gpu", navigationKey: "0"),
             .init(id: "memory", kind: .page, title: "Memory usage", symbol: "memorychip", scene: "memory", navigationKey: "8")])
 
+    public static let search = ModuleManifest(
+        id: "dev.thermo.search", name: "Search apps and files",
+        summary: "Local app and file search, aliases, shortcuts and isolated file previews.",
+        symbol: "magnifyingglass", version: "1.0.0", launch: .prewarm, enabledByDefault: true,
+        entries: [.init(id: "settings", kind: .settingsItem, title: "Search apps and files", symbol: "magnifyingglass", scene: "search-settings"),
+                  .init(id: "search", kind: .menuBarItem, title: "Search apps and files", symbol: "magnifyingglass", scene: "search-panel")])
+
     public static let all = [disk, capture, menuBar, performance]
 }
 

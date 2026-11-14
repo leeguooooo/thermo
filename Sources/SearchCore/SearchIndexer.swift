@@ -73,6 +73,13 @@ public final class SearchIndexer: @unchecked Sendable {
         eventQueue.async { [weak self] in self?.scheduled?.cancel(); self?.scheduled = nil; self?.applicationScheduled?.cancel(); self?.applicationScheduled = nil }
         queue.async { [weak self] in self?.watcher = nil; self?.applicationWatcher = nil }
     }
+    public func finishStopping() async {
+        await withCheckedContinuation { done in
+            eventQueue.async {
+                self.queue.async { done.resume() }
+            }
+        }
+    }
     public func refresh() { schedule(paths: [], all: true) }
     public func refreshApplications() {
         eventQueue.async { [weak self] in
