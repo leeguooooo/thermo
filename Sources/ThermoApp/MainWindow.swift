@@ -357,7 +357,7 @@ struct MainView: View {
         case .plugins:
             PluginsPage(model: models.plugins, open: { page = $0 }).transition(.page)
         case .history:
-            HistoryPage(model: HistoryModel.shared, open: { page = $0 }).transition(.page)
+            ModuleOffView().transition(.page)
         case let .module(id, entry):
             ModulePageView(center: .shared, module: id, entry: entry).id(id + ":" + entry).transition(.page)
         case .space:
@@ -515,7 +515,7 @@ struct MainSidebar: View {
             }
             Rectangle().fill(Theme.hairline).frame(height: 1).padding(.horizontal, 14)
             VStack(spacing: 1) {
-                row(.history, tr("History"), "clock.arrow.circlepath", .brown, trailing: nil)
+                moduleRows(.footer)
                 row(.settings, tr("Settings"), "gearshape", .gray, trailing: nil)
             }.padding(.vertical, 8)
         }

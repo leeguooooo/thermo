@@ -17,6 +17,7 @@ struct StatusMenuLayout {
         var spaceEnabled: Bool = true
         var browserEnabled:Bool = true
         var connectionsEnabled:Bool = true
+        var historyEnabled:Bool = true
         let hasBattery: Bool
         let keepAwakeActive: Bool
         let focusTimerActive: Bool
@@ -268,7 +269,7 @@ struct StatusMenuLayout {
         if context.menuBarEnabled { productItems.append(.manageMenuBar) }
         
         // 11. History
-        productItems.append(.history)
+        if context.historyEnabled {productItems.append(.history)}
         
         // 12. Settings…
         productItems.append(.settings)

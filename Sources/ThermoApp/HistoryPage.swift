@@ -6,7 +6,8 @@ import ThermoL10n
 
 @MainActor
 final class HistoryModel: ObservableObject {
-    static let shared = HistoryModel()
+    static var shared:HistoryModel {AppModels.shared.history}
+    let work=FeatureTasks()
     @Published private(set) var records: [OperationRecord] = []
     @Published private(set) var loaded = false
     @Published private(set) var reading = false
@@ -25,7 +26,7 @@ final class HistoryModel: ObservableObject {
     private var readAgain = false
     private let restoreBatch: @Sendable (String, TrashRestore) throws -> TrashRestore
     private let didRestore: @MainActor ([String]) -> Void
-    init(reader: @escaping @Sendable () -> OperationJournal.ReadReport = { OperationJournal.readReport(limit: 300) },
+    init(enabled:@escaping ()->Bool = {true}, reader: @escaping @Sendable () -> OperationJournal.ReadReport = { OperationJournal.readReport(limit: 300) },
          reviewBatch: @escaping @Sendable (String) throws -> TrashRestore = { try TrashBatches.restore(id: $0, dryRun: true) },
          restoreBatch: @escaping @Sendable (String, TrashRestore) throws -> TrashRestore = { id, review in
              try TrashBatches.restore(id: id, reviewIdentity: review.reviewIdentity,
@@ -35,17 +36,19 @@ final class HistoryModel: ObservableObject {
              AppModels.shared.invalidateAppsAfterRestore()
              AppModels.shared.invalidateSpaceAfterRestore($0)
          }) {
-        self.reader = reader; self.reviewBatch = reviewBatch; self.restoreBatch = restoreBatch; self.didRestore = didRestore
+        work.enabled=enabled;self.reader = reader; self.reviewBatch = reviewBatch; self.restoreBatch = restoreBatch; self.didRestore = didRestore
     }
 
     func load() {
+        guard work.acceptsWork else{return}
         guard !reading else { readAgain = true; return }
         reading = true
         let reader = reader
-        Task.detached(priority: .userInitiated) {
+        work.run(priority: .userInitiated) {
             let report = reader()
             await MainActor.run {
                 self.reading = false
+                guard self.work.acceptsWork else{return}
                 if self.readAgain { self.readAgain = false; self.load(); return }
                 if report.complete { self.records = report.records }
                 else {
@@ -60,7 +63,7 @@ final class HistoryModel: ObservableObject {
     }
 
     func prepareRestore(_ record: OperationRecord) {
-        guard !busy, record.undo?.kind == "trashBatch", let id = record.undo?.ref else { return }
+        guard work.acceptsWork,!busy, record.undo?.kind == "trashBatch", let id = record.undo?.ref else { return }
         restoreReviewTarget = id
         restoreReviewGeneration = UUID(); restoreReview = nil; restoreReviewIssue = nil; reviewingRestore = true
         if restoreReviewInFlight { pendingRestoreReview = record; return }
@@ -68,13 +71,14 @@ final class HistoryModel: ObservableObject {
     }
 
     private func readRestoreReview(_ record: OperationRecord) {
-        guard let id = record.undo?.ref else { return }
+        guard work.acceptsWork,let id = record.undo?.ref else { return }
         let generation = restoreReviewGeneration, reviewBatch = reviewBatch
         restoreReviewInFlight = true
-        Task.detached(priority: .userInitiated) {
+        work.run(priority: .userInitiated) {
             let result = Result { try reviewBatch(id) }
             await MainActor.run {
                 self.restoreReviewInFlight = false
+                guard self.work.acceptsWork else{return}
                 if let pending = self.pendingRestoreReview {
                     self.pendingRestoreReview = nil; self.readRestoreReview(pending); return
                 }
@@ -100,7 +104,7 @@ final class HistoryModel: ObservableObject {
 
     /// Puts recorded items back; replacements, missing items and original-path conflicts are skipped.
     func restore(_ record: OperationRecord, review: TrashRestore) {
-        guard !busy, record.undo?.kind == "trashBatch", let id = record.undo?.ref else { return }
+        guard work.acceptsWork,!busy, record.undo?.kind == "trashBatch", let id = record.undo?.ref else { return }
         guard review.id == id, review.dryRun, review.reviewIdentity != nil,
               review.items.contains(where: { $0.status == "restored" }) else {
             notice = tr("Restore review is unavailable; review the batch again."); return
@@ -108,7 +112,7 @@ final class HistoryModel: ObservableObject {
         busy = true
         let exitGuard = AppExitGuard.beginRestore()
         let restoreBatch = self.restoreBatch
-        Task.detached(priority: .userInitiated) {
+        work.run(priority: .userInitiated) {
             let text: String
             var paths: [String] = []
             do {
@@ -130,6 +134,14 @@ final class HistoryModel: ObservableObject {
             }
         }
     }
+    func stopFeature() {work.stop();readAgain=false;cancelRestoreReview()}
+    func finishFeatureStop() async {
+        await work.finish()
+        // The kernel's persistent journal remains available for recovery after re-enabling.
+        records=[];loaded=false;reading=false;readIssue=nil;notice=nil
+        restoreReviewInFlight=false;restoreReviewTarget=nil;pendingRestoreReview=nil
+    }
+
 }
 
 /// Every change Thermo made, newest first, each with where it is undone. Entries moved to the

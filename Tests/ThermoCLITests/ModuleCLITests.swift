@@ -7,6 +7,7 @@ import XCTest
 
 final class ModuleCLITests: XCTestCase {
     func testCommandLeaseMapsLegacyRootsAndLeavesRecoveryAvailable() throws {
+        XCTAssertEqual(ModuleCLI.builtinManifest(["history"])?.id,BuiltinModuleManifests.history.id)
         XCTAssertEqual(ModuleCLI.builtinManifest(["tabs"])?.id,BuiltinModuleManifests.browser.id)
         XCTAssertEqual(ModuleCLI.builtinManifest(["apps"])?.id,BuiltinModuleManifests.apps.id)
         XCTAssertEqual(ModuleCLI.builtinManifest(["app"])?.id,BuiltinModuleManifests.apps.id)
@@ -23,6 +24,15 @@ final class ModuleCLITests: XCTestCase {
         XCTAssertNil(try ModuleCLI.commandLease(["fan","auto"],defaults:defaults,home:home.path))
         XCTAssertThrowsError(try ModuleCLI.commandLease(["watch"],defaults:defaults,home:home.path))
         XCTAssertTrue(try FileManager.default.contentsOfDirectory(atPath:home.path).isEmpty)
+    }
+    func testDisabledHistoryRefusesItsCommandsWithoutDisablingCleanup() throws {
+        let name="thermo-history-cli-"+UUID().uuidString,defaults=UserDefaults(suiteName:name)!
+        defer{defaults.removePersistentDomain(forName:name)}
+        defaults.set(false,forKey:ModulePreferences.key(BuiltinModuleManifests.history.id))
+        for words in [["history"],["history","show","fixture"],["history","undo","fixture"]] {
+            XCTAssertThrowsError(try ModuleCLI.requireBuiltinFeature(words,defaults:defaults))
+        }
+        XCTAssertNoThrow(try ModuleCLI.requireBuiltinFeature(["clean","overview"],defaults:defaults))
     }
     func testDisabledSpaceRefusesItsCommandsAndKeepsTheDiskFeatureIndependent() throws {
         let name="thermo-space-cli-"+UUID().uuidString,defaults=UserDefaults(suiteName:name)!

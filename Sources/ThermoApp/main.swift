@@ -708,7 +708,6 @@ if let i = CommandLine.arguments.firstIndex(of: "--render-preview"), i + 1 < Com
         case .agents: return models.agents.report != nil && !models.agents.scanning
         case .claude(.accounts): return ClaudeAccountsModel.shared.loaded
         case .claude: return models.claudeCleanup.loaded && !models.claudeCleanup.busy
-        case .history: return HistoryModel.shared.loaded
         case .plugins: return models.plugins.loaded && !models.plugins.checkingUpdates
         case let .module(id, _):
             // Worth a picture once the module's process is up, or once it is known to be off.

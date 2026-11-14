@@ -75,6 +75,25 @@ final class AppModels {
             if self?.storedConnections === model {self?.storedConnections=nil}
         }
     }
+    typealias HistoryFactory = @MainActor (@escaping ()->Bool)->HistoryModel
+    private let makeHistory:HistoryFactory
+    private var storedHistory:HistoryModel?
+    var historyLoaded:Bool {storedHistory != nil}
+    var history:HistoryModel {
+        if let storedHistory{return storedHistory}
+        let defaults=self.defaults
+        let model=makeHistory {ModulePreferences.isEnabled(BuiltinModuleManifests.history,in:defaults)}
+        storedHistory=model;return model
+    }
+    func prepareHistoryStop() throws->BuiltinModules.FinishStop? {
+        guard let model=storedHistory else{return nil}
+        guard !model.busy else{throw BuiltinModules.StopRefused(description:tr("Wait for file restoration before switching History off."))}
+        model.stopFeature()
+        return { [weak self] in
+            await model.finishFeatureStop()
+            if self?.storedHistory === model {self?.storedHistory=nil}
+        }
+    }
     lazy var updates = Updates()
     /// Whether disk cleanup's model exists. It is created on first use and never while the feature is off.
     private var storedDisk: DiskModel?
@@ -88,9 +107,9 @@ final class AppModels {
         set { storedDisk = newValue }
     }
 
-    init(defaults: UserDefaults = .standard, makeApps: @escaping @MainActor () -> AppsFeatureModels = { AppsFeatureModels() }, makeSpace: @escaping SpaceFactory = { SpaceLensModel(enabled:$0) }, invalidateSpaceCache: @escaping @MainActor () -> Void = { SpaceLens.invalidateCache() }, makeBrowser: @escaping BrowserFactory = {ChromePagesModel(enabled:$0,app:$1,appMemoryKB:$2,gpuKB:$3)}, makeWorkspace: @escaping WorkspaceFactory = {TabWorkspaceModel(enabled:$0,app:$1)}, makeConnections:@escaping ConnectionsFactory = {ConnectionsModel(enabled:$0)}, makeDisk: @escaping () -> DiskModel = { DiskModel(retentionPreferences:.stored(in:.standard)) },
+    init(defaults: UserDefaults = .standard, makeApps: @escaping @MainActor () -> AppsFeatureModels = { AppsFeatureModels() }, makeSpace: @escaping SpaceFactory = { SpaceLensModel(enabled:$0) }, invalidateSpaceCache: @escaping @MainActor () -> Void = { SpaceLens.invalidateCache() }, makeBrowser: @escaping BrowserFactory = {ChromePagesModel(enabled:$0,app:$1,appMemoryKB:$2,gpuKB:$3)}, makeWorkspace: @escaping WorkspaceFactory = {TabWorkspaceModel(enabled:$0,app:$1)}, makeConnections:@escaping ConnectionsFactory = {ConnectionsModel(enabled:$0)}, makeHistory:@escaping HistoryFactory = {HistoryModel(enabled:$0)}, makeDisk: @escaping () -> DiskModel = { DiskModel(retentionPreferences:.stored(in:.standard)) },
          makeMonitor: @escaping () -> Monitor = { Monitor(samplingAllowed: { ModulePreferences.isEnabled(BuiltinModuleManifests.performance, in: .standard) }) }) {
-        self.makeConnections=makeConnections;self.makeDisk = makeDisk;self.makeApps=makeApps;self.makeSpace=makeSpace;self.invalidateSpaceCache=invalidateSpaceCache;self.makeBrowser=makeBrowser;self.makeWorkspace=makeWorkspace;self.defaults=defaults
+        self.makeHistory=makeHistory;self.makeConnections=makeConnections;self.makeDisk = makeDisk;self.makeApps=makeApps;self.makeSpace=makeSpace;self.invalidateSpaceCache=invalidateSpaceCache;self.makeBrowser=makeBrowser;self.makeWorkspace=makeWorkspace;self.defaults=defaults
         self.makeMonitor = makeMonitor
     }
 

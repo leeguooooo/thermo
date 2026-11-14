@@ -107,7 +107,11 @@ public enum BuiltinModuleManifests {
         id:"dev.thermo.connections",name:"Connections",summary:"Wi-Fi status, nearby Bluetooth computers and reviewed device and sound controls.",
         symbol:"wifi",version:"1.0.0",launch:.onDemand,enabledByDefault:true,
         entries:[.init(id:"home",kind:.page,title:"Connections",symbol:"wifi",scene:"connections")])
-    public static let all = [disk, search, capture, menuBar, performance, apps, space, browser, connections]
+    public static let history=ModuleManifest(
+        id:"dev.thermo.history",name:"History",summary:"Review recorded operations and restore verified Trash batches; the kernel keeps the recovery journal.",
+        symbol:"clock.arrow.circlepath",version:"1.0.0",launch:.onDemand,enabledByDefault:true,
+        entries:[.init(id:"home",kind:.page,title:"History",symbol:"clock.arrow.circlepath",scene:"history")])
+    public static let all = [disk, search, capture, menuBar, performance, apps, space, browser, connections, history]
 }
 
 public enum ModulePreferences {

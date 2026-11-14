@@ -4540,4 +4540,6 @@ let zhHans: [String: String] = [
     "Wait for browser changes or tab grouping to finish before switching this feature off.": "请等待浏览器变更或标签分组完成，再关闭此功能。",
     "Wi-Fi status, nearby Bluetooth computers and reviewed device and sound controls.": "Wi-Fi 状态、附近的蓝牙电脑，以及经确认的设备和声音控制。",
     "Wait for the Bluetooth connection change before switching this feature off.": "请等待蓝牙连接变更完成，再关闭此功能。",
+    "Review recorded operations and restore verified Trash batches; the kernel keeps the recovery journal.": "查看操作记录并恢复已核验的废纸篓批次；恢复账本由内核保留。",
+    "Wait for file restoration before switching History off.": "请等待文件恢复完成，再关闭操作记录。",
 ]
