@@ -22,6 +22,14 @@ import Foundation
         self.enabled=enabled
         for work in [apps.work,startup.work,updates.work,native.work,store.work] {work.enabled=enabled}
     }
+    func exitBlocker() -> MainPage? {
+        if apps.working {apps.exitRequested=true;return .apps(.installed)}
+        if startup.working {startup.exitRequested=true;return .apps(.startup)}
+        if updates.working {updates.exitRequested=true;updates.channel="homebrew";return .apps(.updates)}
+        if native.installing {native.exitRequested=true;updates.channel="native";return .apps(.updates)}
+        return nil
+    }
+    func retireViews() {apps.retire();startup.retire();updates.retire();native.retire()}
     var busy: Bool { apps.working || startup.working || updates.working || native.installing }
     func beginStopping() -> Bool {
         guard !busy else {return false}

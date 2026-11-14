@@ -69,6 +69,8 @@ import XCTest
         for tab in AppsTab.allCases {XCTAssertFalse(center.shows(.apps(tab)))}
         XCTAssertNil(center.navigationKey(.apps(.installed)))
         XCTAssertNotEqual(MainWindow.state.page.module,AppsModule.manifest.id)
+        models.retireSoftwareViews();models.invalidateAppsAfterRestore();models.prepareNativeRecovery()
+        XCTAssertNil(models.softwareExitBlocker())
         XCTAssertFalse(models.appsLoaded);XCTAssertEqual(creations,0)
     }
     func testStoppingWaitsForUncooperativeReadAndDropsItsResult() async {

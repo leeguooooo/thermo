@@ -10,7 +10,7 @@ final class AppModels {
     static let shared = AppModels()
     lazy var monitor = makeMonitor()
     private let makeMonitor: () -> Monitor
-    private let makeApps: () -> AppsFeatureModels
+    private let makeApps: @MainActor () -> AppsFeatureModels
     private let defaults: UserDefaults
     private var storedApps: AppsFeatureModels?
     var appsLoaded: Bool { storedApps != nil }
@@ -33,7 +33,7 @@ final class AppModels {
         set { storedDisk = newValue }
     }
 
-    init(defaults: UserDefaults = .standard, makeApps: @escaping () -> AppsFeatureModels = { AppsFeatureModels() }, makeDisk: @escaping () -> DiskModel = { DiskModel(retentionPreferences:.stored(in:.standard)) },
+    init(defaults: UserDefaults = .standard, makeApps: @escaping @MainActor () -> AppsFeatureModels = { AppsFeatureModels() }, makeDisk: @escaping () -> DiskModel = { DiskModel(retentionPreferences:.stored(in:.standard)) },
          makeMonitor: @escaping () -> Monitor = { Monitor(samplingAllowed: { ModulePreferences.isEnabled(BuiltinModuleManifests.performance, in: .standard) }) }) {
         self.makeDisk = makeDisk;self.makeApps=makeApps;self.defaults=defaults
         self.makeMonitor = makeMonitor
@@ -57,6 +57,13 @@ final class AppModels {
     lazy var claudeCleanup = ClaudeCleanupModel()
     lazy var plugins = PluginsModel()
     var appStore: AppStoreModel { software.store }
+    func softwareExitBlocker() -> MainPage? { storedApps?.exitBlocker() }
+    func retireSoftwareViews() { storedApps?.retireViews() }
+    func invalidateAppsAfterRestore() { storedApps?.apps.invalidateAfterRestore() }
+    func prepareNativeRecovery() {
+        guard ModulePreferences.isEnabled(BuiltinModuleManifests.apps,in:defaults) else {return}
+        software.updates.channel="native";software.native.showRecovery=true
+    }
     func prepareAppsStop() throws -> BuiltinModules.FinishStop? {
         guard let session=storedApps else {return nil}
         guard session.beginStopping() else {

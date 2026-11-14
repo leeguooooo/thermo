@@ -30,27 +30,12 @@ enum AppExitGuard {
             show(.space(.browse))
             return .terminateCancel
         }
-        if AppModels.shared.apps.working {
-            AppModels.shared.apps.exitRequested = true
-            show(.apps(.installed))
-            return .terminateCancel
+        if let page=AppModels.shared.softwareExitBlocker() {
+            show(page);return .terminateCancel
         }
-        let model = AppModels.shared.softwareUpdates
-        let native = AppModels.shared.nativeUpdates
-        if AppModels.shared.startup.working {
-            AppModels.shared.startup.exitRequested = true
-            show(.apps(.startup))
-            return .terminateCancel
-        }
-        guard model.working || native.installing else {
-            if BatteryCareModel.shared.requestQuit() { show(.settings); return .terminateCancel }
-            if AWDLModel.shared.requestQuit() { show(.settings);return .terminateCancel }
-            return .terminateNow
-        }
-        if model.working { model.exitRequested = true; model.channel = "homebrew" }
-        else { native.exitRequested = true; model.channel = "native" }
-        show(.apps(.updates))
-        return .terminateCancel
+        if BatteryCareModel.shared.requestQuit() {show(.settings);return .terminateCancel}
+        if AWDLModel.shared.requestQuit() {show(.settings);return .terminateCancel}
+        return .terminateNow
     }
 }
 

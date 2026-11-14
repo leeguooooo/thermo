@@ -188,10 +188,7 @@ enum MainWindow {
                 MainActor.assumeIsolated {
                     setSamplingVisibility(false)
                     models.stopBrowserChecks()
-                    models.apps.retire()
-                    models.startup.retire()
-                    models.softwareUpdates.retire()
-                    models.nativeUpdates.retire()
+                    models.retireSoftwareViews()
                     SpaceOverviewModel.shared.stop()
                     SpaceLensModel.shared.stop()
                     SpaceLensModel.shared.stopDuplicates()

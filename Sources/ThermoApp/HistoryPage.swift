@@ -32,7 +32,7 @@ final class HistoryModel: ObservableObject {
                  reviewedDestinations: Set(review.items.filter { $0.status == "restored" }.map(\.destination)))
          },
          didRestore: @escaping @MainActor ([String]) -> Void = {
-             AppModels.shared.apps.invalidateAfterRestore()
+             AppModels.shared.invalidateAppsAfterRestore()
              SpaceLensModel.shared.invalidateAfterRestore($0)
          }) {
         self.reader = reader; self.reviewBatch = reviewBatch; self.restoreBatch = restoreBatch; self.didRestore = didRestore
@@ -340,8 +340,7 @@ struct HistoryPage: View {
         switch r.undo?.kind {
         case "nativeUpdate", "nativePreparation":
             Button(tr("Open")) {
-                AppModels.shared.softwareUpdates.channel = "native"
-                AppModels.shared.nativeUpdates.showRecovery = true
+                AppModels.shared.prepareNativeRecovery()
                 open(.apps(.updates))
             }.buttonStyle(PillButtonStyle()).controlSize(.small).fixedSize()
         case nil where r.feature == "apps" && r.action == "update":
