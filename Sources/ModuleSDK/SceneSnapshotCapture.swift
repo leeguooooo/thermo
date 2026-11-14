@@ -57,7 +57,11 @@ import WebKit
                 // An offscreen remote scene may have no WindowServer-backed surface.
                 // WebKit can still render the same viewport without that surface.
                 let pdfConfiguration = WKPDFConfiguration(); pdfConfiguration.rect = rect
-                let data = try await web.pdf(configuration: pdfConfiguration)
+                let data: Data
+                do { data = try await web.pdf(configuration: pdfConfiguration) }
+                catch {
+                    throw NSError(domain:"dev.thermo.scene-snapshot",code:1,userInfo:[NSLocalizedDescriptionKey:"Web viewport unavailable: \(error as NSError); URL=\(web.url?.absoluteString ?? "none"), loading=\(web.isLoading), progress=\(web.estimatedProgress)"])
+                }
                 guard data.count <= ModuleSnapshot.maxBytes,
                       let provider = CGDataProvider(data: data as CFData), let document = CGPDFDocument(provider),
                       let page = document.page(at: 1),
