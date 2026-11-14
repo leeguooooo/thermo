@@ -5,7 +5,14 @@ import ModuleKit
 do {
     guard CommandLine.arguments.count == 4 else { throw ModuleCommandLease.Failure.unsafeLocation }
     let home=CommandLine.arguments[1],feature=CommandLine.arguments[2],mode=CommandLine.arguments[3]
-    guard mode=="blocking" || mode=="watch" else {throw ModuleCommandLease.Failure.unsafeLocation}
+    guard ["blocking","watch","stop"].contains(mode) else {throw ModuleCommandLease.Failure.unsafeLocation}
+    if mode=="stop" {
+        let stop=try ModuleCommandLease.quiesce(feature:feature,home:home)
+        let deadline=Date().addingTimeInterval(15)
+        while !stop.readersFinished && Date()<deadline {usleep(10_000)}
+        guard stop.readersFinished else {throw ModuleCommandLease.Failure.busy(feature)}
+        stop.release();exit(0)
+    }
     let lease=try ModuleCommandLease.begin(feature:feature,interruptible:mode=="watch",home:home,enabled:{true})
     let root=URL(fileURLWithPath:home)
     try Data("ready".utf8).write(to:root.appendingPathComponent("ready"),options:.atomic)

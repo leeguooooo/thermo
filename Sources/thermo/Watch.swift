@@ -7,8 +7,10 @@ private var interrupted: sig_atomic_t = 0
 /// --json/--csv) one record per sample, suitable for logging and pipes.
 struct Watch {
     let app: App
+    var shouldStop: () -> Bool = {false}
 
     func run() throws {
+        guard !shouldStop() else{return}
         let interval = try app.args.double("interval") ?? 1
         let count = try app.args.int("count")
         let sm = try app.sampler()
@@ -28,7 +30,7 @@ struct Watch {
         let csv = app.args.has("csv")
         let json = app.args.has("json") || !csv
         var csvFanIDs: [Int]?
-        while interrupted == 0 {
+        while interrupted == 0 && !shouldStop() {
             let s = sm.sample()
             if csv {
                 if n == 0 {
@@ -56,7 +58,7 @@ struct Watch {
         var n = 0
         let pages = ["overview", "sensors", "power"]
 
-        loop: while interrupted == 0 {
+        loop: while interrupted == 0 && !shouldStop() {
             let s = sm.sample()
             if let c = s.maximumKnownTemperature { cpuHistory.append(c) }
             let width = terminalWidth()
@@ -70,10 +72,10 @@ struct Watch {
             // Wait for the next tick, reacting to keys immediately.
             let deadline = Date().addingTimeInterval(interval)
             var dimensions = (terminalWidth(), terminalHeight())
-            while interrupted == 0 {
+            while interrupted == 0 && !shouldStop() {
                 let remaining = deadline.timeIntervalSinceNow
                 if remaining <= 0 { break }
-                guard let key = term.readKey(timeout: remaining) else {
+                guard let key = term.readKey(timeout: min(0.25,remaining)) else {
                     let current = (terminalWidth(), terminalHeight())
                     if current != dimensions {
                         dimensions = current
@@ -134,7 +136,7 @@ struct Watch {
 
     private func sleepInterruptibly(_ seconds: Double) {
         let end = Date().addingTimeInterval(seconds)
-        while interrupted == 0 && Date() < end { usleep(UInt32(min(0.05, max(0, end.timeIntervalSinceNow)) * 1e6)) }
+        while interrupted == 0 && !shouldStop() && Date() < end { usleep(UInt32(min(0.05, max(0, end.timeIntervalSinceNow)) * 1e6)) }
     }
 }
 

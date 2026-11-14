@@ -86,6 +86,8 @@ struct App {
             throw CLIError("This command does not take positional arguments.")
         }
 
+        let commandLease=try ModuleCLI.commandLease(args.positionals)
+        defer{withExtendedLifetime(commandLease) {}}
         try ModuleCLI.requireBuiltinFeature(args.positionals)
         switch cmd {
         case "": try snapshotCommand([.temperatures, .fans, .power, .battery], header: true) { r, s in r.summary(s) }
@@ -93,7 +95,7 @@ struct App {
         case "fans", "f": try snapshotCommand(.fans) { r, s in r.fans(s) }
         case "power", "p": try snapshotCommand([.power, .electrical]) { r, s in r.power(s) }
         case "battery", "b": try batteryCommand()
-        case "watch", "w": try Watch(app: self).run()
+        case "watch", "w": try Watch(app: self,shouldStop:{commandLease?.stopRequested ?? false}).run()
         case "list", "ls": try listCommand()
         case "get": try getCommand(rest)
         case "fan": try fanCommand(rest)

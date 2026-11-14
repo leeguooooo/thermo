@@ -4535,4 +4535,5 @@ let zhHans: [String: String] = [
     "Wait for app removal, startup changes or updates before switching this feature off.": "请等待应用移除、启动项变更或更新完成，再关闭此功能。",
     "Folder sizes, large files and duplicate comparisons with reviewed removal.": "目录大小、大文件和重复文件比较，移除前逐项核对。",
     "Wait for file removal or the current AI request before switching this feature off.": "请等待文件移除或当前 AI 请求完成，再关闭此功能。",
+    "Wait for this feature’s current command to finish before switching it off.": "请等待此功能正在执行的命令结束，再关闭它。",
 ]

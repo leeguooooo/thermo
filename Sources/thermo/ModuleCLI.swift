@@ -35,16 +35,35 @@ enum ModuleCLI {
     }
     /// Existing native CLI routes keep their contracts; a disabled feature cannot start readers or fan writes.
     /// Returning fans to system Auto and helper administration remain available for recovery.
-    static func requireBuiltinFeature(_ words: [String], defaults: UserDefaults? = nil) throws {
-        let root = words.first ?? ""
-        if root == "search", words.dropFirst().first != "give-back-command-space" {
-            try requireEnabled(BuiltinModuleManifests.search, defaults: defaults)
+    static func builtinManifest(_ words:[String]) -> ModuleManifest? {
+        let root=words.first ?? ""
+        if root=="fan",words.dropFirst().first=="auto" {return nil}
+        if root=="search",words.dropFirst().first=="give-back-command-space" {return nil}
+        if root=="clean" {return BuiltinModuleManifests.disk}
+        if root=="search" {return BuiltinModuleManifests.search}
+        if root=="apps" || root=="app" {return BuiltinModuleManifests.apps}
+        if root=="space" {return BuiltinModuleManifests.space}
+        let performance:Set<String>=["","temps","temp","t","fans","f","power","p","watch","w","list","ls","get","fan","bench","memory","activity","pulse","status"]
+        return performance.contains(root) ? BuiltinModuleManifests.performance:nil
+    }
+    static func requireBuiltinFeature(_ words:[String],defaults:UserDefaults?=nil) throws {
+        if let manifest=builtinManifest(words) {try requireEnabled(manifest,defaults:defaults)}
+    }
+    struct CommandLease {
+        let manifest:ModuleManifest
+        let settings:UserDefaults
+        let lease:ModuleCommandLease
+        var stopRequested:Bool {lease.stopRequested || !ModulePreferences.isEnabled(manifest,in:settings)}
+    }
+    static func commandLease(_ words:[String],defaults supplied:UserDefaults?=nil,home:String=NSHomeDirectory()) throws -> CommandLease? {
+        guard let manifest=builtinManifest(words) else{return nil}
+        let settings=try supplied ?? defaults()
+        try requireEnabled(manifest,defaults:settings)
+        let root=words.first ?? ""
+        let lease=try ModuleCommandLease.begin(feature:manifest.id,interruptible:root=="watch" || root=="w",home:home) {
+            ModulePreferences.isEnabled(manifest,in:settings)
         }
-        if root == "space" {try requireEnabled(BuiltinModuleManifests.space,defaults:defaults)}
-        if root == "apps" || root == "app" { try requireEnabled(BuiltinModuleManifests.apps,defaults:defaults) }
-        if root == "fan", words.dropFirst().first == "auto" { return }
-        let performance: Set<String> = ["", "temps", "temp", "t", "fans", "f", "power", "p", "watch", "w", "list", "ls", "get", "fan", "bench", "memory", "activity", "pulse", "status"]
-        if performance.contains(root) { try requireEnabled(BuiltinModuleManifests.performance, defaults: defaults) }
+        return .init(manifest:manifest,settings:settings,lease:lease)
     }
     static func normalized(_ path: [String]) -> [String] {
         var result = path
@@ -76,6 +95,8 @@ enum ModuleCLI {
         guard let current = try (supplied ?? catalog()).tool(named:entry.toolName) else { throw CLIError("The module is switched off or this command is no longer available.") }
         try current.validate(arguments)
         guard current.moduleID == BuiltinModuleManifests.disk.id else { try runExternal(current,arguments:arguments); return }
+        let lease=try commandLease(current.cliPath)
+        defer{withExtendedLifetime(lease) {}}
         var args = try Args([])
         args.positionals = current.cliPath
         if noColor { args.flags.insert("no-color") }

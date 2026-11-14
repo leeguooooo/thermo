@@ -8,7 +8,7 @@ import ThermoL10n
 /// The app's one module manager and what the UI is built from: the pages of the modules that are on.
 /// Which modules are on is remembered per module; a new module starts as its manifest says.
 @MainActor final class ModuleCenter: ObservableObject {
-    static let shared = ModuleCenter(startBuiltin: BuiltinModules.start, updatesAppMenu: true)
+    static let shared = ModuleCenter(startBuiltin: BuiltinModules.start, updatesAppMenu: true, commandHome:NSHomeDirectory())
 
     struct Page: Identifiable, Equatable {
         var module: ModuleManifest
@@ -21,6 +21,7 @@ import ThermoL10n
     let manager: ModuleManager
     private let defaults: UserDefaults
     private let updatesAppMenu: Bool
+    private let commandHome:String?
     private let prepareBuiltinStop: @MainActor (String) throws -> BuiltinModules.FinishStop?
     private let startBuiltin: @MainActor (String) -> Void
     @Published private(set) var changing = Set<String>()
@@ -36,11 +37,11 @@ import ThermoL10n
     init(manager: ModuleManager? = nil, defaults: UserDefaults = .standard,
          prepareBuiltinStop: @escaping @MainActor (String) throws -> BuiltinModules.FinishStop? = BuiltinModules.prepareStop,
          startBuiltin: @escaping @MainActor (String) -> Void = { _ in },
-         updatesAppMenu: Bool = false) {
+         updatesAppMenu: Bool = false, commandHome:String? = nil) {
         self.manager = manager ?? ModuleManager(); self.defaults = defaults
         self.prepareBuiltinStop = prepareBuiltinStop
         self.startBuiltin = startBuiltin
-        self.updatesAppMenu = updatesAppMenu
+        self.updatesAppMenu = updatesAppMenu;self.commandHome=commandHome
     }
 
     static func key(_ id: String) -> String { ModulePreferences.key(id) }
@@ -177,8 +178,19 @@ import ThermoL10n
         guard !changing.contains(id) else { return }
         var finish: BuiltinModules.FinishStop?
         if !on, BuiltinModules.manifest(id) != nil {
-            do { finish = try prepareBuiltinStop(id) }
-            catch { switchIssues[id] = String(describing: error); return }
+            do {
+                let external=try commandHome.map{try ModuleCommandLease.quiesce(feature:id,home:$0)}
+                let own=try prepareBuiltinStop(id)
+                if let external {
+                    finish = {
+                        if let own {await own()}
+                        await external.waitForReaders()
+                        external.release()
+                    }
+                } else {finish=own}
+            } catch ModuleCommandLease.Failure.busy {
+                switchIssues[id]=tr("Wait for this feature’s current command to finish before switching it off.");return
+            } catch {switchIssues[id]=error.localizedDescription;return}
         }
         switchIssues[id] = nil
         if finish != nil { changing.insert(id) }
