@@ -2,26 +2,13 @@ import CleanKit
 import AppKit
 import SwiftUI
 import ThermoL10n
-
-/// Timer callbacks run on a worker queue; lifetime changes and publication run
-/// on the UI thread. A new visible session must reject an old session's result.
-private final class PulseSamplingLifetime: @unchecked Sendable {
-    private let lock = NSLock()
-    private var token: UUID?
-    func start() -> UUID {
-        lock.lock(); defer { lock.unlock() }
-        let value = UUID(); token = value; return value
-    }
-    func stop() { lock.lock(); token = nil; lock.unlock() }
-    func current() -> UUID? { lock.lock(); defer { lock.unlock() }; return token }
-    func accepts(_ value: UUID) -> Bool { lock.lock(); defer { lock.unlock() }; return token == value }
-}
+import ModuleKit
 
 /// Samples `MachinePulse` every 3 s while the panel is open on the Overview tab; nothing runs otherwise.
 final class SystemPulse: ObservableObject {
     typealias Hog = MachinePulse.Hog
     /// One sampler for the app; the card starts and stops it as it appears and disappears.
-    static let shared = SystemPulse()
+    static let shared = SystemPulse(samplingAllowed: { ModulePreferences.isEnabled(BuiltinModuleManifests.performance, in: .standard) })
 
     @Published private(set) var current: MachinePulse?
     @Published private(set) var quitProblem: String?
@@ -32,11 +19,13 @@ final class SystemPulse: ObservableObject {
     private var timer: DispatchSourceTimer?
     /// Confined to `queue`. Kept across start/stop so reopening shows fresh numbers in one cheap pass.
     private let sampler = PulseSampler()
-    private let lifetime = PulseSamplingLifetime()
+    private let lifetime = FeatureSamplingLifetime()
     private let readSample: (@Sendable () -> MachinePulse)?
+    private let samplingAllowed: () -> Bool
 
-    init(readSample: (@Sendable () -> MachinePulse)? = nil, samplingQueue: DispatchQueue? = nil) {
+    init(readSample: (@Sendable () -> MachinePulse)? = nil, samplingQueue: DispatchQueue? = nil, samplingAllowed: @escaping () -> Bool = { true }) {
         self.readSample = readSample
+        self.samplingAllowed = samplingAllowed
         queue = samplingQueue ?? DispatchQueue(label: "dev.thermo.app.pulse", qos: .userInitiated)
     }
 
@@ -65,7 +54,7 @@ final class SystemPulse: ObservableObject {
     }
 
     func start() {
-        guard timer == nil else { return }
+        guard samplingAllowed(), timer == nil else { return }
         let token = lifetime.start()
         #if DEBUG
         Self.trace("start", token)
@@ -146,8 +135,14 @@ final class SystemPulse: ObservableObject {
         }
     }
 
+    @MainActor func finishStoppingFeature() async {
+        await withCheckedContinuation { done in queue.async { done.resume() } }
+        if timer == nil { current = nil }
+    }
+
     /// Apps are asked to quit (they may save or refuse); other processes get SIGTERM.
     func quit(_ hog: Hog) {
+        guard samplingAllowed() else { return }
         quitProblem = nil
         guard hog.quittable, !quitting.contains(hog.id) else { return }
         let before = current
@@ -201,6 +196,7 @@ final class SystemPulse: ObservableObject {
     /// Quit like ⌘Q, wait until every process of it has gone, then open it again; it restores its
     /// own windows and tabs. Gives up (and says so) if it is still running after a minute.
     func restart(_ hog: Hog) {
+        guard samplingAllowed() else { return }
         guard hog.quittable, restarting == nil, !quitting.contains(hog.id) else { return }
         guard let path = hog.app,
               let app = NSWorkspace.shared.runningApplications.first(where: { $0.bundleURL?.standardizedFileURL.path == path })

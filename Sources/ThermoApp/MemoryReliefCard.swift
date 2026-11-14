@@ -15,6 +15,7 @@ import ThermoL10n
     @Published private(set) var snapshot: CheckupSnapshot?
 
     func start(_ diagnosis: SlowdownDiagnosis) {
+        guard PerformanceModule.enabled else { return }
         guard phase != .asking else { return }
         snapshot = CheckupSnapshot(uptime: ProcessInfo.processInfo.systemUptime, diagnosis: diagnosis)
         if CheckupModel.shared.consented { ask() } else { phase = .preview }
@@ -283,6 +284,7 @@ struct MemoryReliefCard: View {
     }
 
     func run(_ plan: MemoryReliefPlan) {
+        guard let operation = PerformanceModule.beginOperation() else { feedback = tr("This feature is switched off."); return }
         working = true; feedback = nil
         let confirmed = plan.safeIdentities
         recorder.diagnoseFresh { fresh, processes in
@@ -291,6 +293,7 @@ struct MemoryReliefCard: View {
                 let targets = MemoryRelief.targets(confirmed: confirmed, fresh: fresh)
                 let outcome = MemoryRelief.end(targets, skipped: confirmed.count - targets.count, live: processes)
                 DispatchQueue.main.async {
+                    PerformanceModule.endOperation(operation)
                     working = false; feedback = outcome.summary
                     PulseRecorder.shared.diagnoseNow()
                     acted()

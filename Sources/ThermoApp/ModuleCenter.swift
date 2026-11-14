@@ -189,7 +189,7 @@ import ThermoL10n
             if updatesAppMenu, NSApp != nil { installStandardMenus(center: self) }
         } else { manager.setEnabled(id, on) }
         // A module that was switched off is in no entry point, the open page included.
-        if !on, MainWindow.state.page.module == id { MainWindow.state.page = .overview }
+        if !on, MainWindow.state.page.module == id { MainWindow.state.page = shows(.overview) ? .overview : .settings }
         if let finish {
             Task { @MainActor in
                 await finish()

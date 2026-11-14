@@ -190,6 +190,8 @@ final class Monitor: ObservableObject {
 
     private let queue = DispatchQueue(label: "dev.thermo.app.sampler", qos: .utility)
     private var sampler: Sampler?
+    private let samplingLifetime = FeatureSamplingLifetime()
+    private let samplingAllowed: @Sendable () -> Bool
     /// Mirror of `popoverOpen`, confined to `queue`.
     private var fullSampling = false
     private var samplingSurface: SamplingSurface = .overview
@@ -217,12 +219,15 @@ final class Monitor: ObservableObject {
     }
 
     init(startMonitoring: Bool = true, helperInteraction: Bool = true,
-         helper: HelperClient = HelperClient(), arguments: [String] = CommandLine.arguments) {
+         helper: HelperClient = HelperClient(), arguments: [String] = CommandLine.arguments,
+         samplingAllowed: @escaping @Sendable () -> Bool = { true }) {
         self.helper = helper
+        self.samplingAllowed = samplingAllowed
+        if samplingAllowed() { _ = samplingLifetime.start() }
         // A snapshot must not contact an old helper and thereby start its update
         // or setup path. Apply this to every Monitor, including lazy AppModels.
         self.helperInteraction = helperInteraction && !Self.suppressesAutomaticControl(arguments: arguments)
-        guard startMonitoring else { return }
+        guard startMonitoring, samplingAllowed() else { return }
         reschedule()
         refreshHelper()
     }
@@ -230,7 +235,8 @@ final class Monitor: ObservableObject {
     var interval: TimeInterval { Settings.intervalValue(UserDefaults.standard.double(forKey: Settings.interval)) }
 
     func reschedule() {
-        timer?.cancel()
+        timer?.cancel(); timer = nil
+        guard samplingAllowed(), samplingLifetime.current() != nil else { return }
         // Background: essential sensors only, at least every 2 s. Popover open: everything at the chosen rate.
         let every = watched ? interval : max(interval, 2)
         let t = DispatchSource.makeTimerSource(queue: queue)
@@ -238,6 +244,28 @@ final class Monitor: ObservableObject {
         t.setEventHandler { [weak self] in self?.sample() }
         t.resume()
         timer = t
+    }
+
+    var samplingActive: Bool { timer != nil }
+    var canStopFeature: Bool { !helperBusy && !settingUp && pendingPolicies.isEmpty }
+    func startFeature() {
+        guard samplingAllowed(), timer == nil else { return }
+        if samplingLifetime.current() == nil { _ = samplingLifetime.start() }
+        refreshSamplingDemand(); reschedule()
+    }
+    func beginStoppingFeature() {
+        samplingLifetime.stop(); timer?.cancel(); timer = nil
+        latest = nil; snapshot = nil; sampledFans = nil; fanZeroStreak = [:]; stoppedFans = []
+        buffer = []; history = []; systemMemory = nil; systemDisk = nil; menuLive = MenuLiveValues()
+        onMenuUpdate?()
+    }
+    func finishStoppingFeature() async {
+        await withCheckedContinuation { done in
+            queue.async {
+                self.sampler = nil; self.menuSampler.reset(); self.fullSampling = false
+                done.resume()
+            }
+        }
     }
 
     /// Retry initialization too: a temporary SMC failure must not leave the app stuck loading.
@@ -248,20 +276,22 @@ final class Monitor: ObservableObject {
         }
     }
 
-    private func prepareSampler() {
+    private func prepareSampler(token: UUID) {
         do {
             let s = try Sampler(scope: .essential)
             sampler = s
             DispatchQueue.main.async { [weak self] in
+                guard self?.samplingLifetime.accepts(token) == true else { return }
                 self?.model = s.discovery.model
                 self?.lastError = nil
             }
         } catch {
-            DispatchQueue.main.async { [weak self] in self?.lastError = "\(error)" }
+            DispatchQueue.main.async { [weak self] in if self?.samplingLifetime.accepts(token) == true { self?.lastError = "\(error)" } }
         }
     }
 
     private func sample() {
+        guard samplingAllowed(), let token = samplingLifetime.current() else { return }
         let open = fullSampling
         let defaults = UserDefaults.standard
         let preferences = MenuBarPreferences.read(defaults)
@@ -270,14 +300,16 @@ final class Monitor: ObservableObject {
                                      alerts: defaults.bool(forKey: Settings.alertsEnabled), surface: samplingSurface)
         if plan.parts.isEmpty {
             DispatchQueue.main.async { [weak self] in
+                guard self?.samplingLifetime.accepts(token) == true else { return }
                 self?.menuLive = live
                 self?.onMenuUpdate?()
             }
             return
         }
-        if sampler == nil { prepareSampler() }
+        if sampler == nil { prepareSampler(token: token) }
         guard let sampler else {
             DispatchQueue.main.async { [weak self] in
+                guard self?.samplingLifetime.accepts(token) == true else { return }
                 self?.menuLive = live
                 self?.onMenuUpdate?()
             }
@@ -295,7 +327,7 @@ final class Monitor: ObservableObject {
         let load = getloadavg(&averages, 3) > 0 ? averages[0] / Double(max(1, ProcessInfo.processInfo.activeProcessorCount)) : nil
         let point = HistoryPoint(time: s.timestamp, cpu: s.cpu, gpu: s.gpu, fans: s.fans.map(\.rpm), power: s.systemPower, load: load)
         DispatchQueue.main.async { [weak self] in
-            guard let self else { return }
+            guard let self, self.samplingLifetime.accepts(token) else { return }
             self.menuLive = live
             self.latest = s
             self.latestParts = plan.parts
@@ -592,7 +624,7 @@ final class Monitor: ObservableObject {
     }
 
     func setPolicy(_ policy: FanPolicy, fans: [Int]) {
-        guard !helperBusy, !fans.isEmpty else { return }
+        guard samplingAllowed(), samplingLifetime.current() != nil, !helperBusy, !fans.isEmpty else { return }
         do { try policy.validate() } catch { lastError = "\(error)"; return }
         let changes = Set(fans).sorted().map { ($0, policy) }
         guard [.running, .outdated].contains(helperState) else {

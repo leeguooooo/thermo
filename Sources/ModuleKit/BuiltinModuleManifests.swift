@@ -65,7 +65,19 @@ public enum BuiltinModuleManifests {
         entries: [.init(id: "management", kind: .settingsItem, title: "Manage menu bar", symbol: "menubar.rectangle", scene: "menu-bar-management"),
                   .init(id: "tools", kind: .menuBarItem, title: "Manage menu bar…", symbol: "menubar.rectangle", scene: "menu-bar-management")])
 
-    public static let all = [disk, capture, menuBar]
+    public static let performance = ModuleManifest(
+        id: "dev.thermo.performance", name: "Performance",
+        summary: "Overview, memory, CPU, GPU, sensors, fan controls and slowdown history.",
+        symbol: "gauge.with.dots.needle.67percent", version: "1.0.0", launch: .always, enabledByDefault: true,
+        entries: [
+            .init(id: "overview", kind: .page, title: "Overview", symbol: "gauge.with.dots.needle.67percent", scene: "overview", navigationKey: "1"),
+            .init(id: "sensors", kind: .page, title: "Sensors", symbol: "thermometer.medium", scene: "sensors", navigationKey: "2"),
+            .init(id: "fans", kind: .page, title: "Fans", symbol: "fan", scene: "fans", navigationKey: "3"),
+            .init(id: "cpu", kind: .page, title: "CPU usage", symbol: "cpu", scene: "cpu", navigationKey: "9"),
+            .init(id: "gpu", kind: .page, title: "GPU usage", symbol: "square.stack.3d.up", scene: "gpu", navigationKey: "0"),
+            .init(id: "memory", kind: .page, title: "Memory usage", symbol: "memorychip", scene: "memory", navigationKey: "8")])
+
+    public static let all = [disk, capture, menuBar, performance]
 }
 
 public enum ModulePreferences {

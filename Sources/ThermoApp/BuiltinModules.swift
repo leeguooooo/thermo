@@ -7,35 +7,40 @@ struct BuiltinSidebarItem: Identifiable {
     let target: MainPage
     let tint: Color
     var trailing: String?
+    var trailingColor: Color?
     var selected: Bool
     var id: String { entry.id }
 }
+
+enum BuiltinSidebarSection: Hashable { case overview, machine, resources, storage }
 
 /// Metadata and argument resolution never instantiate a feature. UI and lifetime callbacks run on main.
 protocol BuiltinModule: Sendable {
     static var manifest: ModuleManifest { get }
     @MainActor static func start()
     static var legacyMenuEntries: [String: String] { get }
+    static var sidebarSections: Set<BuiltinSidebarSection> { get }
     static func owns(_ page: MainPage) -> Bool
     static func canonicalArgument(_ argument: String) -> String
     static func target(_ scene: String) -> MainPage?
     static func supports(_ entry: ModuleManifest.Entry) -> Bool
-    @MainActor static func sidebar(page: Binding<MainPage>, models: AppModels,
+    @MainActor static func sidebar(section: BuiltinSidebarSection, page: Binding<MainPage>, models: AppModels,
                                    row: @escaping @MainActor (BuiltinSidebarItem) -> AnyView) -> AnyView
     @MainActor static func page(_ entry: ModuleManifest.Entry, selection: Binding<MainPage>, models: AppModels) -> AnyView
     @MainActor static func settings(_ entry: ModuleManifest.Entry, models: AppModels) -> AnyView
     @MainActor static func prepareStop(models: AppModels) throws -> BuiltinModules.FinishStop?
     @MainActor static func appearance(_ page: MainPage) -> (glow: Bool, tint: Color?)
     @MainActor static func prepareReview(_ arguments: [String], page: inout MainPage, models: AppModels)
-    @MainActor static func snapshotReady(_ arguments: [String], models: AppModels) -> Bool
+    @MainActor static func snapshotReady(_ arguments: [String], models: AppModels, started: Date) -> Bool
 }
 
 extension BuiltinModule {
+    static var sidebarSections: Set<BuiltinSidebarSection> { [.storage] }
     @MainActor static func start() {}
 }
 
 enum BuiltinModules {
-    static let implementations: [any BuiltinModule.Type] = [DiskModule.self, CaptureModule.self, MenuBarModule.self]
+    static let implementations: [any BuiltinModule.Type] = [DiskModule.self, CaptureModule.self, MenuBarModule.self, PerformanceModule.self]
     static var all: [ModuleManifest] { implementations.map { $0.manifest } }
     static var disk: ModuleManifest { DiskModule.manifest }
     static func manifest(_ id: String) -> ModuleManifest? { all.first { $0.id == id } }
@@ -79,10 +84,10 @@ enum BuiltinModules {
         }
     }
 
-    @MainActor static func snapshotReady(_ page: MainPage, arguments: [String], models: AppModels, center: ModuleCenter) -> Bool? {
+    @MainActor static func snapshotReady(_ page: MainPage, arguments: [String], models: AppModels, center: ModuleCenter, started: Date = .distantPast) -> Bool? {
         guard owner(page) != nil else { return nil }
         guard center.shows(page), let feature = self.page(page) else { return true }
-        return feature.implementation.snapshotReady(arguments, models: models)
+        return feature.implementation.snapshotReady(arguments, models: models, started: started)
     }
 
     typealias FinishStop = @MainActor () async -> Void
@@ -102,7 +107,8 @@ extension MainPage {
 
 struct BuiltinSidebarGroup: View {
     let implementation: any BuiltinModule.Type
+    var section: BuiltinSidebarSection = .storage
     @Binding var selection: MainPage
     let row: @MainActor (BuiltinSidebarItem) -> AnyView
-    var body: some View { implementation.sidebar(page: $selection, models: .shared, row: row) }
+    var body: some View { implementation.sidebar(section: section, page: $selection, models: .shared, row: row) }
 }

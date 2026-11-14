@@ -86,6 +86,7 @@ struct App {
             throw CLIError("This command does not take positional arguments.")
         }
 
+        try ModuleCLI.requireBuiltinFeature(args.positionals)
         switch cmd {
         case "": try snapshotCommand([.temperatures, .fans, .power, .battery], header: true) { r, s in r.summary(s) }
         case "temps", "temp", "t": try snapshotCommand(.temperatures) { r, s in r.temperatures(s) }

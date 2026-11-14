@@ -12,10 +12,8 @@ public enum HostPageSpecification {
         }
     }
     public static let pages: [Page] = [
-        .init("overview", "Overview", "1"), .init("sensors", "Sensors", "2"), .init("fans", "Fans", "3"),
         .init("pages", "Browser pages", "4"), .init("agents", "AI Agent Diagnostics", "6"),
-        .init("apps", "Software", "7"), .init("memory", "Memory usage", "8"),
-        .init("cpu", "CPU usage", "9"), .init("gpu", "GPU usage", "0"),
+        .init("apps", "Software", "7"),
         .init("space", "Space Lens"), .init("claude", "Claude tools"), .init("settings", "Settings", ",")
     ]
 }

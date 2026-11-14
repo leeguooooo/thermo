@@ -33,6 +33,7 @@ final class StatusMenu: NSObject, NSMenuDelegate {
         let context = StatusMenuLayout.RuntimeContext(
             captureEnabled: captureEnabled,
             menuBarEnabled: MenuBarModule.enabled,
+            performanceEnabled: PerformanceModule.enabled,
             hasBattery: battery,
             keepAwakeActive: IdleAwakeModel.shared.state.phase == .active,
             focusTimerActive: FocusTimerModel.shared.phase.isActive,

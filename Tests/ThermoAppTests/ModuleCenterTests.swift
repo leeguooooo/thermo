@@ -188,7 +188,7 @@ import XCTest
                 XCTAssertEqual(page?.module, manifest.id, "\(manifest.id) entry \(entry.id) must lead to one of its own pages")
             }
         }
-        XCTAssertNil(MainPage.overview.module)
+        XCTAssertEqual(MainPage.overview.module, PerformanceModule.manifest.id)
         XCTAssertNil(MainPage.settings.module)
     }
 

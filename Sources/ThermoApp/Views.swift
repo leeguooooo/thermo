@@ -149,6 +149,7 @@ struct PopoverView: View {
     private var mainSections: some View {
         VStack(alignment: .leading, spacing: 8) {
             header
+            if modules.isOn(PerformanceModule.manifest.id) {
             if monitor.iconHidden {
                 // The menu bar icon is behind the notch; say how to get it back.
                 Label(tr("The menu bar icon is hidden behind the notch. Hold ⌘ and drag other icons out of the menu bar to make room, or open Thermo from the Dock."),
@@ -171,6 +172,10 @@ struct PopoverView: View {
             if let err = monitor.lastError {
                 Text(FanControlPresentation.errorText(err)).help(err).font(Theme.caption).foregroundStyle(Theme.danger).lineLimit(3)
                     .onTapGesture { monitor.lastError = nil }
+            }
+            } else {
+                Text(tr("This feature is switched off.")).font(Theme.body).foregroundStyle(Theme.textSecondary)
+                Button(tr("Settings")) { MainWindow.show(.settings) }.buttonStyle(PillButtonStyle())
             }
         }
     }

@@ -5,12 +5,13 @@ import SwiftUI
 import ThermoKit
 import ThermoL10n
 import UserNotifications
+import ModuleKit
 
 /// Records the pulse in the background — once a minute on power, every five minutes on battery,
 /// panel open or not — so a slowdown can be looked at afterwards, and tells the user about one
 /// before they feel it. One cheap incremental pass per tick (PulseSampler).
 final class PulseRecorder: ObservableObject {
-    static let shared = PulseRecorder()
+    static let shared = PulseRecorder(samplingAllowed: { ModulePreferences.isEnabled(BuiltinModuleManifests.performance, in: .standard) })
     static let alertsKey = "slowdownAlerts"
     /// Posted (on main) when a slowdown notification is clicked; userInfo["program"] is who to show.
     static let showProgram = Notification.Name("dev.thermo.showPulseProgram")
@@ -26,7 +27,10 @@ final class PulseRecorder: ObservableObject {
     /// The latest "why is it slow" answer, refreshed every tick (and on request).
     @Published private(set) var diagnosis: SlowdownDiagnosis?
 
-    private let queue = DispatchQueue(label: "dev.thermo.app.pulse-history", qos: .utility)
+    private let queue: DispatchQueue
+    private let lifetime = FeatureSamplingLifetime()
+    private let readHistory: (@Sendable () -> [PulseRecord])?
+    private let samplingAllowed: @Sendable () -> Bool
     private let sampler = PulseSampler()
     /// Confined to `queue`; its previous pass turns CPU and disk counters into rates and busy streaks.
     private let slowdown = SlowdownSampler()
@@ -35,17 +39,42 @@ final class PulseRecorder: ObservableObject {
     private var interval: TimeInterval = 0
     private var memory: [PulseRecord] = []
 
-    func start() {
+    init(queue: DispatchQueue? = nil, readHistory: (@Sendable () -> [PulseRecord])? = nil,
+         samplingAllowed: @escaping @Sendable () -> Bool = { true }) {
+        self.queue = queue ?? DispatchQueue(label: "dev.thermo.app.pulse-history", qos: .utility)
+        self.readHistory = readHistory
+        self.samplingAllowed = samplingAllowed
+    }
+
+    @MainActor func start() {
+        guard samplingAllowed(), lifetime.current() == nil else { return }
+        let token = lifetime.start()
         queue.async {
-            self.memory = self.history.records(since: Date().addingTimeInterval(-6 * 3600))
+            guard self.lifetime.accepts(token) else { return }
+            self.memory = self.readHistory?() ?? self.history.records(since: Date().addingTimeInterval(-6 * 3600))
             let snapshot = self.memory
-            DispatchQueue.main.async { self.recent = snapshot }
+            DispatchQueue.main.async { if self.lifetime.accepts(token) { self.recent = snapshot } }
             self.reschedule()
         }
     }
 
+    /// Cancel first, then drain the serial reader; an old publication cannot reach a new session.
+    @MainActor func beginStopping() { lifetime.stop() }
+    @MainActor func stop() async {
+        beginStopping()
+        await withCheckedContinuation { done in
+            queue.async {
+                self.timer?.cancel(); self.timer = nil; self.interval = 0
+                self.memory = []
+                done.resume()
+            }
+        }
+        if lifetime.current() == nil { recent = []; diagnosis = nil }
+    }
+
     /// Every 60 s on power, 300 s on battery.
     private func reschedule() {
+        guard samplingAllowed(), let token = lifetime.current() else { return }
         let onBattery = Battery.read().map { !$0.externalPower } ?? false
         let every: TimeInterval = onBattery ? 300 : 60
         guard every != interval else { return }
@@ -53,12 +82,13 @@ final class PulseRecorder: ObservableObject {
         timer?.cancel()
         let t = DispatchSource.makeTimerSource(queue: queue)
         t.schedule(deadline: .now() + 5, repeating: every, leeway: .seconds(5))
-        t.setEventHandler { [weak self] in self?.tick() }
+        t.setEventHandler { [weak self] in self?.tick(token: token) }
         t.resume()
         timer = t
     }
 
-    private func tick() {
+    private func tick(token: UUID) {
+        guard samplingAllowed(), lifetime.accepts(token) else { return }
         let pulse = sampler.sample()
         let record = PulseRecord(pulse)
         history.append(record)
@@ -66,7 +96,7 @@ final class PulseRecorder: ObservableObject {
         memory.append(record)
         memory.removeAll { now.timeIntervalSince($0.t) > 6 * 3600 }
         let snapshot = memory
-        DispatchQueue.main.async { self.recent = snapshot }
+        DispatchQueue.main.async { if self.lifetime.accepts(token) { self.recent = snapshot } }
         if now.timeIntervalSince(lastProgramRecord) >= 290 {
             lastProgramRecord = now
             let inventory = MemoryInventory.collect()
@@ -76,23 +106,23 @@ final class PulseRecorder: ObservableObject {
         }
 
         let enabled = UserDefaults.standard.object(forKey: Self.alertsKey) as? Bool ?? true
-        let found = diagnose()
+        let found = diagnose(token: token)
         var fired = alerts.evaluate(memory.filter { now.timeIntervalSince($0.t) <= 15 * 60 }, latest: pulse, now: now)
         // One memory notification: the diagnosis names the culprit, the older rules only the biggest program.
         if found.memoryStrain == .exhausted { fired.removeAll { $0.key == "swap" || $0.key == "memory" } }
         fired += alerts.evaluate(found, now: now)
-        if enabled { for a in fired { notify(a) } }
+        if enabled, lifetime.accepts(token) { for a in fired { notify(a) } }
         reschedule()
     }
 
     /// Runs on `queue`.
-    @discardableResult private func diagnose() -> SlowdownDiagnosis {
+    @discardableResult private func diagnose(token: UUID? = nil) -> SlowdownDiagnosis {
         // Snapshots of the Overview card need a diagnosis with culprits even on a calm Mac.
         let fixture = ProcessInfo.processInfo.environment["THERMO_DIAGNOSIS_FIXTURE"]
             .flatMap { FileManager.default.contents(atPath: $0) }
             .flatMap { try? JSONDecoder().decode(SlowdownDiagnosis.self, from: $0) }
         let found = fixture ?? SlowdownDiagnosis.diagnose(slowdown.sample(), system: .read())
-        DispatchQueue.main.async { self.diagnosis = found }
+        DispatchQueue.main.async { if token == nil || self.lifetime.accepts(token!) { self.diagnosis = found } }
         return found
     }
 

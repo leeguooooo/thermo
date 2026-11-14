@@ -11,6 +11,7 @@ struct StatusMenuLayout {
     struct RuntimeContext {
         var captureEnabled: Bool = true
         var menuBarEnabled: Bool = true
+        var performanceEnabled: Bool = true
         let hasBattery: Bool
         let keepAwakeActive: Bool
         let focusTimerActive: Bool
@@ -193,7 +194,12 @@ struct StatusMenuLayout {
             .gpuUsage,
             .memoryUsage,
             .tabOrganizer
-        ]
+        ].filter { item in
+            switch item {
+            case .overview, .sensors, .fans, .cpuUsage, .gpuUsage, .memoryUsage: return context.performanceEnabled
+            default: return true
+            }
+        }
         productItems.append(.menuGroup(MenuGroup(
             title: "System & hardware",
             leaves: systemLeaves,

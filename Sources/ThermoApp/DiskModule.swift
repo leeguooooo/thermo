@@ -59,9 +59,10 @@ enum DiskModule: BuiltinModule {
             return .init(entry: entry, target: page, tint: tint, trailing: trailing, selected: selected == page)
         }
     }
-    @MainActor static func sidebar(page: Binding<MainPage>, models: AppModels,
+    @MainActor static func sidebar(section: BuiltinSidebarSection, page: Binding<MainPage>, models: AppModels,
                                    row: @escaping @MainActor (BuiltinSidebarItem) -> AnyView) -> AnyView {
-        AnyView(DiskSidebarRows(disk: models.disk) { disk in
+        guard section == .storage else { return AnyView(EmptyView()) }
+        return AnyView(DiskSidebarRows(disk: models.disk) { disk in
             ForEach(sidebarItems(selection: page.wrappedValue, disk: disk)) { item in row(item) }
         })
     }
@@ -90,7 +91,7 @@ enum DiskModule: BuiltinModule {
             models.disk.loadSaved(category: category, scanIfMissing: true)
         }
     }
-    @MainActor static func snapshotReady(_ arguments: [String], models: AppModels) -> Bool {
+    @MainActor static func snapshotReady(_ arguments: [String], models: AppModels, started: Date) -> Bool {
         let model = models.disk
         if arguments.contains("--no-scan") || !arguments.contains("--disk") { return !model.loadingSaved && !model.scanning }
         return !model.loadingSaved && model.report != nil && !model.scanning
