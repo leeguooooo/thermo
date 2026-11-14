@@ -83,7 +83,7 @@ final class TabWorkspaceModel: ObservableObject {
         busy = true
         if !keepError { error = nil }
         let app = app,token=generation
-        work.runOnMain {
+        work.runOnMain { [self] in
             guard self.work.acceptsWork,self.generation==token else{self.finishRefresh();return}
             let actions=self.actions
             do {
@@ -113,7 +113,7 @@ final class TabWorkspaceModel: ObservableObject {
         guard work.acceptsWork else{return}
         let selection = name == nil ? pages : chosen
         guard !selection.isEmpty, !busy, !isPreview else { return }; busy = true; mutating=true; error = nil
-        work.runOnMain {
+        work.runOnMain { [self] in
             let actions=self.actions
             do { try await Task.detached { try actions.assign(selection,name) }.value }
             catch { self.error = tr(error.localizedDescription) }
@@ -123,7 +123,7 @@ final class TabWorkspaceModel: ObservableObject {
     func archive(_ selection: [TabWorkspace.Page], name: String) {
         guard work.acceptsWork else{return}
         guard !busy, !isPreview else { return }; busy = true; mutating=true; error = nil; let app = app
-        work.runOnMain {
+        work.runOnMain { [self] in
             let actions=self.actions
             do {
                 let record = try await Task.detached { try await actions.archive(selection,app,name) }.value
@@ -136,7 +136,7 @@ final class TabWorkspaceModel: ObservableObject {
     func forget(_ record: TabWorkspace.Archive) {
         guard work.acceptsWork else{return}
         guard !busy, !isPreview else { return }; busy = true; mutating=true; error = nil
-        work.runOnMain {
+        work.runOnMain { [self] in
             let actions=self.actions
             do {
                 try await Task.detached { try actions.remove(record.id) }.value
@@ -148,7 +148,7 @@ final class TabWorkspaceModel: ObservableObject {
     func restore(_ record: TabWorkspace.Archive, destinationWindow: Int? = nil) {
         guard work.acceptsWork else{return}
         guard !busy, !isPreview else { return }; busy = true; mutating=true; error = nil
-        work.runOnMain {
+        work.runOnMain { [self] in
             let actions=self.actions
             do {
                 let result = try await Task.detached { try await actions.restore(record.id,destinationWindow) }.value
