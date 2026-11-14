@@ -120,6 +120,7 @@ import XCTest
         MainWindow.state.page = .space(.large);center.setEnabled(SpaceModule.manifest.id,false)
         for tab in SpaceTab.allCases {XCTAssertFalse(center.shows(.space(tab)))}
         XCTAssertTrue(center.shows(DiskModule.target("disk:overview")!))
+        XCTAssertFalse(models.revealInSpace("/fixture"))
         models.stopSpaceViews();models.invalidateSpaceAfterRestore(["/fixture"])
         XCTAssertFalse(models.spaceLoaded);XCTAssertEqual(creations,0);XCTAssertEqual(invalidations,1)
     }

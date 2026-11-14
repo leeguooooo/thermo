@@ -25,6 +25,10 @@ final class AppModels {
         if spaceInvalidated {created.invalidateAfterRestore([created.root]);spaceInvalidated=false}
         storedSpace=created;return created
     }
+    @discardableResult func revealInSpace(_ path:String)->Bool {
+        guard ModulePreferences.isEnabled(BuiltinModuleManifests.space,in:defaults) else{return false}
+        space.reveal(path);return true
+    }
     func stopSpaceViews() {storedSpace?.stop();storedSpace?.stopDuplicates()}
     func invalidateSpaceAfterRestore(_ paths:[String]) {
         if let storedSpace {storedSpace.invalidateAfterRestore(paths)}
