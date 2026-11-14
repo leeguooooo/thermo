@@ -13,7 +13,7 @@ final class PreviewInputTests: XCTestCase {
             let file=try FileHandle(forReadingFrom:original);defer {try? file.close()}
             let input=PreviewInput(kind:.file,name:"../../escape/original.pdf")
             let output=try XCTUnwrap(PreviewInputCache(root:cache,cloneEnabled:clone).prepare(input,file:file))
-            XCTAssertEqual(output.deletingLastPathComponent(),cache)
+            XCTAssertEqual(output.deletingLastPathComponent().resolvingSymlinksInPath().path,cache.resolvingSymlinksInPath().path)
             XCTAssertEqual(output.pathExtension,"pdf")
             XCTAssertEqual(try Data(contentsOf:output),Data("original input".utf8))
             try Data("edited cached copy".utf8).write(to:output)
