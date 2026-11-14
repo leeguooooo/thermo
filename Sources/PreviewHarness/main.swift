@@ -94,4 +94,5 @@ private final class Delegate:NSObject,NSApplicationDelegate {
     }
 }
 let app=NSApplication.shared
-let delegate=Delegate();app.delegate=delegate;app.setActivationPolicy(.prohibited);app.run()
+private let delegate=Delegate()
+app.delegate=delegate;app.setActivationPolicy(.prohibited);app.run()
