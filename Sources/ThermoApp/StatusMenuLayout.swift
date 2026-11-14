@@ -13,6 +13,7 @@ struct StatusMenuLayout {
         var menuBarEnabled: Bool = true
         var performanceEnabled: Bool = true
         var searchEnabled: Bool = true
+        var appsEnabled: Bool = true
         let hasBattery: Bool
         let keepAwakeActive: Bool
         let focusTimerActive: Bool
@@ -212,7 +213,10 @@ struct StatusMenuLayout {
             .smartScan,
             .spaceLens,
             .software
-        ]
+        ].filter { item in
+            if case .software = item {return context.appsEnabled}
+            return true
+        }
         productItems.append(.menuGroup(MenuGroup(
             title: "Clean & storage",
             leaves: cleanLeaves,
