@@ -26,6 +26,7 @@ def main():
     run('cp','Resources/Modules/dev.thermo.module.appextensionpoint',str(contents/'Extensions'))
     for name,product,identifier,source in [('Preview','SearchPreviewModule',preview,'Sources/SearchPreviewModule/module.json'),('Probe','ProbeModule',probe,'Sources/ProbeModule/module.json')]:
         manifest=json.loads((repo/source).read_text());manifest['id']=identifier;manifest['capabilities']=[]
+        if name=='Probe':manifest['launch']='always'
         for command in manifest['commands']:command['cli']=['preview-probe-'+token,command['id']]
         path=root/(name+'-module.json');path.write_text(json.dumps(manifest,ensure_ascii=False)+'\n')
         extension=contents/'Extensions'/(name+'.appex')
