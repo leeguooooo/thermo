@@ -84,8 +84,12 @@ func captureFailureMessage(_ error:Error) -> String {
         if #available(macOS 14, *), let scrolling=scrollWindow as? ScrollCaptureWindow, scrolling.captureRunning {
             throw BuiltinModules.StopRefused(description:tr("Finish the current capture, recording or export before switching this feature off."))
         }
-        try pinSession.flushForQuit()
-        try shortcuts.deactivate()
+        do {
+            try pinSession.flushForQuit()
+            try shortcuts.deactivate()
+        } catch {
+            throw BuiltinModules.StopRefused(description:captureFailureMessage(error))
+        }
         pinSession.suspendWindows()
         savingWindow?.close();savingWindow=nil;actionsWindow?.close();actionsWindow=nil
         recordingWindow?.close();recordingWindow=nil
