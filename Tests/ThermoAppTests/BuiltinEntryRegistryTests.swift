@@ -54,7 +54,8 @@ import XCTest
         var made = 0
         let models = AppModels(makeDisk: { made += 1; return DiskModel(requestNotifications: {}) })
         XCTAssertEqual(BuiltinModules.snapshotReady(.module(BuiltinModules.disk.id, "scan"), arguments: ["--disk"], models: models, center: center), true)
-        XCTAssertTrue(center.rootPages.isEmpty)
+        XCTAssertFalse(center.rootPages.contains { $0.module.id == BuiltinModules.disk.id })
+        XCTAssertTrue(center.rootPages.contains { $0.module.id == PerformanceModule.manifest.id })
         XCTAssertNil(center.legacyMenuPage("smartScan"))
         XCTAssertNil(center.navigationKey(.module(BuiltinModules.disk.id, "scan")))
         XCTAssertFalse(models.diskLoaded)
