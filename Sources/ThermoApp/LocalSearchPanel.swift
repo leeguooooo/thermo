@@ -79,9 +79,15 @@ import ThermoL10n
     func previewSelected() {
         guard let item = model.selected, item.kind != .application else { return }
         guard FileManager.default.fileExists(atPath: item.path) else { model.error = tr("This item is no longer available. Check its location and try again."); return }
-        if preview?.isVisible == true { preview?.close(); preview = nil; window?.makeKeyAndOrderFront(nil); return }
+        let url=URL(fileURLWithPath:item.path).standardizedFileURL
+        if let shown=preview,shown.isVisible {
+            let sameFile=shown.representedURL?.standardizedFileURL == url
+            shown.close();preview=nil
+            if sameFile {window?.makeKeyAndOrderFront(nil);return}
+        }
         let available = window?.screen?.visibleFrame ?? NSScreen.main?.visibleFrame ?? NSRect(x: 0, y: 0, width: 1280, height: 900)
         let panel = PreviewWindow(contentRect: NSRect(x: 0, y: 0, width: min(980, available.width - 80), height: min(740, available.height - 80)), styleMask: [.titled, .closable, .resizable], backing: .buffered, defer: false)
+        panel.representedURL=url
         panel.title = item.name; panel.isReleasedWhenClosed = false; panel.level = .floating; panel.delegate = self
         panel.minSize = NSSize(width: 640, height: 400)
         panel.contentView = NSHostingView(rootView: SearchFilePreviewView(item: item, open: { [weak self] in
