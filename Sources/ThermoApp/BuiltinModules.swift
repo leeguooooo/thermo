@@ -12,7 +12,7 @@ struct BuiltinSidebarItem: Identifiable {
     var id: String { entry.id }
 }
 
-enum BuiltinSidebarSection: Hashable { case overview, machine, resources, storage, software }
+enum BuiltinSidebarSection: Hashable { case overview, machine, resources, storage, software, footer }
 
 /// Metadata and argument resolution never instantiate a feature. UI and lifetime callbacks run on main.
 protocol BuiltinModule: Sendable {
@@ -46,7 +46,7 @@ extension BuiltinModule {
 }
 
 enum BuiltinModules {
-    static let implementations: [any BuiltinModule.Type] = [DiskModule.self, SearchModule.self, CaptureModule.self, MenuBarModule.self, PerformanceModule.self, AppsModule.self, SpaceModule.self, BrowserModule.self, ConnectionsModule.self]
+    static let implementations: [any BuiltinModule.Type] = [DiskModule.self, SearchModule.self, CaptureModule.self, MenuBarModule.self, PerformanceModule.self, AppsModule.self, SpaceModule.self, BrowserModule.self, ConnectionsModule.self, HistoryModule.self]
     static var all: [ModuleManifest] { implementations.map { $0.manifest } }
     static var disk: ModuleManifest { DiskModule.manifest }
     static func manifest(_ id: String) -> ModuleManifest? { all.first { $0.id == id } }
