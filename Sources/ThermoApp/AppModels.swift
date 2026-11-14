@@ -10,6 +10,16 @@ final class AppModels {
     static let shared = AppModels()
     lazy var monitor = makeMonitor()
     private let makeMonitor: () -> Monitor
+    private let makeApps: @MainActor () -> AppsFeatureModels
+    private let defaults: UserDefaults
+    private var storedApps: AppsFeatureModels?
+    var appsLoaded: Bool { storedApps != nil }
+    private var software: AppsFeatureModels {
+        if let storedApps { return storedApps }
+        let created=makeApps(),defaults=self.defaults
+        created.setEnabled { ModulePreferences.isEnabled(BuiltinModuleManifests.apps,in:defaults) }
+        storedApps=created;return created
+    }
     lazy var updates = Updates()
     /// Whether disk cleanup's model exists. It is created on first use and never while the feature is off.
     private var storedDisk: DiskModel?
@@ -23,9 +33,9 @@ final class AppModels {
         set { storedDisk = newValue }
     }
 
-    init(makeDisk: @escaping () -> DiskModel = { DiskModel(retentionPreferences:.stored(in:.standard)) },
+    init(defaults: UserDefaults = .standard, makeApps: @escaping @MainActor () -> AppsFeatureModels = { AppsFeatureModels() }, makeDisk: @escaping () -> DiskModel = { DiskModel(retentionPreferences:.stored(in:.standard)) },
          makeMonitor: @escaping () -> Monitor = { Monitor(samplingAllowed: { ModulePreferences.isEnabled(BuiltinModuleManifests.performance, in: .standard) }) }) {
-        self.makeDisk = makeDisk
+        self.makeDisk = makeDisk;self.makeApps=makeApps;self.defaults=defaults
         self.makeMonitor = makeMonitor
     }
 
@@ -40,13 +50,30 @@ final class AppModels {
         }
     }
     lazy var agents = AgentScanner()
-    lazy var apps = AppsModel()
-    lazy var startup = StartupItemsModel()
-    lazy var softwareUpdates = AppUpdatesModel()
-    lazy var nativeUpdates = NativeUpdatesModel()
+    var apps: AppsModel { get {software.apps} set {software.apps=newValue} }
+    var startup: StartupItemsModel { software.startup }
+    var softwareUpdates: AppUpdatesModel { software.updates }
+    var nativeUpdates: NativeUpdatesModel { software.native }
     lazy var claudeCleanup = ClaudeCleanupModel()
     lazy var plugins = PluginsModel()
-    lazy var appStore = AppStoreModel()
+    var appStore: AppStoreModel { software.store }
+    func softwareExitBlocker() -> MainPage? { storedApps?.exitBlocker() }
+    func retireSoftwareViews() { storedApps?.retireViews() }
+    func invalidateAppsAfterRestore() { storedApps?.apps.invalidateAfterRestore() }
+    func prepareNativeRecovery() {
+        guard ModulePreferences.isEnabled(BuiltinModuleManifests.apps,in:defaults) else {return}
+        software.updates.channel="native";software.native.showRecovery=true
+    }
+    func prepareAppsStop() throws -> BuiltinModules.FinishStop? {
+        guard let session=storedApps else {return nil}
+        guard session.beginStopping() else {
+            throw BuiltinModules.StopRefused(description:tr("Wait for app removal, startup changes or updates before switching this feature off."))
+        }
+        return { [weak self] in
+            await session.finishStopping()
+            if self?.storedApps === session {self?.storedApps=nil}
+        }
+    }
     private var browsers: [String: ChromePagesModel] = [:]
 
     func stopBrowserChecks() {

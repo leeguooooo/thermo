@@ -35,6 +35,7 @@ final class StatusMenu: NSObject, NSMenuDelegate {
             menuBarEnabled: MenuBarModule.enabled,
             performanceEnabled: PerformanceModule.enabled,
             searchEnabled: SearchModule.enabled,
+            appsEnabled: AppsModule.enabled,
             hasBattery: battery,
             keepAwakeActive: IdleAwakeModel.shared.state.phase == .active,
             focusTimerActive: FocusTimerModel.shared.phase.isActive,

@@ -3,6 +3,19 @@ import XCTest
 
 @MainActor final class StatusMenuLayoutTests: XCTestCase {
     
+    func testDisabledSoftwareIsAbsentFromTheQuickMenuWithoutHidingOtherStorageTools() {
+        let context=StatusMenuLayout.RuntimeContext(appsEnabled:false,hasBattery:false,keepAwakeActive:false,focusTimerActive:false,
+            configuredCaptureEntriesAppear:false,menuBarQuickControlsAppear:false,updatesCanCheck:false,
+            moreToolsActiveStates:.init(cleanScreenActive:false,lowLatencyActive:false,batteryProtectionActive:false))
+        let layout=StatusMenuLayout.make(context:context,captureShortcutSuffix:"",pinShortcutSuffix:"",configuredCaptureEntries:[])
+        let ids=layout.productItems.flatMap { item -> [String] in
+            if case let .menuGroup(group)=item{return group.leaves.map(\.identity)}
+            return []
+        }
+        XCTAssertFalse(ids.contains("software"))
+        XCTAssertTrue(ids.contains("spaceLens") && ids.contains("smartScan"))
+    }
+
     // A1: Default inputs yield product first-level titles in the confirmed order of the twelve
     func testProductFirstLevelOrderMatchesSpec() {
         let context = StatusMenuLayout.RuntimeContext(

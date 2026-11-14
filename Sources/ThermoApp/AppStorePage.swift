@@ -6,37 +6,50 @@ import ThermoL10n
 /// Products from app.leeguoo.com. Opens apps or their web page; never downloads anything itself.
 @MainActor
 final class AppStoreModel: ObservableObject {
+    let work = FeatureTasks()
+    private var generation = UUID()
+    private let fetch: @Sendable () async -> Data?
     @Published private(set) var apps: [StoreApp] = []
     @Published private(set) var loading = false
     @Published private(set) var loaded = false
     @Published private(set) var usingCachedCopy = false
     private var lastLoad: Date?
-    private let cache = StoreCache()
+    private let cache: StoreCache
     private static let cacheName = "app-store.json"
 
+    init(cache: StoreCache = StoreCache(), fetch: @escaping @Sendable () async -> Data? = { await StoreFetch.data(AppStoreCatalog.url) }) {
+        self.cache=cache;self.fetch=fetch
+    }
     func open() {
+        guard work.acceptsWork else { return }
         if let lastLoad, Date().timeIntervalSince(lastLoad) < 600 { return }
         refresh()
     }
 
     func refresh() {
+        guard work.acceptsWork else { return }
         guard !loading else { return }
         loading = true
         lastLoad = Date()
-        let cache = cache
-        Task {
-            let fetched = await StoreFetch.data(AppStoreCatalog.url)
-            if let fetched, let list = AppStoreCatalog.decode(fetched) {
-                cache.write(fetched, as: Self.cacheName)
-                apps = list
-                usingCachedCopy = false
-            } else {
-                if apps.isEmpty { apps = cache.read(Self.cacheName).flatMap(AppStoreCatalog.decode) ?? [] }
-                usingCachedCopy = !apps.isEmpty
+        let cache = cache, fetch = fetch, token = generation
+        work.run { [weak self] in
+            let fetched = await fetch()
+            guard !Task.isCancelled else { return }
+            await MainActor.run {
+                guard let self,self.work.acceptsWork,self.generation == token else { return }
+                if let fetched,let list=AppStoreCatalog.decode(fetched) {
+                    cache.write(fetched,as:Self.cacheName);self.apps=list;self.usingCachedCopy=false
+                } else {
+                    if self.apps.isEmpty {self.apps=cache.read(Self.cacheName).flatMap(AppStoreCatalog.decode) ?? []}
+                    self.usingCachedCopy = !self.apps.isEmpty
+                }
+                self.loading=false;self.loaded=true
             }
-            loading = false
-            loaded = true
         }
+    }
+    func stopFeature() {work.stop();generation=UUID();loading=false}
+    func finishFeatureStop() async {
+        await work.finish();apps=[];lastLoad=nil;loaded=false;usingCachedCopy=false
     }
 
     static func installedURL(_ app: StoreApp) -> URL? {

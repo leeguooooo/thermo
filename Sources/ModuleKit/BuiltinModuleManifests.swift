@@ -84,7 +84,15 @@ public enum BuiltinModuleManifests {
         entries: [.init(id: "settings", kind: .settingsItem, title: "Search apps and files", symbol: "magnifyingglass", scene: "search-settings"),
                   .init(id: "search", kind: .menuBarItem, title: "Search apps and files", symbol: "magnifyingglass", scene: "search-panel")])
 
-    public static let all = [disk, search, capture, menuBar, performance]
+    public static let apps = ModuleManifest(
+        id:"dev.thermo.apps",name:"Software",summary:"Installed apps, leftovers, startup items and reviewed software updates.",
+        symbol:"square.grid.2x2",version:"1.0.0",launch:.onDemand,enabledByDefault:true,
+        entries:[.init(id:"installed",kind:.page,title:"Software",symbol:"square.grid.2x2",scene:"apps",navigationKey:"7"),
+                 .init(id:"leftovers",kind:.page,title:"Leftovers",scene:"apps:leftovers",parent:"installed"),
+                 .init(id:"startup",kind:.page,title:"Startup items",scene:"apps:startup",parent:"installed"),
+                 .init(id:"updates",kind:.page,title:"Updates",scene:"apps:updates",parent:"installed"),
+                 .init(id:"store",kind:.page,title:"Store",scene:"apps:store",parent:"installed")])
+    public static let all = [disk, search, capture, menuBar, performance, apps]
 }
 
 public enum ModulePreferences {

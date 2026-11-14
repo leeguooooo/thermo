@@ -33,6 +33,7 @@ struct OrphanRemovalReview: Identifiable, Sendable {
 /// goes to the Trash after a confirmation that lists every path.
 @MainActor
 final class AppsModel: ObservableObject {
+    let work = FeatureTasks()
     @Published private(set) var apps: [InstalledApp] = []
     @Published private(set) var measured = 0
     @Published private(set) var loading = false
@@ -52,6 +53,7 @@ final class AppsModel: ObservableObject {
     @Published var outcome: String?
     private var cancellation: ScanCancellation?
     private var reviewCancellation: ScanCancellation?
+    private let inventory: @Sendable (ScanCancellation) -> [InstalledApp]
     private let reviewPlan: @Sendable (InstalledApp, [InstalledApp], Bool, ScanCancellation) -> UninstallPlan
     private let remove: @Sendable (UninstallPlan) -> CleanResult
     private let readOrphans: @Sendable (ScanCancellation) -> OrphanScanReport
@@ -63,14 +65,14 @@ final class AppsModel: ObservableObject {
     private var restartOrphans = false
     private var measurementComplete = false
 
-    init(reviewPlan: @escaping @Sendable (InstalledApp, [InstalledApp], Bool, ScanCancellation) -> UninstallPlan = { app, all, removeApp, token in
+    init(inventory: @escaping @Sendable (ScanCancellation) -> [InstalledApp] = { AppUninstaller.installed(cancellation:$0) }, reviewPlan: @escaping @Sendable (InstalledApp, [InstalledApp], Bool, ScanCancellation) -> UninstallPlan = { app, all, removeApp, token in
         AppUninstaller.plan(app, installed: all, removeApp: removeApp, cancellation: token)
     }, remove: @escaping @Sendable (UninstallPlan) -> CleanResult = { AppUninstaller.uninstall($0) },
        readOrphans: (@Sendable (ScanCancellation) -> [OrphanData])? = nil,
        readOrphanReport: @escaping @Sendable (ScanCancellation) -> OrphanScanReport = { AppUninstaller.orphanReport(minimumBytes: 1 << 20, cancellation: $0) },
        prepareOrphanData: @escaping @Sendable ([OrphanData], ScanCancellation) -> [OrphanData] = { AppUninstaller.reviewOrphans($0, cancellation: $1) },
        removeOrphanData: @escaping @Sendable ([OrphanData]) -> [CleanResult] = { AppUninstaller.removeOrphans($0) }) {
-        self.reviewPlan = reviewPlan; self.remove = remove
+        self.inventory = inventory; self.reviewPlan = reviewPlan; self.remove = remove
         self.readOrphans = { token in readOrphans.map { OrphanScanReport(items: $0(token)) } ?? readOrphanReport(token) }
         self.removeOrphanData = removeOrphanData
         self.prepareOrphanData = prepareOrphanData
@@ -81,6 +83,7 @@ final class AppsModel: ObservableObject {
     var totalSizeText: String { AppSize.text(totalBytes, state: AppSize.combined(apps.map(\.totalSizeState), bytes: totalBytes)) }
 
     func load(ifEmpty: Bool = false, exact: Bool = false) {
+        guard work.acceptsWork else { return }
         guard !working else { return }
         if ifEmpty, measurementComplete || loading { return }
         cancellation?.cancel()
@@ -90,8 +93,9 @@ final class AppsModel: ObservableObject {
         measurementComplete = false
         measured = 0
         sizeNotice = nil
-        Task.detached(priority: .userInitiated) {
-            let found = AppUninstaller.installed(cancellation: token)
+        let inventory = self.inventory
+        work.run(priority: .userInitiated) {
+            let found = inventory(token)
             guard !token.isCancelled else { return }
             let busy = Self.runningPaths(found)
             await MainActor.run {
@@ -139,6 +143,14 @@ final class AppsModel: ObservableObject {
         orphanReview = nil
     }
 
+    func stopFeature() { work.stop(); retire() }
+    func finishFeatureStop() async {
+        await work.finish()
+        apps=[];running=[];orphans=nil;orphanIssues=[];selectedOrphans=[]
+        measured=0;sizeNotice=nil;measurementComplete=false;orphanScanComplete=false
+        planning=nil;reviewingOrphans=false;scanningOrphans=false;outcome=nil
+    }
+
     func cancelAppReview() {
         reviewCancellation?.cancel()
         plan = nil
@@ -168,13 +180,14 @@ final class AppsModel: ObservableObject {
 
     /// Looks the app's files up again and opens the confirmation.
     func review(_ app: InstalledApp, removeApp: Bool = true) {
+        guard work.acceptsWork else { return }
         guard planning == nil, !working, !reviewingOrphans else { return }
         planning = app.path
         let all = apps
         let token = ScanCancellation()
         reviewCancellation = token
         let buildPlan = reviewPlan
-        Task.detached(priority: .userInitiated) {
+        work.run(priority: .userInitiated) {
             let plan = token.isCancelled ? nil : buildPlan(app, all, removeApp, token)
             await MainActor.run {
                 guard self.reviewCancellation === token else { return }
@@ -186,6 +199,7 @@ final class AppsModel: ObservableObject {
     }
 
     func uninstall(_ plan: UninstallPlan) {
+        guard work.acceptsWork else { return }
         guard !working, !reviewingOrphans else { return }
         stopMeasuring()
         orphanCancellation?.cancel()
@@ -194,7 +208,7 @@ final class AppsModel: ObservableObject {
         working = true
         exitRequested = false
         let remove = self.remove
-        Task.detached(priority: .userInitiated) {
+        work.run(priority: .userInitiated) {
             let result = remove(plan)
             await MainActor.run {
                 self.working = false
@@ -206,6 +220,7 @@ final class AppsModel: ObservableObject {
     }
 
     func scanOrphans() {
+        guard work.acceptsWork else { return }
         guard !working else { return }
         if reviewingOrphans { restartOrphans = true; return }
         if orphanInFlight { restartOrphans = true; return }
@@ -214,7 +229,7 @@ final class AppsModel: ObservableObject {
         let token = ScanCancellation()
         orphanCancellation = token
         let read = readOrphans
-        Task.detached(priority: .userInitiated) {
+        work.run(priority: .userInitiated) {
             let report = read(token)
             await MainActor.run {
                 self.orphanInFlight = false
@@ -251,6 +266,7 @@ final class AppsModel: ObservableObject {
     }
 
     func reviewPickedOrphans() {
+        guard work.acceptsWork else { return }
         let picked = pickedOrphans
         guard !working, !orphanInFlight, !reviewingOrphans, planning == nil, orphanReview == nil, !picked.isEmpty else { return }
         stopMeasuring()
@@ -258,7 +274,7 @@ final class AppsModel: ObservableObject {
         orphanReviewCancellation = token
         reviewingOrphans = true
         let prepare = prepareOrphanData
-        Task.detached(priority: .userInitiated) {
+        work.run(priority: .userInitiated) {
             let ready = prepare(picked, token)
             await MainActor.run {
                 self.reviewingOrphans = false
@@ -275,13 +291,14 @@ final class AppsModel: ObservableObject {
     }
 
     func removeOrphans(_ picked: [OrphanData]) {
+        guard work.acceptsWork else { return }
         guard !working, !orphanInFlight, !reviewingOrphans, planning == nil, !picked.isEmpty else { return }
         orphanReview = nil
         stopMeasuring()
         working = true
         exitRequested = false
         let remove = removeOrphanData
-        Task.detached(priority: .userInitiated) {
+        work.run(priority: .userInitiated) {
             let results = remove(picked)
             await MainActor.run {
                 self.working = false
@@ -724,6 +741,7 @@ enum AppSort: String, CaseIterable, Identifiable {
 
 /// When Spotlight last saw each app opened; read once per app and kept for the session.
 @MainActor enum AppLastUsed {
+    static func clear() { cache.removeAll() }
     private static var cache: [String: Date?] = [:]
     static func date(_ path: String) -> Date? {
         if let hit = cache[path] { return hit }
