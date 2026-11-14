@@ -78,8 +78,10 @@ import ModuleKit
         let center=ModuleCenter(defaults:defaults,prepareBuiltinStop:{_ in try BrowserModule.prepareStop(models:models)})
         center.setEnabled(BrowserModule.manifest.id,false)
         models.stopBrowserChecks()
+        XCTAssertNil(center.navigationKey(.browser("Arc")))
         XCTAssertFalse(center.shows(.browser("Arc")));XCTAssertFalse(models.browsersLoaded);XCTAssertEqual(creations,0)
         defaults.set(true,forKey:ModulePreferences.key(BrowserModule.manifest.id))
+        XCTAssertEqual(center.navigationKey(.browser("Arc")),"4")
         let old=models.workspace("Fixture")
         if let finish=try BrowserModule.prepareStop(models:models){await finish()}
         old.refresh();XCTAssertEqual(old.work.count,0)
