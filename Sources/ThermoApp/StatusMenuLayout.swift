@@ -14,6 +14,7 @@ struct StatusMenuLayout {
         var performanceEnabled: Bool = true
         var searchEnabled: Bool = true
         var appsEnabled: Bool = true
+        var spaceEnabled: Bool = true
         let hasBattery: Bool
         let keepAwakeActive: Bool
         let focusTimerActive: Bool
@@ -214,8 +215,11 @@ struct StatusMenuLayout {
             .spaceLens,
             .software
         ].filter { item in
-            if case .software = item {return context.appsEnabled}
-            return true
+            switch item {
+            case .software:return context.appsEnabled
+            case .spaceLens:return context.spaceEnabled
+            default:return true
+            }
         }
         productItems.append(.menuGroup(MenuGroup(
             title: "Clean & storage",

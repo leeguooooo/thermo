@@ -16,6 +16,19 @@ import XCTest
         XCTAssertTrue(ids.contains("spaceLens") && ids.contains("smartScan"))
     }
 
+    func testDisabledSpaceIsAbsentFromTheQuickMenuWithoutHidingSoftwareOrCleanup() {
+        let context=StatusMenuLayout.RuntimeContext(spaceEnabled:false,hasBattery:false,keepAwakeActive:false,focusTimerActive:false,
+            configuredCaptureEntriesAppear:false,menuBarQuickControlsAppear:false,updatesCanCheck:false,
+            moreToolsActiveStates:.init(cleanScreenActive:false,lowLatencyActive:false,batteryProtectionActive:false))
+        let layout=StatusMenuLayout.make(context:context,captureShortcutSuffix:"",pinShortcutSuffix:"",configuredCaptureEntries:[])
+        let ids=layout.productItems.flatMap { item -> [String] in
+            if case let .menuGroup(group)=item{return group.leaves.map(\.identity)}
+            return []
+        }
+        XCTAssertFalse(ids.contains("spaceLens"))
+        XCTAssertTrue(ids.contains("software") && ids.contains("smartScan"))
+    }
+
     // A1: Default inputs yield product first-level titles in the confirmed order of the twelve
     func testProductFirstLevelOrderMatchesSpec() {
         let context = StatusMenuLayout.RuntimeContext(

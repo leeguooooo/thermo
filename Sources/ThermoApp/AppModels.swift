@@ -14,6 +14,7 @@ final class AppModels {
     private let defaults: UserDefaults
     typealias SpaceFactory = @MainActor (@escaping () -> Bool) -> SpaceLensModel
     private let makeSpace: SpaceFactory
+    private let invalidateSpaceCache: @MainActor () -> Void
     private var storedSpace: SpaceLensModel?
     private var spaceInvalidated = false
     var spaceLoaded: Bool { storedSpace != nil }
@@ -27,7 +28,7 @@ final class AppModels {
     func stopSpaceViews() {storedSpace?.stop();storedSpace?.stopDuplicates()}
     func invalidateSpaceAfterRestore(_ paths:[String]) {
         if let storedSpace {storedSpace.invalidateAfterRestore(paths)}
-        else if !paths.isEmpty {spaceInvalidated=true;SpaceLens.invalidateCache()}
+        else if !paths.isEmpty {spaceInvalidated=true;invalidateSpaceCache()}
     }
     func prepareSpaceStop() throws -> BuiltinModules.FinishStop? {
         guard let model=storedSpace else{return nil}
@@ -61,9 +62,9 @@ final class AppModels {
         set { storedDisk = newValue }
     }
 
-    init(defaults: UserDefaults = .standard, makeApps: @escaping @MainActor () -> AppsFeatureModels = { AppsFeatureModels() }, makeSpace: @escaping SpaceFactory = { SpaceLensModel(enabled:$0) }, makeDisk: @escaping () -> DiskModel = { DiskModel(retentionPreferences:.stored(in:.standard)) },
+    init(defaults: UserDefaults = .standard, makeApps: @escaping @MainActor () -> AppsFeatureModels = { AppsFeatureModels() }, makeSpace: @escaping SpaceFactory = { SpaceLensModel(enabled:$0) }, invalidateSpaceCache: @escaping @MainActor () -> Void = { SpaceLens.invalidateCache() }, makeDisk: @escaping () -> DiskModel = { DiskModel(retentionPreferences:.stored(in:.standard)) },
          makeMonitor: @escaping () -> Monitor = { Monitor(samplingAllowed: { ModulePreferences.isEnabled(BuiltinModuleManifests.performance, in: .standard) }) }) {
-        self.makeDisk = makeDisk;self.makeApps=makeApps;self.makeSpace=makeSpace;self.defaults=defaults
+        self.makeDisk = makeDisk;self.makeApps=makeApps;self.makeSpace=makeSpace;self.invalidateSpaceCache=invalidateSpaceCache;self.defaults=defaults
         self.makeMonitor = makeMonitor
     }
 
