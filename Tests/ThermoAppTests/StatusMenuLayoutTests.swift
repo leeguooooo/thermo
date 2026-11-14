@@ -9,7 +9,7 @@ import XCTest
             moreToolsActiveStates:.init(cleanScreenActive:false,lowLatencyActive:false,batteryProtectionActive:false))
         let layout=StatusMenuLayout.make(context:context,captureShortcutSuffix:"",pinShortcutSuffix:"",configuredCaptureEntries:[])
         let ids=layout.productItems.flatMap { item -> [String] in
-            if case let .menuGroup(group)=item{return group.leaves.map(\.id)}
+            if case let .menuGroup(group)=item{return group.leaves.map(\.identity)}
             return []
         }
         XCTAssertFalse(ids.contains("software"))
