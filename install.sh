@@ -14,7 +14,7 @@ curl -fLSs "$THERMO_ASSET_BASE/$thermo_archive.sha256" -o "$thermo_stage/$thermo
 # Validate names and entry types before extraction; license directories must not be links.
 tar -tzf "$thermo_stage/$thermo_archive" | awk '
     $0 == "thermo" || $0 == "thermo-helper" || $0 == "ThirdPartyNotices/" ||
-    $0 ~ /^ThirdPartyNotices\/[A-Za-z0-9][A-Za-z0-9._-]*\.txt$/ {
+    $0 ~ /^ThirdPartyNotices\/([A-Za-z0-9][A-Za-z0-9._-]*\/)*[A-Za-z0-9][A-Za-z0-9._-]*\/?$/ {
         if (seen[$0]++) bad = 1
         next
     }
@@ -46,9 +46,18 @@ if [ -d "$thermo_stage/ThirdPartyNotices" ]; then
         exit 1
     fi
     mkdir -p "$thermo_notices"
-    for thermo_notice in "$thermo_stage/ThirdPartyNotices/"*.txt; do
-        [ -f "$thermo_notice" ] || continue
-        thermo_install_file "$thermo_notice" "$thermo_notices/${thermo_notice##*/}" 644
+    find "$thermo_stage/ThirdPartyNotices" -type d | while IFS= read -r thermo_notice_dir; do
+        thermo_relative="${thermo_notice_dir#"$thermo_stage/ThirdPartyNotices"}"
+        thermo_target="$thermo_notices$thermo_relative"
+        if [ -L "$thermo_target" ] || { [ -e "$thermo_target" ] && [ ! -d "$thermo_target" ]; }; then
+            echo 'Refusing an unsafe thermo-notices directory.' >&2
+            exit 1
+        fi
+        mkdir -p "$thermo_target"
+    done
+    find "$thermo_stage/ThirdPartyNotices" -type f | while IFS= read -r thermo_notice; do
+        thermo_relative="${thermo_notice#"$thermo_stage/ThirdPartyNotices/"}"
+        thermo_install_file "$thermo_notice" "$thermo_notices/$thermo_relative" 644
     done
 fi
 for thermo_binary in thermo thermo-helper; do
