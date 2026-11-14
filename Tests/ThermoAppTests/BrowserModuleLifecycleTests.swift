@@ -127,4 +127,41 @@ import ModuleKit
         XCTAssertTrue(drained);XCTAssertNil(model.diagnosis);XCTAssertEqual(model.work.count,0)
     }
 
+    func testColdOffBrowserDoesNotReadDiagnosticsOrAcceptFixtureResults() async {
+        let calls=Calls()
+        let actions=BrowserPageActions(tabs:{_ in calls.hit();return []},close:{_,_ in calls.hit();return []},
+            reading:{_ in fatalError("off feature cannot read browser memory")},wait:{},
+            diagnose:{app,_,_,_,_,_ in calls.hit();return .init(app:app,mode:.tabs,tabs:[],duplicates:[])})
+        let model=ChromePagesModel(enabled:{false},app:"Fixture",appMemoryKB:nil,gpuKB:nil,actions:actions)
+        model.start();model.accept(.init(app:"Fixture",mode:.tabs,tabs:[],duplicates:[]),tabs:[])
+        model.loadFixture(before:"/must-not-read",after:"/must-not-read");model.selectRecommended()
+        XCTAssertFalse(model.canMeasure)
+        await model.work.finish()
+        XCTAssertEqual(calls.count,0);XCTAssertNil(model.diagnosis);XCTAssertFalse(model.running)
+    }
+    func testConfirmedCloseIsKeptAcrossNavigationAndRefusesFeatureStop() async throws {
+        let entered=expectation(description:"fake close"),release=DispatchSemaphore(value:0)
+        defer{release.signal()}
+        let process=ProcessIdentity(pid:42,uid:501,started:Date(timeIntervalSince1970:100),executable:"/fixture/browser")
+        let tab=ChromeInspector.Tab(window:1,index:1,url:"https://example.test",title:"Fixture",browserID:"fixture",active:false,browserProcess:process)
+        let actions=BrowserPageActions(tabs:{_ in []},close:{tabs,_ in
+            entered.fulfill();_ = release.wait(timeout:.now()+5)
+            return tabs.map{.init(id:$0.selectionID,status:.closed)}
+        },reading:{_ in
+            let pulse=MachinePulse(load1:0,load5:0,cores:8,thermal:.nominal,memory:.normal,swapUsedMB:0,hogs:[],sampled:Date())
+            return .init(pulse:pulse,browserMemoryKB:0)
+        },wait:{})
+        let model=ChromePagesModel(app:"Fixture",appMemoryKB:nil,gpuKB:nil,actions:actions)
+        let models=AppModels(defaults:defaults(),makeBrowser:{gate,_,_,_ in model.work.enabled=gate;return model})
+        _=models.browser("Fixture")
+        model.close([tab]);await fulfillment(of:[entered],timeout:2)
+        models.stopBrowserChecks()
+        XCTAssertEqual(models.browserExitBlocker(),.browser("Fixture"))
+        XCTAssertThrowsError(try BrowserModule.prepareStop(models:models));XCTAssertFalse(model.work.stopping)
+        release.signal();await model.work.finish()
+        XCTAssertNil(model.closing);XCTAssertEqual(model.closeResults.count,1)
+        if let finish=try BrowserModule.prepareStop(models:models){await finish()}
+        XCTAssertFalse(models.browsersLoaded)
+    }
+
 }

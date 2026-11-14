@@ -187,9 +187,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate, UNU
         panelItem.target = self
         panelItem.keyEquivalentModifierMask = [.command, .shift]
         if BrowserModule.enabled {
-            appMenu.addItem(withTitle:tr("Save and close background tabs"),action:#selector(archiveTabsFromMenu),keyEquivalent:"s").target=self
+            let archive=appMenu.addItem(withTitle:tr("Save and close background tabs"),action:#selector(archiveTabsFromMenu),keyEquivalent:"s")
+            archive.target=self;archive.keyEquivalentModifierMask=[.command,.shift]
         }
-        appMenu.items.last?.keyEquivalentModifierMask = [.command, .shift]
         appMenu.addItem(.separator())
         appMenu.addItem(withTitle: tr("Hide Thermo"), action: #selector(NSApplication.hide(_:)), keyEquivalent: "h")
         appMenu.addItem(withTitle: tr("Quit Thermo"), action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q")
