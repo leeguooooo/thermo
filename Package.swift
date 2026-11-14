@@ -83,6 +83,8 @@ let package = Package(
                           swiftSettings: [.unsafeFlags(["-application-extension"])],
                           linkerSettings: [.unsafeFlags(["-Xlinker", "-e", "-Xlinker", "_NSExtensionMain"])]),
         .executableTarget(name: "ModuleHarness", dependencies: ["ModuleHost", "ModuleKit"]),
+        // Process fixture for command-lifetime tests; never copied into the App or release archives.
+        .executableTarget(name: "ModuleLeaseProbe", dependencies: ["ModuleKit"]),
         .executableTarget(name: "PreviewHarness", dependencies: ["ModuleHost", "ModuleKit", "PreviewCore", "AgentCore"], linkerSettings: [.linkedFramework("AppKit"), .linkedFramework("Vision")]),
         // Build-time check of the modules packed into the app; run by scripts/build.sh, not shipped.
         .executableTarget(name: "ModuleCheck", dependencies: ["ModuleKit"]),
@@ -111,7 +113,7 @@ let package = Package(
         .testTarget(name: "MediaToolsKitTests", dependencies: ["MediaToolsKit"]),
         .testTarget(name: "VideoKitTests", dependencies: ["VideoKit"]),
         .testTarget(name: "PreviewCoreTests", dependencies: ["PreviewCore"]),
-        .testTarget(name: "ModuleKitTests", dependencies: ["ModuleKit"]),
+        .testTarget(name: "ModuleKitTests", dependencies: ["ModuleKit", "ModuleLeaseProbe"]),
         .testTarget(name: "ModuleHostTests", dependencies: ["ModuleHost", "ModuleKit"]),
     ],
     swiftLanguageVersions: [.v5]

@@ -6,6 +6,23 @@ import XCTest
 @testable import thermo
 
 final class ModuleCLITests: XCTestCase {
+    func testCommandLeaseMapsLegacyRootsAndLeavesRecoveryAvailable() throws {
+        XCTAssertEqual(ModuleCLI.builtinManifest(["apps"])?.id,BuiltinModuleManifests.apps.id)
+        XCTAssertEqual(ModuleCLI.builtinManifest(["app"])?.id,BuiltinModuleManifests.apps.id)
+        XCTAssertEqual(ModuleCLI.builtinManifest(["clean","overview"])?.id,BuiltinModuleManifests.disk.id)
+        XCTAssertEqual(ModuleCLI.builtinManifest(["w"])?.id,BuiltinModuleManifests.performance.id)
+        XCTAssertNil(ModuleCLI.builtinManifest(["fan","auto"]))
+        XCTAssertNil(ModuleCLI.builtinManifest(["search","give-back-command-space"]))
+        let home=FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        try FileManager.default.createDirectory(at:home,withIntermediateDirectories:true)
+        defer{try? FileManager.default.removeItem(at:home)}
+        let name="thermo-cli-lease-"+UUID().uuidString,defaults=UserDefaults(suiteName:name)!
+        defer{defaults.removePersistentDomain(forName:name)}
+        defaults.set(false,forKey:ModulePreferences.key(BuiltinModuleManifests.performance.id))
+        XCTAssertNil(try ModuleCLI.commandLease(["fan","auto"],defaults:defaults,home:home.path))
+        XCTAssertThrowsError(try ModuleCLI.commandLease(["watch"],defaults:defaults,home:home.path))
+        XCTAssertTrue(try FileManager.default.contentsOfDirectory(atPath:home.path).isEmpty)
+    }
     func testDisabledSpaceRefusesItsCommandsAndKeepsTheDiskFeatureIndependent() throws {
         let name="thermo-space-cli-"+UUID().uuidString,defaults=UserDefaults(suiteName:name)!
         defer{defaults.removePersistentDomain(forName:name)}
