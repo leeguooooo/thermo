@@ -46,6 +46,7 @@ import WebKit
             let frame = root.convert(rect, from: web)
             let configuration = WKSnapshotConfiguration()
             configuration.rect = rect
+            configuration.afterScreenUpdates = false
             configuration.snapshotWidth = NSNumber(value: Double(rect.width))
             let image = try await web.takeSnapshot(configuration: configuration)
             guard root.window === window, root.bounds == bounds, web.isDescendant(of: root),

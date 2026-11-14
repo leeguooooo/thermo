@@ -39,6 +39,7 @@ public struct MarkdownPreviewPane:View {
                 Button{state.find()}label:{Image(systemName:"chevron.down")}.keyboardShortcut("g",modifiers:.command)
                 Button(tr("Find")){finding=true}.keyboardShortcut("f",modifiers:.command).hidden().frame(width:0,height:0)
             }.buttonStyle(.plain)
+            if let issue=state.issue { Text(issue).foregroundStyle(.secondary).textSelection(.enabled) }
             MarkdownSurface(state:state,open:{openURL($0)})
         }
     }
@@ -83,6 +84,9 @@ struct MarkdownSurface:NSViewRepresentable {
             }
             decisionHandler(.cancel)
         }
-        func webView(_ webView:WKWebView,didFinish navigation:WKNavigation!){if !state.query.isEmpty{state.find()}}
+        func webView(_ webView:WKWebView,didFinish navigation:WKNavigation!){state.issue=nil;if !state.query.isEmpty{state.find()}}
+        func webView(_ webView:WKWebView,didFail navigation:WKNavigation!,withError error:Error){state.issue=error.localizedDescription}
+        func webView(_ webView:WKWebView,didFailProvisionalNavigation navigation:WKNavigation!,withError error:Error){state.issue=error.localizedDescription}
+        func webViewWebContentProcessDidTerminate(_ webView:WKWebView){state.issue=tr("File preview stopped. Try previewing the file again.")}
     }
 }

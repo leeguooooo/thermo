@@ -54,7 +54,7 @@ private struct SearchPreviewSource: @unchecked Sendable {
         guard SearchModule.enabled else{state = .failed(tr("This feature is switched off."));return}
         AppInstallationMonitor.shared.check()
         guard !AppInstallationMonitor.shared.needsRestart else{state = .failed(tr("An update is installed. Restart Thermo to use it."));return}
-        cancellation?.cancel();for task in tasks.values{task.cancel()}
+        stop()
         let id=request,cancel=SearchCancellation();current=id;Self.owners[key]=id;cancellation=cancel;state = .preparing
         let language=L10n.current.rawValue
         let task=Task{[weak self] in
@@ -78,12 +78,18 @@ private struct SearchPreviewSource: @unchecked Sendable {
                         for name in assets {
                             try Task.checkCancellation();guard owns(id) else{throw PreviewFailure.cancelled}
                             guard let url=URL(string:name),url.isFileURL else{continue}
-                            guard let file=try? await Task.detached(priority:.userInitiated,operation:{try scope.openFile(url,imageOnly:true,maxBytes:8*1024*1024)}).value else{continue}
+                            let file:FileHandle
+                            do { file=try await Task.detached(priority:.userInitiated,operation:{try scope.openFile(url,imageOnly:true,maxBytes:8*1024*1024)}).value }
+                            catch {
+                                ModuleKernel.log.record(ModuleAccessRecord(module:worker,capability:Capability.Kind.filesRead.rawValue,operation:"preview-resource",targets:[url.path],outcome:.denied,detail:"Resource outside the selected preview scope or not a bounded regular image."))
+                                continue
+                            }
                             defer{try? file.close()}
                             var info=stat();guard fstat(file.fileDescriptor,&info)==0,bytes+info.st_size<=24*1024*1024 else{continue}
                             bytes += info.st_size
                             let input=PreviewInput(id:id,kind:.asset,name:url.lastPathComponent,resourceURL:name)
                             _=try await center.manager.prepareInput(worker,file:file,metadata:input.data(),timeout:15)
+                            ModuleKernel.log.record(ModuleAccessRecord(module:worker,capability:Capability.Kind.filesRead.rawValue,operation:"preview-resource",targets:[url.path],outcome:.allowed,detail:"Read-only associated image supplied within the selected preview scope."))
                         }
                     }
                     let final=try await center.manager.prepareInput(worker,file:nil,metadata:PreviewInput(id:id,kind:.render,name:source.input.name).data(),timeout:30)

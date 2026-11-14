@@ -183,7 +183,7 @@ public struct ModuleConfiguration: AppExtensionConfiguration {
                 reply(nil, "scene has no attached view"); return
             }
             do { reply(try await SceneSnapshotCapture.capture(view), nil) }
-            catch { reply(nil, error.localizedDescription) }
+            catch { reply(nil, String(describing: error as NSError)) }
         }
     }
 }
