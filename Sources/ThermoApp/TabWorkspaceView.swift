@@ -84,6 +84,7 @@ final class TabWorkspaceModel: ObservableObject {
         if !keepError { error = nil }
         let app = app,token=generation
         work.runOnMain {
+            guard self.work.acceptsWork,self.generation==token else{self.finishRefresh();return}
             let actions=self.actions
             do {
                 let inv = try await Task.detached { try await actions.inventory(app) }.value
@@ -157,7 +158,7 @@ final class TabWorkspaceModel: ObservableObject {
             busy = false; mutating=false; refresh(keepError: true)
         }
     }
-    func retireRead() {if !mutating && !work.hasOperations {generation=UUID();pendingRefresh=false;work.cancel()}}
+    func retireRead() {if !mutating && !work.hasOperations {generation=UUID();pendingRefresh=false}}
     func stopFeature() {work.stop();generation=UUID();pendingRefresh=false}
     func finishFeatureStop() async {
         await work.finish()

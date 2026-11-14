@@ -87,7 +87,7 @@ struct NativeTabOrganizerView: View {
             VStack(alignment: .leading, spacing: 0) {
                 HStack(spacing: Theme.Space.s) {
                     Toggle(tr("Automatically group new tabs"), isOn: Binding(get: { config.enabled }, set: { enabled in
-                        guard !previewOnly else { return }
+                        guard !previewOnly,scope?.acceptsWork != false else { return }
                         var updated = config; updated.enabled = enabled
                         do { try TabOrganizer.configure(updated); config = updated }
                         catch { self.error = error.localizedDescription }
@@ -240,6 +240,7 @@ struct NativeTabOrganizerView: View {
                 TextField(tr("Group name"), text: $name).textFieldStyle(.roundedBorder)
                 Picker(tr("Color"), selection: $color) { ForEach(TabOrganizer.colors, id: \.self) { Text(tr($0)).tag($0) } }.frame(width: 120)
                 Button(tr("Add rule")) {
+                    guard scope?.acceptsWork != false else{return}
                     var updated = config; updated.rules.append(.init(domain: domain, name: name, color: color))
                     do { if !previewOnly { try TabOrganizer.configure(updated) }; config = updated; domain = ""; name = "" }
                     catch { self.error = error.localizedDescription }
@@ -252,6 +253,7 @@ struct NativeTabOrganizerView: View {
                             Text(rule.domain + " → " + rule.name)
                             Spacer()
                             Button(tr("Remove rule")) {
+                                guard scope?.acceptsWork != false else{return}
                                 var updated = config; updated.rules.removeAll { $0.id == rule.id }
                                 do { if !previewOnly { try TabOrganizer.configure(updated) }; config = updated }
                                 catch { self.error = error.localizedDescription }

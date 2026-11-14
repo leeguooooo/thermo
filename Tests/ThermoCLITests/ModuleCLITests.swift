@@ -7,6 +7,7 @@ import XCTest
 
 final class ModuleCLITests: XCTestCase {
     func testCommandLeaseMapsLegacyRootsAndLeavesRecoveryAvailable() throws {
+        XCTAssertEqual(ModuleCLI.builtinManifest(["tabs"])?.id,BuiltinModuleManifests.browser.id)
         XCTAssertEqual(ModuleCLI.builtinManifest(["apps"])?.id,BuiltinModuleManifests.apps.id)
         XCTAssertEqual(ModuleCLI.builtinManifest(["app"])?.id,BuiltinModuleManifests.apps.id)
         XCTAssertEqual(ModuleCLI.builtinManifest(["clean","overview"])?.id,BuiltinModuleManifests.disk.id)

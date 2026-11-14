@@ -3,6 +3,19 @@ import XCTest
 
 @MainActor final class StatusMenuLayoutTests: XCTestCase {
     
+    func testDisabledBrowserIsAbsentFromTheQuickMenuWithoutHidingOtherSystemTools() {
+        let context=StatusMenuLayout.RuntimeContext(browserEnabled:false,hasBattery:false,keepAwakeActive:false,focusTimerActive:false,
+            configuredCaptureEntriesAppear:false,menuBarQuickControlsAppear:false,updatesCanCheck:false,
+            moreToolsActiveStates:.init(cleanScreenActive:false,lowLatencyActive:false,batteryProtectionActive:false))
+        let layout=StatusMenuLayout.make(context:context,captureShortcutSuffix:"",pinShortcutSuffix:"",configuredCaptureEntries:[])
+        let ids=layout.productItems.flatMap { item -> [String] in
+            if case let .menuGroup(group)=item{return group.leaves.map(\.identity)}
+            return []
+        }
+        XCTAssertFalse(ids.contains("tabOrganizer"))
+        XCTAssertTrue(ids.contains("cpuUsage") && ids.contains("memoryUsage"))
+    }
+
     func testDisabledSoftwareIsAbsentFromTheQuickMenuWithoutHidingOtherStorageTools() {
         let context=StatusMenuLayout.RuntimeContext(appsEnabled:false,hasBattery:false,keepAwakeActive:false,focusTimerActive:false,
             configuredCaptureEntriesAppear:false,menuBarQuickControlsAppear:false,updatesCanCheck:false,

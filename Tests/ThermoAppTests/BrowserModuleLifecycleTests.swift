@@ -94,4 +94,37 @@ import ModuleKit
         automation.start();automation.tick();automation.stop();automation.tick()
         XCTAssertEqual(reads,0);XCTAssertFalse(automation.running)
     }
+    func testRetiringQueuedReadDoesNotLeaveWorkspacePermanentlyBusy() async {
+        let calls=Calls(),model=TabWorkspaceModel(app:"Fixture",actions:actions(calls))
+        model.refresh();model.retireRead()
+        await model.work.finish()
+        XCTAssertFalse(model.busy)
+        model.refresh();await model.work.finish()
+        XCTAssertNotNil(model.inventory)
+        XCTAssertEqual(calls.count,2)
+        model.stopFeature();await model.finishFeatureStop()
+    }
+    func testStoppingDrainsCancelledDiagnosisAndItsPhysicalTabReader() async {
+        let tabsEntered=expectation(description:"tabs"),diagnosisEntered=expectation(description:"diagnosis")
+        let tabsRelease=DispatchSemaphore(value:0),diagnosisRelease=DispatchSemaphore(value:0)
+        defer{tabsRelease.signal();diagnosisRelease.signal()}
+        let actions=BrowserPageActions(tabs:{_ in tabsEntered.fulfill();_ = tabsRelease.wait(timeout:.now()+5);return []},
+            close:{_,_ in XCTFail("no browser mutation requested");return []},
+            reading:{_ in fatalError("no close reading requested")},wait:{},
+            diagnose:{app,_,_,_,_,_ in
+                diagnosisEntered.fulfill()
+                await Task.detached {_ = diagnosisRelease.wait(timeout:.now()+5)}.value
+                return .init(app:app,mode:.tabs,tabs:[],duplicates:[])
+            })
+        let model=ChromePagesModel(app:"Fixture",appMemoryKB:nil,gpuKB:nil,actions:actions)
+        model.start();await fulfillment(of:[tabsEntered,diagnosisEntered],timeout:2)
+        model.stop();XCTAssertFalse(model.running)
+        model.stopFeature()
+        var drained=false;let finish=Task {await model.finishFeatureStop();drained=true}
+        await Task.yield();XCTAssertFalse(drained)
+        diagnosisRelease.signal();await Task.yield();XCTAssertFalse(drained)
+        tabsRelease.signal();await finish.value
+        XCTAssertTrue(drained);XCTAssertNil(model.diagnosis);XCTAssertEqual(model.work.count,0)
+    }
+
 }
