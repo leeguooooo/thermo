@@ -244,7 +244,7 @@ enum MainWindow {
         @AppStorage(L10n.defaultsKey) private var language = "system"
         var body: some View {
             let _ = L10n.apply(preference: language)
-            MainView(page: $state.page, monitor: models.monitor, agents: models.agents, models: models)
+            MainView(page: $state.page, monitor: models.monitor, models: models)
                 .environment(\.windowSamplingActive, state.visible)
                 .onChange(of: state.page) { models.monitor.setWindowSurface($0.samplingSurface) }
                 .id(language)
@@ -269,7 +269,6 @@ enum MainWindow {
 struct MainView: View {
     @Binding var page: MainPage
     let monitor: Monitor
-    @ObservedObject var agents: AgentScanner
     let models: AppModels
     @ObservedObject private var modules = ModuleCenter.shared
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
@@ -278,7 +277,7 @@ struct MainView: View {
         ZStack {
             MainBackdrop(glow: glow, overrideTint: tint, monitor: monitor)
             HStack(spacing: 0) {
-                MainSidebar(page: $page, monitor: monitor, agents: agents)
+                MainSidebar(page: $page, monitor: monitor)
                     .frame(width: 228).background(Theme.sidebar.opacity(0.92))
                 Rectangle().fill(Theme.hairline).frame(width: 1)
                 VStack(spacing: 0) {
@@ -291,21 +290,13 @@ struct MainView: View {
         }
         .ignoresSafeArea()
         .preferredColorScheme(.dark)
-        .onChange(of: page) { p in
-            if p.isAgents { agents.scan(ifOlderThan: 60) }
-        }
-        .onAppear {
-            if page.isAgents { agents.scan(ifOlderThan: 60) }
-        }
-        .sheet(isPresented: Binding(get: { agents.batch?.finished == true }, set: { if !$0 { agents.batch = nil } })) {
-            BatchResult(scanner: agents)
-        }
+
     }
 
     var glow: Bool {
         if let owner = BuiltinModules.owner(page) { return modules.isOn(owner.manifest.id) && owner.appearance(page).glow }
         switch page {
-        case .overview, .agents(.home): return true
+        case .overview: return true
         default: return false
         }
     }
@@ -313,9 +304,6 @@ struct MainView: View {
     var tint: Color? {
         if let owner = BuiltinModules.owner(page), modules.isOn(owner.manifest.id) { return owner.appearance(page).tint }
         switch page {
-        case .agents:
-            guard let r = agents.report else { return Color(red: 0.42, green: 0.36, blue: 1.0) }
-            return r.count(.error) > 0 ? .red : r.count(.warning) > 0 ? .orange : .green
         default: return nil
         }
     }
@@ -340,10 +328,8 @@ struct MainView: View {
             }.transition(.page)
         case .browser:
             ModuleOffView().transition(.page)
-        case .agents(.home):
-            DiagnosticsHome(scanner: agents, open: { a in page = .agents(.area(a)) }).transition(.page)
-        case let .agents(.area(a)):
-            AreaPage(scanner: agents, area: a).id(a).transition(.page)
+        case .agents:
+            ModuleOffView().transition(.page)
         case .apps:
             ModuleOffView().transition(.page)
         case .claude(.accounts):
@@ -426,7 +412,6 @@ extension WindowPage where Trailing == EmptyView {
 struct MainSidebar: View {
     @Binding var page: MainPage
     @ObservedObject var monitor: Monitor
-    @ObservedObject var agents: AgentScanner
     @AppStorage(Settings.fahrenheit) private var fahrenheit = false
     @ObservedObject private var modules = ModuleCenter.shared
 
@@ -440,7 +425,7 @@ struct MainSidebar: View {
                 if titled { header(tr(feature.manifest.name)) }
                 BuiltinSidebarGroup(implementation: feature, section: section, selection: $page, row: { item in
                     AnyView(row(item.target, tr(item.entry.title), item.entry.symbol ?? feature.manifest.symbol,
-                        item.tint, trailing: item.trailing, trailingColor: item.trailingColor, indent: item.entry.parent != nil, selected: item.selected)
+                        item.tint, trailing: item.trailing, trailingColor: item.trailingColor, badge:item.badge, indent: item.entry.parent != nil, selected: item.selected)
                         .padding(.leading, CGFloat(max(0, feature.manifest.depth(of: item.entry.id) - 1)) * 14))
                 })
             }
@@ -492,13 +477,7 @@ struct MainSidebar: View {
                         row(.claude(.reset), tr("Reset"), "arrow.counterclockwise.circle", .orange, trailing: nil, indent: true)
                         row(.claude(.privacy), tr("Privacy & network"), "hand.raised", .orange, trailing: nil, indent: true)
                     }
-                    row(.agents(.home), tr("Smart Check"), "stethoscope", .purple, trailing: nil, badge: agents.report?.problemCount ?? 0)
-                    if page.isAgents {
-                        ForEach(Area.allCases, id: \.self) { a in
-                            row(.agents(.area(a)), AgentStyle.title(a), AgentStyle.icon(a), AgentStyle.tint(a), trailing: nil,
-                                badge: agents.report?.problemCount(in: a) ?? 0, indent: true)
-                        }
-                    }
+                    moduleRows(.agents)
                 }
                 .padding(.bottom, 8)
             }
@@ -586,11 +565,6 @@ struct MainSidebar: View {
     }
     @ViewBuilder func coreShortcut(_ target: MainPage) -> some View {
         switch target {
-        case .overview: key("1", target)
-        case .sensors: key("2", target)
-        case .fans: key("3", target)
-        case .browser("Google Chrome"): key("4", target)
-        case .agents(.home): key("6", target)
         case .settings: key(",", target)
         default: EmptyView()
         }

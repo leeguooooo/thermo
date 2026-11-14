@@ -107,9 +107,9 @@ final class AppModels {
         set { storedDisk = newValue }
     }
 
-    init(defaults: UserDefaults = .standard, makeApps: @escaping @MainActor () -> AppsFeatureModels = { AppsFeatureModels() }, makeSpace: @escaping SpaceFactory = { SpaceLensModel(enabled:$0) }, invalidateSpaceCache: @escaping @MainActor () -> Void = { SpaceLens.invalidateCache() }, makeBrowser: @escaping BrowserFactory = {ChromePagesModel(enabled:$0,app:$1,appMemoryKB:$2,gpuKB:$3)}, makeWorkspace: @escaping WorkspaceFactory = {TabWorkspaceModel(enabled:$0,app:$1)}, makeConnections:@escaping ConnectionsFactory = {ConnectionsModel(enabled:$0)}, makeHistory:@escaping HistoryFactory = {HistoryModel(enabled:$0)}, makeDisk: @escaping () -> DiskModel = { DiskModel(retentionPreferences:.stored(in:.standard)) },
+    init(defaults: UserDefaults = .standard, makeApps: @escaping @MainActor () -> AppsFeatureModels = { AppsFeatureModels() }, makeSpace: @escaping SpaceFactory = { SpaceLensModel(enabled:$0) }, invalidateSpaceCache: @escaping @MainActor () -> Void = { SpaceLens.invalidateCache() }, makeBrowser: @escaping BrowserFactory = {ChromePagesModel(enabled:$0,app:$1,appMemoryKB:$2,gpuKB:$3)}, makeWorkspace: @escaping WorkspaceFactory = {TabWorkspaceModel(enabled:$0,app:$1)}, makeConnections:@escaping ConnectionsFactory = {ConnectionsModel(enabled:$0)}, makeHistory:@escaping HistoryFactory = {HistoryModel(enabled:$0)}, makeAgents:@escaping AgentsFactory = {AgentScanner(enabled:$0)}, makeDisk: @escaping () -> DiskModel = { DiskModel(retentionPreferences:.stored(in:.standard)) },
          makeMonitor: @escaping () -> Monitor = { Monitor(samplingAllowed: { ModulePreferences.isEnabled(BuiltinModuleManifests.performance, in: .standard) }) }) {
-        self.makeHistory=makeHistory;self.makeConnections=makeConnections;self.makeDisk = makeDisk;self.makeApps=makeApps;self.makeSpace=makeSpace;self.invalidateSpaceCache=invalidateSpaceCache;self.makeBrowser=makeBrowser;self.makeWorkspace=makeWorkspace;self.defaults=defaults
+        self.makeAgents=makeAgents;self.makeHistory=makeHistory;self.makeConnections=makeConnections;self.makeDisk = makeDisk;self.makeApps=makeApps;self.makeSpace=makeSpace;self.invalidateSpaceCache=invalidateSpaceCache;self.makeBrowser=makeBrowser;self.makeWorkspace=makeWorkspace;self.defaults=defaults
         self.makeMonitor = makeMonitor
     }
 
@@ -123,7 +123,28 @@ final class AppModels {
             if self?.storedDisk === model { self?.storedDisk = nil }
         }
     }
-    lazy var agents = AgentScanner()
+    typealias AgentsFactory = @MainActor (@escaping ()->Bool)->AgentScanner
+    private let makeAgents:AgentsFactory
+    private var storedAgents:AgentScanner?
+    var agentsLoaded:Bool {storedAgents != nil}
+    var existingAgents:AgentScanner? {storedAgents}
+    var agentReport:DoctorReport? {storedAgents?.report}
+    var agents:AgentScanner {
+        if let storedAgents{return storedAgents}
+        let defaults=self.defaults
+        let scanner=makeAgents {ModulePreferences.isEnabled(BuiltinModuleManifests.agents,in:defaults)}
+        storedAgents=scanner;return scanner
+    }
+    func agentsExitBlocker()->MainPage? {storedAgents?.canStopFeature == false ? .agents(.home):nil}
+    func prepareAgentsStop() throws->BuiltinModules.FinishStop? {
+        guard let scanner=storedAgents else{return nil}
+        guard scanner.canStopFeature else{throw BuiltinModules.StopRefused(description:tr("Wait for the confirmed agent configuration changes before switching diagnostics off."))}
+        scanner.stopFeature()
+        return { [weak self] in
+            await scanner.finishFeatureStop()
+            if self?.storedAgents === scanner {self?.storedAgents=nil}
+        }
+    }
     var apps: AppsModel { get {software.apps} set {software.apps=newValue} }
     var startup: StartupItemsModel { software.startup }
     var softwareUpdates: AppUpdatesModel { software.updates }

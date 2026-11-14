@@ -18,6 +18,7 @@ struct StatusMenuLayout {
         var browserEnabled:Bool = true
         var connectionsEnabled:Bool = true
         var historyEnabled:Bool = true
+        var agentsEnabled:Bool = true
         let hasBattery: Bool
         let keepAwakeActive: Bool
         let focusTimerActive: Bool
@@ -242,6 +243,7 @@ struct StatusMenuLayout {
         if context.hasBattery {
             moreToolsLeaves.append(.batteryProtection)
         }
+        moreToolsLeaves.removeAll{$0 == .smartCheck && !context.agentsEnabled}
         let moreToolsActive = context.moreToolsActiveStates.cleanScreenActive ||
                                context.moreToolsActiveStates.lowLatencyActive ||
                                (context.hasBattery && context.moreToolsActiveStates.batteryProtectionActive)

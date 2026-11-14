@@ -111,7 +111,19 @@ public enum BuiltinModuleManifests {
         id:"dev.thermo.history",name:"History",summary:"Review recorded operations and restore verified Trash batches; the kernel keeps the recovery journal.",
         symbol:"clock.arrow.circlepath",version:"1.0.0",launch:.onDemand,enabledByDefault:true,
         entries:[.init(id:"home",kind:.page,title:"History",symbol:"clock.arrow.circlepath",scene:"history")])
-    public static let all = [disk, search, capture, menuBar, performance, apps, space, browser, connections, history]
+    public static let agents=ModuleManifest(
+        id:"dev.thermo.agents",name:"AI Agent Diagnostics",summary:"Agent configuration checks, reviewed repairs, MCP inspection and local tool-use analysis.",
+        symbol:"stethoscope",version:"1.0.0",launch:.onDemand,enabledByDefault:true,
+        entries:[.init(id:"home",kind:.page,title:"Smart Check",symbol:"stethoscope",scene:"agents",navigationKey:"6"),
+                 .init(id:"hooks",kind:.page,title:"Hooks",symbol:"arrow.triangle.branch",scene:"agents:hooks",parent:"home"),
+                 .init(id:"mcp",kind:.page,title:"MCP servers",symbol:"server.rack",scene:"agents:mcp",parent:"home"),
+                 .init(id:"plugins",kind:.page,title:"Plugins",symbol:"puzzlepiece.extension",scene:"agents:plugins",parent:"home"),
+                 .init(id:"skills",kind:.page,title:"Skills",symbol:"book.closed",scene:"agents:skills",parent:"home"),
+                 .init(id:"statusline",kind:.page,title:"Status line",symbol:"menubar.rectangle",scene:"agents:statusline",parent:"home"),
+                 .init(id:"launchd",kind:.page,title:"Launch agents",symbol:"gearshape.2",scene:"agents:launchd",parent:"home"),
+                 .init(id:"processes",kind:.page,title:"Agent processes",symbol:"cpu",scene:"agents:processes",parent:"home"),
+                 .init(id:"worktrees",kind:.page,title:"Worktrees",symbol:"arrow.triangle.pull",scene:"agents:worktrees",parent:"home")])
+    public static let all = [disk, search, capture, menuBar, performance, apps, space, browser, connections, history, agents]
 }
 
 public enum ModulePreferences {
