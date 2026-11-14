@@ -187,7 +187,7 @@ struct ModuleActivityView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: Theme.Space.m) {
             HStack {
-                Text(tr("What %1$@ did through Thermo", manifest.name)).font(Theme.heading)
+                Text(tr("What %1$@ did through Thermo", BuiltinModules.manifest(manifest.id) == nil ? manifest.name : tr(manifest.name))).font(Theme.heading)
                 Spacer()
                 Button(tr("Done"), action: close).keyboardShortcut(.defaultAction)
             }
@@ -210,8 +210,8 @@ struct ModuleActivityView: View {
         }
         .padding(24).frame(width: 560, height: 440).foregroundStyle(Theme.textPrimary).background(Theme.canvas).preferredColorScheme(.dark)
         .task {
-            let id = manifest.id
-            summary = await Task.detached { ModuleKernel.log.summary(module: id) }.value
+            let ids = [manifest.id] + (BuiltinModules.implementation(manifest.id)?.privateWorkers.sorted() ?? [])
+            summary = await Task.detached { ModuleKernel.log.summary(modules: ids) }.value
         }
     }
 

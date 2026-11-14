@@ -152,13 +152,21 @@ public final class ModuleAccessLog: @unchecked Sendable {
     }
 
     /// What the module read, deleted, reached and ended; each target once, in first-seen order.
-    public func summary(module: String) -> Summary {
+    public func summary(module: String) -> Summary { summary(modules: [module]) }
+
+    /// A feature may own private workers; its activity panel includes their records.
+    public func summary(modules: [String]) -> Summary {
+        let records = Set(modules).sorted().flatMap { records(module: $0) }.enumerated().sorted { a, b in
+            let left = a.element.loggedAt ?? a.element.time.timeIntervalSince1970
+            let right = b.element.loggedAt ?? b.element.time.timeIntervalSince1970
+            return left == right ? a.offset < b.offset : left < right
+        }.map(\.element)
         var summary = Summary()
         var seen = Set<String>()
         func add(_ list: inout [String], _ record: ModuleAccessRecord) {
             for target in record.targets where seen.insert(record.capability + "\u{0}" + target).inserted { list.append(target) }
         }
-        for record in records(module: module) {
+        for record in records {
             switch record.outcome {
             case .denied: summary.denied += 1
             case .declined: summary.declined += 1

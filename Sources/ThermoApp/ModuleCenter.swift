@@ -233,8 +233,12 @@ struct ModuleSceneView: NSViewControllerRepresentable {
     let module: String
     let scene: String
 
-    final class Coordinator { var scene: ModuleManager.Scene? }
-    func makeCoordinator() -> Coordinator { Coordinator() }
+    final class Coordinator {
+        let manager: ModuleManager
+        var scene: ModuleManager.Scene?
+        init(manager: ModuleManager) { self.manager = manager }
+    }
+    func makeCoordinator() -> Coordinator { Coordinator(manager: manager) }
 
     func makeNSViewController(context: Context) -> NSViewController {
         guard let attached = try? manager.attach(module, scene: scene) else { return NSViewController() }
@@ -245,7 +249,7 @@ struct ModuleSceneView: NSViewControllerRepresentable {
     static func dismantleNSViewController(_ controller: NSViewController, coordinator: Coordinator) {
         // SwiftUI calls this on the main thread.
         MainActor.assumeIsolated {
-            if let scene = coordinator.scene { ModuleCenter.shared.manager.detach(scene); coordinator.scene = nil }
+            if let scene = coordinator.scene { coordinator.manager.detach(scene); coordinator.scene = nil }
         }
     }
 }
@@ -273,8 +277,7 @@ struct ModuleSwitches: View {
                     }
                 }
                 Spacer()
-                // Only a module in its own process goes through the kernel and has a record of it.
-                if !status.builtin {
+                if !status.builtin || !(BuiltinModules.implementation(status.manifest.id)?.privateWorkers.isEmpty ?? true) {
                     Button(tr("Activity")) { activity = status.manifest.localized(L10n.current.rawValue) }.buttonStyle(PillButtonStyle()).controlSize(.small).fixedSize()
                 }
                 Toggle("", isOn: Binding(get: { status.enabled }, set: { center.setEnabled(status.manifest.id, $0) }))
