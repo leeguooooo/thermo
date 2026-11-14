@@ -16,20 +16,22 @@ final class StatusMenu: NSObject, NSMenuDelegate {
     static let shared = StatusMenu()
 
     func make(battery: Bool) -> NSMenu {
-        let captureShortcutSuffix = CaptureWorkspace.shared.shortcutSuffix(for: .screenshot)
-        let pinShortcutSuffix = CaptureWorkspace.shared.shortcutSuffix(for: .pinClipboard)
+        let captureEnabled = CaptureModule.enabled
+        let captureShortcutSuffix = captureEnabled ? CaptureWorkspace.shared.shortcutSuffix(for: .screenshot) : ""
+        let pinShortcutSuffix = captureEnabled ? CaptureWorkspace.shared.shortcutSuffix(for: .pinClipboard) : ""
         
-        let configuredEntries = CaptureWorkspace.shared.shortcuts.settings.entries
+        let configuredEntries = captureEnabled ? CaptureWorkspace.shared.shortcuts.settings.entries
             .filter { $0.appearsInMenu }
             .map { entry -> String in
                 let label = CaptureWorkspace.shared.shortcuts.label(for: entry)
                 return (entry.title.isEmpty ? tr(entry.action.title) : entry.title) + (label.isEmpty ? "" : "  " + label)
-            }
+            } : []
         
         let menuBarManager = MenuBarManager.shared
         let menuBarQuickControlsAppear = menuBarManager.enabled || menuBarManager.state != .visible
         
         let context = StatusMenuLayout.RuntimeContext(
+            captureEnabled: captureEnabled,
             hasBattery: battery,
             keepAwakeActive: IdleAwakeModel.shared.state.phase == .active,
             focusTimerActive: FocusTimerModel.shared.phase.isActive,

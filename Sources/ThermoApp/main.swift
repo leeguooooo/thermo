@@ -26,7 +26,7 @@ import ModuleKit
 }
 
 @MainActor
-final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate, UNUserNotificationCenterDelegate, NSMenuItemValidation {
+final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate, UNUserNotificationCenterDelegate, NSMenuItemValidation, NSMenuDelegate {
     private var statusItem: NSStatusItem!
     private let popover = NSPopover()
     private var monitor: Monitor { AppModels.shared.monitor }
@@ -46,7 +46,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate, UNU
         ModuleCenter.shared.start()
         CleanScreenShortcutModel.enableLive()
         LocalSearchShortcut.shared.activate()
-        CaptureWorkspace.shared.activate()
         LocalSearchModel.shared.start()
         if CommandLine.arguments.contains("--search") { DispatchQueue.main.async { LocalSearchPanel.shared.show() } }
         BatteryCareModel.shared.restoreSavedPreference()
@@ -184,6 +183,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate, UNU
         appMenu.addItem(withTitle: tr("Scrolling capture…"), action: #selector(scrollCaptureFromMenu), keyEquivalent: "").target = self
         appMenu.addItem(withTitle: tr("Record screen…"), action: #selector(recordScreenFromMenu), keyEquivalent: "").target = self
         appMenu.addItem(withTitle: tr("Recording drafts…"), action: #selector(recordingDraftsFromMenu), keyEquivalent: "").target = self
+        for item in appMenu.items.suffix(6) { item.representedObject = CaptureModule.manifest.id }
+        appMenu.delegate = self
+        menuNeedsUpdate(appMenu)
         let panelItem = appMenu.addItem(withTitle: tr("Open Menu Panel"), action: #selector(openPanelFromMenu), keyEquivalent: "p")
         panelItem.target = self
         panelItem.keyEquivalentModifierMask = [.command, .shift]
@@ -198,6 +200,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate, UNU
     }
 
     @objc private func openSearchFromMenu() { LocalSearchPanel.shared.show() }
+    func menuNeedsUpdate(_ menu: NSMenu) {
+        for item in menu.items where item.representedObject as? String == CaptureModule.manifest.id {
+            item.isHidden = !CaptureModule.enabled
+        }
+    }
     @objc private func captureFromMenu() { CaptureWorkspace.shared.capture() }
     @objc private func pinFromMenu() { CaptureWorkspace.shared.pinClipboard() }
     @objc private func openImageFromMenu() { CaptureWorkspace.shared.importImage() }

@@ -34,7 +34,7 @@ import ThermoL10n
     func withScriptExecutor(onIssue:@escaping()->Void={},_ value:@escaping(String)async throws->CaptureScriptResult) -> Self {executeScript=value;scriptFailureHandler=onIssue;return self}
     static func backend() -> CarbonCleanScreenHotkeys { CarbonCleanScreenHotkeys(validate:{ CaptureShortcut(keyCode:$0.keyCode,modifiers:$0.modifiers,keyLabel:$0.keyLabel).validGlobal }) }
     func activate() {
-        guard !activated else { return };activated=true
+        guard !activated,!uncertain else { return };activated=true
         if let data=read() {
             do { settings=try CaptureActionSettings.decode(data) }
             catch { settings = .init();settings.shortcutsEnabled=false;issue=tr(CaptureActionFailure.invalidSettings.localizedDescription);return }
@@ -96,7 +96,7 @@ import ThermoL10n
     }
     func receive(_ key:CaptureShortcut,down:Bool) {
         if !down { held.remove(key.gesture);return }
-        guard !uncertain,settings.shortcutsEnabled,!held.contains(key.gesture) else { return };held.insert(key.gesture)
+        guard activated,!uncertain,settings.shortcutsEnabled,!held.contains(key.gesture) else { return };held.insert(key.gesture)
         if let owner=recordingOwner { record(key,owner:owner);return }
         let matching=settings.entries.filter { $0.enabled && $0.shortcut?.gesture == key.gesture }
         let entry=pinFocused() ? matching.first(where:{ $0.scope == .pin }) ?? matching.first(where:{ $0.scope == .global }) : matching.first(where:{ $0.scope == .global })
@@ -146,10 +146,23 @@ import ThermoL10n
         if entry.scope == .pin { return tr("Local binding enabled") }
         return leases[key.gesture] != nil ? tr("Registered") : registrationIssues[key.gesture] ?? tr("Not registered")
     }
+    /// A feature is not off until every global shortcut lease was released.
+    func deactivate() throws {
+        recordingOwner=nil;recordingReceiver=nil;held.removeAll()
+        var failed:[CleanScreenHotkeyLease]=[]
+        for lease in Array(leases.values)+retained {
+            do { try lease.release() } catch { failed.append(lease) }
+        }
+        leases=[:];retained=failed
+        if let localMonitor { NSEvent.removeMonitor(localMonitor) };localMonitor=nil;activated=false
+        uncertain = !failed.isEmpty
+        if uncertain {
+            issue=tr("Shortcut release was not confirmed. Restart Thermo before changing shortcuts.")
+            throw CaptureScriptFailure.execution(issue!)
+        }
+    }
     func shutdown() {
         cancelScript()
-        recordingOwner=nil;recordingReceiver=nil;held.removeAll()
-        for lease in Array(leases.values)+retained { try? lease.release() };leases=[:];retained=[]
-        if let localMonitor { NSEvent.removeMonitor(localMonitor) };localMonitor=nil;activated=false
+        try? deactivate()
     }
 }

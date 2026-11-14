@@ -44,6 +44,7 @@ import Foundation
         case "capture.run","capture.action":break
         default:return failure("Unsupported capture control operation.")
         }
+        guard workspace.enabled else { return failure("This feature is switched off. Switch on Screenshots and pins in Settings to use it.") }
         let source:String
         if request.action == "capture.run" {
             guard request.arguments.keys.sorted() == ["source"],let value=request.arguments["source"],!value.trimmingCharacters(in:.whitespacesAndNewlines).isEmpty,value.utf8.count<=16384 else{return failure(CaptureScriptFailure.invalidSource.localizedDescription)}

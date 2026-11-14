@@ -9,6 +9,7 @@ struct StatusMenuLayout {
     let retainedExtras: RetainedExtras
     
     struct RuntimeContext {
+        var captureEnabled: Bool = true
         let hasBattery: Bool
         let keepAwakeActive: Bool
         let focusTimerActive: Bool
@@ -159,11 +160,11 @@ struct StatusMenuLayout {
         }
         captureLeaves.append(.captureSavingSettings)
         captureLeaves.append(.captureShortcutsSettings)
-        productItems.append(.menuGroup(MenuGroup(
+        if context.captureEnabled { productItems.append(.menuGroup(MenuGroup(
             title: "Capture & record",
             leaves: captureLeaves,
             hasActiveHint: false
-        )))
+        ))) }
         
         // 4. Clipboard & pins (Menu Group)
         let clipboardLeaves: [LeafAction] = [
@@ -174,11 +175,11 @@ struct StatusMenuLayout {
             .restoreLastClosedPin,
             .restorePinMouseInteraction
         ]
-        productItems.append(.menuGroup(MenuGroup(
+        if context.captureEnabled { productItems.append(.menuGroup(MenuGroup(
             title: "Clipboard & pins",
             leaves: clipboardLeaves,
             hasActiveHint: false
-        )))
+        ))) }
         
         // 5. System & hardware (Menu Group)
         let systemLeaves: [LeafAction] = [

@@ -27,6 +27,16 @@ import ThermoL10n
         do { try checkLoaded();try prepareWindows(for:library.currentGroupID);displayCurrent() }
         catch { issue=captureFailureMessage(error) }
     }
+    /// Edits were flushed by the feature's stop guard. Closing UI must not mark saved pins closed.
+    func suspendWindows() {
+        saving?.cancel();saving=nil
+        libraryWindow?.close();libraryWindow=nil
+        for editor in windows.values {
+            editor.window?.delegate=nil
+            editor.close()
+        }
+        windows.removeAll()
+    }
     private func checkLoaded() throws { if loadFailed { throw CapturePinFailure.invalidLibrary } }
     func retryLoad() {
         do {
