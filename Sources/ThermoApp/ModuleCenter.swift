@@ -190,6 +190,8 @@ import ThermoL10n
                 } else {finish=own}
             } catch ModuleCommandLease.Failure.busy {
                 switchIssues[id]=tr("Wait for this feature’s current command to finish before switching it off.");return
+            } catch let error as BuiltinModules.StopRefused {
+                switchIssues[id]=error.description;return
             } catch {switchIssues[id]=error.localizedDescription;return}
         }
         switchIssues[id] = nil
