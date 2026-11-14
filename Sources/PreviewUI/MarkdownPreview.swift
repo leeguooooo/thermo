@@ -13,6 +13,7 @@ import WebKit
     weak var web:WKWebView?
     init(document:PreviewMarkdownDocument){self.document=document}
     func find(backwards:Bool=false) {
+        guard !query.isEmpty else {found=nil;web?.find("",configuration:WKFindConfiguration()){_ in};return}
         let config=WKFindConfiguration();config.backwards=backwards;config.wraps=true
         let expected=query
         web?.find(query,configuration:config){[weak self] result in
@@ -35,8 +36,11 @@ public struct MarkdownPreviewPane:View {
                 TextField(tr("Find in document"),text:$state.query).textFieldStyle(.roundedBorder).frame(width:180)
                     .focused($finding).onSubmit{state.find()}.onChange(of:state.query){_ in state.find()}
                 if state.found == false {Text(tr("No matches")).font(.caption).foregroundStyle(.secondary)}
-                Button{state.find(backwards:true)}label:{Image(systemName:"chevron.up")}
-                Button{state.find()}label:{Image(systemName:"chevron.down")}.keyboardShortcut("g",modifiers:.command)
+                if !state.query.isEmpty {
+                    Button{state.find(backwards:true)}label:{Image(systemName:"chevron.up")}.help(tr("Previous match")).accessibilityLabel(tr("Previous match"))
+                    Button{state.find()}label:{Image(systemName:"chevron.down")}.help(tr("Next match")).accessibilityLabel(tr("Next match")).keyboardShortcut("g",modifiers:.command)
+                    Button{state.query=""}label:{Image(systemName:"xmark.circle.fill")}.accessibilityLabel(tr("Clear search"))
+                }
                 Button(tr("Find")){finding=true}.keyboardShortcut("f",modifiers:.command).hidden().frame(width:0,height:0)
             }.buttonStyle(.plain)
             if let issue=state.issue { Text(issue).foregroundStyle(.secondary).textSelection(.enabled) }
