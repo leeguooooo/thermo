@@ -81,6 +81,24 @@ final class PreviewMarkdownDocumentTests: XCTestCase {
         model.source=true;coordinator.load(text)
         XCTAssertTrue(text.string.contains("**content**"))
     }
+    @MainActor func testNativePreviewKeepsEmbeddedImagesTablesAndInterceptsLinks() throws {
+        let context=try XCTUnwrap(CGContext(data:nil,width:8,height:8,bitsPerComponent:8,bytesPerRow:32,space:CGColorSpaceCreateDeviceRGB(),bitmapInfo:CGImageAlphaInfo.premultipliedLast.rawValue))
+        context.setFillColor(CGColor(red:1,green:0,blue:1,alpha:1));context.fill(CGRect(x:0,y:0,width:8,height:8))
+        let image=try XCTUnwrap(context.makeImage()),png=try XCTUnwrap(NSBitmapImageRep(cgImage:image).representation(using:.png,properties:[:]))
+        let document=PreviewMarkdownDocument.render("![local](image.png)\n\n| Alpha | Beta |\n| --- | --- |\n| One | Two |\n\n[Website](https://example.test)",baseURL:URL(fileURLWithPath:"/fixture"),readImage:{_,_ in png})
+        let model=MarkdownPreviewState(document:document),content=try model.content()
+        var attachments=0
+        content.enumerateAttribute(.attachment,in:NSRange(location:0,length:content.length)){value,_,_ in if value is NSTextAttachment {attachments += 1}}
+        XCTAssertEqual(attachments,1)
+        XCTAssertTrue(content.string.contains("Alpha"));XCTAssertTrue(content.string.contains("Two"))
+        var opened:[URL]=[]
+        let coordinator=MarkdownSurface.Coordinator(state:model,open:{opened.append($0)})
+        let text=NSTextView();coordinator.load(text)
+        XCTAssertTrue(coordinator.textView(text,clickedOnLink:URL(string:"https://example.test")!,at:0))
+        XCTAssertEqual(opened.map(\.absoluteString),["https://example.test"])
+        XCTAssertTrue(coordinator.textView(text,clickedOnLink:"javascript:alert(1)",at:0))
+        XCTAssertEqual(opened.count,1)
+    }
     func testBoundedReadingReportsLargeAndUnsupportedDocuments() throws {
         let directory = FileManager.default.temporaryDirectory.appendingPathComponent("thermo-markdown-test-" + UUID().uuidString)
         try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
