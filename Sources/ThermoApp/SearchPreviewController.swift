@@ -70,6 +70,7 @@ private struct SearchPreviewSource: @unchecked Sendable {
                 let first=try await center.manager.prepareInput(worker,file:source.file,metadata:source.input.data(),timeout:30)
                 try Task.checkCancellation();guard owns(id) else{throw PreviewFailure.cancelled}
                 let receipt=try Self.receipt(first,id:id)
+                ModuleKernel.log.record(ModuleAccessRecord(module:worker,capability:Capability.Kind.filesRead.rawValue,operation:"selected-input",targets:[item.path],outcome:.allowed,detail:"Read-only input supplied for this selected preview; no filesystem scope granted."))
                 let assets=receipt["needsAssets"] as? [String] ?? []
                 guard assets.count<=48 else{throw PreviewFailure.invalidInput}
                 if receipt["ready"] as? Bool != true {
@@ -96,10 +97,10 @@ private struct SearchPreviewSource: @unchecked Sendable {
                     guard try Self.receipt(final,id:id)["ready"] as? Bool == true else{throw PreviewFailure.invalidInput}
                 }
                 try Task.checkCancellation();guard owns(id) else{throw PreviewFailure.cancelled}
-                ModuleKernel.log.record(ModuleAccessRecord(module:worker,capability:Capability.Kind.filesRead.rawValue,operation:"selected-input",targets:[item.path],outcome:.allowed,detail:"Read-only input supplied for this selected preview; no filesystem scope granted."))
                 state = .ready(id)
             }catch {
                 guard let self,self.owns(id),!Task.isCancelled else{return}
+                ModuleKernel.log.record(ModuleAccessRecord(module:worker,capability:Capability.Kind.filesRead.rawValue,operation:"selected-input",targets:[item.path],outcome:.failed,detail:error.localizedDescription))
                 state = .failed((error as? ModuleError).map(String.init(describing:)) ?? error.localizedDescription);center.manager.setEnabled(worker,false)
             }
         }
