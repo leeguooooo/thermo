@@ -6,6 +6,14 @@ import XCTest
 @testable import thermo
 
 final class ModuleCLITests: XCTestCase {
+    func testDisabledSoftwareRefusesBothLegacyCommandAliases() throws {
+        let name="thermo-apps-cli-"+UUID().uuidString,defaults=UserDefaults(suiteName:name)!
+        defer{defaults.removePersistentDomain(forName:name)}
+        defaults.set(false,forKey:ModulePreferences.key(BuiltinModuleManifests.apps.id))
+        for words in [["apps"],["app","list"],["apps","uninstall"],["apps","startup"],["apps","updates"]] {
+            XCTAssertThrowsError(try ModuleCLI.requireBuiltinFeature(words,defaults:defaults))
+        }
+    }
     func testDisabledSearchRejectsQueriesIndexingAndTakeoverButAllowsGivingSpotlightBack() throws {
         let name="thermo-search-cli-"+UUID().uuidString
         let defaults=UserDefaults(suiteName:name)!
