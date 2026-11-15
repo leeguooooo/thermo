@@ -153,6 +153,11 @@ import XCTest
         XCTAssertFalse(store.canAdmitUIEntryOwner(ref));XCTAssertFalse(store.admitUIEntryOwner(ref));XCTAssertFalse(store.activate(ref));XCTAssertNil(store.renderPreview(ref));XCTAssertEqual(made,1)
         await drain.finish();XCTAssertTrue(store.canAdmitUIEntryOwner(ref));XCTAssertEqual(made,1);XCTAssertTrue(store.admitUIEntryOwner(ref));XCTAssertEqual(made,2);XCTAssertEqual(sessions[1].starts,0)
     }
+
+}
+
+
+extension NativeWindowUITests {
     func testCompactPanelValidatesExactOwnerBeforeAdmissionAndStaysColdWhenOff() async throws {
         var made=0,enabled=false
         let session=Session()

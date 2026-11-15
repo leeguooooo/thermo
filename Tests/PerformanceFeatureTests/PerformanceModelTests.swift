@@ -30,9 +30,9 @@ import XCTest
         }
     }
     final class Fan: FanPolicyAccess {
-        let available: () -> Bool
+        let available: @MainActor () -> Bool
         var retired = false, refreshes = 0, requests = 0, finishes = 0
-        init(_ available: @escaping () -> Bool) { self.available = available }
+        init(_ available: @escaping @MainActor () -> Bool) { self.available = available }
         var latest: HelperReading { .init() }
         var readings: AnyPublisher<HelperReading,Never> { Empty().eraseToAnyPublisher() }
         func request(_ policy: FanPolicy, fans: [Int]) { if available() && !retired { requests += 1 } }
