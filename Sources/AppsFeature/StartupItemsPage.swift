@@ -198,7 +198,7 @@ struct StartupItemsPage: View {
                                           color: item.enabled == true ? Theme.good : Theme.textSecondary)
                                 if item.requiresAdministrator { StatusTag(text: tr("Administrator approval required")) }
                             }
-                            Text(item.effectiveScope.title + " · " + FSPath.tilde(item.program ?? item.path))
+                            Text(item.effectiveScope.title + " · " + FS.tilde(item.program ?? item.path))
                                 .font(Theme.caption).foregroundStyle(Theme.textTertiary).lineLimit(1).truncationMode(.middle)
                                 .textSelection(.enabled).help(item.program ?? item.path)
                             if let why = item.blocked { Text(tr(why)).font(Theme.caption).foregroundStyle(Theme.caution) }
@@ -247,7 +247,7 @@ struct StartupItemsPage: View {
                         }
                         Text(item.identifier ?? item.uuid).font(Theme.mono).foregroundStyle(Theme.textTertiary).lineLimit(1).textSelection(.enabled)
                         if let path = item.executable ?? item.path {
-                            Text(FSPath.tilde(path)).font(Theme.mono).foregroundStyle(Theme.textTertiary).lineLimit(1).truncationMode(.middle).textSelection(.enabled).help(path)
+                            Text(FS.tilde(path)).font(Theme.mono).foregroundStyle(Theme.textTertiary).lineLimit(1).truncationMode(.middle).textSelection(.enabled).help(path)
                         }
                     }
                     .padding(.horizontal, Theme.Space.m).padding(.vertical, 10)
