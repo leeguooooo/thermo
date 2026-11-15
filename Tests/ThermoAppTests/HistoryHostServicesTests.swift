@@ -1,6 +1,8 @@
 import AgentCore
 import HistoryFeature
 import ModuleKit
+import NativeFeatureAPI
+@testable import AppsFeature
 import XCTest
 @testable import CleanKit
 @testable import ThermoApp
@@ -88,13 +90,15 @@ import XCTest
         let name="thermo-history-host-"+UUID().uuidString,defaults=UserDefaults(suiteName:name)!
         defer{defaults.removePersistentDomain(forName:name)}
         defaults.set(true,forKey:ModulePreferences.key(BuiltinModuleManifests.apps.id))
-        let models=AppModels(defaults:defaults)
+        let group=AppsFeatureModels()
+        let definition=NativeFeatureDefinition(manifest:BuiltinModuleManifests.apps,pageContracts:AppsFeature.registration.pageContracts,makeSession:{AppsFeatureSession(availability:$0,makeModels:{group})})
+        let models=AppModels(defaults:defaults,nativeDefinitions:[definition])
         var pages:[MainPage]=[]
         HistoryHostServices.perform(.nativeRecovery,models:models,open:{
-            XCTAssertTrue(models.nativeUpdates.showRecovery)
-            XCTAssertEqual(models.softwareUpdates.channel,"native")
+            XCTAssertTrue(group.native.showRecovery)
+            XCTAssertEqual(group.updates.channel,"native")
             pages.append($0)
         })
-        XCTAssertEqual(pages,[.apps(.updates)])
+        XCTAssertEqual(pages,[.native(.init(BuiltinModuleManifests.apps.id,"updates"))])
     }
 }

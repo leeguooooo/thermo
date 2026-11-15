@@ -310,7 +310,7 @@ struct NativeUpdatesPanel: View {
                     }
                     Text(source.feedHost ?? (source.kind == "appStore" ? "App Store" : tr("No app-declared update feed")))
                         .font(Theme.caption).foregroundStyle(Theme.textTertiary).lineLimit(1).textSelection(.enabled)
-                        .help(FSPath.tilde(source.app.path))
+                        .help(FS.tilde(source.app.path))
                 }
                 Spacer(minLength: Theme.Space.s)
                 if model.checking.contains(source.id) { ProgressView().controlSize(.small) }
@@ -399,7 +399,7 @@ struct NativeUpdatesPanel: View {
                         DisclosureGroup {
                             VStack(alignment: .leading, spacing: Theme.Space.xs) {
                                 ForEach(Array(report.issues.enumerated()), id: \.offset) { _, issue in
-                                    Text(tr(issue.message) + " · " + FSPath.tilde(issue.path)).font(Theme.caption).foregroundStyle(Theme.textTertiary).textSelection(.enabled)
+                                    Text(tr(issue.message) + " · " + FS.tilde(issue.path)).font(Theme.caption).foregroundStyle(Theme.textTertiary).textSelection(.enabled)
                                 }
                                 if report.issuesTruncated { Text(tr("More discovery issues were omitted.")).font(Theme.caption).foregroundStyle(Theme.caution) }
                             }.padding(.top, Theme.Space.xs)
@@ -446,7 +446,7 @@ struct NativeUpdatesPanel: View {
             ConfirmSheet(title: tr("Check these update feeds?"),
                 summary: tr("Only the listed feeds will be contacted. No downloads or installation will start."),
                 destructive: false, heading: tr("Apps and update servers"),
-                lines: sources.map { $0.app.name + " · " + ($0.feedHost ?? "") + "\n" + FSPath.tilde($0.app.path) },
+                lines: sources.map { $0.app.name + " · " + ($0.feedHost ?? "") + "\n" + FS.tilde($0.app.path) },
                 footnote: tr("Up to four checks run at once. Leaving this page stops pending checks."),
                 confirmTitle: tr("Check"), confirmEnabled: !sources.isEmpty,
                 confirm: { confirmingAll = false; model.checkAll(sources) }, cancel: { confirmingAll = false })

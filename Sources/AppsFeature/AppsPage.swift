@@ -1,3 +1,4 @@
+import ThermoL10n
 import ThermoUI
 import NativeFeatureAPI
 import AgentCore
@@ -336,7 +337,7 @@ final class AppsModel: ObservableObject {
 
     nonisolated static func summary(_ results: [CleanResult]) -> String {
         let bytes = results.reduce(Int64(0)) { $0 + $1.bytes }
-        let failed = results.flatMap { $0.failed.map { FSPath.tilde($0.key) + ": " + $0.value } }
+        let failed = results.flatMap { $0.failed.map { FS.tilde($0.key) + ": " + $0.value } }
         var text = results.contains(where: { !$0.removed.isEmpty })
             ? tr("Moved %1$@ to the Trash (empty it to get the space back)", AppSize.text(bytes, state: results.contains { $0.bytesIncomplete == true } ? .incomplete : .complete))
             : tr("Nothing was moved to the Trash.")
@@ -416,8 +417,8 @@ struct AppsPage: View {
                          summary: tr("%1$@ goes to the Trash. Each one is checked again first: still not installed, not running, untouched for 30 days.",
                                      orphanSize(ready)),
                          destructive: false, heading: tr("What will be moved to the Trash"),
-                         lines: ready.flatMap { o in o.items.map { $0.sizeText + "  " + FSPath.tilde($0.path) } },
-                         retainedLines: kept.flatMap { o in [o.bundleID + ": " + (o.blocked ?? "")] + o.items.map { FSPath.tilde($0.path) } },
+                         lines: ready.flatMap { o in o.items.map { $0.sizeText + "  " + FS.tilde($0.path) } },
+                         retainedLines: kept.flatMap { o in [o.bundleID + ": " + (o.blocked ?? "")] + o.items.map { FS.tilde($0.path) } },
                          footnote: tr("You can put them back from the Trash. Moves are listed in ~/Library/Logs/Thermo/clean.log."),
                          confirmTitle: tr("Move to Trash"),
                          confirmEnabled: !ready.isEmpty && !model.working && !model.scanningOrphans,
@@ -429,23 +430,23 @@ struct AppsPage: View {
 
     static func lines(_ p: UninstallPlan) -> [String] {
         var out = p.removesApp ? [p.app.bundleSizeText + "  " + p.app.path] : []
-        out += p.app.leftovers.filter { p.paths.contains($0.path) }.map { $0.sizeText + "  " + FSPath.tilde($0.path) }
+        out += p.app.leftovers.filter { p.paths.contains($0.path) }.map { $0.sizeText + "  " + FS.tilde($0.path) }
         return out
     }
 
     static func retainedLines(_ p: UninstallPlan) -> [String] {
-        var out = p.removesApp ? [] : [tr("App kept: %1$@", FSPath.tilde(p.app.path))]
+        var out = p.removesApp ? [] : [tr("App kept: %1$@", FS.tilde(p.app.path))]
         if let kept = p.ownershipKept, !kept.isEmpty {
             out.append(tr("Kept: shared data or ownership could not be established"))
-            out += kept.map { FSPath.tilde($0) }
+            out += kept.map { FS.tilde($0) }
         }
         if let kept = p.kept, !kept.isEmpty {
             out.append(tr("Personal data kept"))
-            out += kept.map { $0.sizeText + "  " + FSPath.tilde($0.path) }
+            out += kept.map { $0.sizeText + "  " + FS.tilde($0.path) }
         }
         if let kept = p.whitelisted, !kept.isEmpty {
             out.append(tr("Kept, whitelisted:"))
-            out += kept.map { FSPath.tilde($0) }
+            out += kept.map { FS.tilde($0) }
         }
         return out
     }
@@ -454,7 +455,7 @@ struct AppsPage: View {
         var out: [String] = []
         if let issues = p.ownership?.issues, !issues.isEmpty {
             out.append(tr("Ownership could not be checked at:"))
-            out += issues.map { FSPath.tilde($0) }
+            out += issues.map { FS.tilde($0) }
         }
         if p.kept?.isEmpty == false {
             out.append(p.removesApp ? tr("Kept, your data (profiles, chat history, mail); remove it in the app first, or with thermo apps uninstall --with-data:") : tr("Personal data kept. To include it while keeping the app, review thermo apps uninstall NAME --data-only --with-data --dry-run first."))
@@ -594,14 +595,14 @@ struct AppsPage: View {
 
     func detail(_ a: InstalledApp) -> String {
         let used = AppLastUsed.date(a.path).map { tr("opened %1$@", AgeFormat.string($0)) } ?? tr("never opened")
-        return [used, a.bundleID, FSPath.tilde((a.path as NSString).deletingLastPathComponent)].compactMap { $0 }.joined(separator: " · ")
+        return [used, a.bundleID, FS.tilde((a.path as NSString).deletingLastPathComponent)].compactMap { $0 }.joined(separator: " · ")
     }
 
     func toggle(_ id: String) { if open.contains(id) { open.remove(id) } else { open.insert(id) } }
 
     func pathRow(_ path: String, _ bytes: Int64, state: AppSizeState = .complete) -> some View {
         HStack {
-            Text(FSPath.tilde(path)).font(Theme.mono).foregroundStyle(Theme.textSecondary).lineLimit(1).truncationMode(.middle)
+            Text(FS.tilde(path)).font(Theme.mono).foregroundStyle(Theme.textSecondary).lineLimit(1).truncationMode(.middle)
                 .textSelection(.enabled)
             Spacer()
             Text(AppSize.text(bytes, state: state)).font(Theme.caption.monospacedDigit()).foregroundStyle(Theme.textTertiary)
@@ -617,12 +618,12 @@ struct AppsPage: View {
                     Spacer(minLength: Theme.Space.s)
                     // A protected container never reads without the permission; scanning again would not help.
                     if model.orphanIssues.contains(where: { $0.message.contains("Full Disk Access") }) {
-                        Button(tr("Open Full Disk Access")) { DiskModel.openFullDiskAccess() }
+                        Button(tr("Open Full Disk Access")) { NSWorkspace.shared.open(URL(string:"x-apple.systempreferences:com.apple.preference.security?Privacy_AllFiles")!) }
                             .buttonStyle(PillButtonStyle()).controlSize(.small)
                     }
                 }
                 ForEach(model.orphanIssues, id: \.self) { issue in
-                    Text(tr(issue.message) + (issue.path.map { " · " + FSPath.tilde($0) } ?? ""))
+                    Text(tr(issue.message) + (issue.path.map { " · " + FS.tilde($0) } ?? ""))
                         .font(Theme.caption).foregroundStyle(Theme.textTertiary).textSelection(.enabled)
                 }
             }

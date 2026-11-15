@@ -1,7 +1,7 @@
 import AgentCore
 @testable import CleanKit
 import XCTest
-@testable import ThermoApp
+@testable import AppsFeature
 
 final class NativeSourceDiscoveryTests: XCTestCase {
     @MainActor func testIncompleteEmptyDiscoveryRetainsIssues() async throws {

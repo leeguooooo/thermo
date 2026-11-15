@@ -1,3 +1,4 @@
+import AppsFeature
 import DownloadFeature
 import HistoryFeature
 import ClaudeFeature
@@ -9,6 +10,6 @@ import NativeFeatureAPI
 
 /// Assembly only. Feature targets keep their own models and views internal.
 enum BuiltinNativeFeatures {
-    static var registrations:[NativeFeatureDefinition] {[BrowserFeature.registration,DownloadFeature.registration(presentation:{DownloadHostPresentation()}),HistoryFeature.registration(services:{HistoryHostServices()}),ConnectionsFeature.registration(),ClaudeFeature.registration(),CheckupFeature.registration(reading:{AppModels.shared.monitor.snapshot},navigate:{route in MainWindow.show(.module(route.module,route.entry))}),PluginsFeature.registration(navigate:{route in MainWindow.show(.module(route.module,route.entry))})]}
+    static var registrations:[NativeFeatureDefinition] {[AppsFeature.registration,BrowserFeature.registration,DownloadFeature.registration(presentation:{DownloadHostPresentation()}),HistoryFeature.registration(services:{HistoryHostServices()}),ConnectionsFeature.registration(),ClaudeFeature.registration(),CheckupFeature.registration(reading:{AppModels.shared.monitor.snapshot},navigate:{route in MainWindow.show(.module(route.module,route.entry))}),PluginsFeature.registration(navigate:{route in MainWindow.show(.module(route.module,route.entry))})]}
     static let catalog=try! NativeFeatureCatalog(definitions:registrations)
 }

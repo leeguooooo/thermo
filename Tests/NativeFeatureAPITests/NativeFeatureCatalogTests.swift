@@ -9,6 +9,8 @@ import ModuleKit
     private final class Session:NativeFeatureSession {
         var routes:[NativeFeatureRoute]=[],options:[[String:NativeContextValue]]=[]
         var navigation=NativeNavigation.unavailable
+        var invalidations:[[String]]=[]
+        func invalidateAfterRestore(_ paths:[String]){invalidations.append(paths)}
         var activated=0
         func page(_ route:NativeFeatureRoute,navigation:NativeNavigation)->AnyView? {routes.append(route);self.navigation=navigation;return AnyView(EmptyView())}
         func preparePresentation(_ route:NativeFeatureRoute,options:[String:NativeContextValue]){routes.append(route);self.options.append(options)}
@@ -85,5 +87,15 @@ import ModuleKit
         XCTAssertThrowsError(try NativeFeatureCatalog(definitions:[required,required]))
         let wrong=NativeFeatureDefinition(manifest:manifest,pageContracts:[.init(entry:"action")],makeSession:{_ in Session()})
         XCTAssertThrowsError(try NativeFeatureCatalog(definitions:[wrong]))
+    }
+    func testRestoreInvalidationIsExistingOnlyAndDoesNotTouchDrainingGeneration()async throws {
+        let session=Session();var made=0
+        let store=NativeFeatureStore(definitions:[definition{_ in made+=1;return session}],enabled:{_ in true})
+        store.invalidateAfterRestore(["/restored"]);XCTAssertEqual(made,0)
+        _=store.page(.init(id,"home"));store.invalidateAfterRestore([]);XCTAssertTrue(session.invalidations.isEmpty)
+        store.invalidateAfterRestore(["/restored"]);XCTAssertEqual(session.invalidations,[["/restored"]])
+        let drain=try XCTUnwrap(store.prepareStop(id));store.invalidateAfterRestore(["/later"])
+        XCTAssertEqual(session.invalidations,[["/restored"]]);await drain.finish()
+        store.invalidateAfterRestore(["/cold"]);XCTAssertEqual(made,1)
     }
 }

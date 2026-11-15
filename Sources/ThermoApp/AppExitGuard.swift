@@ -1,3 +1,4 @@
+import NativeFeatureAPI
 import ModuleKit
 import AppKit
 
@@ -17,7 +18,7 @@ enum AppExitGuard {
     }
     static func endManualRemoval(_ token: UUID) { manualRemovals[token] = nil }
 
-    static func reply(show: @MainActor (MainPage) -> Void = { MainWindow.show($0) }) -> NSApplication.TerminateReply {
+    static func reply(nativeBlocker:@MainActor (String?)->NativeFeatureBlocker? = {AppModels.shared.nativeFeatures.quitBlocker($0)},show: @MainActor (MainPage) -> Void = { MainWindow.show($0) }) -> NSApplication.TerminateReply {
         if !restores.isEmpty {
             show(.module(BuiltinModuleManifests.history.id,"home"))
             return .terminateCancel
@@ -31,16 +32,14 @@ enum AppExitGuard {
             show(.space(.browse))
             return .terminateCancel
         }
-        if let blocker=AppModels.shared.nativeFeatures.quitBlocker(BuiltinModuleManifests.download.id){show(.native(blocker.route));return .terminateCancel}
-        if let blocker=AppModels.shared.nativeFeatures.quitBlocker(BuiltinModuleManifests.plugins.id){show(.native(blocker.route));return .terminateCancel}
-        if let blocker=AppModels.shared.nativeFeatures.quitBlocker(BuiltinModuleManifests.claude.id){show(.native(blocker.route));return .terminateCancel}
-        if let blocker=AppModels.shared.nativeFeatures.quitBlocker(BuiltinModuleManifests.checkup.id){show(.native(blocker.route));return .terminateCancel}
+        if let blocker=nativeBlocker(BuiltinModuleManifests.download.id){show(.native(blocker.route));return .terminateCancel}
+        if let blocker=nativeBlocker(BuiltinModuleManifests.plugins.id){show(.native(blocker.route));return .terminateCancel}
+        if let blocker=nativeBlocker(BuiltinModuleManifests.claude.id){show(.native(blocker.route));return .terminateCancel}
+        if let blocker=nativeBlocker(BuiltinModuleManifests.checkup.id){show(.native(blocker.route));return .terminateCancel}
         if let page=AppModels.shared.agentsExitBlocker(){show(page);return .terminateCancel}
-        if let blocker=AppModels.shared.nativeFeatures.quitBlocker(BuiltinModuleManifests.connections.id){show(.native(blocker.route));return .terminateCancel}
-        if let blocker=AppModels.shared.nativeFeatures.quitBlocker(BuiltinModuleManifests.browser.id){show(.native(blocker.route));return .terminateCancel}
-        if let page=AppModels.shared.softwareExitBlocker() {
-            show(page);return .terminateCancel
-        }
+        if let blocker=nativeBlocker(BuiltinModuleManifests.connections.id){show(.native(blocker.route));return .terminateCancel}
+        if let blocker=nativeBlocker(BuiltinModuleManifests.browser.id){show(.native(blocker.route));return .terminateCancel}
+        if let blocker=nativeBlocker(BuiltinModuleManifests.apps.id){show(.native(blocker.route));return .terminateCancel}
         if BatteryCareModel.shared.requestQuit() {show(.settings);return .terminateCancel}
         if AWDLModel.shared.requestQuit() {show(.settings);return .terminateCancel}
         return .terminateNow

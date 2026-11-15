@@ -14,7 +14,6 @@ enum MainPage: Hashable {
     case native(NativeFeatureRoute)
     static func browser(_ app:String)->MainPage {.native(.init(BuiltinModuleManifests.browser.id,"home",context:["app":.text(app)]))}
     case agents(SidebarEntry)
-    case apps(AppsTab)
     case space(SpaceTab)
     case memory
     case compute(Bool)
@@ -34,7 +33,6 @@ enum MainPage: Hashable {
         case "fans": self = .fans
         case "settings": self = .settings
         case "agents": self = .agents(parts.count > 1 ? (Area(rawValue: parts[1]).map { .area($0) } ?? .home) : .home)
-        case "apps": self = .apps(parts.count > 1 ? (parts[1] == "feeds" ? .updates : AppsTab(rawValue: parts[1]) ?? .installed) : .installed)
         case "memory": self = .memory
         case "module":
             // module:<module id>[:<entry id>]
@@ -56,7 +54,6 @@ enum MainPage: Hashable {
         }
     }
     var isAgents: Bool { if case .agents = self { return true } else { return false } }
-    var appsTab: AppsTab? { if case let .apps(t) = self { return t } else { return nil } }
     var spaceTab: SpaceTab? { if case let .space(t) = self { return t } else { return nil } }
 }
 
@@ -186,7 +183,6 @@ enum MainWindow {
                 MainActor.assumeIsolated {
                     setSamplingVisibility(false)
                     models.nativeFeatures.retireVisibility()
-                    models.retireSoftwareViews()
                     SpaceOverviewModel.shared.stop()
                     models.stopSpaceViews()
                     MemoryModel.shared.stop()
@@ -327,8 +323,6 @@ struct MainView: View {
         case .native:
             ModuleOffView().transition(.page)
         case .agents:
-            ModuleOffView().transition(.page)
-        case .apps:
             ModuleOffView().transition(.page)
         case let .module(id, entry):
             ModulePageView(center: .shared, module: id, entry: entry).id(id + ":" + entry).transition(.page)

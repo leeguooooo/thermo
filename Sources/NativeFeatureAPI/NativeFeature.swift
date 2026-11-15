@@ -41,6 +41,7 @@ package struct NativeFeatureBusy:Error,CustomStringConvertible {
     var status:NativeFeatureStatus {get}
     func start()
     func shutdown()
+    func invalidateAfterRestore(_ paths:[String])
     func retireVisibility()
     func quitBlocker()->NativeFeatureBlocker?
     func preparePresentation(_ route:NativeFeatureRoute,options:[String:NativeContextValue])
@@ -61,6 +62,7 @@ package struct NativeFeatureDefinition:Sendable {
 }
 
 extension NativeFeatureSession {
+    package func invalidateAfterRestore(_ paths:[String]) {}
     package func start() {}
     package func shutdown() {}
     package func preparePresentation(_ route:NativeFeatureRoute,options:[String:NativeContextValue]) {}
