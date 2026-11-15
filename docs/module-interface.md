@@ -39,3 +39,7 @@
 沙盒页面使用 `ModuleSDK.moduleScene` 提供界面。离屏验证通过该场景自己的 XPC 连接请求当前视图的 PNG，再按宿主中的位置合成；不重新创建页面，也不读取屏幕，不需要屏幕录制授权。同一场景的多个实例各有自己的连接、局部状态和截图。模块崩溃恢复后连接重新建立，已卸载的页面不会为了截图重新启动。
 
 截图响应上限为 32 MiB，宽高各不超过 8192 像素，总计不超过 16 Mi 像素；宿主先检查 PNG 头，再解码。连接未就绪、三秒内无响应、位图无效或截图过程中页面关闭、重启或布局改变时返回失败。`--snapshot` 遇到失败会退出非零，不把空白区域当作成功。协议随当前未发布的模块接口一起交付，清单 `interface` 保持 1。
+
+## Sandbox file access
+
+A `files.read` declaration authorizes requests to the kernel. It does not grant a macOS filesystem exception. Use the SDK kernel request for directory listings, measurements and file reads, so protected paths, scope checks and access records apply to every request. Module-local data remains in the system container. Trusted in-process features retain their existing native I/O.

@@ -70,16 +70,16 @@ func uptime() -> Double { ProcessInfo.processInfo.systemUptime }
         guard let data = try? await manager.run(a, command: command, arguments: JSONSerialization.data(withJSONObject: arguments)) else { return [:] }
         return (try? JSONSerialization.jsonObject(with: data) as? [String: Any]) ?? [:]
     }
-    // The manifest gives read access to open/ and delete access to bin/.
+    // Declarations authorize broker requests, not direct filesystem access.
     let own = await call("peek", ["path": scratch + "/open/note.txt"])
-    check(own["readable"] as? Bool == true, "the module reads what its manifest lets it read by itself")
+    check(own["readable"] as? Bool == false, "a declared read still cannot bypass the kernel and its log")
     let poke = await call("poke", ["path": scratch + "/open"])
-    check(poke["writable"] as? Bool == false && poke["listed"] as? Int == 1, "it can list that folder but cannot write into it")
+    check(poke["writable"] as? Bool == false && (poke["listed"] as? Int ?? -1) <= 0, "it cannot list or write the declared folder without the kernel")
     let bin = await call("peek", ["path": scratch + "/bin/old.txt"])
     let away = await call("peek", ["path": outside])
     check(bin["readable"] as? Bool == false && away["readable"] as? Bool == false, "it cannot read where it may only delete, nor anywhere else")
     let read = await call("ask", ["capability": "files.read:" + scratch + "/open/note.txt", "payload": ["op": "read"]])
-    check(((read["answer"] as? [String: Any])?["base64"] as? String).flatMap { Data(base64Encoded: $0) } == Data("hello".utf8), "the kernel also reads it for the module, as its manifest allows")
+    check(((read["answer"] as? [String: Any])?["base64"] as? String).flatMap { Data(base64Encoded: $0) } == Data("hello".utf8), "the kernel reads what the manifest allows and records the request")
     let stray = await call("ask", ["capability": "files.read:" + outside, "payload": ["op": "read"]])
     check((stray["problem"] as? String)?.hasPrefix("denied") == true && stray["answer"] == nil, "a file its manifest does not cover is refused: \(stray["problem"] ?? "")")
     let end = await call("ask", ["capability": "processes.end", "payload": [:]])
