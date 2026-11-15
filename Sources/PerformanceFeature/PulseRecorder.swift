@@ -34,6 +34,7 @@ final class PulseRecorder: ObservableObject {
     private let readHistory: (@Sendable () -> [PulseRecord])?
     private let readDiagnosis: (@Sendable () -> (SlowdownDiagnosis, [SlowdownProcess]))?
     private let samplingAllowed: @Sendable () -> Bool
+    private let readOnBattery: @Sendable () -> Bool
     private let sampler = PulseSampler()
     /// Confined to `queue`; its previous pass turns CPU and disk counters into rates and busy streaks.
     private let slowdown = SlowdownSampler()
@@ -44,13 +45,16 @@ final class PulseRecorder: ObservableObject {
 
     init(queue: DispatchQueue? = nil, readHistory: (@Sendable () -> [PulseRecord])? = nil,
          samplingAllowed: @escaping @Sendable () -> Bool = { true },
-         readDiagnosis: (@Sendable () -> (SlowdownDiagnosis, [SlowdownProcess]))? = nil) {
+         readDiagnosis: (@Sendable () -> (SlowdownDiagnosis, [SlowdownProcess]))? = nil,
+         readOnBattery: @escaping @Sendable () -> Bool = { Battery.read().map { !$0.externalPower } ?? false }) {
         self.queue = queue ?? DispatchQueue(label: "dev.thermo.app.pulse-history", qos: .utility)
         self.readHistory = readHistory
         self.readDiagnosis = readDiagnosis
+        self.readOnBattery = readOnBattery
         self.samplingAllowed = samplingAllowed
     }
 
+    var samplingActive: Bool { lifetime.current() != nil }
     @MainActor func start() {
         guard samplingAllowed(), lifetime.current() == nil else { return }
         let token = lifetime.start()
@@ -80,7 +84,7 @@ final class PulseRecorder: ObservableObject {
     /// Every 60 s on power, 300 s on battery.
     private func reschedule() {
         guard samplingAllowed(), let token = lifetime.current() else { return }
-        let onBattery = Battery.read().map { !$0.externalPower } ?? false
+        let onBattery = readOnBattery()
         let every: TimeInterval = onBattery ? 300 : 60
         guard every != interval else { return }
         interval = every

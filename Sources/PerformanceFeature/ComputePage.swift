@@ -44,7 +44,7 @@ final class ComputeModel: ObservableObject {
     @Published private(set) var history: [Point] = []
     private let worker: ComputeWorker
     private let refreshInterval: TimeInterval
-    private let samplingAllowed: () -> Bool
+    private let samplingAllowed: @MainActor () -> Bool
     private var timer: Timer?
     private var sampling = false
     private var generation = UUID()
@@ -52,7 +52,7 @@ final class ComputeModel: ObservableObject {
     private var resetNextReading = true
     private var visibility = SamplingLeases()
     init(includeGPU: Bool = true, readSample: (@Sendable (ScanCancellation) -> ComputeActivity)? = nil,
-         samplingQueue: DispatchQueue? = nil, refreshInterval: TimeInterval = 2, samplingAllowed: @escaping () -> Bool = { true }) {
+         samplingQueue: DispatchQueue? = nil, refreshInterval: TimeInterval = 2, samplingAllowed: @escaping @MainActor () -> Bool = { true }) {
         precondition(refreshInterval.isFinite && refreshInterval > 0)
         self.refreshInterval = refreshInterval
         self.samplingAllowed = samplingAllowed
@@ -62,7 +62,10 @@ final class ComputeModel: ObservableObject {
     var sampleInFlight: Bool { sampling }
     func setVisible(_ active: Bool, owner: UUID) {
         visibility.set(owner, active: active)
-        if visibility.active { start() } else { stop() }
+        reconcileVisibility()
+    }
+    func reconcileVisibility() {
+        if visibility.active && samplingAllowed() { start() } else { stop() }
     }
     func releaseReadingsIfIdle() {
         guard timer == nil else { return }

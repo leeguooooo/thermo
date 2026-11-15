@@ -25,7 +25,7 @@ final class MemoryModel: ObservableObject {
     private var liveReadings: [ProgramMemoryRecord] = []
     private var historyReadings: [ProgramMemoryRecord] = []
     private var timer: Timer?
-    private let samplingAllowed: () -> Bool
+    private let samplingAllowed: @MainActor () -> Bool
     private var sampling = false
     private var dayLoaded = Date.distantPast
     private var dayTask:Task<Void,Never>?
@@ -43,7 +43,7 @@ final class MemoryModel: ObservableObject {
     init(read: @escaping @Sendable (ScanCancellation) -> Reading = { MemoryModel.readLive($0) },
          readHistory: @escaping @Sendable (ScanCancellation) -> [ProgramMemoryRecord],
          readDay: @escaping @Sendable () -> [PulseRecord],
-         samplingAllowed: @escaping () -> Bool = { true }) {
+         samplingAllowed: @escaping @MainActor () -> Bool = { true }) {
         self.read = read; self.readHistory = readHistory; self.readDay = readDay
         self.samplingAllowed = samplingAllowed
     }
@@ -56,7 +56,10 @@ final class MemoryModel: ObservableObject {
     var sampleInFlight: Bool { sampling || dayTask != nil }
     func setVisible(_ active: Bool, owner: UUID) {
         visibility.set(owner, active: active)
-        if visibility.active { start() } else { stop() }
+        reconcileVisibility()
+    }
+    func reconcileVisibility() {
+        if visibility.active && samplingAllowed() { start() } else { stop() }
     }
 
     func start() {

@@ -15,12 +15,21 @@ package struct NativeFeatureRoute:Hashable,Sendable {
     package var acceptsWork:Bool {!revoked && enabled()}
     func revoke(){revoked=true}
 }
+package struct NativeReaderStatus: Sendable {
+    package var sampling: Bool
+    package var workInFlight: Bool?
+    package var holders: Int?
+    package init(sampling: Bool, workInFlight: Bool? = nil, holders: Int? = nil) {
+        self.sampling = sampling; self.workInFlight = workInFlight; self.holders = holders
+    }
+}
 package struct NativeFeatureStatus {
     package var modelLoaded:Bool
     package var sampling:Bool
     package var snapshotReady:Bool
-    package init(modelLoaded:Bool = false,sampling:Bool = false,snapshotReady:Bool = false) {
-        self.modelLoaded=modelLoaded;self.sampling=sampling;self.snapshotReady=snapshotReady
+    package var readers:[String:NativeReaderStatus]
+    package init(modelLoaded:Bool = false,sampling:Bool = false,snapshotReady:Bool = false,readers:[String:NativeReaderStatus] = [:]) {
+        self.modelLoaded=modelLoaded;self.sampling=sampling;self.snapshotReady=snapshotReady;self.readers=readers
     }
 }
 package struct NativeFeatureBlocker {

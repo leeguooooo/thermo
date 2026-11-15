@@ -26,13 +26,13 @@ final class SystemPulse: ObservableObject {
     private let sampler = PulseSampler()
     private let lifetime = FeatureSamplingLifetime()
     private let readSample: (@Sendable () -> MachinePulse)?
-    private let samplingAllowed: () -> Bool
+    private let samplingAllowed: @MainActor () -> Bool
     private let observe: @MainActor (MachinePulse) -> Void
     private let reviewDelay: TimeInterval
     private let readActionReview: (@Sendable (Hog, MachinePulse, PulseActionReview.Action) -> PulseActionReview)?
     private let recordActionReview: @Sendable (PulseActionReview) -> Void
 
-    init(readSample: (@Sendable () -> MachinePulse)? = nil, samplingQueue: DispatchQueue? = nil, samplingAllowed: @escaping () -> Bool = { true },
+    init(readSample: (@Sendable () -> MachinePulse)? = nil, samplingQueue: DispatchQueue? = nil, samplingAllowed: @escaping @MainActor () -> Bool = { true },
          reviewDelay: TimeInterval = 5,
          readActionReview: (@Sendable (Hog, MachinePulse, PulseActionReview.Action) -> PulseActionReview)? = nil,
          recordActionReview: @escaping @Sendable (PulseActionReview) -> Void = { $0.record() },
@@ -70,7 +70,7 @@ final class SystemPulse: ObservableObject {
         return .green
     }
 
-    func start() {
+    @MainActor func start() {
         guard samplingAllowed(), timer == nil else { return }
         let token = lifetime.start()
         #if DEBUG
@@ -83,7 +83,7 @@ final class SystemPulse: ObservableObject {
         timer = t
     }
 
-    func stop() {
+    @MainActor func stop() {
         #if DEBUG
         Self.trace("stop", lifetime.current())
         #endif
@@ -94,8 +94,8 @@ final class SystemPulse: ObservableObject {
     private var holders = 0
     var samplingActive: Bool { timer != nil }
     var holderCount: Int { holders }
-    func hold() { holders += 1; if holders == 1 { start() } }
-    func release() { holders = max(0, holders - 1); if holders == 0 { stop() } }
+    @MainActor func hold() { holders += 1; if holders == 1 { start() } }
+    @MainActor func release() { holders = max(0, holders - 1); if holders == 0 { stop() } }
 
     deinit { timer?.cancel() }
 
@@ -134,7 +134,7 @@ final class SystemPulse: ObservableObject {
     }
 
     /// Recheck the entire process inventory; an idle reopened app can fall out of the busiest list.
-    func review(_ hog: Hog, before: MachinePulse, action: PulseActionReview.Action) {
+    @MainActor func review(_ hog: Hog, before: MachinePulse, action: PulseActionReview.Action) {
         let id = UUID(); reviewID = id
         pendingActionReviews.insert(id)
         actionFeedback = tr("Checking the effect of the action…")
@@ -158,7 +158,7 @@ final class SystemPulse: ObservableObject {
         }
     }
 
-    private func finishActionReview(_ id: UUID) {
+    @MainActor private func finishActionReview(_ id: UUID) {
         pendingActionReviews.remove(id)
         guard pendingActionReviews.isEmpty else { return }
         let waiting = actionReviewWaiters; actionReviewWaiters = []
@@ -174,7 +174,7 @@ final class SystemPulse: ObservableObject {
     }
 
     /// Apps are asked to quit (they may save or refuse); other processes get SIGTERM.
-    func quit(_ hog: Hog) {
+    @MainActor func quit(_ hog: Hog) {
         guard samplingAllowed() else { return }
         quitProblem = nil
         guard hog.quittable, !quitting.contains(hog.id) else { return }
@@ -228,7 +228,7 @@ final class SystemPulse: ObservableObject {
 
     /// Quit like ⌘Q, wait until every process of it has gone, then open it again; it restores its
     /// own windows and tabs. Gives up (and says so) if it is still running after a minute.
-    func restart(_ hog: Hog) {
+    @MainActor func restart(_ hog: Hog) {
         guard samplingAllowed() else { return }
         guard hog.quittable, restarting == nil, !quitting.contains(hog.id) else { return }
         guard let path = hog.app,

@@ -68,7 +68,7 @@ final class PanelModel: ObservableObject {
     let memoryTotal = ProcessInfo.processInfo.physicalMemory
 
     private var timer: Timer?
-    private let samplingAllowed: () -> Bool
+    private let samplingAllowed: @MainActor () -> Bool
     private let worker: PanelReadingWorker
     private var generation = UUID()
     private var cancellation: ScanCancellation?
@@ -82,7 +82,7 @@ final class PanelModel: ObservableObject {
          readBackground: (@Sendable () -> Reading)? = nil, samplingQueue: DispatchQueue? = nil,
          holdPulse: @escaping @MainActor () -> Void,
          releasePulse: @escaping @MainActor () -> Void,
-         samplingAllowed: @escaping () -> Bool = { true }) {
+         samplingAllowed: @escaping @MainActor () -> Bool = { true }) {
         self.readSample = readSample; self.holdPulse = holdPulse; self.releasePulse = releasePulse
         self.samplingAllowed = samplingAllowed
         worker = PanelReadingWorker(queue: samplingQueue, read: readBackground)
