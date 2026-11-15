@@ -127,4 +127,11 @@ import SwiftUI
         XCTAssertNil(sessions[1].disk.report)
         let next=try XCTUnwrap(store.prepareStop(route.module));await next.finish()
     }
+    func testWindowRetirementRevokesPendingPresentationWithoutDisablingTheFeature() {
+        let session=DiskSession(availability:FeatureAvailability(enabled:{true}),services:Services(),cache:DiskCacheEpoch(clear:{}))
+        let old=session.presentationGate();XCTAssertTrue(old())
+        session.retireVisibility();XCTAssertFalse(old())
+        XCTAssertTrue(session.presentationGate()());XCTAssertFalse(session.status.modelLoaded)
+    }
+
 }

@@ -38,6 +38,7 @@ package enum DiskFeature {
     let explanationWork=FeatureTasks()
     private var storedDisk:DiskModel?
     private var storedOverview:SpaceOverviewModel?
+    private var visibilityGeneration:UInt64=0
     init(availability:FeatureAvailability,services:any DiskServices,cache:DiskCacheEpoch,
          makeDisk:CleanupFactory? = nil,makeOverview:OverviewFactory? = nil) {
         self.availability=availability;self.services=services;self.cache=cache
@@ -57,9 +58,10 @@ package enum DiskFeature {
     }
     func page(_ route:NativeFeatureRoute,navigation:NativeNavigation)->AnyView? {
         guard availability.acceptsWork,let sub=DiskFeature.page(route) else{return nil}
-        return AnyView(DiskPages(navigate:{_ = navigation.show(DiskFeature.route($0))},revealInSpace:{[availability,services] path in
-            guard availability.acceptsWork else{return};services.revealInSpace(path)
-        },overview:sub == .overview ? overview:nil,availability:{[availability] in availability.acceptsWork},sub:sub,disk:disk))
+        let acceptsPresentation=presentationGate()
+        return AnyView(DiskPages(navigate:{_ = navigation.show(DiskFeature.route($0))},revealInSpace:{[services] path in
+            guard acceptsPresentation() else{return};services.revealInSpace(path)
+        },overview:sub == .overview ? overview:nil,availability:acceptsPresentation,sub:sub,disk:disk))
     }
     func ui(_ surface:NativeUISurface,navigation:NativeNavigation)->AnyView? {
         guard availability.acceptsWork else{return nil}
@@ -79,7 +81,11 @@ package enum DiskFeature {
         guard storedDisk.map({$0.cleaning || $0.aiPicking != nil}) == true || explanationWork.hasOperations else{return nil}
         return .init(reason:tr("Wait for cleanup or AI selection to finish before switching this feature off."),route:DiskFeature.route(.home))
     }
-    func retireVisibility(){storedOverview?.stop()}
+    func presentationGate()->@MainActor ()->Bool {
+        let generation=visibilityGeneration
+        return {[weak self,availability] in availability.acceptsWork && self?.visibilityGeneration==generation}
+    }
+    func retireVisibility(){visibilityGeneration &+= 1;storedOverview?.stop()}
     func shutdown(){storedDisk?.stop();storedOverview?.retire();explanationWork.stop()}
     func prepareStop()throws->NativeFeatureDrain {
         if let blocker=quitBlocker(){throw NativeFeatureBusy(blocker.reason)}
