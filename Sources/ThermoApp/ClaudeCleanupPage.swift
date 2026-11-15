@@ -4,7 +4,31 @@ import SwiftUI
 
 @MainActor
 final class ClaudeCleanupModel: ObservableObject {
-    lazy var privacy = PrivacyToolsModel()
+    let work=FeatureTasks()
+    private let scanLocal:@Sendable ()->([ClaudeResetCandidate],[ClaudeResetBatch])
+    private let resetLocal:@Sendable ([ClaudeResetCandidate])->ClaudeResetResult
+    private let restoreLocal:@Sendable (String)->ClaudeResetResult
+    private let makePrivacy:@MainActor (@escaping ()->Bool)->PrivacyToolsModel
+    private var storedPrivacy:PrivacyToolsModel?
+    var privacy:PrivacyToolsModel {
+        if let storedPrivacy{return storedPrivacy}
+        let model=makePrivacy { [weak self] in self?.work.acceptsWork ?? false }
+        storedPrivacy=model;return model
+    }
+    var privacyOperationRunning:Bool {storedPrivacy?.canStopFeature == false}
+    var canStopFeature:Bool {!work.hasOperations && (storedPrivacy?.canStopFeature ?? true)}
+    init(enabled:@escaping ()->Bool = {true},
+         scan:@escaping @Sendable ()->([ClaudeResetCandidate],[ClaudeResetBatch]) = {let service=ClaudeCleanup();return(service.scan(),service.batches())},
+         reset:@escaping @Sendable ([ClaudeResetCandidate])->ClaudeResetResult = {ClaudeCleanup().reset($0)},
+         restore:@escaping @Sendable (String)->ClaudeResetResult = {ClaudeCleanup().restore(batchID:$0)},
+         makePrivacy:@escaping @MainActor (@escaping ()->Bool)->PrivacyToolsModel = {PrivacyToolsModel(enabled:$0)}) {
+        work.enabled=enabled;scanLocal=scan;resetLocal=reset;restoreLocal=restore;self.makePrivacy=makePrivacy
+    }
+    func stopFeature(){work.stop();storedPrivacy?.stopFeature()}
+    func finishFeatureStop() async {
+        await work.finish();await storedPrivacy?.finishFeatureStop();storedPrivacy=nil
+        candidates=[];selected=[];batches=[];loaded=false;busy=false;outcome=nil
+    }
     @Published var candidates: [ClaudeResetCandidate] = []
     @Published var selected: Set<ClaudeResetTarget> = []
     @Published var batches: [ClaudeResetBatch] = []
@@ -15,14 +39,14 @@ final class ClaudeCleanupModel: ObservableObject {
     var picked: [ClaudeResetCandidate] { candidates.filter { selected.contains($0.target) && $0.status == .available } }
 
     func scan() {
-        guard !busy else { return }
+        guard work.acceptsWork,!busy else { return }
         busy = true
         selected = []
-        Task.detached(priority: .userInitiated) {
-            let service = ClaudeCleanup()
-            let candidates = service.scan()
-            let batches = service.batches()
+        let scan=scanLocal
+        work.run(priority:.userInitiated,onSkipped:{[weak self] in self?.busy=false}) {
+            let (candidates,batches)=scan()
             await MainActor.run {
+                guard self.work.acceptsWork else{return}
                 self.candidates = candidates
                 self.batches = batches
                 self.loaded = true
@@ -32,7 +56,7 @@ final class ClaudeCleanupModel: ObservableObject {
     }
 
     func toggle(_ candidate: ClaudeResetCandidate) {
-        guard !busy, candidate.status == .available else { return }
+        guard work.acceptsWork,!busy, candidate.status == .available else { return }
         if selected.remove(candidate.target) != nil { return }
         let family = candidate.target.family
         // A folder reset and a file reset within that folder are alternatives.
@@ -45,12 +69,16 @@ final class ClaudeCleanupModel: ObservableObject {
     }
 
     func reset(_ plan: [ClaudeResetCandidate]) {
-        guard !busy, !plan.isEmpty else { return }
+        guard work.acceptsWork,!busy, !plan.isEmpty else { return }
+        guard let token=work.beginOperation() else{return}
         busy = true
         selected = []
-        Task.detached(priority: .userInitiated) {
-            let result = ClaudeCleanup().reset(plan)
+        let reset=resetLocal
+        work.run(priority:.userInitiated,onSkipped:{[weak self] in self?.work.endOperation(token);self?.busy=false}) {
+            let result = reset(plan)
             await MainActor.run {
+                self.work.endOperation(token)
+                guard self.work.acceptsWork else{return}
                 self.outcome = Self.summary(result)
                 self.busy = false
                 self.scan()
@@ -59,11 +87,15 @@ final class ClaudeCleanupModel: ObservableObject {
     }
 
     func restore(_ batch: ClaudeResetBatch) {
-        guard !busy else { return }
+        guard work.acceptsWork,!busy else { return }
+        guard let token=work.beginOperation() else{return}
         busy = true
-        Task.detached(priority: .userInitiated) {
-            let result = ClaudeCleanup().restore(batchID: batch.id)
+        let restore=restoreLocal
+        work.run(priority:.userInitiated,onSkipped:{[weak self] in self?.work.endOperation(token);self?.busy=false}) {
+            let result = restore(batch.id)
             await MainActor.run {
+                self.work.endOperation(token)
+                guard self.work.acceptsWork else{return}
                 self.outcome = Self.summary(result)
                 self.busy = false
                 self.scan()
@@ -207,7 +239,7 @@ extension ClaudeCleanupModel {
     }
 
     func clear(_ items: [ClaudeResetCandidate]) {
-        guard !busy else { return }
+        guard work.acceptsWork,!busy else { return }
         let targets = Set(items.map(\.target))
         selected.subtract(targets)
     }

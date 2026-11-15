@@ -1,3 +1,4 @@
+import AgentDoctor
 import AppKit
 import CleanKit
 import SwiftUI
@@ -9,34 +10,65 @@ final class PrivacyToolsModel: ObservableObject {
     @Published var result: String?
     @Published var profiles: [PrivacyBrowserProfile] = []
     @Published var location: PrivacyExitLocation?
-    let service = PrivacyToolsService()
-
+    let work=FeatureTasks()
+    let service:PrivacyToolsService
+    let diagnostics:ClaudeDiagnosticsModel
+    private let inspectProfiles:@Sendable ()throws->[PrivacyBrowserProfile]
+    private let lookupLocation:@Sendable () async throws->PrivacyExitLocation
+    init(enabled:@escaping ()->Bool = {true},service:PrivacyToolsService = PrivacyToolsService(),
+         inspect:(@Sendable ()throws->[PrivacyBrowserProfile])? = nil,
+         lookup:(@Sendable () async throws->PrivacyExitLocation)? = nil,
+         diagnostics:ClaudeDiagnosticsModel? = nil) {
+        work.enabled=enabled;self.service=service
+        inspectProfiles=inspect ?? {try service.discoverProfiles()}
+        lookupLocation=lookup ?? {try await service.lookupExitLocation()}
+        self.diagnostics=diagnostics ?? ClaudeDiagnosticsModel(enabled:enabled)
+    }
+    var canStopFeature:Bool {!work.hasOperations}
+    func stopFeature(){work.stop();diagnostics.stopFeature()}
+    func finishFeatureStop() async {
+        await work.finish();await diagnostics.finishFeatureStop()
+        busy=false;result=nil;profiles=[];location=nil
+    }
     func perform(_ action: @escaping @Sendable (PrivacyToolsService) throws -> String) {
-        guard !busy else { return }; busy = true
-        let service = service
-        Task.detached(priority: .userInitiated) {
-            let result: String
-            do { result = try action(service) } catch { result = error.localizedDescription }
-            await MainActor.run { self.result = result; self.busy = false }
+        guard work.acceptsWork,!busy,let token=work.beginOperation() else{return}
+        busy=true;let service=service
+        work.run(priority:.userInitiated,onSkipped:{[weak self] in self?.work.endOperation(token);self?.busy=false}) {
+            let result:String
+            do {result=try action(service)} catch {result=error.localizedDescription}
+            await MainActor.run {
+                self.work.endOperation(token)
+                guard self.work.acceptsWork else{return}
+                self.result=result;self.busy=false
+            }
         }
     }
     func inspect() {
-        guard !busy else { return }; busy = true
-        let service = service
-        Task.detached {
-            do {
-                let profiles = try service.discoverProfiles()
-                await MainActor.run { self.profiles = profiles; self.result = tr("Browser profile scan completed."); self.busy = false }
-            } catch { await MainActor.run { self.result = error.localizedDescription; self.busy = false } }
+        guard work.acceptsWork,!busy else{return};busy=true
+        let inspect=inspectProfiles
+        work.run(onSkipped:{[weak self] in self?.busy=false}) {
+            let result=Result{try inspect()}
+            await MainActor.run {
+                guard self.work.acceptsWork else{return}
+                switch result {
+                case let .success(profiles):self.profiles=profiles;self.result=tr("Browser profile scan completed.")
+                case let .failure(error):self.result=error.localizedDescription
+                }
+                self.busy=false
+            }
         }
     }
     func lookup() {
-        guard !busy else { return }; busy = true; location = nil
-        let service = service
-        Task {
-            do { location = try await service.lookupExitLocation(); result = tr("Exit location detected. Review the timezone before applying it.") }
-            catch { result = error.localizedDescription }
-            busy = false
+        guard work.acceptsWork,!busy else{return};busy=true;location=nil
+        work.runOnMain { [self] in
+            let result:Result<PrivacyExitLocation,Error>
+            do {result = .success(try await lookupLocation())} catch {result = .failure(error)}
+            guard work.acceptsWork else{return}
+            switch result {
+            case let .success(found):location=found;self.result=tr("Exit location detected. Review the timezone before applying it.")
+            case let .failure(error):self.result=error.localizedDescription
+            }
+            busy=false
         }
     }
 }
@@ -131,7 +163,7 @@ struct PrivacyToolsView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: Theme.Space.l) {
-            ClaudeLocalDiagnosticsView()
+            ClaudeLocalDiagnosticsView(model:model.diagnostics)
             HStack(alignment: .firstTextBaseline, spacing: Theme.Space.s) {
                 Image(systemName: "hand.raised").font(.system(size: 11)).foregroundStyle(Theme.textTertiary).accessibilityHidden(true)
                 Text(tr("Explicit controls for local settings. Review each action before applying it. No account restriction or anonymity guarantees."))

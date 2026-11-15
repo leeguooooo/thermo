@@ -332,10 +332,8 @@ struct MainView: View {
             ModuleOffView().transition(.page)
         case .apps:
             ModuleOffView().transition(.page)
-        case .claude(.accounts):
-            ClaudeAccountsPage(model: ClaudeAccountsModel.shared).transition(.page)
-        case let .claude(tab):
-            ClaudeCleanupPage(model: models.claudeCleanup, tab: tab).id(tab).transition(.page)
+        case .claude:
+            ModuleOffView().transition(.page)
         case .connections:
             ModuleOffView().transition(.page)
         case .yunx:
@@ -468,13 +466,6 @@ struct MainSidebar: View {
                     }
 
                     header(tr("AI Agent Diagnostics"))
-                    row(.claude(page.claudeTab ?? .accounts), tr("Claude tools"), "person.2", .orange, trailing: nil,
-                        selected: page.claudeTab != nil)
-                    if page.claudeTab != nil {
-                        row(.claude(.accounts), tr("Accounts"), "person.crop.circle", .orange, trailing: nil, indent: true)
-                        row(.claude(.reset), tr("Reset"), "arrow.counterclockwise.circle", .orange, trailing: nil, indent: true)
-                        row(.claude(.privacy), tr("Privacy & network"), "hand.raised", .orange, trailing: nil, indent: true)
-                    }
                     moduleRows(.agents)
                 }
                 .padding(.bottom, 8)

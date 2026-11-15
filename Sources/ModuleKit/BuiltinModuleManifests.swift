@@ -131,7 +131,13 @@ public enum BuiltinModuleManifests {
         id:"dev.thermo.plugins",name:"Plugin marketplace",summary:"Browse, install and update Claude Code plugins with reviewed commands.",
         symbol:"puzzlepiece.extension",version:"1.0.0",launch:.onDemand,enabledByDefault:true,
         entries:[.init(id:"home",kind:.page,title:"Plugin marketplace",symbol:"puzzlepiece.extension",scene:"plugins")])
-    public static let all = [disk, search, capture, menuBar, performance, apps, space, browser, connections, history, agents, checkup, plugins]
+    public static let claude=ModuleManifest(
+        id:"dev.thermo.claude",name:"Claude tools",summary:"Local account profiles, reviewed data reset and privacy controls.",
+        symbol:"person.2",version:"1.0.0",launch:.onDemand,enabledByDefault:true,
+        entries:[.init(id:"accounts",kind:.page,title:"Claude tools",symbol:"person.2",scene:"claude:accounts"),
+                 .init(id:"reset",kind:.page,title:"Reset",symbol:"arrow.counterclockwise.circle",scene:"claude:reset",parent:"accounts"),
+                 .init(id:"privacy",kind:.page,title:"Privacy & network",symbol:"hand.raised",scene:"claude:privacy",parent:"accounts")])
+    public static let all = [disk, search, capture, menuBar, performance, apps, space, browser, connections, history, agents, checkup, plugins, claude]
 }
 
 public enum ModulePreferences {
