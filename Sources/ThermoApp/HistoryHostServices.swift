@@ -14,12 +14,13 @@ import ThermoL10n
     private let invalidate: @MainActor ([String]) -> Void
     var journalURL: URL { OperationJournal.url() }
 
-    init(environment:ShellFeatureEnvironment = .current,reader: @escaping @Sendable () -> OperationJournal.ReadReport = { OperationJournal.readReport(limit: 300) },
+    init(environment:ShellFeatureEnvironment? = nil,reader: @escaping @Sendable () -> OperationJournal.ReadReport = { OperationJournal.readReport(limit: 300) },
          reviewer: @escaping @Sendable (String) throws -> TrashRestore = { try TrashBatches.restore(id: $0, dryRun: true) },
          restore: @escaping @Sendable (String, TrashRestore) throws -> TrashRestore = { id, review in
              try TrashBatches.restore(id: id, reviewIdentity: review.reviewIdentity,
                  reviewedDestinations: Set(review.items.filter { $0.status == "restored" }.map(\.destination)))
          }, invalidate: (@MainActor ([String]) -> Void)? = nil) {
+        let environment=environment ?? .current
         self.environment=environment;self.reader=reader;self.reviewer=reviewer;self.restore=restore
         self.invalidate=invalidate ?? {environment.nativeFeatures?.invalidateAfterRestore($0)}
     }
@@ -62,8 +63,9 @@ import ThermoL10n
         }
         return .init(title:title,symbol:symbol,perform:{[environment] in Self.perform(destination,environment:environment)})
     }
-    static func perform(_ destination:Destination,environment:ShellFeatureEnvironment = .current,
+    static func perform(_ destination:Destination,environment:ShellFeatureEnvironment? = nil,
                         open:((NativeFeatureRoute)->Void)? = nil) {
+        let environment=environment ?? .current
         let request:NativePresentationRequest
         switch destination {
         case .nativeRecovery:request = .init(route:.init(BuiltinModuleManifests.apps.id,"updates"),options:["channel":.text("native"),"showRecovery":.boolean(true)])
