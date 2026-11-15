@@ -1,3 +1,4 @@
+import SystemServicesAPI
 import Foundation
 import ServiceManagement
 import ThermoKit
@@ -5,89 +6,6 @@ import ThermoL10n
 import UserNotifications
 import AgentCore
 
-enum TitleMetric: String, CaseIterable, Identifiable {
-    case cpu, hottest, fan, cpuAndFan, power, iconOnly
-    var id: String { rawValue }
-    var label: String {
-        switch self {
-        case .cpu: return tr("CPU temperature")
-        case .hottest: return tr("Hottest sensor")
-        case .fan: return tr("Fan speed")
-        case .cpuAndFan: return tr("CPU temperature + fan")
-        case .power: return tr("System power")
-        case .iconOnly: return tr("Icon only")
-        }
-    }
-}
-
-enum HelperState: Equatable {
-    case unknown, notInstalled, needsApproval, notRunning, outdated, running
-}
-
-struct HistoryPoint: Identifiable {
-    let time: Date
-    let cpu: Double?
-    let gpu: Double?
-    let fans: [Double?]
-    let power: Double?
-    /// 1-minute load average per core at this tick; 1 means every core has work.
-    var load: Double? = nil
-    var id: Date { time }
-}
-
-enum Settings {
-    static let interval = "interval"
-    static let titleMetric = "titleMetric"
-    static let alertsEnabled = "alertsEnabled"
-    /// Whether heat turns "stay awake with the lid closed" off (default on).
-    static let lidAwakeHeatGuard = "lidAwakeHeatGuard"
-    static let alertThreshold = "alertThreshold"
-    static let fahrenheit = "fahrenheit"
-    static let unnamedSensors = "unnamedSensors"
-    /// Show the Dock icon (on by default: a menu bar icon alone is easy to lose, e.g. behind the notch).
-    static let showInDock = "showInDock"
-
-    static func intervalValue(_ value: Double) -> Double {
-        [0.5, 1, 2, 5].contains(value) ? value : 2
-    }
-
-    static func thresholdValue(_ value: Double) -> Double {
-        value.isFinite && (60...105).contains(value) ? value : 90
-    }
-
-    static func thresholdText(_ value: Double, fahrenheit: Bool) -> String {
-        let celsius = thresholdValue(value)
-        let displayed = fahrenheit ? ((celsius * 9 / 5 + 32) * 10).rounded() / 10 : celsius
-        return String(format: "%g", displayed)
-    }
-
-    static func normalize(_ defaults: UserDefaults = .standard) {
-        let numbers = [(interval, intervalValue(defaults.double(forKey: interval))),
-                       (alertThreshold, thresholdValue(defaults.double(forKey: alertThreshold)))]
-        for (key, value) in numbers where (defaults.object(forKey: key) as? NSNumber)?.doubleValue != value {
-            defaults.set(value, forKey: key)
-        }
-        if TitleMetric(rawValue: defaults.string(forKey: titleMetric) ?? "") == nil {
-            defaults.set(TitleMetric.cpu.rawValue, forKey: titleMetric)
-        }
-        MenuBarPreferences.normalize(defaults)
-        let language = defaults.string(forKey: L10n.defaultsKey) ?? "system"
-        if language != "system", Language(rawValue: language) == nil {
-            defaults.set("system", forKey: L10n.defaultsKey)
-        }
-    }
-
-    static func register(_ defaults: UserDefaults = .standard) {
-        defaults.register(defaults: [
-            showInDock: true,
-            lidAwakeHeatGuard: true,
-            PulseRecorder.alertsKey: true,
-            interval: 2.0, titleMetric: TitleMetric.cpu.rawValue,
-            alertsEnabled: false, alertThreshold: 90.0, fahrenheit: false,
-        ])
-        normalize(defaults)
-    }
-}
 
 /// Owns the sampler on a background queue and publishes snapshots on the main thread.
 final class Monitor: ObservableObject {

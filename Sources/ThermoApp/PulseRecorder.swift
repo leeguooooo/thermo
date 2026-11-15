@@ -1,3 +1,4 @@
+import SystemServicesAPI
 import ThermoUI
 import AppKit
 import Charts
@@ -13,7 +14,7 @@ import ModuleKit
 /// before they feel it. One cheap incremental pass per tick (PulseSampler).
 final class PulseRecorder: ObservableObject {
     static let shared = PulseRecorder(samplingAllowed: { ModulePreferences.isEnabled(BuiltinModuleManifests.performance, in: .standard) })
-    static let alertsKey = "slowdownAlerts"
+    static let alertsKey = Settings.slowdownAlerts
     /// Posted (on main) when a slowdown notification is clicked; userInfo["program"] is who to show.
     static let showProgram = Notification.Name("dev.thermo.showPulseProgram")
 

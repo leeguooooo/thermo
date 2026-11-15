@@ -1,3 +1,4 @@
+import SystemServicesAPI
 import XCTest
 import ThermoL10n
 @testable import ThermoApp

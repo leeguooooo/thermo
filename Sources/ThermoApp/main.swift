@@ -1,3 +1,4 @@
+import SystemServicesAPI
 import ThermoUI
 import NativeFeatureAPI
 import AppKit

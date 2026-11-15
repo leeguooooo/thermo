@@ -9,7 +9,7 @@ package struct TelemetryDemand:Sendable,Equatable {
     package var includeUnnamed:Bool
     package init(visible:Bool = false,surface:TelemetrySurface = .overview,includeUnnamed:Bool = false){self.visible=visible;self.surface=surface;self.includeUnnamed=includeUnnamed}
 }
-package struct SensorHistoryPoint:Identifiable,Sendable {
+package struct HistoryPoint:Identifiable,Sendable {
     package let time:Date
     package let cpu:Double?,gpu:Double?
     package let fans:[Double?]
@@ -17,7 +17,7 @@ package struct SensorHistoryPoint:Identifiable,Sendable {
     package var id:Date{time}
     package init(time:Date,cpu:Double?,gpu:Double?,fans:[Double?],power:Double?,load:Double? = nil){self.time=time;self.cpu=cpu;self.gpu=gpu;self.fans=fans;self.power=power;self.load=load}
 }
-package struct MenuLiveReading:Sendable {
+package struct MenuLiveValues:Sendable {
     package var sampled=Date.distantPast
     package var cpu:Double?,memory:Double?,download:Double?,upload:Double?
     package init(sampled:Date = .distantPast,cpu:Double? = nil,memory:Double? = nil,download:Double? = nil,upload:Double? = nil){self.sampled=sampled;self.cpu=cpu;self.memory=memory;self.download=download;self.upload=upload}
@@ -29,21 +29,21 @@ package struct TelemetryReading:Sendable {
     package var sampledFans:[FanReading]?
     package var fanReadingsUnavailable=false
     package var stoppedFans:Set<Int>=[]
-    package var history:[SensorHistoryPoint]=[]
+    package var history:[HistoryPoint]=[]
     package var memory:SystemStats.Memory?
     package var disk:SystemStats.Disk?
     package var model=""
     package var error:String?
-    package var menu=MenuLiveReading()
+    package var menu=MenuLiveValues()
     package var visible=false
     package var sampling=false
     package init(){}
 }
 package struct MenuTelemetryReading:Sendable {
     package let snapshot:Snapshot?
-    package let values:MenuLiveReading
+    package let values:MenuLiveValues
     package let sampling:Bool
-    package init(snapshot:Snapshot?,values:MenuLiveReading,sampling:Bool){self.snapshot=snapshot;self.values=values;self.sampling=sampling}
+    package init(snapshot:Snapshot?,values:MenuLiveValues,sampling:Bool){self.snapshot=snapshot;self.values=values;self.sampling=sampling}
 }
 @MainActor package protocol TelemetrySamplingLease:AnyObject {
     func setDemand(_ demand:TelemetryDemand)

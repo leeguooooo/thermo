@@ -1,3 +1,4 @@
+import SystemServicesAPI
 import ModuleKit
 import ThermoUI
 import AppKit

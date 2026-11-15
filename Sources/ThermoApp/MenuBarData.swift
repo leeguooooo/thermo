@@ -1,3 +1,4 @@
+import SystemServicesAPI
 import Darwin
 import Foundation
 import CleanKit
@@ -27,14 +28,6 @@ extension MenuClickAction {
         case .menu: return tr("Menu")
         }
     }
-}
-
-struct MenuLiveValues {
-    var sampled = Date.distantPast
-    var cpu: Double?
-    var memory: Double?
-    var download: Double?
-    var upload: Double?
 }
 
 /// Queue confined, injectable kernel counters. Never enumerates processes or reads sensors.

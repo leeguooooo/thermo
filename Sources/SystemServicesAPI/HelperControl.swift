@@ -2,10 +2,10 @@ import Combine
 import Foundation
 import ThermoKit
 
-package enum HelperPhase:Sendable,Equatable {case unknown,notInstalled,needsApproval,notRunning,outdated,running}
+package enum HelperState:Sendable,Equatable {case unknown,notInstalled,needsApproval,notRunning,outdated,running}
 /// Observed helper state is owned by the core; requested edits are separate feature intent.
 package struct HelperReading:Sendable {
-    package var phase:HelperPhase = .unknown
+    package var phase:HelperState = .unknown
     package var policies:[Int:FanPolicy]=[:]
     package var policiesAvailable=false
     package var fanControl:FanControlState?
