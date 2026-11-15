@@ -1,3 +1,4 @@
+import NativeFeatureAPI
 import AppKit
 import CaptureCore
 import ScreenCaptureKit
@@ -19,10 +20,11 @@ import ThermoL10n
     /// Saves the marked selection while the selector is hidden; anything but success brings the
     /// same selection and marks back.
     var saveImage: ((CGImage) -> SaveResult)?
+    private let work:FeatureTasks
     private let captureDisplays: @MainActor () async throws -> [Frozen]
     init(purpose: Purpose = .screenshot(confirm: nil),
-         captureDisplays: @escaping @MainActor () async throws -> [Frozen] = CaptureScreenshotSelector.freezeDisplays) {
-        self.purpose = purpose; self.captureDisplays = captureDisplays
+         captureDisplays:@escaping @MainActor () async throws->[Frozen] = CaptureScreenshotSelector.freezeDisplays,work:FeatureTasks? = nil) {
+        self.purpose=purpose;self.captureDisplays=captureDisplays;self.work=work ?? FeatureTasks()
     }
     struct Frozen { let screen: NSScreen; let displayID: CGDirectDisplayID; let image: CGImage; let windows: [CGRect] }
 
@@ -36,7 +38,7 @@ import ThermoL10n
         guard self.completion == nil else { return }
         self.completion = completion
         let captureDisplays = self.captureDisplays
-        loading = Task { [weak self] in
+        loading = work.runOnMain { [weak self] in
             do {
                 let frozen = try await captureDisplays()
                 guard let self, !Task.isCancelled, self.completion != nil else { return }
@@ -55,6 +57,7 @@ import ThermoL10n
         if let displayObserver { NotificationCenter.default.removeObserver(displayObserver) }
         displayObserver = nil
         for panel in panels { panel.orderOut(nil); panel.close() }
+        for view in views{view.retireRecognition()}
         panels.removeAll(); views.removeAll()
         NSCursor.unhide()
         let callback = completion; completion = nil; callback?(result)
@@ -130,7 +133,7 @@ import ThermoL10n
             panel.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary, .stationary, .ignoresCycle]
             panel.isReleasedWhenClosed = false; panel.acceptsMouseMovedEvents = true; panel.hidesOnDeactivate = false
             panel.title = tr("Select a screenshot region")
-            let view = SelectorView(frame: NSRect(origin: .zero, size: item.screen.frame.size), frozen: item, purpose: purpose)
+            let view = SelectorView(frame: NSRect(origin: .zero, size: item.screen.frame.size), frozen:item,purpose:purpose,work:work)
             view.onFinish = { [weak self] outcome in self?.finish(.success(outcome)) }
             view.onSave = { [weak self, weak panel] image in self?.save(image, from: panel) }
             view.onBeginSelection = { [weak self, weak view] in
@@ -270,7 +273,8 @@ private final class SelectorView: NSView, NSTextFieldDelegate {
     private var draft: CaptureSelectionMark?
     private var textEntry: NSTextField?
     private var recognition: RecognitionCard?
-    private var recognitionTask: Task<Void, Never>?
+    private var recognitionTask:Task<Void,Never>?
+    private let work:FeatureTasks
     private var toolButtons: [CaptureTool: NSButton] = [:]
     private var undoButton: NSButton?
     private var redoButton: NSButton?
@@ -281,8 +285,8 @@ private final class SelectorView: NSView, NSTextFieldDelegate {
         (.text, "textformat", "Text", "t"), (.mosaic, "checkerboard.rectangle", "Mosaic", "m"),
         (.number, "1.circle", "Sequence number", "n")]
 
-    init(frame: NSRect, frozen: CaptureScreenshotSelector.Frozen, purpose: CaptureScreenshotSelector.Purpose) {
-        self.frozen = frozen; self.purpose = purpose
+    init(frame:NSRect,frozen:CaptureScreenshotSelector.Frozen,purpose:CaptureScreenshotSelector.Purpose,work:FeatureTasks) {
+        self.frozen=frozen;self.purpose=purpose;self.work=work
         scale = frame.width > 0 ? CGFloat(frozen.image.width) / frame.width : frozen.screen.backingScaleFactor
         super.init(frame: frame)
         setAccessibilityLabel(tr("Select a screenshot region") + " · " + frozen.screen.localizedName)
@@ -607,7 +611,7 @@ private final class SelectorView: NSView, NSTextFieldDelegate {
         recognitionTask?.cancel()
         card.show(.working); window?.makeFirstResponder(self)
         if let selection { placeRecognition(over: selection) }
-        recognitionTask = Task { [weak self] in
+        recognitionTask = work.runOnMain { [weak self] in
             let result: Result<String, Error>
             do { result = .success(try await CaptureSaveModel.recognizeText(image)) } catch { result = .failure(error) }
             guard let self, !Task.isCancelled, self.recognition === card else { return }
@@ -630,6 +634,7 @@ private final class SelectorView: NSView, NSTextFieldDelegate {
     }
 
     /// Back to the screenshot with its selection and marks untouched.
+    func retireRecognition(){recognitionTask?.cancel();recognitionTask=nil}
     private func closeRecognition() {
         guard let card = recognition else { return }
         recognitionTask?.cancel(); recognitionTask = nil

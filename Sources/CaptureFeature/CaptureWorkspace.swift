@@ -23,6 +23,8 @@ func captureFailureMessage(_ error:Error) -> String {
     private let screenCaptureAccess:()->Bool
     private let featureEnabled:()->Bool
     private let providedShortcuts:CaptureShortcutModel?
+    let captureReads=FeatureTasks()
+    let editorWork=FeatureTasks()
     let nativeScriptWork=FeatureTasks()
     var nativeScriptBusy:Bool{nativeScriptWork.hasOperations}
     let nativeScriptAction:((String) async throws->CaptureScriptValue)?
@@ -41,10 +43,12 @@ func captureFailureMessage(_ error:Error) -> String {
         self.nativeScriptAction=nativeScriptAction
         self.screenCaptureAccess=screenCaptureAccess;self.makeCaptureProcess=makeCaptureProcess
         self.featureEnabled=featureEnabled
-        nativeScriptWork.enabled=featureEnabled
+        nativeScriptWork.enabled=featureEnabled;captureReads.enabled=featureEnabled;editorWork.enabled=featureEnabled
         self.providedShortcuts=shortcuts
         self.pinSession=pinSession ?? CapturePinSession();self.pinSession.onCountChange={ [weak self] in self?.pinCount=$0 }
         self.pinSession.configureEditor={ [weak self] model in
+            guard let self else{return}
+            model.featureEnabled=featureEnabled;model.work=editorWork
             model.saveOptions={ [weak self] in try self?.saving.snapshot() ?? CaptureSaveSettings() }
             model.quickSaveImage={ [weak self] document in guard let self else {throw CaptureSaveFailure.invalidSettings};return try self.saving.quickSave(document) }
             model.showSaveSettings={ [weak self] in self?.showSavingSettings() }
@@ -61,7 +65,7 @@ func captureFailureMessage(_ error:Error) -> String {
     private var captureDirectory: URL?
     private var captureID:UUID?
     private var screenshotSelector:AnyObject?
-    var captureBusy:Bool {capturing || process != nil || screenshotSelector != nil || afterTask != nil || saving.running}
+    var captureBusy:Bool {capturing || process != nil || screenshotSelector != nil || afterTask != nil || captureReads.count>0 || saving.running}
     private var captureCompletion:((Result<Bool,Error>)->Void)?
     @Published var scriptRunning=false
     var scriptWorker:URL?
@@ -83,7 +87,7 @@ func captureFailureMessage(_ error:Error) -> String {
         catch { issue=captureFailureMessage(error);return false }
     }
     func stopFeature() throws {
-        guard !nativeScriptBusy,!captureBusy,!scriptRunning,!shortcuts.scriptRunning,!recordingActive,
+        guard editorWork.count==0,!editorWork.hasOperations,!nativeScriptBusy,!captureBusy,!scriptRunning,!shortcuts.scriptRunning,!recordingActive,
               !pinSession.batchExport.running,!pinSession.windows.values.contains(where: { $0.model.recognizing }) else {
             throw NativeFeatureBusy(tr("Finish the current capture, recording or export before switching this feature off."))
         }
@@ -174,7 +178,7 @@ func captureFailureMessage(_ error:Error) -> String {
     }
     @available(macOS 14, *)
     private func selectScreenshot(id:UUID,options:CaptureSaveSettings,confirm:[CaptureAfterStep]?) {
-        let selector=CaptureScreenshotSelector(purpose:.screenshot(confirm:confirm));screenshotSelector=selector
+        let selector=CaptureScreenshotSelector(purpose:.screenshot(confirm:confirm),work:captureReads);screenshotSelector=selector
         selector.saveImage={ [weak self] image in self?.saveSelection(image,options:options) ?? .cancelled }
         selector.start { [weak self] result in
             guard let self else{return}
@@ -278,6 +282,7 @@ func captureFailureMessage(_ error:Error) -> String {
         }
         selectRegion(confirmTitle: tr("Start recording")) { [weak self] region in
             guard let self,self.enabled,let region else{return}
+            if let recording=self.recordingWindow,recording.model.active || recording.model.exporting{recording.showWindow(nil);return}
             let window = CaptureRecordingWindow(region:region); self.recordingWindow = window; window.showWindow(nil)
         }
     }
@@ -286,7 +291,7 @@ func captureFailureMessage(_ error:Error) -> String {
     private func selectRegion(confirmTitle:String,completion:@escaping(CaptureRegionSelector.Region?)->Void) {
         guard regionSelector == nil, screenshotSelector == nil else { return }
         if #available(macOS 14, *), screenCaptureAccess() {
-            let selector=CaptureScreenshotSelector(purpose:.region(confirmTitle:confirmTitle));screenshotSelector=selector
+            let selector=CaptureScreenshotSelector(purpose:.region(confirmTitle:confirmTitle),work:captureReads);screenshotSelector=selector
             selector.start { [weak self] result in
                 guard let self else{return}
                 if self.screenshotSelector === selector {self.screenshotSelector=nil}
@@ -315,7 +320,7 @@ func captureFailureMessage(_ error:Error) -> String {
     }
     func finishFeatureStop() async {
         await afterTask?.value
-        await nativeScriptWork.finish()
+        await nativeScriptWork.finish();await captureReads.finish();await editorWork.finish()
         if #available(macOS 14,*),let scrolling=scrollWindow as? ScrollCaptureWindow{await scrolling.finishStopping()}
     }
     func finishRecordingForQuit() async -> Bool {
@@ -458,6 +463,7 @@ func captureFailureMessage(_ error:Error) -> String {
     @Published var pinTextReloadID=UUID()
     func revertUnsavedPinText() { pinContentSaveError=nil;error=nil;pinTextReloadID=UUID() }
     func updatePinContent(_ content:CapturePinContent,derivedHTMLText:Bool=false) throws {
+        guard featureEnabled() else{throw CaptureScriptFailure.execution(tr("This feature is switched off."))}
         if locked {
             // Loading an unchanged HTML pin may fill its initially empty, derived plain text.
             // No source, formatting or other content change is allowed through this path.
@@ -499,7 +505,9 @@ func captureFailureMessage(_ error:Error) -> String {
         item.color=nextColor;item.width=lineWidth;item.text=text;item.options=annotationOptions
         document.replaceAnnotation(at:index,with:item)
     }
-    func requireEditable() throws {guard !locked else {throw CaptureActionFailure.pinLocked}}
+    var featureEnabled:()->Bool = {true}
+    var work=FeatureTasks()
+    func requireEditable() throws {guard featureEnabled() else{throw CaptureScriptFailure.execution(tr("This feature is switched off."))};guard !locked else {throw CaptureActionFailure.pinLocked}}
     func transformImage(_ operation:CaptureImageTransform) throws {
         try requireEditable();guard pinContent==nil else {throw CaptureActionFailure.imageRequired}
         try document.transform(operation)
@@ -523,6 +531,7 @@ func captureFailureMessage(_ error:Error) -> String {
     }
     func copy() {copyDocument(document)}
     func copyDocument(_ output:CaptureDocument) {
+        guard featureEnabled() else{return}
         do {
             let data = try output.data()
             let board=copyPasteboard ?? .general
@@ -534,10 +543,12 @@ func captureFailureMessage(_ error:Error) -> String {
     var showSaveSettings:(()->Void)?
     @Published var savedImagePath:String?
     func quickSave() throws {
+        guard featureEnabled() else{throw CaptureScriptFailure.execution(tr("This feature is switched off."))}
         guard let quickSaveImage else {throw CaptureSaveFailure.missingDirectory}
         savedImagePath=try quickSaveImage(document).path;error=nil
     }
     func save(displayed:Bool=false) {
+        guard featureEnabled() else{return}
         let options:CaptureSaveSettings,output:CaptureDocument
         do {
             options=try saveOptions?() ?? CaptureSaveSettings()
@@ -545,7 +556,7 @@ func captureFailureMessage(_ error:Error) -> String {
         } catch {self.error=captureFailureMessage(error);return}
         let panel = NSSavePanel(),manual=CaptureManualImageSave()
         manual.configure(panel,name:(displayed ? "Thermo-display-" : "Thermo-") + ISO8601DateFormatter().string(from: Date()).replacingOccurrences(of: ":", with: "-"))
-        guard panel.runModal() == .OK, let url = panel.url else { return }
+        guard panel.runModal() == .OK,featureEnabled(),let url=panel.url else{return}
         do {
             try manual.save(output,to:url,quality:options.quality)
             savedImagePath=url.path;error=nil
@@ -553,28 +564,29 @@ func captureFailureMessage(_ error:Error) -> String {
         } catch { self.error = tr(error.localizedDescription) }
     }
     func recognizeForScript() async throws -> String {
-        guard !recognizing else {throw CaptureSaveFailure.busy}
+        guard featureEnabled(),!recognizing else{throw CaptureSaveFailure.busy}
         let image=try document.rendered(),initial=revision;recognizing=true;defer{recognizing=false}
         let result=try await Task.detached(priority:.userInitiated){try CaptureRecognition.recognize(image)}.value
-        try Task.checkCancellation();guard initial == revision else {throw CaptureScriptFailure.execution("The image changed. Run recognition again.")}
+        try Task.checkCancellation();guard featureEnabled() else{throw CaptureScriptFailure.unavailable};guard initial == revision else {throw CaptureScriptFailure.execution("The image changed. Run recognition again.")}
         let value=([result.text]+result.codes).filter{!$0.isEmpty}.joined(separator:"\n");guard !value.isEmpty else {throw CaptureSaveFailure.noText};recognition=value;error=nil;return value
     }
     func recognize() {
-        guard !recognizing else { return }
+        guard featureEnabled(),!recognizing else { return }
         do {
             let image = try document.rendered()
             let revision = self.revision
             recognizing = true; error = nil
-            Task {
+            work.runOnMain {
+                defer{self.recognizing=false}
                 do {
                     let result = try await Task.detached(priority: .userInitiated) { try CaptureRecognition.recognize(image,includeGeometry:true) }.value
+                    guard self.featureEnabled(),!Task.isCancelled else{return}
                     if self.revision == revision {
                         recognition = ([result.text] + result.codes).filter { !$0.isEmpty }.joined(separator: "\n")
                         ocrSegments=result.segments;selectedOCRSegments=[];selectingOCRText=false
                         if recognition.isEmpty { error = tr("No text or barcode found.") }
                     } else { error = tr("The image changed. Run recognition again.") }
-                } catch { self.error = tr(error.localizedDescription) }
-                recognizing = false
+                } catch {if self.featureEnabled(),!Task.isCancelled{self.error=tr(error.localizedDescription)}}
             }
         } catch { self.error = tr(error.localizedDescription) }
     }
