@@ -48,7 +48,7 @@ func captureFailureMessage(_ error:Error) -> String {
         self.pinSession=pinSession ?? CapturePinSession();self.pinSession.onCountChange={ [weak self] in self?.pinCount=$0 }
         self.pinSession.configureEditor={ [weak self] model in
             guard let self else{return}
-            model.featureEnabled=featureEnabled;model.work=editorWork
+            model.featureEnabled=self.featureEnabled;model.work=self.editorWork
             model.saveOptions={ [weak self] in try self?.saving.snapshot() ?? CaptureSaveSettings() }
             model.quickSaveImage={ [weak self] document in guard let self else {throw CaptureSaveFailure.invalidSettings};return try self.saving.quickSave(document) }
             model.showSaveSettings={ [weak self] in self?.showSavingSettings() }
@@ -126,6 +126,7 @@ func captureFailureMessage(_ error:Error) -> String {
         savingWindow?.showWindow(nil);NSApp.activate(ignoringOtherApps:true);savingWindow?.window?.makeKeyAndOrderFront(nil)
     }
     func shutdown() {
+        captureReads.cancel();editorWork.cancel()
         pinSession.batchExport.cancel()
         shuttingDown=true;if let id=captureID{cancelCapture(id:id)};afterTask?.cancel();afterTask=nil
         if process?.isRunning == true {process?.terminate()}
@@ -507,6 +508,12 @@ func captureFailureMessage(_ error:Error) -> String {
     }
     var featureEnabled:()->Bool = {true}
     var work=FeatureTasks()
+    var recognizeImage:@Sendable (CGImage,Bool)throws->CaptureRecognition = {try CaptureRecognition.recognize($0,includeGeometry:$1)}
+    func performUserAction(_ action:()throws->Void){
+        guard featureEnabled(),let ticket=work.beginOperation() else{return}
+        defer{work.endOperation(ticket)}
+        do{try action();error=nil}catch{if featureEnabled(){self.error=captureFailureMessage(error)}}
+    }
     func requireEditable() throws {guard featureEnabled() else{throw CaptureScriptFailure.execution(tr("This feature is switched off."))};guard !locked else {throw CaptureActionFailure.pinLocked}}
     func transformImage(_ operation:CaptureImageTransform) throws {
         try requireEditable();guard pinContent==nil else {throw CaptureActionFailure.imageRequired}
@@ -548,7 +555,8 @@ func captureFailureMessage(_ error:Error) -> String {
         savedImagePath=try quickSaveImage(document).path;error=nil
     }
     func save(displayed:Bool=false) {
-        guard featureEnabled() else{return}
+        guard featureEnabled(),let ticket=work.beginOperation() else{return}
+        defer{work.endOperation(ticket)}
         let options:CaptureSaveSettings,output:CaptureDocument
         do {
             options=try saveOptions?() ?? CaptureSaveSettings()
@@ -566,20 +574,21 @@ func captureFailureMessage(_ error:Error) -> String {
     func recognizeForScript() async throws -> String {
         guard featureEnabled(),!recognizing else{throw CaptureSaveFailure.busy}
         let image=try document.rendered(),initial=revision;recognizing=true;defer{recognizing=false}
-        let result=try await Task.detached(priority:.userInitiated){try CaptureRecognition.recognize(image)}.value
+        let execute=recognizeImage
+        let result=try await Task.detached(priority:.userInitiated){try execute(image,false)}.value
         try Task.checkCancellation();guard featureEnabled() else{throw CaptureScriptFailure.unavailable};guard initial == revision else {throw CaptureScriptFailure.execution("The image changed. Run recognition again.")}
         let value=([result.text]+result.codes).filter{!$0.isEmpty}.joined(separator:"\n");guard !value.isEmpty else {throw CaptureSaveFailure.noText};recognition=value;error=nil;return value
     }
     func recognize() {
-        guard featureEnabled(),!recognizing else { return }
+        guard featureEnabled(),work.acceptsWork,!recognizing else{return}
         do {
             let image = try document.rendered()
-            let revision = self.revision
+            let revision=self.revision,execute=recognizeImage
             recognizing = true; error = nil
             work.runOnMain {
                 defer{self.recognizing=false}
                 do {
-                    let result = try await Task.detached(priority: .userInitiated) { try CaptureRecognition.recognize(image,includeGeometry:true) }.value
+                    let result = try await Task.detached(priority: .userInitiated) { try execute(image,true) }.value
                     guard self.featureEnabled(),!Task.isCancelled else{return}
                     if self.revision == revision {
                         recognition = ([result.text] + result.codes).filter { !$0.isEmpty }.joined(separator: "\n")

@@ -9,6 +9,7 @@ struct CaptureLaTeXPinView:View {
     let formula:CaptureLaTeX
     @State private var draft=""
     private func apply(_ next:CaptureLaTeX? = nil) {
+        guard model.featureEnabled() else{return}
         var value=next ?? formula;value.source=draft
         do { try model.updatePinContent(.latex(value));model.error=nil }
         catch { model.error=captureFailureMessage(error) }
@@ -40,15 +41,15 @@ struct CaptureLaTeXPinView:View {
             }
             if !formula.transparentBackground { ColorPicker(tr("Formula background"),selection:Binding(get:{ Color(nsColor:CapturePinColor.parse(formula.background)!.nsColor) },set:{ color in var value=formula;value.background=hex(color);apply(value) }),supportsOpacity:false) }
             HStack {
-                Button(tr("Copy LaTeX source")) { NSPasteboard.general.clearContents();NSPasteboard.general.setString(draft,forType:.string) }
+                Button(tr("Copy LaTeX source")) { model.performUserAction{NSPasteboard.general.clearContents();NSPasteboard.general.setString(draft,forType:.string)} }
                 Button(tr("Copy MathML")) { copyMathML() }.disabled(model.pinContentSaveError != nil)
                 Button(tr("Copy SVG")) { copySVG() }.disabled(model.pinContentSaveError != nil)
                 Button(tr("Export SVG…")) { exportSVG() }.disabled(model.pinContentSaveError != nil)
                 Slider(value:$model.zoom,in:0.25...4).frame(width:85).disabled(model.locked).help(tr("Zoom"))
             }
             HStack {
-                Button(tr("Export editable Word document…")) { do { try CaptureWordMathActions.export(formula) } catch { model.error=captureFailureMessage(error) } }.disabled(model.pinContentSaveError != nil)
-                Button(tr("Open editable copy in Word")) { do { try CaptureWordMathActions.openCopy(formula) { model.error=$0 } } catch { model.error=captureFailureMessage(error) } }.disabled(model.pinContentSaveError != nil || CaptureWordMathActions.wordApplication == nil)
+                Button(tr("Export editable Word document…")) { model.performUserAction{try CaptureWordMathActions.export(formula)} }.disabled(model.pinContentSaveError != nil)
+                Button(tr("Open editable copy in Word")) { model.performUserAction{try CaptureWordMathActions.openCopy(formula){[weak model] issue in if model?.featureEnabled() == true{model?.error=issue}}} }.disabled(model.pinContentSaveError != nil || CaptureWordMathActions.wordApplication == nil)
                 if CaptureWordMathActions.wordApplication == nil { Text(tr("Microsoft Word is not installed on this Mac.")).font(.caption).foregroundStyle(.secondary) }
             }
         }.padding(.horizontal,10).onAppear { draft=formula.source }
@@ -58,18 +59,16 @@ struct CaptureLaTeXPinView:View {
         return String(format:"#%02X%02X%02X",Int((color.redComponent*255).rounded()),Int((color.greenComponent*255).rounded()),Int((color.blueComponent*255).rounded()))
     }
     private func copyMathML() {
-        do { try CapturePinClipboard.copyFormula(formula,format:.mathml,to:.general) }
-        catch { model.error=captureFailureMessage(error) }
+        model.performUserAction{try CapturePinClipboard.copyFormula(formula,format:.mathml,to:.general)}
     }
     private func copySVG() {
-        do { try CapturePinClipboard.copyFormula(formula,format:.svg,to:.general) }
-        catch { model.error=captureFailureMessage(error) }
+        model.performUserAction{try CapturePinClipboard.copyFormula(formula,format:.svg,to:.general)}
     }
     private func exportSVG() {
-        do {
+        model.performUserAction{
             let output=try formula.render(),panel=NSSavePanel();panel.allowedContentTypes=[.svg];panel.nameFieldStringValue="Thermo-formula.svg"
-            guard panel.runModal() == .OK,let url=panel.url else { return }
+            guard panel.runModal() == .OK,model.featureEnabled(),let url=panel.url else { return }
             try Data(output.svg.utf8).write(to:url,options:.atomic)
-        } catch { model.error=captureFailureMessage(error) }
+        }
     }
 }

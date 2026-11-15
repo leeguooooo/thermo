@@ -35,7 +35,8 @@ import ThermoL10n
     private var displayObserver: NSObjectProtocol?
 
     func start(completion: @escaping (Result<Outcome, Error>) -> Void) {
-        guard self.completion == nil else { return }
+        guard self.completion == nil else{return}
+        guard work.acceptsWork else{completion(.success(.cancelled));return}
         self.completion = completion
         let captureDisplays = self.captureDisplays
         loading = work.runOnMain { [weak self] in

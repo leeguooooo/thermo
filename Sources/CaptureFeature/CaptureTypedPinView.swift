@@ -10,7 +10,7 @@ struct CaptureTypedPinView:View {
     @State private var selectedFiles:Set<UUID>=[]
     @State private var preview:CapturePinFile?
     @State private var colorFormat:CapturePinColor.Format = .hex
-    private func run(_ action:() throws -> Void) { do { try action();model.error=nil } catch { model.error=tr(error.localizedDescription) } }
+    private func run(_ action:()throws->Void){model.performUserAction(action)}
     private func update(_ text:CapturePinText) { run { try model.updatePinContent(.text(text)) } }
     var body:some View {
         VStack(spacing:10) {
@@ -35,13 +35,15 @@ struct CaptureTypedPinView:View {
                 Slider(value:$model.opacity,in:0.2...1).frame(width:100).disabled(model.locked).help(tr("Pin opacity")).onChange(of:model.opacity) { _ in model.changeWindow?() }
                 if case .text = model.pinContent { Slider(value:$model.zoom,in:0.25...4).frame(width:85).disabled(model.locked).help(tr("Zoom")) }
                 Button(tr("Create image copy")) {
-                    Task { do {
+                    guard model.featureEnabled() else{return}
+                    model.work.runOnMain { do {
                         let image:CGImage
                         if case .text = model.pinContent,let snapshot=model.snapshotPinContent { image=try await snapshot() }
                         else if let content=model.pinContent { image=try content.previewImage() }
                         else { throw CaptureFailure.invalidImage }
+                        guard model.featureEnabled(),!Task.isCancelled else{return}
                         model.makeImageCopy?(image)
-                    } catch { model.error=tr(error.localizedDescription) } }
+                    } catch {if model.featureEnabled(),!Task.isCancelled{model.error=tr(error.localizedDescription)}} }
                 }.help(tr("Text image copies contain only the visible area.")).disabled(model.pinContentSaveError != nil)
                 Spacer()
                 if let show=model.showPinLibrary { Button(tr("Pin groups and history"),action:show) }
@@ -84,7 +86,7 @@ struct CaptureTypedPinView:View {
             CaptureFileList(files:files,selection:$selectedFiles,onOpen:{ file in openFile(file) })
             HStack {
                 Button(tr("Open file")) { if let file=chosen(files).first { openFile(file) } }.disabled(chosen(files).count != 1)
-                Button(tr("Preview file")) { if let file=chosen(files).first { preview=file } }.disabled(chosen(files).count != 1)
+                Button(tr("Preview file")) { if model.featureEnabled(),let file=chosen(files).first { preview=file } }.disabled(chosen(files).count != 1)
                 Button(tr("Show in Finder")) { run { NSWorkspace.shared.activateFileViewerSelecting(try chosen(files).map { try $0.resolved() }) } }
                 Button(tr("Copy files")) { run { try CapturePinClipboard.copy(.files(files),to:.general,selectedFiles:selectedFiles.isEmpty ? nil : selectedFiles) } }
                 Button(tr("Copy file paths")) { run { let text=try chosen(files).map { try $0.resolved().path }.joined(separator:"\n");NSPasteboard.general.clearContents();NSPasteboard.general.setString(text,forType:.string) } }
