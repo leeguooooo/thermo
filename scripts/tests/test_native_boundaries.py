@@ -54,6 +54,15 @@ class NativeBoundariesTests(unittest.TestCase):
             errors = check.problems(self.package, source_root=temporary)
             self.assertTrue(any("ConnectionsFeature imports undeclared target HiddenFeature" in error for error in errors))
 
+    def test_shared_library_cannot_silently_import_undeclared_localization(self):
+        self.package["targets"].append(target("AgentCore"))
+        with tempfile.TemporaryDirectory() as temporary:
+            source = Path(temporary) / "Sources/AgentCore"
+            source.mkdir(parents=True)
+            (source / "Category.swift").write_text("import ThermoL10n\n")
+            errors = check.problems(self.package, source_root=temporary)
+            self.assertTrue(any("AgentCore imports undeclared target ThermoL10n" in error for error in errors))
+
     def test_embedded_swift_templates_do_not_create_import_dependencies(self):
         text = '\n'.join(['// import FakeFeature', 'let code = #"""', 'import FakeFeature', '"""#', '/* import FakeFeature */', '@_implementationOnly import struct ModuleKit.ModuleManifest'])
         self.assertEqual(check.source_imports(text), {"ModuleKit"})

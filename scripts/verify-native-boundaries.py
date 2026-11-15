@@ -51,9 +51,10 @@ def problems(package, complete=False, source_root=None):
     if source_root is not None:
         root = Path(source_root).resolve()
         definitions = {target["name"]: target for target in package.get("targets", [])}
-        for name in sorted(features | {"ThermoUI", "NativeFeatureAPI"}):
+        for name in sorted(graph):
             target = definitions.get(name, {})
-            directory = (root / (target.get("path") or "Sources/" + name)).resolve()
+            base = "Tests/" if target.get("type") == "test" else "Sources/"
+            directory = (root / (target.get("path") or base + name)).resolve()
             if not directory.is_relative_to(root):
                 errors.append(f"{name} source path escapes package")
                 continue
