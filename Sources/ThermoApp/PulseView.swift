@@ -24,10 +24,19 @@ final class SystemPulse: ObservableObject {
     private let lifetime = FeatureSamplingLifetime()
     private let readSample: (@Sendable () -> MachinePulse)?
     private let samplingAllowed: () -> Bool
+    private let reviewDelay: TimeInterval
+    private let readActionReview: (@Sendable (Hog, MachinePulse, PulseActionReview.Action) -> PulseActionReview)?
+    private let recordActionReview: @Sendable (PulseActionReview) -> Void
 
-    init(readSample: (@Sendable () -> MachinePulse)? = nil, samplingQueue: DispatchQueue? = nil, samplingAllowed: @escaping () -> Bool = { true }) {
+    init(readSample: (@Sendable () -> MachinePulse)? = nil, samplingQueue: DispatchQueue? = nil, samplingAllowed: @escaping () -> Bool = { true },
+         reviewDelay: TimeInterval = 5,
+         readActionReview: (@Sendable (Hog, MachinePulse, PulseActionReview.Action) -> PulseActionReview)? = nil,
+         recordActionReview: @escaping @Sendable (PulseActionReview) -> Void = { $0.record() }) {
         self.readSample = readSample
         self.samplingAllowed = samplingAllowed
+        self.reviewDelay = reviewDelay
+        self.readActionReview = readActionReview
+        self.recordActionReview = recordActionReview
         queue = samplingQueue ?? DispatchQueue(label: "dev.thermo.app.pulse", qos: .userInitiated)
     }
 
@@ -119,16 +128,20 @@ final class SystemPulse: ObservableObject {
     }
 
     /// Recheck the entire process inventory; an idle reopened app can fall out of the busiest list.
-    private func review(_ hog: Hog, before: MachinePulse, action: PulseActionReview.Action) {
+    func review(_ hog: Hog, before: MachinePulse, action: PulseActionReview.Action) {
         let id = UUID(); reviewID = id
         actionFeedback = tr("Checking the effect of the action…")
-        queue.asyncAfter(deadline: .now() + 5) { [weak self] in
+        queue.asyncAfter(deadline: .now() + reviewDelay) { [weak self] in
             guard let self else { return }
+            let result: PulseActionReview
+            if let read = self.readActionReview { result = read(hog, before, action) }
+            else {
             let after = self.sampler.sample()
             let all = MachinePulse.group(ProcessTable.current(.init(cpu: false)).entries, byMemory: true, limit: nil)
-            let result = PulseActionReview(action: action, target: hog, before: before, after: after,
+            result = PulseActionReview(action: action, target: hog, before: before, after: after,
                                            afterTarget: PulseActionReview.findTarget(hog, in: all), inventoryAvailable: !all.isEmpty)
-            result.record()
+            }
+            self.recordActionReview(result)
             DispatchQueue.main.async {
                 guard self.reviewID == id else { return }
                 self.actionFeedback = MachinePulse.sentences(result.summary, result.detail)
