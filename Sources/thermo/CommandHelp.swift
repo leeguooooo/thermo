@@ -38,8 +38,8 @@ enum CommandHelp {
         }
     }
     static let aliases = HostCommandSpecification.aliases
-    static func text(for words: [String]) -> String {
-        let capabilities = availableCapabilities
+    static func text(for words: [String], capabilities supplied: [Capability]? = nil) -> String {
+        let capabilities = supplied ?? availableCapabilities
         var path = words.filter { $0 != "help" }
         if let first = path.first { path[0] = aliases[first] ?? first }
         if path.isEmpty {
