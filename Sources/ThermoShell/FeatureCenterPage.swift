@@ -45,3 +45,25 @@ struct ModuleCapabilityDetails:View {
         }.frame(maxWidth:.infinity,alignment:.leading)
     }
 }
+
+struct ModuleStopDetails:View {
+    let progress:ModuleCenter.StopProgress
+    var body:some View {
+        VStack(alignment:.leading,spacing:4){
+            switch progress {
+            case .waiting:
+                Text(tr("Waiting for current work or the module process to finish.")).foregroundStyle(Theme.caution)
+            case .refused:
+                Text(tr("The feature could not be switched off.")).foregroundStyle(Theme.caution)
+            case .nativeFinished:
+                Label(tr("Entry points closed"),systemImage:"checkmark")
+                Label(tr("Background work finished"),systemImage:"checkmark")
+                Text(tr("Saved records and preferences are kept. Recovery controls remain available."))
+            case .processExited:
+                Label(tr("Entry points closed"),systemImage:"checkmark")
+                Label(tr("Module process exited"),systemImage:"checkmark")
+                Text(tr("The module's saved data has not been deleted."))
+            }
+        }.font(Theme.secondary).foregroundStyle(Theme.textSecondary).frame(maxWidth:.infinity,alignment:.leading)
+    }
+}

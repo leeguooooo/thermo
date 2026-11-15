@@ -28,6 +28,8 @@ import ThermoL10n
     private let startBuiltin: @MainActor (String) -> Void
     @Published private(set) var changing = Set<String>()
     @Published private(set) var switchIssues: [String: String] = [:]
+    enum StopProgress:Equatable {case waiting,nativeFinished,processExited,refused(String)}
+    @Published private(set) var stopProgress:[String:StopProgress]=[:]
     @Published private(set) var statuses: [ModuleManager.Status] = []
     var visibleStatuses: [ModuleManager.Status] { statuses.filter { NativeModules.workerOwner($0.manifest.id) == nil } }
     /// Bumped when a built-in feature is switched, so views that show its entries update.
@@ -74,6 +76,9 @@ import ThermoL10n
 
     private func refresh() {
         let now = manager.modules
+        for status in now where !status.enabled && status.phase == .stopped && status.pid == nil {
+            if stopProgress[status.manifest.id] == .waiting {stopProgress[status.manifest.id] = .processExited}
+        }
         if now != statuses {
             statuses = now
             if updatesAppMenu, NSApp != nil { installStandardMenus(center: self) }
@@ -191,12 +196,14 @@ import ThermoL10n
                     }
                 } else {finish=own}
             } catch ModuleCommandLease.Failure.busy {
-                switchIssues[id]=tr("Wait for this feature’s current command to finish before switching it off.");return
+                let reason=tr("Wait for this feature’s current command to finish before switching it off.")
+                switchIssues[id]=reason;stopProgress[id] = .refused(reason);return
             } catch let error as NativeModules.StopRefused {
-                switchIssues[id]=error.description;return
-            } catch {switchIssues[id]=error.localizedDescription;return}
+                switchIssues[id]=error.description;stopProgress[id] = .refused(error.description);return
+            } catch {switchIssues[id]=error.localizedDescription;stopProgress[id] = .refused(error.localizedDescription);return}
         }
         switchIssues[id] = nil
+        stopProgress[id] = on ? nil:.waiting
         if finish != nil { changing.insert(id) }
         defaults.set(on, forKey: Self.key(id))
         if NativeModules.manifest(id) != nil {
@@ -204,14 +211,20 @@ import ThermoL10n
             revision += 1
             // The View menu and its shortcuts list pages too.
             if updatesAppMenu, NSApp != nil { installStandardMenus(center: self) }
-        } else { manager.setEnabled(id, on) }
+        } else {
+            manager.setEnabled(id,on)
+            if !on,let status=manager.modules.first(where:{$0.manifest.id==id}),status.phase == .stopped,status.pid == nil {stopProgress[id] = .processExited}
+        }
         // A module that was switched off is in no entry point, the open page included.
         if !on, MainWindow.state.page.module == id { MainWindow.state.page = shows(.overview) ? .overview : .settings }
         if let finish {
             Task { @MainActor in
                 await finish()
                 changing.remove(id)
+                stopProgress[id] = .nativeFinished
             }
+        } else if !on,NativeModules.manifest(id) != nil {
+            stopProgress[id] = .nativeFinished
         }
     }
 }
@@ -297,12 +310,13 @@ struct ModuleSwitches: View {
                 Spacer()
                 Button(tr("Access records")){activity=status.manifest.localized(L10n.current.rawValue)}
                     .buttonStyle(PillButtonStyle()).controlSize(.small).fixedSize()
-                Toggle("", isOn: Binding(get: { status.enabled }, set: { center.setEnabled(status.manifest.id, $0) }))
+                Toggle("", isOn: Binding(get: { status.enabled }, set: { center.setEnabled(status.manifest.id,$0);if !$0{expanded.insert(status.manifest.id)} }))
                     .labelsHidden().toggleStyle(.switch).accessibilityLabel(status.manifest.name)
                     .disabled(center.changing.contains(status.manifest.id))
             }.padding(.horizontal, Theme.Space.m).padding(.vertical, 8)
-                DisclosureGroup(tr("Declared access"),isExpanded:Binding(get:{expanded.contains(status.manifest.id)},set:{if $0{expanded.insert(status.manifest.id)}else{expanded.remove(status.manifest.id)}})) {
+                DisclosureGroup(tr("Access and stop details"),isExpanded:Binding(get:{expanded.contains(status.manifest.id)},set:{if $0{expanded.insert(status.manifest.id)}else{expanded.remove(status.manifest.id)}})) {
                     ModuleCapabilityDetails(manifest:status.manifest,builtin:status.builtin).padding(.top,8)
+                    if let progress=center.stopProgress[status.manifest.id]{ModuleStopDetails(progress:progress).padding(.top,8)}
                 }.font(Theme.secondary).foregroundStyle(Theme.textSecondary)
                     .padding(.leading,46).padding(.trailing,Theme.Space.m).padding(.bottom,12)
             }

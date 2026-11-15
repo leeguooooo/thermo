@@ -4585,4 +4585,14 @@ let zhHans: [String: String] = [
     "Refused": "已拒绝",
     "Not confirmed": "未确认",
 
+    "Waiting for current work or the module process to finish.": "正在等待当前工作或模块进程结束。",
+    "The feature could not be switched off.": "此功能暂时无法关闭。",
+    "Entry points closed": "已关闭功能入口",
+    "Background work finished": "后台工作已结束",
+    "Saved records and preferences are kept. Recovery controls remain available.": "已保留历史记录和设置，恢复控制仍可使用。",
+    "Module process exited": "模块进程已退出",
+    "The module's saved data has not been deleted.": "尚未删除模块保存的数据。",
+
+    "Access and stop details": "访问范围与停用情况",
+
 ]
