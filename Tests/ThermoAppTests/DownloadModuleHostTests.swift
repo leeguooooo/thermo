@@ -4,10 +4,10 @@ import XCTest
 
 final class DownloadModuleHostTests: XCTestCase {
     func testRegistryPreservesLegacyAndGenericDownloadPages() {
-        XCTAssertTrue(BuiltinModules.problems.isEmpty)
-        let route=MainPage.module(DownloadModule.manifest.id,"home")
+        XCTAssertTrue(NativeModules.problems.isEmpty)
+        let route=MainPage.native(.init(BuiltinModuleManifests.download.id,"home"))
         for argument in ["yunx","yunx:","yunx:legacy"] {XCTAssertEqual(MainPage(argument:argument),route)}
-        XCTAssertEqual(route.module,DownloadModule.manifest.id)
-        XCTAssertEqual(BuiltinModules.page(route)?.target,route)
+        XCTAssertEqual(route.module,BuiltinModuleManifests.download.id)
+        XCTAssertEqual(NativeModules.page(route)?.target,route)
     }
 }

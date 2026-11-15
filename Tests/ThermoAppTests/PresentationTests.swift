@@ -47,7 +47,7 @@ final class PresentationTests: XCTestCase {
         XCTAssertEqual(items.map(\.keyEquivalent).filter{!$0.isEmpty}, ["1", "2", "3", "4", "5", "6", "7", "8", "9", "0", ","])
         let destinations=items.compactMap{$0.representedObject as? MainPage}
         XCTAssertEqual(Set(destinations).count,destinations.count,"View menu destinations must not be duplicated")
-        for page in [MainPage.native(.init(BuiltinModuleManifests.apps.id,"installed")), .memory, .compute(false), .compute(true), .native(.init(BuiltinModuleManifests.space.id,"browse")), .module(BuiltinModuleManifests.claude.id,"accounts"), .module(BuiltinModuleManifests.connections.id,"home"), .module(BuiltinModuleManifests.history.id,"home")] {
+        for page in [MainPage.native(.init(BuiltinModuleManifests.apps.id,"installed")), .memory, .compute(false), .compute(true), .native(.init(BuiltinModuleManifests.space.id,"browse")), .native(.init(BuiltinModuleManifests.claude.id,"accounts")), .native(.init(BuiltinModuleManifests.connections.id,"home")), .native(.init(BuiltinModuleManifests.history.id,"home"))] {
             XCTAssertEqual(items.filter { ($0.representedObject as? MainPage) == page }.count, 1)
         }
         XCTAssertEqual(items.first?.representedObject as? MainPage, .overview)
@@ -107,7 +107,7 @@ final class PresentationTests: XCTestCase {
         XCTAssertNil(MainPage(argument: ""))
         XCTAssertNil(MainPage(argument: ":"))
         XCTAssertEqual(MainPage(argument: "sensors"), .native(.init(BuiltinModuleManifests.performance.id,"sensors")))
-        XCTAssertEqual(MainPage(argument: "disk:overview"), .native(.init(BuiltinModules.disk.id, "overview")))
+        XCTAssertEqual(MainPage(argument: "disk:overview"), .native(.init(BuiltinModuleManifests.disk.id, "overview")))
     }
 
 

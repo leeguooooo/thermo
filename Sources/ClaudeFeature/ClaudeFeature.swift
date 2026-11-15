@@ -5,7 +5,15 @@ import ThermoL10n
 
 package enum ClaudeFeature {
     package static func registration()->NativeFeatureDefinition {
-        .init(manifest:BuiltinModuleManifests.claude,ui:.init(sidebarLocations:[.agents]),makeSession:{ClaudeSession(availability:$0)})
+        .init(manifest:BuiltinModuleManifests.claude,ui:.init(sidebarLocations:[.agents]),resolveLegacyPage:{argument in
+            let manifest=BuiltinModuleManifests.claude
+            let scene:String
+            if argument=="claude-cleanup" || argument.hasPrefix("claude-cleanup:") {scene=argument=="claude-cleanup:privacy" ? "claude:privacy":"claude:reset"}
+            else if argument=="claude" {scene="claude:accounts"}
+            else if argument.hasPrefix("claude:") {scene=manifest.entries.contains(where:{$0.scene==argument}) ? argument:"claude:accounts"}
+            else{return nil}
+            return manifest.entries.first{$0.kind == .page && $0.scene==scene}.map{.init(manifest.id,$0.id)}
+        },makeSession:{ClaudeSession(availability:$0)})
     }
 }
 @MainActor final class ClaudeSession:NativeFeatureSession {

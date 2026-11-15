@@ -29,7 +29,7 @@ enum BuiltinNativeFeatures {
             reading:{AppModels.shared.services.telemetry.latest.snapshot})
     }
     static func registrations(performance:NativeFeatureDefinition,reading:@escaping @MainActor @Sendable ()->Snapshot?)->[NativeFeatureDefinition] {
-        [performance,search.definition,capture.definition,menuBar,DiskFeature.registration(services:{DiskHostServices()}),AgentDiagnosticsFeature.registration,SpaceFeature.registration(services:{SpaceHostServices()}),AppsFeature.registration,BrowserFeature.registration,DownloadFeature.registration(presentation:{DownloadHostPresentation()}),HistoryFeature.registration(services:{HistoryHostServices()}),ConnectionsFeature.registration(),ClaudeFeature.registration(),CheckupFeature.registration(reading:reading,navigate:{route in MainWindow.show(.module(route.module,route.entry))}),PluginsFeature.registration(navigate:{route in MainWindow.show(.module(route.module,route.entry))})]
+        [DiskFeature.registration(services:{DiskHostServices()}),search.definition,capture.definition,menuBar,performance,AgentDiagnosticsFeature.registration,SpaceFeature.registration(services:{SpaceHostServices()}),AppsFeature.registration,BrowserFeature.registration,DownloadFeature.registration(presentation:{DownloadHostPresentation()}),HistoryFeature.registration(services:{HistoryHostServices()}),ConnectionsFeature.registration(),ClaudeFeature.registration(),CheckupFeature.registration(reading:reading,navigate:{route in MainWindow.show(.module(route.module,route.entry))}),PluginsFeature.registration(navigate:{route in MainWindow.show(.module(route.module,route.entry))})]
     }
     static let catalog=try! NativeFeatureCatalog(definitions:registrations)
 }

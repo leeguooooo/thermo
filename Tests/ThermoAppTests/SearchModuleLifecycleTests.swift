@@ -5,10 +5,10 @@ import ModuleKit
 
 @MainActor final class SearchHostIntegrationTests:XCTestCase {
     func testSearchManifestAndWorkerOwnershipStayInTheRegistry() {
-        XCTAssertTrue(BuiltinModules.problems.isEmpty, BuiltinModules.problems.joined(separator:"\n"))
-        XCTAssertEqual(BuiltinModules.workerOwner(SearchModule.previewWorker)?.id,SearchModule.manifest.id)
-        XCTAssertTrue(SearchModule.manifest.entries.allSatisfy(SearchModule.supports))
-        XCTAssertEqual(SearchModule.manifest.launch,.prewarm)
+        XCTAssertTrue(NativeModules.problems.isEmpty, NativeModules.problems.joined(separator:"\n"))
+        XCTAssertEqual(NativeModules.workerOwner("dev.thermo.search-preview")?.id,BuiltinModuleManifests.search.id)
+
+        XCTAssertEqual(BuiltinModuleManifests.search.launch,.prewarm)
     }
     func testDisabledSearchAppControlCannotPretendItsWindowWasOpened() async {
         let defaults=UserDefaults.standard,previous=defaults.volatileDomain(forName:UserDefaults.argumentDomain)

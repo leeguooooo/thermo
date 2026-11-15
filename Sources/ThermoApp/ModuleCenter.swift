@@ -10,7 +10,7 @@ import ThermoL10n
 /// The app's one module manager and what the UI is built from: the pages of the modules that are on.
 /// Which modules are on is remembered per module; builtin defaults also follow the installation cohort.
 @MainActor final class ModuleCenter: ObservableObject {
-    static let shared = ModuleCenter(startBuiltin: BuiltinModules.start, updatesAppMenu: true, commandHome:NSHomeDirectory())
+    static let shared = ModuleCenter(startBuiltin: NativeModules.start, updatesAppMenu: true, commandHome:NSHomeDirectory())
 
     struct Page: Identifiable, Equatable {
         var module: ModuleManifest
@@ -24,12 +24,12 @@ import ThermoL10n
     private let defaults: UserDefaults
     private let updatesAppMenu: Bool
     private let commandHome:String?
-    private let prepareBuiltinStop: @MainActor (String) throws -> BuiltinModules.FinishStop?
+    private let prepareBuiltinStop: @MainActor (String) throws -> NativeModules.FinishStop?
     private let startBuiltin: @MainActor (String) -> Void
     @Published private(set) var changing = Set<String>()
     @Published private(set) var switchIssues: [String: String] = [:]
     @Published private(set) var statuses: [ModuleManager.Status] = []
-    var visibleStatuses: [ModuleManager.Status] { statuses.filter { BuiltinModules.workerOwner($0.manifest.id) == nil } }
+    var visibleStatuses: [ModuleManager.Status] { statuses.filter { NativeModules.workerOwner($0.manifest.id) == nil } }
     /// Bumped when a built-in feature is switched, so views that show its entries update.
     @Published private(set) var revision = 0
     /// False until the modules inside the app have been read.
@@ -37,7 +37,7 @@ import ThermoL10n
     private var started = false
 
     init(manager: ModuleManager? = nil, defaults: UserDefaults = .standard,
-         prepareBuiltinStop: @escaping @MainActor (String) throws -> BuiltinModules.FinishStop? = BuiltinModules.prepareStop,
+         prepareBuiltinStop: @escaping @MainActor (String) throws -> NativeModules.FinishStop? = NativeModules.prepareStop,
          startBuiltin: @escaping @MainActor (String) -> Void = { _ in },
          updatesAppMenu: Bool = false, commandHome:String? = nil) {
         self.manager = manager ?? ModuleManager(); self.defaults = defaults
@@ -59,7 +59,7 @@ import ThermoL10n
         guard !started else { return }
         started = true
         if prewarmBuiltins {
-            for manifest in BuiltinModules.all where isOn(manifest.id) { startBuiltin(manifest.id) }
+            for manifest in NativeModules.all where isOn(manifest.id) { startBuiltin(manifest.id) }
         }
         manager.onChange = { [weak self] _ in self?.refresh() }
         manager.kernel = { ModuleKernel.make(for: $0) }
@@ -108,19 +108,19 @@ import ThermoL10n
 
     /// Whether a module is on. A built-in feature is known at once; a module in its own process once it has been read.
     func isOn(_ id: String) -> Bool {
-        if let builtin = BuiltinModules.manifest(id) { return Self.stored(builtin, in: defaults) }
+        if let builtin = NativeModules.manifest(id) { return Self.stored(builtin, in: defaults) }
         return statuses.first { $0.manifest.id == id }?.enabled ?? false
     }
 
     /// Whether anything may lead to `page`: always for Thermo's own pages, otherwise only while the module is on.
     func shows(_ page: MainPage) -> Bool {
         guard let module = page.module else { return true }
-        return BuiltinModules.manifest(module) == nil ? true : isOn(module)
+        return NativeModules.manifest(module) == nil ? true : isOn(module)
     }
 
     /// Every module with its switch, built-in features first.
     var switches: [(manifest: ModuleManifest, enabled: Bool, builtin: Bool)] {
-        BuiltinModules.all.map { ($0, isOn($0.id), true) } + visibleStatuses.map { ($0.manifest, $0.enabled, false) }
+        NativeModules.all.map { ($0, isOn($0.id), true) } + visibleStatuses.map { ($0.manifest, $0.enabled, false) }
     }
 
     struct NavigationPage: Identifiable {
@@ -137,7 +137,7 @@ import ThermoL10n
         var symbol: String { entry.symbol ?? module.symbol }
     }
     var activeManifests: [ModuleManifest] {
-        BuiltinModules.all.filter { isOn($0.id) } + visibleStatuses.filter(\.enabled).map(\.manifest)
+        NativeModules.all.filter { isOn($0.id) } + visibleStatuses.filter(\.enabled).map(\.manifest)
     }
     var navigationConflicts: [ModuleNavigation.Conflict] { ModuleNavigation.conflicts(activeManifests) }
     func navigationIssue(_ id: String) -> String? {
@@ -145,15 +145,15 @@ import ThermoL10n
         guard let owner = conflict.owner else {
             return tr("Command-%1$@ belongs to Thermo's built-in navigation.", conflict.key)
         }
-        let name = BuiltinModules.manifest(owner).map { tr($0.name) }
+        let name = NativeModules.manifest(owner).map { tr($0.name) }
             ?? statuses.first { $0.manifest.id == owner }?.manifest.localized(L10n.current.rawValue).name ?? owner
         return tr("Command-%1$@ is already used by %2$@. Switch that feature off first.", conflict.key, name)
     }
     var navigationPages: [NavigationPage] {
-        let native = BuiltinModules.implementations.filter { isOn($0.manifest.id) }.flatMap { owner in
-            owner.manifest.entries.compactMap { entry -> NavigationPage? in
-                guard entry.kind == .page, let scene = entry.scene, let target = owner.target(scene) else { return nil }
-                return .init(module: owner.manifest, entry: entry, target: target, builtin: true)
+        let native = NativeModules.all.filter{isOn($0.id)}.flatMap{manifest in
+            manifest.entries.compactMap{entry->NavigationPage? in
+                guard entry.kind == .page,let route=try? BuiltinNativeFeatures.catalog.normalize(.init(manifest.id,entry.id)) else{return nil}
+                return .init(module:manifest,entry:entry,target:.native(route),builtin:true)
             }
         }
         return native + pages.map { .init(module: $0.module, entry: $0.entry, target: $0.target, builtin: false) }
@@ -161,7 +161,7 @@ import ThermoL10n
     var rootPages: [NavigationPage] { navigationPages.filter { $0.entry.parent == nil } }
     func navigationKey(_ target: MainPage) -> String? {
         let identity: String
-        if let native = BuiltinModules.page(target) { identity = native.module.id + ":" + native.entry.id }
+        if let native = NativeModules.page(target) { identity = native.module.id + ":" + native.entry.id }
         else if case let .module(id, entry) = target, let page = page(module: id, entry: entry) { identity = page.id }
         else { return nil }
         guard let page = navigationPages.first(where: { $0.id == identity }), let key = page.entry.navigationKey,
@@ -172,14 +172,14 @@ import ThermoL10n
         rootPages.first { $0.module.id == module }?.target
     }
     func legacyMenuPage(_ key: String) -> NavigationPage? {
-        guard let old = BuiltinModules.legacyMenuEntry(key), isOn(old.module.id), let target = old.target else { return nil }
+        guard let old = NativeModules.legacyMenuEntry(key), isOn(old.module.id), let target = old.target else { return nil }
         return .init(module: old.module, entry: old.entry, target: target, builtin: true)
     }
 
     func setEnabled(_ id: String, _ on: Bool) {
         guard !changing.contains(id) else { return }
-        var finish: BuiltinModules.FinishStop?
-        if !on, BuiltinModules.manifest(id) != nil {
+        var finish: NativeModules.FinishStop?
+        if !on, NativeModules.manifest(id) != nil {
             do {
                 let external=try commandHome.map{try ModuleCommandLease.quiesce(feature:id,home:$0)}
                 let own=try prepareBuiltinStop(id)
@@ -192,14 +192,14 @@ import ThermoL10n
                 } else {finish=own}
             } catch ModuleCommandLease.Failure.busy {
                 switchIssues[id]=tr("Wait for this feature’s current command to finish before switching it off.");return
-            } catch let error as BuiltinModules.StopRefused {
+            } catch let error as NativeModules.StopRefused {
                 switchIssues[id]=error.description;return
             } catch {switchIssues[id]=error.localizedDescription;return}
         }
         switchIssues[id] = nil
         if finish != nil { changing.insert(id) }
         defaults.set(on, forKey: Self.key(id))
-        if BuiltinModules.manifest(id) != nil {
+        if NativeModules.manifest(id) != nil {
             if on { startBuiltin(id) }
             revision += 1
             // The View menu and its shortcuts list pages too.
@@ -317,7 +317,7 @@ struct ModuleSettingsControls: View {
     @ObservedObject var center: ModuleCenter
     let models: AppModels
     var body: some View {
-        ForEach(BuiltinModules.all.filter{center.isOn($0.id)},id:\.id) {manifest in
+        ForEach(NativeModules.all.filter{center.isOn($0.id)},id:\.id) {manifest in
             ForEach(manifest.entries.filter{$0.kind == .settingsItem},id:\.id) {entry in
                 InspectorDivider(inset:46)
                 models.nativeFeatures.inlineSettings(.init(manifest.id,entry.id))

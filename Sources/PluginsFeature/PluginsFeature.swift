@@ -5,7 +5,7 @@ import ThermoL10n
 
 package enum PluginsFeature {
     package static func registration(navigate:@escaping @MainActor (NativeFeatureRoute)->Void)->NativeFeatureDefinition {
-        .init(manifest:BuiltinModuleManifests.plugins,ui:.init(sidebarLocations:[.software]),makeSession:{PluginsSession(availability:$0,navigate:navigate)})
+        .init(manifest:BuiltinModuleManifests.plugins,ui:.init(sidebarLocations:[.software]),resolveLegacyPage:{argument in argument=="plugins" ? .init(BuiltinModuleManifests.plugins.id,"home"):nil},makeSession:{PluginsSession(availability:$0,navigate:navigate)})
     }
 }
 @MainActor final class PluginsSession:NativeFeatureSession {

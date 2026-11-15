@@ -10,26 +10,26 @@ import XCTest
 
 @MainActor final class CaptureHostRoutingTests:XCTestCase {
     func testManifestUsesPrewarmAndHasRegisteredMenuAndSettings() {
-        XCTAssertEqual(CaptureModule.manifest.launch, .prewarm)
-        XCTAssertTrue(CaptureModule.manifest.enabledByDefault)
-        XCTAssertTrue(CaptureModule.manifest.problems().isEmpty)
-        XCTAssertTrue(CaptureModule.manifest.entries.allSatisfy(CaptureModule.supports))
-        XCTAssertEqual(CaptureModule.manifest.entries.filter { $0.kind == .settingsItem }.count, 2)
-        XCTAssertTrue(BuiltinModules.problems.isEmpty)
+        XCTAssertEqual(BuiltinModuleManifests.capture.launch, .prewarm)
+        XCTAssertTrue(BuiltinModuleManifests.capture.enabledByDefault)
+        XCTAssertTrue(BuiltinModuleManifests.capture.problems().isEmpty)
+
+        XCTAssertEqual(BuiltinModuleManifests.capture.entries.filter { $0.kind == .settingsItem }.count, 2)
+        XCTAssertTrue(NativeModules.problems.isEmpty)
     }
     func testModuleCenterStartsOnlyEnabledBuiltinsAndStartsOnReenable() {
         let name = "thermo-capture-test-" + UUID().uuidString
         let defaults = UserDefaults(suiteName: name)!
         defer { defaults.removePersistentDomain(forName: name) }
-        defaults.set(false, forKey: ModuleCenter.key(CaptureModule.manifest.id))
+        defaults.set(false, forKey: ModuleCenter.key(BuiltinModuleManifests.capture.id))
         var starts: [String] = []
         let center = ModuleCenter(defaults: defaults, prepareBuiltinStop: { _ in nil }, startBuiltin: { starts.append($0) })
         center.start(); center.start()
-        XCTAssertFalse(starts.contains(CaptureModule.manifest.id))
-        center.setEnabled(CaptureModule.manifest.id, true)
-        XCTAssertEqual(starts.filter { $0 == CaptureModule.manifest.id }.count, 1)
-        center.setEnabled(CaptureModule.manifest.id, false)
-        XCTAssertFalse(center.isOn(CaptureModule.manifest.id))
+        XCTAssertFalse(starts.contains(BuiltinModuleManifests.capture.id))
+        center.setEnabled(BuiltinModuleManifests.capture.id, true)
+        XCTAssertEqual(starts.filter { $0 == BuiltinModuleManifests.capture.id }.count, 1)
+        center.setEnabled(BuiltinModuleManifests.capture.id, false)
+        XCTAssertFalse(center.isOn(BuiltinModuleManifests.capture.id))
     }
     func testOffscreenStartupDoesNotWarmNativeFeatures() {
         let name = "thermo-capture-offscreen-" + UUID().uuidString
@@ -39,7 +39,7 @@ import XCTest
         let center = ModuleCenter(defaults: defaults, startBuiltin: { starts.append($0) })
         center.start(prewarmBuiltins: false)
         XCTAssertTrue(starts.isEmpty)
-        XCTAssertTrue(center.isOn(CaptureModule.manifest.id))
+        XCTAssertTrue(center.isOn(BuiltinModuleManifests.capture.id))
     }
     private final class Control:CaptureApplicationControl {
         var calls:[CaptureControlRequest]=[]

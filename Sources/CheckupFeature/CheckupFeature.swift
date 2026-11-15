@@ -6,7 +6,7 @@ import ThermoL10n
 
 package enum CheckupFeature {
     package static func registration(reading:@escaping @MainActor ()->Snapshot?,navigate:@escaping @MainActor (NativeFeatureRoute)->Void)->NativeFeatureDefinition {
-        .init(manifest:BuiltinModuleManifests.checkup,ui:.init(sidebarLocations:[.overview]),makeSession:{CheckupSession(availability:$0,reading:reading,navigate:navigate)})
+        .init(manifest:BuiltinModuleManifests.checkup,ui:.init(sidebarLocations:[.overview]),resolveLegacyPage:{argument in argument=="checkup" ? .init(BuiltinModuleManifests.checkup.id,"home"):nil},makeSession:{CheckupSession(availability:$0,reading:reading,navigate:navigate)})
     }
 }
 @MainActor final class CheckupSession:NativeFeatureSession {

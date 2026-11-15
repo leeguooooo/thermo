@@ -38,7 +38,7 @@ struct PopoverView: View {
     }
     private var mainSections: some View {
         VStack(alignment: .leading, spacing: 8) {
-            if modules.isOn(PerformanceModule.manifest.id) {
+            if modules.isOn(BuiltinModuleManifests.performance.id) {
                 if monitor.iconHidden {
                     Label(tr("The menu bar icon is hidden behind the notch. Hold ⌘ and drag other icons out of the menu bar to make room, or open Thermo from the Dock."), systemImage: "eye.slash")
                         .font(Theme.caption).foregroundStyle(Theme.caution).fixedSize(horizontal: false, vertical: true)
@@ -74,7 +74,7 @@ struct PopoverView: View {
                             .buttonStyle(.plain).foregroundStyle(Theme.textSecondary).help(tr(entry.title))
                     }
                 }
-                shortcut("clock.arrow.circlepath", tr("History"), .module(BuiltinModuleManifests.history.id,"home"))
+                shortcut("clock.arrow.circlepath", tr("History"), .native(.init(BuiltinModuleManifests.history.id,"home")))
                 // An icon like its neighbours: with a text button the English row overflowed the 372 pt panel.
                 shortcut("slider.horizontal.3", tr("Customize menu bar…"), .settings)
                 Button { NSApp.terminate(nil) } label: { Image(systemName: "power").frame(width: 22) }

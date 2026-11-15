@@ -59,11 +59,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate, UNU
         AppControlHost.shared.start()
         CleanScreenShortcutModel.enableLive()
         ModuleCenter.shared.start()
-        if CommandLine.arguments.contains("--search") { DispatchQueue.main.async { SearchModule.show() } }
+        if CommandLine.arguments.contains("--search") { DispatchQueue.main.async { SearchHost.show() } }
         BatteryCareModel.shared.restoreSavedPreference()
         _ = AppModels.shared.updates  // Sparkle starts checking with the app
         // Slowdown history and alerts, in the background whether or not the panel is open.
-        // PerformanceModule owns background slowdown history.
+        // The admitted performance session owns background slowdown history.
         if Bundle.main.bundleIdentifier != nil { UNUserNotificationCenter.current().delegate = self }
 
         statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
@@ -202,7 +202,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate, UNU
         NativeMenuItems.refreshContent(in:menu)
         NativeMenuItems.updateVisibility(in:menu,enabled:ModuleCenter.shared.isOn)
         for item in menu.items {
-            if let id = item.representedObject as? String, BuiltinModules.manifest(id) != nil {
+            if let id = item.representedObject as? String, NativeModules.manifest(id) != nil {
                 item.isHidden = !ModuleCenter.shared.isOn(id)
             }
         }
@@ -380,7 +380,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate, UNU
 
     private func updateTitle(_ s: Snapshot?) {
         guard let button = statusItem.button else { return }
-        if !PerformanceModule.enabled {
+        if !ModuleCenter.shared.isOn(BuiltinModuleManifests.performance.id) {
             let awake = IdleAwakeModel.shared.state
             let marker = awake.phase == .active ? "☕︎" : awake.phase == .ending ? "☕︎?" : awake.requested ? "☕︎⏸" : ""
             button.title = marker.isEmpty ? "" : " " + marker
@@ -684,12 +684,8 @@ if let i = CommandLine.arguments.firstIndex(of: "--render-preview"), i + 1 < Com
     let models = AppModels.shared
     func value(after flag: String) -> String? { args.firstIndex(of: flag).flatMap { $0 + 1 < args.count ? args[$0 + 1] : nil } }
     var page = value(after: "--page").flatMap(MainPage.init(argument:)) ?? .overview
-    do {
-        if let request=try models.nativeFeatures.catalog.resolveLegacyLaunch(args),models.nativeFeatures.preparePresentation(request) {
-            page = .native(request.route)
-        }
-    } catch {fputs("Invalid feature launch: \(error.localizedDescription)\n",stderr);exit(2)}
-    if let route=page.nativeRoute {models.nativeFeatures.prepareReview(route,arguments:args)}
+    do {page=try NativeModules.prepareReview(args,page:page,models:models)}
+    catch {fputs("Invalid feature launch: \(error.localizedDescription)\n",stderr);exit(2)}
     MainWindow.show(page)
     // `--height N`: a taller window, so a snapshot can show what sits below the fold.
     if let h = value(after: "--height").flatMap(Double.init), let w = MainWindow.window {
@@ -704,17 +700,14 @@ if let i = CommandLine.arguments.firstIndex(of: "--render-preview"), i + 1 < Com
         }
         // Give each page what it needs to be worth a picture, but never wait more than 90 s.
         if Date().timeIntervalSince(started) > 90 { return true }
-        if let ready = BuiltinModules.snapshotReady(page, arguments: args, models: models, center: .shared, started: started) { return ready }
+        if let ready = NativeModules.snapshotReady(page, arguments: args, models: models, center: .shared, started: started) { return ready }
         switch page {
         case let .module(id, _):
             // Worth a picture once the module's process is up, or once it is known to be off.
             guard ModuleCenter.shared.loaded else { return false }
             let status = ModuleCenter.shared.manager.status(id)
             return status?.enabled != true || (status?.phase == .running && Date().timeIntervalSince(started) > 3)
-        case .compute: return models.nativeFeatures.snapshotReady(.init(BuiltinModuleManifests.performance.id,"cpu"),arguments:args,started:started)
-        case .memory: return models.nativeFeatures.snapshotReady(.init(BuiltinModuleManifests.performance.id,"memory"),arguments:args,started:started)
-        case .overview: return models.nativeFeatures.snapshotReady(.init(BuiltinModuleManifests.performance.id,"overview"),arguments:args,started:started)
-        default: return models.system.snapshot != nil || !PerformanceModule.enabled
+        default: return models.system.snapshot != nil || !ModuleCenter.shared.isOn(BuiltinModuleManifests.performance.id)
         }
     }
 }

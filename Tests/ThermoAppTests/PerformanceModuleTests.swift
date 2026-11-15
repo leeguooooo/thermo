@@ -7,20 +7,20 @@ import XCTest
 
 @MainActor final class PerformanceModuleTests: XCTestCase {
     func testRegisteredPagesKeepLegacyRoutesAndOwnTheirNavigationKeys() {
-        XCTAssertTrue(BuiltinModules.problems.isEmpty, BuiltinModules.problems.joined(separator: "\n"))
-        XCTAssertTrue(ModuleNavigation.conflicts(BuiltinModules.all).isEmpty)
+        XCTAssertTrue(NativeModules.problems.isEmpty, NativeModules.problems.joined(separator: "\n"))
+        XCTAssertTrue(ModuleNavigation.conflicts(NativeModules.all).isEmpty)
         for (name, page) in [("overview",MainPage.overview),("sensors",.sensors),("fans",.fans),("memory",.memory),("cpu",.compute(false)),("gpu",.compute(true))] {
             let canonical=MainPage.native(.init(BuiltinModuleManifests.performance.id,name))
             XCTAssertEqual(MainPage(argument:name),canonical)
             XCTAssertEqual(MainPage(argument:name)?.nativeRoute,page.nativeRoute)
-            XCTAssertEqual(page.module,PerformanceModule.manifest.id)
-            XCTAssertEqual(BuiltinModules.page(page)?.target,page)
-            let generic=MainPage(argument:"module:"+PerformanceModule.manifest.id+":"+name)
-            XCTAssertEqual(generic.flatMap {BuiltinModules.page($0)?.target},page)
+            XCTAssertEqual(page.module,BuiltinModuleManifests.performance.id)
+            XCTAssertEqual(NativeModules.page(page)?.target,page)
+            let generic=MainPage(argument:"module:"+BuiltinModuleManifests.performance.id+":"+name)
+            XCTAssertEqual(generic.flatMap {NativeModules.page($0)?.target},page)
             XCTAssertFalse(HostPageSpecification.pages.contains {$0.argument == name})
         }
-        XCTAssertEqual(PerformanceModule.manifest.launch,.always)
-        XCTAssertTrue(PerformanceModule.manifest.entries.allSatisfy(PerformanceModule.supports))
+        XCTAssertEqual(BuiltinModuleManifests.performance.launch,.always)
+
     }
 
     func testSwitchingOffOverviewFallsBackToSettingsAndReleasesNavigation() {
@@ -32,11 +32,11 @@ import XCTest
         defer { MainWindow.state.page=previous }
         MainWindow.state.page = .overview
         XCTAssertEqual(center.navigationKey(.overview),"1")
-        center.setEnabled(PerformanceModule.manifest.id,false)
+        center.setEnabled(BuiltinModuleManifests.performance.id,false)
         XCTAssertFalse(center.shows(.overview) || center.shows(.sensors) || center.shows(.fans) || center.shows(.memory))
         XCTAssertNil(center.navigationKey(.overview))
         XCTAssertEqual(MainWindow.state.page,.settings)
-        XCTAssertTrue(center.shows(.settings) && center.shows(.module(BuiltinModuleManifests.connections.id,"home")))
+        XCTAssertTrue(center.shows(.settings) && center.shows(.native(.init(BuiltinModuleManifests.connections.id,"home"))))
     }
 
     func testStopIsRefusedWhileHelperMaintenanceIsRunning() async {
@@ -50,7 +50,7 @@ import XCTest
         XCTAssertFalse(monitor.administration.latest.canRetirePerformance)
         let models=AppModels(services:services,makeSystemPresentation:{monitor})
         models.nativeFeatures.start(BuiltinModuleManifests.performance.id)
-        XCTAssertThrowsError(try PerformanceModule.prepareStop(models:models))
+        XCTAssertThrowsError(try NativeModules.prepareStop(BuiltinModuleManifests.performance.id,models:models))
         release.signal();await fulfillment(of:[finished],timeout:2)
         XCTAssertFalse(monitor.installingHelper)
         // Retire any remaining helper-readiness polling after the isolated installer finishes.

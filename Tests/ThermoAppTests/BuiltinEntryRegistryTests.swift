@@ -21,9 +21,9 @@ import XCTest
         return (UserDefaults(suiteName: name)!, name)
     }
     func testEveryDeclaredEntryHasAnImplementationAndCorePagesStayCore() {
-        XCTAssertTrue(BuiltinModules.problems.isEmpty, BuiltinModules.problems.joined(separator: "\n"))
-        XCTAssertEqual(Set(BuiltinModules.all.map(\.id)), Set(BuiltinModuleManifests.all.map(\.id)))
-        XCTAssertTrue(ModuleNavigation.conflicts(BuiltinModules.all).isEmpty)
+        XCTAssertTrue(NativeModules.problems.isEmpty, NativeModules.problems.joined(separator: "\n"))
+        XCTAssertEqual(Set(NativeModules.all.map(\.id)), Set(BuiltinModuleManifests.all.map(\.id)))
+        XCTAssertTrue(ModuleNavigation.conflicts(NativeModules.all).isEmpty)
         for entry in HostPageSpecification.pages {
             let page = MainPage(argument: entry.argument)
             XCTAssertNotNil(page, entry.argument)
@@ -31,33 +31,33 @@ import XCTest
         }
     }
     func testDiskRoutesCoverEveryCategoryAndKeepLegacyAndGenericArguments() {
-        let expected = Set([MainPage.native(.init(BuiltinModules.disk.id, "scan")), .native(.init(BuiltinModules.disk.id, "overview"))] + CleanCategory.allCases.map { .native(.init(BuiltinModules.disk.id, $0.rawValue)) })
-        let entries = BuiltinModules.disk.entries.filter { $0.kind == .page }
-        XCTAssertEqual(Set(entries.compactMap { $0.scene.flatMap(DiskModule.target) }), expected)
+        let expected = Set([MainPage.native(.init(BuiltinModuleManifests.disk.id, "scan")), .native(.init(BuiltinModuleManifests.disk.id, "overview"))] + CleanCategory.allCases.map { .native(.init(BuiltinModuleManifests.disk.id, $0.rawValue)) })
+        let entries = BuiltinModuleManifests.disk.entries.filter { $0.kind == .page }
+        XCTAssertEqual(Set(entries.compactMap { $0.scene.flatMap(MainPage.init(argument:)) }), expected)
         for entry in entries {
-            XCTAssertEqual(MainPage(argument: entry.scene!), DiskModule.target(entry.scene!))
-            let generic = MainPage.module(BuiltinModules.disk.id, entry.id)
-            XCTAssertEqual(BuiltinModules.page(generic)?.target, DiskModule.target(entry.scene!))
+            XCTAssertEqual(MainPage(argument:entry.scene!),.native(.init(BuiltinModuleManifests.disk.id,entry.id)))
+            let generic = MainPage.module(BuiltinModuleManifests.disk.id, entry.id)
+            XCTAssertEqual(NativeModules.page(generic)?.target, MainPage(argument:entry.scene!))
         }
-        XCTAssertEqual(MainPage(argument: "disk:home"), .native(.init(BuiltinModules.disk.id, "scan")))
-        XCTAssertEqual(BuiltinModules.page(.module(BuiltinModules.disk.id, ""))?.target, .native(.init(BuiltinModules.disk.id, "scan")))
+        XCTAssertEqual(MainPage(argument: "disk:home"), .native(.init(BuiltinModuleManifests.disk.id, "scan")))
+        XCTAssertEqual(NativeModules.page(.module(BuiltinModuleManifests.disk.id, ""))?.target, .native(.init(BuiltinModuleManifests.disk.id, "scan")))
         XCTAssertNil(MainPage(argument: "disk:not-declared"))
-        XCTAssertEqual(BuiltinModules.disk.entries.filter { $0.kind == .settingsItem }.count, 1)
+        XCTAssertEqual(BuiltinModuleManifests.disk.entries.filter { $0.kind == .settingsItem }.count, 1)
     }
 
     func testDisabledSnapshotAndNavigationDoNotCreateAModel() {
         let (defaults, name) = settings(); defer { defaults.removePersistentDomain(forName: name) }
-        defaults.set(false, forKey: ModuleCenter.key(BuiltinModules.disk.id))
+        defaults.set(false, forKey: ModuleCenter.key(BuiltinModuleManifests.disk.id))
         let center = ModuleCenter(defaults: defaults)
         var made = 0
         let definition=NativeFeatureDefinition(manifest:BuiltinModuleManifests.disk,makeSession:{_ in made+=1;return Session()})
         let models=AppModels(defaults:defaults,nativeDefinitions:[definition])
-        XCTAssertEqual(BuiltinModules.snapshotReady(.module(BuiltinModules.disk.id, "scan"), arguments: ["--disk"], models: models, center: center), true)
-        XCTAssertFalse(center.rootPages.contains { $0.module.id == BuiltinModules.disk.id })
-        XCTAssertTrue(center.rootPages.contains { $0.module.id == PerformanceModule.manifest.id })
+        XCTAssertEqual(NativeModules.snapshotReady(.module(BuiltinModuleManifests.disk.id, "scan"), arguments: ["--disk"], models: models, center: center), true)
+        XCTAssertFalse(center.rootPages.contains { $0.module.id == BuiltinModuleManifests.disk.id })
+        XCTAssertTrue(center.rootPages.contains { $0.module.id == BuiltinModuleManifests.performance.id })
         XCTAssertNil(center.legacyMenuPage("smartScan"))
-        XCTAssertNil(center.navigationKey(.module(BuiltinModules.disk.id, "scan")))
-        XCTAssertFalse(models.nativeFeatures.status(BuiltinModules.disk.id).modelLoaded)
+        XCTAssertNil(center.navigationKey(.module(BuiltinModuleManifests.disk.id, "scan")))
+        XCTAssertFalse(models.nativeFeatures.status(BuiltinModuleManifests.disk.id).modelLoaded)
         XCTAssertEqual(made, 0)
     }
     func testViewMenuAndLegacySlotUseDeclaredDestinationAndReleaseCommandFive() throws {
@@ -69,10 +69,10 @@ import XCTest
         installStandardMenus(center: center)
         func menu() throws -> NSMenu { try XCTUnwrap(NSApp.mainMenu?.items.first { $0.identifier?.rawValue == "thermo.view" }?.submenu) }
         let five = try XCTUnwrap(menu().items.first { $0.keyEquivalent == "5" })
-        XCTAssertEqual(five.title, BuiltinModules.disk.name)
-        XCTAssertEqual(five.representedObject as? MainPage, .native(.init(BuiltinModules.disk.id, "scan")))
+        XCTAssertEqual(five.title, BuiltinModuleManifests.disk.name)
+        XCTAssertEqual(five.representedObject as? MainPage, .native(.init(BuiltinModuleManifests.disk.id, "scan")))
         XCTAssertEqual(center.legacyMenuPage("smartScan")?.title, "Smart Scan")
-        center.setEnabled(BuiltinModules.disk.id, false)
+        center.setEnabled(BuiltinModuleManifests.disk.id, false)
         XCTAssertNil(try menu().items.first { $0.keyEquivalent == "5" })
         XCTAssertNil(center.legacyMenuPage("smartScan"))
     }
@@ -99,7 +99,7 @@ import XCTest
         XCTAssertNil(center.navigationKey(page))
         XCTAssertNotNil(center.navigationIssue(manifest.id))
         XCTAssertNil(center.statuses.first?.pid)
-        center.setEnabled(BuiltinModules.disk.id, false)
+        center.setEnabled(BuiltinModuleManifests.disk.id, false)
         XCTAssertEqual(center.navigationKey(page), "5")
         XCTAssertNil(center.navigationIssue(manifest.id))
         center.setEnabled(manifest.id, false)

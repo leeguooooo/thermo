@@ -5,7 +5,7 @@ import ThermoL10n
 
 package enum ConnectionsFeature {
     package static func registration()->NativeFeatureDefinition {
-        .init(manifest:BuiltinModuleManifests.connections,ui:.init(sidebarLocations:[.machine]),makeSession:{ConnectionsSession(availability:$0)})
+        .init(manifest:BuiltinModuleManifests.connections,ui:.init(sidebarLocations:[.machine]),resolveLegacyPage:{argument in argument=="connections" ? .init(BuiltinModuleManifests.connections.id,"home"):nil},makeSession:{ConnectionsSession(availability:$0)})
     }
 }
 @MainActor final class ConnectionsSession:NativeFeatureSession {

@@ -35,7 +35,7 @@ import XCTest
         await fulfillment(of:[entered],timeout:2)
         var shown:[MainPage]=[]
         XCTAssertEqual(AppExitGuard.reply(show:{shown.append($0)}),.terminateCancel)
-        XCTAssertEqual(shown,[.module(BuiltinModuleManifests.history.id,"home")])
+        XCTAssertEqual(shown,[.native(.init(BuiltinModuleManifests.history.id,"home"))])
         // Once physical work begins, abandoning a pending request cannot release its guard.
         operation.cancelBeforeStart()
         XCTAssertEqual(AppExitGuard.reply(show:{_ in}),.terminateCancel)

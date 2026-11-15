@@ -7,11 +7,11 @@ import SwiftUI
 
 @MainActor final class MenuBarHostRoutingTests:XCTestCase {
     func testManifestAndRegistryCoverMenuAndSettings() {
-        XCTAssertEqual(MenuBarModule.manifest.launch, .always)
-        XCTAssertTrue(MenuBarModule.manifest.enabledByDefault)
-        XCTAssertTrue(MenuBarModule.manifest.entries.allSatisfy(MenuBarModule.supports))
-        XCTAssertTrue(BuiltinModules.problems.isEmpty)
-        XCTAssertEqual(Set(BuiltinModules.all.map(\.id)),Set(BuiltinModuleManifests.all.map(\.id)))
+        XCTAssertEqual(BuiltinModuleManifests.menuBar.launch, .always)
+        XCTAssertTrue(BuiltinModuleManifests.menuBar.enabledByDefault)
+
+        XCTAssertTrue(NativeModules.problems.isEmpty)
+        XCTAssertEqual(Set(NativeModules.all.map(\.id)),Set(BuiltinModuleManifests.all.map(\.id)))
     }
     func testProductionMaterializerIncludesRecoveryWhileOrdinaryModuleIsOff() throws {
         _=NSApplication.shared

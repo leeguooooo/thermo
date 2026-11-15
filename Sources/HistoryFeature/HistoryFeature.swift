@@ -5,7 +5,7 @@ import ThermoL10n
 
 package enum HistoryFeature {
     package static func registration(services: @escaping @MainActor () -> any HistoryServices) -> NativeFeatureDefinition {
-        .init(manifest: BuiltinModuleManifests.history,ui:.init(sidebarLocations:[.footer]), makeSession: { HistorySession(availability: $0, services: services()) })
+        .init(manifest: BuiltinModuleManifests.history,ui:.init(sidebarLocations:[.footer]), resolveLegacyPage:{argument in argument=="history" || argument.hasPrefix("history:") ? .init(BuiltinModuleManifests.history.id,"home"):nil},makeSession: { HistorySession(availability: $0, services: services()) })
     }
 }
 @MainActor final class HistorySession: NativeFeatureSession {

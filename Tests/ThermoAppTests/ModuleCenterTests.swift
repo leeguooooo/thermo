@@ -182,14 +182,14 @@ import XCTest
 
 @MainActor final class BuiltinModuleTests: XCTestCase {
     func testBuiltinManifestsAreValidAndTheirPagesExist() {
-        for manifest in BuiltinModules.all {
+        for manifest in NativeModules.all {
             XCTAssertEqual(manifest.problems(), [], manifest.id)
             for entry in manifest.entries where entry.kind == .page {
                 let page = MainPage(argument: entry.scene ?? "")
                 XCTAssertEqual(page?.module, manifest.id, "\(manifest.id) entry \(entry.id) must lead to one of its own pages")
             }
         }
-        XCTAssertEqual(MainPage.overview.module, PerformanceModule.manifest.id)
+        XCTAssertEqual(MainPage.overview.module, BuiltinModuleManifests.performance.id)
         XCTAssertNil(MainPage.settings.module)
     }
 
@@ -199,16 +199,16 @@ import XCTest
         defer { defaults.removePersistentDomain(forName: name) }
         let empty = FileManager.default.temporaryDirectory.appendingPathComponent("thermo-none-" + UUID().uuidString + "/Thermo.app")
         let center = ModuleCenter(manager: ModuleManager(app: empty), defaults: defaults)
-        let id = BuiltinModules.disk.id
+        let id = BuiltinModuleManifests.disk.id
         // On for everyone who never touched the switch.
         XCTAssertTrue(center.isOn(id))
-        XCTAssertTrue(center.shows(.module(BuiltinModules.disk.id, "scan")) && center.shows(.module(BuiltinModules.disk.id, "overview")))
+        XCTAssertTrue(center.shows(.module(BuiltinModuleManifests.disk.id, "scan")) && center.shows(.module(BuiltinModuleManifests.disk.id, "overview")))
         center.setEnabled(id, false)
         XCTAssertFalse(center.isOn(id))
-        XCTAssertFalse(center.shows(.module(BuiltinModules.disk.id, "scan")) || center.shows(.module(BuiltinModules.disk.id, "ai-sessions")))
+        XCTAssertFalse(center.shows(.module(BuiltinModuleManifests.disk.id, "scan")) || center.shows(.module(BuiltinModuleManifests.disk.id, "ai-sessions")))
         XCTAssertTrue(center.shows(.overview) && center.shows(.memory), "other pages are untouched")
         XCTAssertEqual(center.switches.first { $0.manifest.id == id }?.enabled, false)
         center.setEnabled(id, true)
-        XCTAssertTrue(center.shows(.module(BuiltinModules.disk.id, "scan")))
+        XCTAssertTrue(center.shows(.module(BuiltinModuleManifests.disk.id, "scan")))
     }
 }

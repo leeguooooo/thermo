@@ -4,11 +4,11 @@ import XCTest
 
 @MainActor final class HistoryModuleHostTests: XCTestCase {
     func testRegistryOwnsLegacyAndGenericHistoryPage() {
-        XCTAssertTrue(BuiltinModules.problems.isEmpty,BuiltinModules.problems.joined(separator:"\n"))
-        XCTAssertEqual(MainPage.module(HistoryModule.manifest.id,"home").module,HistoryModule.manifest.id)
+        XCTAssertTrue(NativeModules.problems.isEmpty,NativeModules.problems.joined(separator:"\n"))
+        XCTAssertEqual(MainPage.native(.init(BuiltinModuleManifests.history.id,"home")).module,BuiltinModuleManifests.history.id)
         for argument in ["history", "history:", "history:legacy"] {
-            XCTAssertEqual(MainPage(argument:argument),.module(HistoryModule.manifest.id,"home"))
+            XCTAssertEqual(MainPage(argument:argument),.native(.init(BuiltinModuleManifests.history.id,"home")))
         }
-        XCTAssertEqual(BuiltinModules.page(.module(HistoryModule.manifest.id,"home"))?.target,.module(HistoryModule.manifest.id,"home"))
+        XCTAssertEqual(NativeModules.page(.native(.init(BuiltinModuleManifests.history.id,"home")))?.target,.native(.init(BuiltinModuleManifests.history.id,"home")))
     }
 }

@@ -124,6 +124,20 @@ import ModuleKit
         XCTAssertThrowsError(try NativeFeatureCatalog(definitions:[valid,duplicate]).resolveLegacyLaunch(["--fixture"]))
         XCTAssertEqual(made,0)
     }
+    func testLegacyMenuAliasesAreUniqueDeclaredPagesAndStayCold()throws {
+        var made=0
+        let definition=NativeFeatureDefinition(manifest:manifest,legacyMenuEntries:["old-menu":"home"],makeSession:{_ in made+=1;return Session()})
+        let catalog=try NativeFeatureCatalog(definitions:[definition])
+        XCTAssertEqual(try catalog.resolveLegacyMenu("old-menu"),.init(id,"home"))
+        XCTAssertNil(try catalog.resolveLegacyMenu("unknown"))
+        for entry in ["unknown","action"] {
+            XCTAssertThrowsError(try NativeFeatureCatalog(definitions:[.init(manifest:manifest,legacyMenuEntries:["old":entry],makeSession:{_ in Session()})]))
+        }
+        let other=ModuleManifest(id:"com.example.other",name:"Other",summary:"",symbol:"doc",version:"1",entries:[.init(id:"home",kind:.page,title:"Home")])
+        let duplicate=NativeFeatureDefinition(manifest:other,legacyMenuEntries:["old-menu":"home"],makeSession:{_ in Session()})
+        XCTAssertThrowsError(try NativeFeatureCatalog(definitions:[definition,duplicate]))
+        XCTAssertEqual(made,0)
+    }
     func testRestoreInvalidationIsExistingOnlyAndDoesNotTouchDrainingGeneration()async throws {
         let session=Session();var made=0
         let store=NativeFeatureStore(definitions:[definition{_ in made+=1;return session}],enabled:{_ in true})

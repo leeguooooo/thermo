@@ -42,7 +42,7 @@ import XCTest
     }
     func testOwnRefusalReleasesTheExternalAdmissionLock() throws {
         let (root,defaults,_)=try fixture(),id=BuiltinModuleManifests.space.id
-        let center=ModuleCenter(defaults:defaults,prepareBuiltinStop:{_ in throw BuiltinModules.StopRefused(description:"owned action in progress")},commandHome:root.path)
+        let center=ModuleCenter(defaults:defaults,prepareBuiltinStop:{_ in throw NativeModules.StopRefused(description:"owned action in progress")},commandHome:root.path)
         center.setEnabled(id,false)
         XCTAssertTrue(center.isOn(id));XCTAssertTrue(center.changing.isEmpty)
         let next=try ModuleCommandLease.begin(feature:id,home:root.path,enabled:{true})

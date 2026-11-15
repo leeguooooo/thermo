@@ -4,19 +4,19 @@ import XCTest
 
 @MainActor final class ClaudeHostRouteTests:XCTestCase {
     func testRegistryOwnsAccountsResetPrivacyAndGenericEntries() {
-        XCTAssertTrue(BuiltinModules.problems.isEmpty)
+        XCTAssertTrue(NativeModules.problems.isEmpty)
         for entry in ["accounts","reset","privacy"] {
-            let target=MainPage.module(ClaudeToolsModule.manifest.id,entry)
+            let target=MainPage.native(.init(BuiltinModuleManifests.claude.id,entry))
             XCTAssertEqual(MainPage(argument:"claude:"+entry),target)
-            XCTAssertEqual(BuiltinModules.page(target)?.target,target)
+            XCTAssertEqual(NativeModules.page(target)?.target,target)
         }
     }
     func testDisabledClaudeRoutesDoNotCreateModels() {
         let name="thermo-claude-target-"+UUID().uuidString,defaults=UserDefaults(suiteName:name)!
         defer{defaults.removePersistentDomain(forName:name)}
-        defaults.set(false,forKey:ModulePreferences.key(ClaudeToolsModule.manifest.id))
+        defaults.set(false,forKey:ModulePreferences.key(BuiltinModuleManifests.claude.id))
         let models=AppModels(defaults:defaults)
-        for entry in ["accounts","reset","privacy"] {XCTAssertNil(models.nativeFeatures.page(.init(ClaudeToolsModule.manifest.id,entry)))}
-        XCTAssertFalse(models.nativeFeatures.status(ClaudeToolsModule.manifest.id).modelLoaded)
+        for entry in ["accounts","reset","privacy"] {XCTAssertNil(models.nativeFeatures.page(.init(BuiltinModuleManifests.claude.id,entry)))}
+        XCTAssertFalse(models.nativeFeatures.status(BuiltinModuleManifests.claude.id).modelLoaded)
     }
 }

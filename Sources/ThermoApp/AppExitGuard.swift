@@ -20,7 +20,7 @@ enum AppExitGuard {
 
     static func reply(nativeBlocker:@MainActor (String?)->NativeFeatureBlocker? = {AppModels.shared.nativeFeatures.quitBlocker($0)},show: @MainActor (MainPage) -> Void = { MainWindow.show($0) }) -> NSApplication.TerminateReply {
         if !restores.isEmpty {
-            show(.module(BuiltinModuleManifests.history.id,"home"))
+            show(.native(.init(BuiltinModuleManifests.history.id,"home")))
             return .terminateCancel
         }
         if !helperMaintenance.isEmpty {

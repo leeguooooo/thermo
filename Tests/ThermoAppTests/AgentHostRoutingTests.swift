@@ -6,15 +6,15 @@ import AgentDiagnosticsFeature
 
 @MainActor final class AgentHostRoutingTests:XCTestCase {
     func testAllAreasAndHomeResolveToDeclaredPagesAndCommandSix() {
-        XCTAssertTrue(BuiltinModules.problems.isEmpty,BuiltinModules.problems.joined(separator:"\n"))
+        XCTAssertTrue(NativeModules.problems.isEmpty,NativeModules.problems.joined(separator:"\n"))
         XCTAssertFalse(HostPageSpecification.pages.contains{$0.argument=="agents"})
         let manifest=BuiltinModuleManifests.agents
-        XCTAssertEqual(BuiltinModules.page(.native(.init(manifest.id,"home")))?.entry.navigationKey,"6")
+        XCTAssertEqual(NativeModules.page(.native(.init(manifest.id,"home")))?.entry.navigationKey,"6")
         for entry in manifest.entries {
             let page=MainPage.native(.init(manifest.id,entry.id))
             XCTAssertEqual(MainPage(argument:entry.scene!),page)
-            XCTAssertEqual(BuiltinModules.page(page)?.target,page)
-            XCTAssertEqual(BuiltinModules.page(.module(manifest.id,entry.id))?.target,page)
+            XCTAssertEqual(NativeModules.page(page)?.target,page)
+            XCTAssertEqual(NativeModules.page(.module(manifest.id,entry.id))?.target,page)
             XCTAssertEqual(MainPage.module(manifest.id,entry.id).nativeRoute,page.nativeRoute)
         }
     }

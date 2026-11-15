@@ -9,7 +9,7 @@ import ThermoL10n
 }
 package enum DownloadFeature {
     package static func registration(presentation: @escaping @MainActor @Sendable () -> any DownloadPresentation) -> NativeFeatureDefinition {
-        .init(manifest: BuiltinModuleManifests.download,runsInBackground:true,ui:.init(sidebarLocations:[.software]), makeSession: { DownloadSession(availability:$0,presentation:presentation()) })
+        .init(manifest: BuiltinModuleManifests.download,runsInBackground:true,ui:.init(sidebarLocations:[.software]), resolveLegacyPage:{argument in argument=="yunx" || argument.hasPrefix("yunx:") ? .init(BuiltinModuleManifests.download.id,"home"):nil},makeSession: { DownloadSession(availability:$0,presentation:presentation()) })
     }
 }
 @MainActor final class DownloadSession: NativeFeatureSession {

@@ -8,13 +8,13 @@ import XCTest
 @testable import ThermoApp
 
 @MainActor final class BuiltinModuleLifecycleTests: XCTestCase {
-    let diskID = BuiltinModules.disk.id
+    let diskID = BuiltinModuleManifests.disk.id
     func defaults() -> (UserDefaults, String) {
         let name = "thermo-builtin-stop-" + UUID().uuidString
         return (UserDefaults(suiteName: name)!, name)
     }
     func center(_ defaults: UserDefaults, models: AppModels) -> ModuleCenter {
-        ModuleCenter(defaults: defaults, prepareBuiltinStop: { _ in try DiskModule.prepareStop(models:models) })
+        ModuleCenter(defaults: defaults, prepareBuiltinStop: { _ in try NativeModules.prepareStop(BuiltinModuleManifests.disk.id,models:models) })
     }
     private final class Services:DiskServices {
         func requestScanNotifications(){}
@@ -130,7 +130,7 @@ import XCTest
         let (settings, name) = defaults(); defer { settings.removePersistentDomain(forName: name) }
         settings.set(true, forKey: ModuleCenter.key(diskID))
         let host = ModuleCenter(defaults: settings, prepareBuiltinStop: { _ in
-            throw BuiltinModules.StopRefused(description: "operation is still writing")
+            throw NativeModules.StopRefused(description: "operation is still writing")
         })
         host.setEnabled(diskID, false)
         XCTAssertTrue(host.isOn(diskID))

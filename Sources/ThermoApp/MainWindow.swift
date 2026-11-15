@@ -12,45 +12,41 @@ import ThermoL10n
 
 /// Where the main window is.
 enum MainPage: Hashable {
-    case overview, sensors, fans, settings
+    case settings
     case native(NativeFeatureRoute)
+    /// Only isolated external modules use this representation.
+    case module(String,String)
+    static var overview:MainPage {.native(.init(BuiltinModuleManifests.performance.id,"overview"))}
+    static var sensors:MainPage {.native(.init(BuiltinModuleManifests.performance.id,"sensors"))}
+    static var fans:MainPage {.native(.init(BuiltinModuleManifests.performance.id,"fans"))}
+    static var memory:MainPage {.native(.init(BuiltinModuleManifests.performance.id,"memory"))}
+    static func compute(_ gpu:Bool)->MainPage {.native(.init(BuiltinModuleManifests.performance.id,gpu ? "gpu":"cpu"))}
     static func browser(_ app:String)->MainPage {.native(.init(BuiltinModuleManifests.browser.id,"home",context:["app":.text(app)]))}
-    case memory
-    case compute(Bool)
-    /// A page drawn by a module: module id, entry id (empty: the module's first page).
-    case module(String, String)
 
-    /// `--page` values: overview, checkup, sensors, fans, settings, pages, disk, disk:overview, disk:<category>,
-    /// module:<id>[:<entry>], agents, agents:<area>, apps, apps:leftovers, apps:store, plugins, space, space:large, space:duplicates, memory, cpu, gpu, claude, claude:<accounts|reset|privacy>, claude-cleanup, history, connections.
-    init?(argument: String) {
-        if let native=try? BuiltinNativeFeatures.catalog.resolveLegacyPage(argument) {self = .native(native);return}
-        if let feature = BuiltinModules.argument(argument) { self = feature; return }
-        let parts = argument.split(separator: ":", maxSplits: 1).map(String.init)
-        guard let command = parts.first else { return nil }
-        switch command {
-        case "overview": self = .overview
-        case "sensors": self = .sensors
-        case "fans": self = .fans
-        case "settings": self = .settings
-        case "memory": self = .memory
-        case "module":
-            // module:<module id>[:<entry id>]
-            guard parts.count > 1 else { return nil }
-            let rest = parts[1].split(separator: ":", maxSplits: 1).map(String.init)
-            self = .module(rest[0], rest.count > 1 ? rest[1] : "")
-        case "cpu": self = .compute(false)
-        case "gpu": self = .compute(true)
-        default: return nil
+    init?(argument:String) {
+        if argument=="settings" {self = .settings;return}
+        if let route=try? BuiltinNativeFeatures.catalog.resolveLegacyPage(argument) {self = .native(route);return}
+        guard argument.hasPrefix("module:") else{return nil}
+        let parts=argument.dropFirst(7).split(separator:":",maxSplits:1,omittingEmptySubsequences:false).map(String.init)
+        guard let id=parts.first,!id.isEmpty else{return nil}
+        let page=MainPage.module(id,parts.count>1 ? parts[1]:"")
+        if BuiltinNativeFeatures.catalog.manifest(id) != nil {
+            guard let route=page.nativeRoute else{return nil};self = .native(route)
+        } else {self=page}
+    }
+    var nativeRoute:NativeFeatureRoute? {
+        let catalog=BuiltinNativeFeatures.catalog
+        switch self {
+        case let .native(route):return try? catalog.normalize(route)
+        case let .module(id,entry):
+            guard let manifest=catalog.manifest(id),let selected=manifest.entries.first(where:{$0.kind == .page && (entry.isEmpty ? $0.parent==nil:$0.id==entry)}) else{return nil}
+            return try? catalog.normalize(.init(id,selected.id))
+        case .settings:return nil
         }
     }
-
-    var nativeRoute:NativeFeatureRoute? {
-        if case let .native(route)=self{return try? BuiltinNativeFeatures.catalog.normalize(route)}
-        guard let feature=BuiltinModules.page(self),BuiltinNativeFeatures.catalog.manifest(feature.module.id) != nil else{return nil}
-        return try? BuiltinNativeFeatures.catalog.normalize(.init(feature.module.id,feature.entry.id))
+    var module:String? {
+        switch self {case let .native(route):return route.module;case let .module(id,_):return id;case .settings:return nil}
     }
-
-
 }
 
 /// The main window: everything Thermo does, in the Disk Cleanup look — a sidebar of places and a
@@ -287,8 +283,6 @@ struct MainView: View {
 
     @ViewBuilder var coreContent: some View {
         switch page {
-        case .overview, .sensors, .fans, .memory, .compute:
-            ModuleOffView().transition(.page)
         case .settings:
             WindowPage(title: tr("Settings"), subtitle: "Thermo \(AppInfo.version)") {
                 SettingsView(monitor: monitor, updates: models.updates).onAppear{monitor.refreshHelper()}
@@ -296,7 +290,9 @@ struct MainView: View {
         case .native:
             ModuleOffView().transition(.page)
         case let .module(id, entry):
-            ModulePageView(center: .shared, module: id, entry: entry).id(id + ":" + entry).transition(.page)
+            if BuiltinNativeFeatures.catalog.manifest(id)==nil {
+                ModulePageView(center:.shared,module:id,entry:entry).id(id+":"+entry).transition(.page)
+            } else {ModuleOffView().transition(.page)}
         }
     }
 }

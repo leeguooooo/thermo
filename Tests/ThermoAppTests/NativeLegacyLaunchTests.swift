@@ -15,4 +15,13 @@ final class NativeLegacyLaunchTests:XCTestCase {
         XCTAssertThrowsError(try catalog.resolveLegacyLaunch(["--chrome-pages","--app","bad\nname"]))
         XCTAssertThrowsError(try catalog.resolveLegacyLaunch(["--disk","--agents"]))
     }
+    @MainActor func testDisabledLegacyDestinationStaysSelectedWithoutLoadingItsModel()throws {
+        let name="thermo-legacy-off-"+UUID().uuidString,defaults=UserDefaults(suiteName:name)!
+        defer{defaults.removePersistentDomain(forName:name)}
+        defaults.set(false,forKey:ModulePreferences.key(BuiltinModuleManifests.disk.id))
+        let models=AppModels(defaults:defaults)
+        let page=try NativeModules.prepareReview(["--disk"],page:.settings,models:models)
+        XCTAssertEqual(page,.native(.init(BuiltinModuleManifests.disk.id,"scan")))
+        XCTAssertFalse(models.nativeFeatures.status(BuiltinModuleManifests.disk.id).modelLoaded)
+    }
 }

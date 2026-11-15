@@ -24,12 +24,12 @@ final class StatusMenu: NSObject, NSMenuDelegate {
         
         let context = StatusMenuLayout.RuntimeContext(
             nativeMenusAppear:!nativeEntries.isEmpty,
-            menuBarEnabled: MenuBarModule.enabled,
-            performanceEnabled: PerformanceModule.enabled,
-            searchEnabled: SearchModule.enabled,
-            appsEnabled: AppsModule.enabled,
-            spaceEnabled: SpaceModule.enabled,
-            browserEnabled:BrowserModule.enabled,connectionsEnabled:ConnectionsModule.enabled,historyEnabled:HistoryModule.enabled,agentsEnabled:AgentDiagnosticsModule.enabled,checkupEnabled:CheckupModule.enabled,
+            menuBarEnabled: ModuleCenter.shared.isOn(BuiltinModuleManifests.menuBar.id),
+            performanceEnabled: ModuleCenter.shared.isOn(BuiltinModuleManifests.performance.id),
+            searchEnabled: ModuleCenter.shared.isOn(BuiltinModuleManifests.search.id),
+            appsEnabled: ModuleCenter.shared.isOn(BuiltinModuleManifests.apps.id),
+            spaceEnabled: ModuleCenter.shared.isOn(BuiltinModuleManifests.space.id),
+            browserEnabled:ModuleCenter.shared.isOn(BuiltinModuleManifests.browser.id),connectionsEnabled:ModuleCenter.shared.isOn(BuiltinModuleManifests.connections.id),historyEnabled:ModuleCenter.shared.isOn(BuiltinModuleManifests.history.id),agentsEnabled:ModuleCenter.shared.isOn(BuiltinModuleManifests.agents.id),checkupEnabled:ModuleCenter.shared.isOn(BuiltinModuleManifests.checkup.id),
             hasBattery: battery,
             keepAwakeActive: IdleAwakeModel.shared.state.phase == .active,
             focusTimerActive: FocusTimerModel.shared.phase.isActive,
@@ -52,7 +52,7 @@ final class StatusMenu: NSObject, NSMenuDelegate {
                 menu.addItem(item(tr("Open Thermo"), "macwindow", key: "o") { MainWindow.show() })
                 
             case .searchAppsAndFiles:
-                menu.addItem(item(tr("Search apps and files"), "magnifyingglass") { SearchModule.show() })
+                menu.addItem(item(tr("Search apps and files"), "magnifyingglass") { SearchHost.show() })
                 
             case .nativeMenus:
                 for entry in nativeEntries {
@@ -76,7 +76,7 @@ final class StatusMenu: NSObject, NSMenuDelegate {
                 menu.addItem(item(tr("Manage menu bar…"), "menubar.rectangle") { _=AppModels.shared.nativeFeatures.activate(.init(BuiltinModuleManifests.menuBar.id,"tools")) })
                 
             case .history:
-                menu.addItem(page(tr("History"), "clock.arrow.circlepath", .module(BuiltinModuleManifests.history.id,"home")))
+                menu.addItem(page(tr("History"), "clock.arrow.circlepath", .native(.init(BuiltinModuleManifests.history.id,"home"))))
                 
             case .settings:
                 menu.addItem(item(tr("Settings…"), "gearshape", key: ",") { MainWindow.show(.settings) })
@@ -122,13 +122,13 @@ final class StatusMenu: NSObject, NSMenuDelegate {
             case .overview:
                 submenu.addItem(page(tr("Overview"), "gauge.with.dots.needle.67percent", .overview))
             case .aiCheckup:
-                submenu.addItem(page(tr("AI Check-up"), "waveform.path.ecg", .module(BuiltinModuleManifests.checkup.id,"home")))
+                submenu.addItem(page(tr("AI Check-up"), "waveform.path.ecg", .native(.init(BuiltinModuleManifests.checkup.id,"home"))))
             case .sensors:
                 submenu.addItem(page(tr("Sensors"), "thermometer.medium", .sensors))
             case .fans:
                 submenu.addItem(page(tr("Fans"), "fan", .fans))
             case .connections:
-                submenu.addItem(page(tr("Connections"), "wifi", .module(BuiltinModuleManifests.connections.id,"home")))
+                submenu.addItem(page(tr("Connections"), "wifi", .native(.init(BuiltinModuleManifests.connections.id,"home"))))
             case .cpuUsage:
                 submenu.addItem(page(tr("CPU usage"), "cpu", .compute(false)))
             case .gpuUsage:
@@ -147,7 +147,7 @@ final class StatusMenu: NSObject, NSMenuDelegate {
             case .software:
                 submenu.addItem(page(tr("Software"), "square.grid.2x2", .native(.init(BuiltinModuleManifests.apps.id,"installed"))))
             case .claudeTools:
-                submenu.addItem(page(tr("Claude tools"), "person.2", .module(BuiltinModuleManifests.claude.id,"accounts")))
+                submenu.addItem(page(tr("Claude tools"), "person.2", .native(.init(BuiltinModuleManifests.claude.id,"accounts"))))
             case .smartCheck:
                 submenu.addItem(page(tr("Smart Check"), "stethoscope", .native(.init(BuiltinModuleManifests.agents.id,"home"))))
             case .cleanScreen:

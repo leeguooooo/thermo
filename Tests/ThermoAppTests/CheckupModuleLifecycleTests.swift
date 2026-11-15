@@ -4,9 +4,9 @@ import XCTest
 
 @MainActor final class CheckupHostRouteTests:XCTestCase {
     func testRegistryOwnsLegacyAndGenericCheckupPages() {
-        XCTAssertTrue(BuiltinModules.problems.isEmpty,BuiltinModules.problems.joined(separator:"\n"))
-        XCTAssertEqual(MainPage(argument:"checkup")?.module,CheckupModule.manifest.id)
-        XCTAssertEqual(BuiltinModules.page(MainPage(argument:"checkup")!)?.target,.module(CheckupModule.manifest.id,"home"))
-        XCTAssertEqual(BuiltinModules.page(.module(CheckupModule.manifest.id,"home"))?.target,.module(CheckupModule.manifest.id,"home"))
+        XCTAssertTrue(NativeModules.problems.isEmpty,NativeModules.problems.joined(separator:"\n"))
+        XCTAssertEqual(MainPage(argument:"checkup")?.module,BuiltinModuleManifests.checkup.id)
+        XCTAssertEqual(NativeModules.page(MainPage(argument:"checkup")!)?.target,.native(.init(BuiltinModuleManifests.checkup.id,"home")))
+        XCTAssertEqual(NativeModules.page(.native(.init(BuiltinModuleManifests.checkup.id,"home")))?.target,.native(.init(BuiltinModuleManifests.checkup.id,"home")))
     }
 }

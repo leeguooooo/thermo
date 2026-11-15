@@ -42,7 +42,7 @@ import ThermoKit
         seen.insert(request.id)
         let action = request.action
         if action == "modules.run" { return await ModuleCommandHost.handle(request) }
-        if action.hasPrefix("search."), action != "search.giveBackCommandSpace", !SearchModule.enabled {
+        if action.hasPrefix("search."), action != "search.giveBackCommandSpace", !ModuleCenter.shared.isOn(BuiltinModuleManifests.search.id) {
             return result([:], "Search apps and files is switched off. Enable it in Thermo Settings before using it.")
         }
         if action.hasPrefix("capture."){return await captureHandler(request)}
@@ -92,11 +92,11 @@ import ThermoKit
         defer { if writes.contains(action) { mutating = false } }
         switch action {
         case "search.show", "search.settings":
-            let shown=SearchModule.show(settings:action == "search.settings")
+            let shown=SearchHost.show(settings:action == "search.settings")
             return result(["action":action,"windowVisible":String(shown)],shown ? nil:"Search is unavailable while its feature is stopping.")
         case "search.useCommandSpace", "search.giveBackCommandSpace":
             let taking=action == "search.useCommandSpace"
-            let state=taking ? SearchModule.access.takeOverSpotlight():SearchModule.access.giveBackSpotlight()
+            let state=taking ? SearchHost.access.takeOverSpotlight():SearchHost.access.giveBackSpotlight()
             let values=["action":action,"shortcut":state.label,"spotlightReleased":String(state.spotlightReleased)]
             return result(values,state.confirmed ? nil:state.issue ?? "The ⌘Space change was not confirmed. Check Search settings.")
         case "keep-awake.start", "keep-awake.stop", "keep-awake.status":
