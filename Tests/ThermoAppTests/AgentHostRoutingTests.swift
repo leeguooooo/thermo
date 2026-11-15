@@ -15,6 +15,7 @@ import AgentDiagnosticsFeature
             XCTAssertEqual(MainPage(argument:entry.scene!),page)
             XCTAssertEqual(BuiltinModules.page(page)?.target,page)
             XCTAssertEqual(BuiltinModules.page(.module(manifest.id,entry.id))?.target,page)
+            XCTAssertEqual(MainPage.module(manifest.id,entry.id).nativeRoute,page.nativeRoute)
         }
     }
     func testOffWindowUIAndNavigationStayCold() {

@@ -131,10 +131,8 @@ enum MainWindow {
         show(.native(canonical.route));return true
     }
     static func show(_ page: MainPage? = nil) {
-        if case let .native(route)?=page {
-            guard let normalized=try? BuiltinNativeFeatures.catalog.normalize(route) else{return}
-            showCanonical(.native(normalized));return
-        }
+        if case .native?=page,page?.nativeRoute == nil{return}
+        if let normalized=page?.nativeRoute {showCanonical(.native(normalized));return}
         showCanonical(page)
     }
     private static func showCanonical(_ page:MainPage?) {
