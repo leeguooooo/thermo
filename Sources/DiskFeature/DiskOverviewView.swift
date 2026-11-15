@@ -1,3 +1,4 @@
+import Combine
 import NativeFeatureAPI
 import LocalAIUI
 import ThermoUI
@@ -196,6 +197,7 @@ struct DiskOverviewView: View {
     var openInSpaceLens: (String) -> Void = { _ in }
     @State private var detail: SpaceOverview.Entry?
     @State private var pendingDestination:DetailDestination?
+    @State private var sheetHost=DiskSheetHost()
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
@@ -270,7 +272,11 @@ struct DiskOverviewView: View {
             .frame(maxWidth: .infinity)
         }
         .onAppear { model.measureIfStale() }
+        .background(DiskSheetHostProbe(host:sheetHost).frame(width:0,height:0))
         .onDisappear { model.stop();pendingDestination=nil }
+        .onReceive(NotificationCenter.default.publisher(for:NSWindow.didEndSheetNotification).receive(on:RunLoop.main)){_ in
+            completeDetailDestination()
+        }
         .sheet(item:$detail,onDismiss:completeDetailDestination) { e in
             SpaceDetailSheet(entry:e,explanationWork:explanationWork,route:Self.cleanupRoute(for:e.id),cleanupDisabled:cleanupDisabled,
                 openCleanup:{requestDetailDestination(.cleanup($0))},openInSpaceLens:{requestDetailDestination(.space($0))}) {detail=nil}
@@ -283,6 +289,7 @@ struct DiskOverviewView: View {
         pendingDestination=destination;detail=nil
     }
     private func completeDetailDestination() {
+        guard detail == nil,let window=sheetHost.window,window.attachedSheet == nil else{return}
         let destination=pendingDestination;pendingDestination=nil
         guard availability(),let destination else{return}
         switch destination {case let .cleanup(category):openCleanup(category);case let .space(path):openInSpaceLens(path)}
@@ -663,3 +670,18 @@ struct SpaceStyle {
     }
 }
 
+
+/// SwiftUI onDismiss can precede AppKit detaching the sheet. Keep only the actual
+/// containing window reference; the pending destination stays in the owning view.
+private final class DiskSheetHost {weak var window:NSWindow?}
+private struct DiskSheetHostProbe:NSViewRepresentable {
+    let host:DiskSheetHost
+    func makeNSView(context:Context)->Probe {Probe(host:host)}
+    func updateNSView(_ view:Probe,context:Context){host.window=view.window}
+    final class Probe:NSView {
+        private let host:DiskSheetHost
+        init(host:DiskSheetHost){self.host=host;super.init(frame:.zero)}
+        required init?(coder:NSCoder){fatalError("init(coder:) is unavailable")}
+        override func viewDidMoveToWindow(){super.viewDidMoveToWindow();host.window=window}
+    }
+}
