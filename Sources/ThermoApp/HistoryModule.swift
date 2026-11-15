@@ -10,7 +10,9 @@ enum HistoryModule:BuiltinModule {
         if case let .module(id,_)=page{return id==manifest.id}
         return false
     }
-    static func canonicalArgument(_ argument:String)->String {argument}
+    static func canonicalArgument(_ argument:String)->String {
+        argument.hasPrefix("history:") ? "history" : argument
+    }
     static func target(_ scene:String)->MainPage? {scene=="history" ? .module(manifest.id,"home"):nil}
     static func supports(_ entry:ModuleManifest.Entry)->Bool {entry.kind == .page && entry.scene=="history"}
     @MainActor static func sidebar(section:BuiltinSidebarSection,page:Binding<MainPage>,models:AppModels,row:@escaping @MainActor (BuiltinSidebarItem)->AnyView)->AnyView {
