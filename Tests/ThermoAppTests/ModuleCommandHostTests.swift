@@ -18,7 +18,9 @@ import XCTest
         let suite="thermo-module-command-"+UUID().uuidString,defaults=UserDefaults(suiteName:suite)!
         let center=ModuleCenter(manager:ModuleManager(app:root.appendingPathComponent("Thermo.app")),defaults:defaults)
         center.start()
-        for _ in 0..<100 where !center.loaded { try? await Task.sleep(nanoseconds:20_000_000) }
+        // Discovery is bounded at five seconds when the synthetic extension is not registered.
+        let deadline=ProcessInfo.processInfo.systemUptime+10
+        while !center.loaded && ProcessInfo.processInfo.systemUptime<deadline {try await Task.sleep(nanoseconds:20_000_000)}
         XCTAssertTrue(center.loaded)
         return (center,root,defaults,suite)
     }

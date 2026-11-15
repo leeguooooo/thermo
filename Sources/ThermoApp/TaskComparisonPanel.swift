@@ -5,20 +5,28 @@ import ThermoL10n
 import UniformTypeIdentifiers
 
 @MainActor final class TaskComparisonModel: ObservableObject {
+    let work:FeatureTasks
+    private let reader:@Sendable (URL)throws->TaskComparison.Report
+    init(work:FeatureTasks? = nil,reader:@escaping @Sendable (URL)throws->TaskComparison.Report = {try TaskComparison.read($0)}) {self.work=work ?? FeatureTasks();self.reader=reader}
     @Published private(set) var loading = false
     @Published private(set) var report: TaskComparison.Report?
     @Published private(set) var error: String?
     private var generation = UUID()
 
     func load(_ url: URL) {
-        guard !loading else { return }
+        guard work.acceptsWork,!loading else { return }
         let generation = UUID()
         self.generation = generation
         loading = true; report = nil; error = nil
-        Task.detached(priority: .utility) {
-            let result = Result { try TaskComparison.read(url) }
+        let reader=self.reader
+        work.run(priority: .utility,onSkipped:{ [weak self] in
+            if self?.generation==generation {self?.loading=false}
+        }) {
+            let result = Result { try reader(url) }
             await MainActor.run {
                 guard self.generation == generation else { return }
+                self.loading=false
+                guard self.work.acceptsWork else{self.report=nil;self.error=nil;return}
                 switch result {
                 case .success(let report): self.report = report
                 case .failure(let error): self.error = (error as? TaskComparison.InvalidRecords)?.description ?? "Cannot read local evaluation file"

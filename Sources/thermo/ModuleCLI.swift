@@ -44,6 +44,7 @@ enum ModuleCLI {
         if root=="apps" || root=="app" {return BuiltinModuleManifests.apps}
         if root=="tabs" {return BuiltinModuleManifests.browser}
         if root=="history" {return BuiltinModuleManifests.history}
+        if ["agents","agent","doctor"].contains(root) {return BuiltinModuleManifests.agents}
         if root=="space" {return BuiltinModuleManifests.space}
         let performance:Set<String>=["","temps","temp","t","fans","f","power","p","watch","w","list","ls","get","fan","bench","memory","activity","pulse","status"]
         return performance.contains(root) ? BuiltinModuleManifests.performance:nil

@@ -8,16 +8,18 @@ struct BuiltinSidebarItem: Identifiable {
     let tint: Color
     var trailing: String?
     var trailingColor: Color?
+    var badge:Int = 0
     var selected: Bool
     var id: String { entry.id }
 }
 
-enum BuiltinSidebarSection: Hashable { case overview, machine, resources, storage, software, footer }
+enum BuiltinSidebarSection: Hashable { case overview, machine, resources, storage, software, footer, agents }
 
 /// Metadata and argument resolution never instantiate a feature. UI and lifetime callbacks run on main.
 protocol BuiltinModule: Sendable {
     static var manifest: ModuleManifest { get }
     @MainActor static func start()
+    @MainActor static func overlay(models:AppModels)->AnyView
     static var legacyMenuEntries: [String: String] { get }
     static var sidebarSections: Set<BuiltinSidebarSection> { get }
     static var privateWorkers: Set<String> { get }
@@ -43,10 +45,11 @@ extension BuiltinModule {
     static var privateWorkers: Set<String> { [] }
     static var sidebarSections: Set<BuiltinSidebarSection> { [.storage] }
     @MainActor static func start() {}
+    @MainActor static func overlay(models:AppModels)->AnyView {AnyView(EmptyView())}
 }
 
 enum BuiltinModules {
-    static let implementations: [any BuiltinModule.Type] = [DiskModule.self, SearchModule.self, CaptureModule.self, MenuBarModule.self, PerformanceModule.self, AppsModule.self, SpaceModule.self, BrowserModule.self, ConnectionsModule.self, HistoryModule.self]
+    static let implementations: [any BuiltinModule.Type] = [DiskModule.self, SearchModule.self, CaptureModule.self, MenuBarModule.self, PerformanceModule.self, AppsModule.self, SpaceModule.self, BrowserModule.self, ConnectionsModule.self, HistoryModule.self, AgentDiagnosticsModule.self]
     static var all: [ModuleManifest] { implementations.map { $0.manifest } }
     static var disk: ModuleManifest { DiskModule.manifest }
     static func manifest(_ id: String) -> ModuleManifest? { all.first { $0.id == id } }
@@ -118,4 +121,16 @@ struct BuiltinSidebarGroup: View {
     @Binding var selection: MainPage
     let row: @MainActor (BuiltinSidebarItem) -> AnyView
     var body: some View { implementation.sidebar(section: section, page: $selection, models: .shared, row: row) }
+}
+
+/// Feature-owned notices stay attached to the window when another page is selected.
+struct BuiltinModuleOverlays:View {
+    let models:AppModels
+    @ObservedObject private var center=ModuleCenter.shared
+    var body:some View {
+        ForEach(BuiltinModules.implementations.indices,id:\.self) {index in
+            let feature=BuiltinModules.implementations[index]
+            if center.isOn(feature.manifest.id) {feature.overlay(models:models)}
+        }
+    }
 }

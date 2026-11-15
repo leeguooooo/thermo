@@ -679,10 +679,6 @@ if let i = CommandLine.arguments.firstIndex(of: "--render-preview"), i + 1 < Com
     func value(after flag: String) -> String? { args.firstIndex(of: flag).flatMap { $0 + 1 < args.count ? args[$0 + 1] : nil } }
     var page = value(after: "--page").flatMap(MainPage.init(argument:)) ?? .overview
     for feature in BuiltinModules.implementations { feature.prepareReview(args, page: &page, models: models) }
-    if args.contains("--agents") {
-        page = .agents(value(after: "--agents").flatMap(Area.init(rawValue:)).map { .area($0) } ?? .home)
-        models.agents.scan()
-    }
     if page == .checkup, let i = args.firstIndex(of: "--fixture"), i + 1 < args.count {
         CheckupModel.shared.loadFixture(answer: args[i + 1])
     }
@@ -705,7 +701,6 @@ if let i = CommandLine.arguments.firstIndex(of: "--render-preview"), i + 1 < Com
         if Date().timeIntervalSince(started) > 90 { return true }
         if let ready = BuiltinModules.snapshotReady(page, arguments: args, models: models, center: .shared, started: started) { return ready }
         switch page {
-        case .agents: return models.agents.report != nil && !models.agents.scanning
         case .claude(.accounts): return ClaudeAccountsModel.shared.loaded
         case .claude: return models.claudeCleanup.loaded && !models.claudeCleanup.busy
         case .plugins: return models.plugins.loaded && !models.plugins.checkingUpdates

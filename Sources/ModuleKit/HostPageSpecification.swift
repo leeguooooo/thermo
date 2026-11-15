@@ -12,7 +12,6 @@ public enum HostPageSpecification {
         }
     }
     public static let pages: [Page] = [
-        .init("agents", "AI Agent Diagnostics", "6"),
         .init("claude", "Claude tools"), .init("settings", "Settings", ",")
     ]
 }

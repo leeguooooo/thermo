@@ -48,9 +48,9 @@ final class ModuleNavigationTests: XCTestCase {
         ])
     }
     func testCoreSlotsCannotBeClaimedByAModule() {
-        let m = feature("com.example.one", "6")
+        let m = feature("com.example.one", ",")
         let conflict = ModuleNavigation.conflicts([m]).first
-        XCTAssertEqual(conflict?.key, "6")
+        XCTAssertEqual(conflict?.key, ",")
         XCTAssertNil(conflict?.owner)
         XCTAssertEqual(conflict?.module, m.id)
     }

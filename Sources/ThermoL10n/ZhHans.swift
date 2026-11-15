@@ -4542,4 +4542,6 @@ let zhHans: [String: String] = [
     "Wait for the Bluetooth connection change before switching this feature off.": "请等待蓝牙连接变更完成，再关闭此功能。",
     "Review recorded operations and restore verified Trash batches; the kernel keeps the recovery journal.": "查看操作记录并恢复已核验的废纸篓批次；恢复账本由内核保留。",
     "Wait for file restoration before switching History off.": "请等待文件恢复完成，再关闭操作记录。",
+    "Agent configuration checks, reviewed repairs, MCP inspection and local tool-use analysis.": "Agent 配置检查、经确认的修复、MCP 检查和本机工具用量分析。",
+    "Wait for the confirmed agent configuration changes before switching diagnostics off.": "请等待已确认的 agent 配置变更完成，再关闭诊断。",
 ]

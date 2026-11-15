@@ -9,8 +9,10 @@ import ThermoL10n
 /// so it runs when the tab or window opens (if the last result is stale), on Rescan, and after an action.
 @MainActor
 final class AgentScanner: ObservableObject {
-    let toolUsage = ToolUsageModel()
-    let taskComparison = TaskComparisonModel()
+    let work:FeatureTasks
+    let toolUsage:ToolUsageModel
+    let taskComparison:TaskComparisonModel
+    private let performAction:@Sendable (Action,AgentItem)->ActionResult
     let mcpDefinitions: MCPDefinitionStore
     let mcpBatch: MCPBatchInspectionModel
     @Published private(set) var mcpBatchRunning = false
@@ -35,8 +37,11 @@ final class AgentScanner: ObservableObject {
     private var operationLanguage: String?
     private var needsLanguageRefresh = false
 
-    init(diagnose: (@Sendable () -> DoctorReport)? = nil, inspectMCP: MCPBatchInspectionModel.Inspector? = nil) {
+    init(enabled:@escaping ()->Bool = {true}, performAction:@escaping @Sendable (Action,AgentItem)->ActionResult = {ActionRunner.perform($0,env:DoctorEnvironment(),item:$1.name)}, diagnose: (@Sendable () -> DoctorReport)? = nil, inspectMCP: MCPBatchInspectionModel.Inspector? = nil) {
         let store = MCPDefinitionStore()
+        work=store.work;work.enabled=enabled
+        toolUsage=ToolUsageModel(work:store.work);taskComparison=TaskComparisonModel(work:store.work)
+        self.performAction=performAction
         mcpDefinitions = store
         mcpBatch = MCPBatchInspectionModel(store: store, inspector: inspectMCP)
         self.diagnose = diagnose
@@ -50,14 +55,14 @@ final class AgentScanner: ObservableObject {
     }
 
     func selectEncoding(_ encoding: TextEncoding) {
-        guard !busy else { return }
+        guard work.acceptsWork,!busy else { return }
         tokenEncoding = encoding
         report = nil; selection = nil
         scan()
     }
 
     func selectProject(_ project: URL?) {
-        guard !busy else { return }
+        guard work.acceptsWork,!busy else { return }
         self.project = project?.standardizedFileURL
         report = nil
         selection = nil
@@ -95,6 +100,7 @@ final class AgentScanner: ObservableObject {
     var busy: Bool { scanning || running != nil || batching || batch?.finished == false || mcpBatchRunning }
 
     func scan(ifOlderThan age: TimeInterval = 0) {
+        guard work.acceptsWork else{return}
         if stopped && age > 0 { return }
         if busy {
             if let language = operationLanguage, language != L10n.current.rawValue { needsLanguageRefresh = true }
@@ -112,10 +118,11 @@ final class AgentScanner: ObservableObject {
         let diagnose = scanDiagnosis
         let project = project
         let encoding = tokenEncoding
-        Task.detached(priority: .userInitiated) {
+        work.run(priority: .userInitiated) {
+            await withTaskCancellationHandler(operation:{
             let r = diagnose(cancellation, project, encoding)
             await MainActor.run {
-                guard self.scanCancellation === cancellation else { return }
+                guard self.work.acceptsWork,self.scanCancellation === cancellation else { return }
                 if cancellation.isCancelled || r.cancelled == true {
                     self.stopped = true
                     self.needsLanguageRefresh = false
@@ -125,6 +132,7 @@ final class AgentScanner: ObservableObject {
                 self.scanning = false
                 self.resumeLanguageRefresh()
             }
+            },onCancel:{cancellation.cancel()})
         }
     }
 
@@ -136,13 +144,13 @@ final class AgentScanner: ObservableObject {
     }
 
     func perform(_ action: Action, on item: AgentItem) {
-        guard !busy else { return }
+        guard work.acceptsWork,!busy else { return }
         mcpDefinitions.reset()
         running = action.id
         operationLanguage = L10n.current.rawValue
-        let diagnose = currentDiagnosis()
-        Task.detached(priority: .userInitiated) {
-            let result = ActionRunner.perform(action, env: DoctorEnvironment(), item: item.name)
+        let diagnose = currentDiagnosis(),perform=self.performAction
+        work.run(priority: .userInitiated) {
+            let result = perform(action,item)
             let r = diagnose()
             await MainActor.run {
                 self.recordResult(item: item.id, name: item.name, action: action.title, result: result)
@@ -164,13 +172,13 @@ final class AgentScanner: ObservableObject {
     func performAll(_ plans: [(AgentItem, Action)],
                     executor: (@Sendable (Action) -> ActionResult)? = nil,
                     rescan: (@Sendable () -> DoctorReport)? = nil) {
-        guard !busy, !plans.isEmpty else { return }
+        guard work.acceptsWork,!busy, !plans.isEmpty else { return }
         mcpDefinitions.reset()
         batching = true
         operationLanguage = L10n.current.rawValue
         let diagnose = currentDiagnosis()
         batch = Batch(total: plans.count, before: problems.count)
-        Task.detached(priority: .userInitiated) {
+        work.run(priority: .userInitiated) {
             let env = DoctorEnvironment()
             var failed = 0
             for (i, (item, action)) in plans.enumerated() {
@@ -208,7 +216,7 @@ final class AgentScanner: ObservableObject {
     }
 
     private func resumeLanguageRefresh() {
-        if needsLanguageRefresh && !busy { scan() }
+        if work.acceptsWork && needsLanguageRefresh && !busy { scan() }
     }
 
     @discardableResult
@@ -222,6 +230,20 @@ final class AgentScanner: ObservableObject {
         history.insert(entry, at: 0)
         if history.count > 20 { history.removeLast(history.count - 20) }
         return entry
+    }
+
+    var canStopFeature:Bool {running == nil && !batching && batch?.finished != false}
+    func stopFeature() {
+        stopScan();toolUsage.stop();mcpBatch.cancel();needsLanguageRefresh=false
+        work.stop()
+    }
+    func finishFeatureStop() async {
+        await work.finish()
+        report=nil;selection=nil;lastResult=nil;history=[];batch=nil
+        scanning=false;running=nil;batching=false;stopRequested=false;stopped=true
+        scanCancellation=nil;operationLanguage=nil;project=nil
+        mcpDefinitions.reset();mcpBatch.releaseReadings();mcpBatchRunning=false
+        toolUsage.releaseReadings();taskComparison.clear()
     }
 
 }
