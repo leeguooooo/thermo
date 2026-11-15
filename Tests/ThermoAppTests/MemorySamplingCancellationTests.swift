@@ -101,4 +101,22 @@ final class MemorySamplingCancellationTests: XCTestCase {
         XCTAssertEqual(reader.inventoryCount, 2)
     }
 
+    private final class DayReader:@unchecked Sendable {
+        let began=XCTestExpectation(description:"independent day read held")
+        let returned=XCTestExpectation(description:"independent day read returned")
+        let release=DispatchSemaphore(value:0)
+        func read()->[PulseRecord]{began.fulfill();release.wait();returned.fulfill();return []}
+    }
+    @MainActor func testIndependentDayHistoryRemainsBusyUntilItsPhysicalReadReturns() async {
+        let reader=DayReader();defer{reader.release.signal()}
+        let model=MemoryModel(read:{_ in .init(breakdown:nil,inventory:.init(sampled:Date(),programs:[],processCount:0,unreadableCount:0,available:true),history:[])},readHistory:{_ in []},readDay:{reader.read()})
+        model.start();await fulfillment(of:[reader.began],timeout:3)
+        model.stop()
+        // Yield other ready completion callbacks while the day reader is provably still blocked.
+        for _ in 0..<50{await Task.yield();XCTAssertTrue(model.sampleInFlight,"independent history IO is still physically held")}
+        reader.release.signal();await fulfillment(of:[reader.returned],timeout:3)
+        for _ in 0..<200 where model.sampleInFlight{try? await Task.sleep(nanoseconds:10_000_000)}
+        XCTAssertFalse(model.sampleInFlight);XCTAssertTrue(model.day.isEmpty,"retired history must not publish")
+    }
+
 }
