@@ -13,7 +13,8 @@ import ThermoUI
 
 @MainActor final class PerformanceReviewState:ObservableObject {
     @Published var route=NativeFeatureRoute(BuiltinModuleManifests.performance.id,"overview")
-    @Published var visible=false,enabled=true
+    @Published var visible=false
+    @Published var enabled=true
     @Published var problem:String?
     weak var store:NativeFeatureStore?
     var showWindow:()->Void = {}
