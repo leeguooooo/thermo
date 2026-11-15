@@ -1,6 +1,6 @@
 import XCTest
 @testable import CleanKit
-@testable import ThermoApp
+@testable import DiskFeature
 import ThermoL10n
 
 final class SpaceOverviewLifecycleTests: XCTestCase {
@@ -53,7 +53,7 @@ final class SpaceOverviewLifecycleTests: XCTestCase {
         XCTAssertEqual(model.overview?.entries.first?.id, "run-2")
     }
 
-    func testOverviewCleanupRoutesScanTheRelevantCategory() {
+    @MainActor func testOverviewCleanupRoutesScanTheRelevantCategory() {
         XCTAssertEqual(DiskOverviewView.cleanupRoute(for: "projects")?.category, .projects)
         XCTAssertEqual(DiskOverviewView.cleanupRoute(for: "simulator-runtimes")?.category, .xcode)
         XCTAssertEqual(DiskOverviewView.cleanupRoute(for: "homebrew")?.category, .devCaches)
@@ -110,7 +110,7 @@ final class SpaceOverviewLifecycleTests: XCTestCase {
         XCTAssertEqual(model.partial.first?.attemptedLocations, 2)
     }
 
-    func testGrowthRowShowsFolderNameOverParent() {
+    @MainActor func testGrowthRowShowsFolderNameOverParent() {
         let home = "/Users/someone"
         let folder = SpaceGrowth.Item(title: home + "/.cache", path: home + "/.cache", changeBytes: 3_000_000_000, currentBytes: 40_000_000_000)
         XCTAssertEqual(DiskOverviewView.growthLabel(folder, home: home).title, ".cache")
@@ -122,7 +122,7 @@ final class SpaceOverviewLifecycleTests: XCTestCase {
         XCTAssertNil(DiskOverviewView.growthLabel(heading).caption)
     }
 
-    func testFooterSaysWhenTheSelectionSpansOtherCategories() {
+    @MainActor func testFooterSaysWhenTheSelectionSpansOtherCategories() {
         XCTAssertEqual(DiskCategoryPage.selectionText(total: 3, here: 3), trCount(3, "%1$@ item selected", "%1$@ items selected"))
         let mixed = DiskCategoryPage.selectionText(total: 5, here: 0)
         XCTAssertEqual(mixed, tr("%1$@ selected in all · %2$@ on this page", "5", "0"))

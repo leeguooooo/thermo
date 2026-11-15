@@ -35,7 +35,7 @@ package struct AskAIPanel: View {
     @State private var phase: Phase = .idle
     @State private var built: LocalAIQuestion?
 
-    package init(_ make: @escaping () -> LocalAIQuestion) { self.make = make;self.scope=nil }
+    package init(scope: FeatureTasks? = nil, _ make: @escaping () -> LocalAIQuestion) { self.make = make;self.scope=scope }
     package init(question: LocalAIQuestion, scope: FeatureTasks? = nil) { self.make = { question };self.scope=scope }
 
     var question: LocalAIQuestion { built ?? make() }
@@ -48,13 +48,13 @@ package struct AskAIPanel: View {
                 content(backend)
             }
         }
-        .onAppear { store.discover() }
+        .onAppear {if scope?.acceptsWork != false {store.discover()}}
     }
 
     @ViewBuilder func content(_ backend: LocalAIBackend) -> some View {
         switch phase {
         case .idle:
-            Button { built = make(); if store.consented { ask(backend) } else { phase = .preview } } label: {
+            Button { guard scope?.acceptsWork != false else{return};built = make(); if store.consented { ask(backend) } else { phase = .preview } } label: {
                 Label(tr("Ask AI"), systemImage: "sparkles")
             }
             .buttonStyle(PillButtonStyle()).controlSize(.small)
@@ -67,7 +67,7 @@ package struct AskAIPanel: View {
                 Text(tr("Only these facts are sent, never file contents. The AI may pass them to the cloud model it uses."))
                     .font(Theme.caption).foregroundStyle(Theme.textTertiary).fixedSize(horizontal: false, vertical: true)
                 HStack {
-                    Button(tr("Send")) { store.consented = true; ask(backend) }.buttonStyle(PillButtonStyle(prominent: true))
+                    Button(tr("Send")) {guard scope?.acceptsWork != false else{return};store.consented = true;ask(backend)}.buttonStyle(PillButtonStyle(prominent: true))
                     Button(tr("Cancel")) { phase = .idle }.buttonStyle(PillButtonStyle())
                 }
             }
@@ -126,8 +126,14 @@ package struct AskAIPanel: View {
         phase = .asking
         Task {
             defer{if let operation{scope?.endOperation(operation)}}
-            do { phase = .answered(try await LocalAI.ask(question, using: backend)) }
-            catch { phase = .failed(error.localizedDescription) }
+            do {
+                let answer=try await LocalAI.ask(question,using:backend)
+                guard scope?.acceptsWork != false else{return}
+                phase = .answered(answer)
+            } catch {
+                guard scope?.acceptsWork != false else{return}
+                phase = .failed(error.localizedDescription)
+            }
         }
     }
 

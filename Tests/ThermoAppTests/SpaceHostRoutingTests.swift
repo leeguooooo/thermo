@@ -63,4 +63,33 @@ import SpaceFeature
         lease.finish();lease.finish()
         XCTAssertEqual(AppExitGuard.reply(show:{_ in}),.terminateNow)
     }
+    func testDiskRevealPreparesSpacePathBeforeSelectingTheDestination() {
+        let name="thermo-disk-space-bridge-"+UUID().uuidString,defaults=UserDefaults(suiteName:name)!
+        defer{defaults.removePersistentDomain(forName:name)}
+        defaults.set(true,forKey:ModulePreferences.key(SpaceModule.manifest.id))
+        let session=Session(),schema=SpaceFeature.registration(services:{SpaceHostServices()})
+        let definition=NativeFeatureDefinition(manifest:schema.manifest,pageContracts:schema.pageContracts,makeSession:{_ in session})
+        let models=AppModels(defaults:defaults,nativeDefinitions:[definition]),path="/fixture/folder\nwith-newline"
+        var shown:[MainPage]=[]
+        XCTAssertTrue(DiskHostServices.reveal(path,models:models,open:{page in
+            XCTAssertEqual(session.requests.last?.options,["path":.text(path)],"Path preparation must finish before navigation")
+            shown.append(page)
+        }))
+        XCTAssertEqual(shown,[.native(.init(SpaceModule.manifest.id,"browse"))])
+    }
+    func testDiskRevealShowsOffDestinationWithoutAdmissionAndRejectsInvalidPaths() {
+        let name="thermo-disk-space-off-"+UUID().uuidString,defaults=UserDefaults(suiteName:name)!
+        defer{defaults.removePersistentDomain(forName:name)}
+        defaults.set(false,forKey:ModulePreferences.key(SpaceModule.manifest.id))
+        var made=0,shown:[MainPage]=[]
+        let schema=SpaceFeature.registration(services:{SpaceHostServices()})
+        let definition=NativeFeatureDefinition(manifest:schema.manifest,pageContracts:schema.pageContracts,makeSession:{_ in made+=1;return Session()})
+        let models=AppModels(defaults:defaults,nativeDefinitions:[definition])
+        XCTAssertTrue(DiskHostServices.reveal("/fixture",models:models,open:{shown.append($0)}))
+        XCTAssertEqual(shown,[.native(.init(SpaceModule.manifest.id,"browse"))]);XCTAssertEqual(made,0)
+        XCTAssertFalse(DiskHostServices.reveal("relative/path",models:models,open:{_ in XCTFail("Invalid path navigated")}))
+        XCTAssertFalse(DiskHostServices.reveal("/fixture/\0bad",models:models,open:{_ in XCTFail("Invalid path navigated")}))
+        XCTAssertEqual(made,0)
+    }
+
 }

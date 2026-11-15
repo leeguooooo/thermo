@@ -1,5 +1,6 @@
+import ThermoL10n
 @testable import CleanKit
-@testable import ThermoApp
+@testable import DiskFeature
 import AgentCore
 import XCTest
 

@@ -41,6 +41,7 @@ enum AppExitGuard {
         if let blocker=nativeBlocker(BuiltinModuleManifests.browser.id){show(.native(blocker.route));return .terminateCancel}
         if let blocker=nativeBlocker(BuiltinModuleManifests.apps.id){show(.native(blocker.route));return .terminateCancel}
         if let blocker=nativeBlocker(BuiltinModuleManifests.space.id){show(.native(blocker.route));return .terminateCancel}
+        if let blocker=nativeBlocker(BuiltinModuleManifests.disk.id){show(.native(blocker.route));return .terminateCancel}
         if BatteryCareModel.shared.requestQuit() {show(.settings);return .terminateCancel}
         if AWDLModel.shared.requestQuit() {show(.settings);return .terminateCancel}
         return .terminateNow

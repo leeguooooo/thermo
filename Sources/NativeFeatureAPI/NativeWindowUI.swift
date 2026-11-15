@@ -18,7 +18,8 @@ package struct NativeUIContributions:Sendable {
     package let route:NativeFeatureRoute
     package let tint:Color
     package let badge:Int
-    package init(route:NativeFeatureRoute,tint:Color,badge:Int = 0){self.route=route;self.tint=tint;self.badge=badge}
+    package let trailing:String?
+    package init(route:NativeFeatureRoute,tint:Color,badge:Int = 0,trailing:String? = nil){self.route=route;self.tint=tint;self.badge=badge;self.trailing=trailing}
 }
 @MainActor package struct NativeSidebarRow {
     package let route:NativeFeatureRoute
@@ -26,6 +27,7 @@ package struct NativeUIContributions:Sendable {
     package let entry:ModuleManifest.Entry
     package let tint:Color
     package let badge:Int
+    package let trailing:String?
     package let selected:Bool
     package let open:@MainActor ()->Void
 }
@@ -50,6 +52,7 @@ package struct NativeUIContributions:Sendable {
 package enum NativeUISurface {
     case sidebar(location:NativeSidebarLocation,selection:NativeFeatureRoute?,rows:NativeSidebarRenderer)
     case windowOverlay
+    case inlineSettings(NativeUIEntryRef)
     case backdrop(NativeFeatureRoute)
 }
 @MainActor package struct NativeWindowUI {

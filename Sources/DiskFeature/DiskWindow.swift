@@ -568,7 +568,7 @@ struct DiskCategoryPage: View {
             Button(tr("Show in Finder")) { model.reveal(i) }.disabled(i.paths.isEmpty)
             Button(tr("Always keep")) { model.alwaysKeep(i) }
                 .disabled((i.paths.isEmpty && (i.commandScope ?? []).isEmpty) || i.blocked == tr(Whitelist.reason) || model.cleaning || model.scanning)
-            Button(tr("Copy ID")) { NSPasteboard.general.clearContents(); NSPasteboard.general.setString(i.id, forType: .string) }
+            Button(tr("Copy ID")) {guard model.acceptsWork else{return};NSPasteboard.general.clearContents(); NSPasteboard.general.setString(i.id, forType: .string) }
         }
     }
 
@@ -657,7 +657,7 @@ struct DiskItemDetail: View {
             }
             .font(Theme.caption).foregroundStyle(Theme.textTertiary)
             if item.safety != .safe, !item.paths.isEmpty {
-                AskAIPanel { Self.question(item) }
+                AskAIPanel(scope:model.explanationWork) { Self.question(item) }
             }
             if let parts = item.parts, parts.count > 1 {
                 let ticked = parts.filter { model.isTicked($0, of: item) }.count
@@ -695,7 +695,7 @@ struct DiskItemDetail: View {
                         Text(FSPath.tilde(p)).font(Theme.mono).foregroundStyle(Theme.textSecondary)
                             .lineLimit(1).truncationMode(.middle).textSelection(.enabled)
                         Spacer()
-                        Button { NSWorkspace.shared.activateFileViewerSelecting([URL(fileURLWithPath: p)]) } label: {
+                        Button {guard model.acceptsWork else{return};NSWorkspace.shared.activateFileViewerSelecting([URL(fileURLWithPath:p)])} label: {
                             Image(systemName: "magnifyingglass")
                         }.buttonStyle(.borderless).foregroundStyle(Theme.textTertiary).help(tr("Show in Finder"))
                     }

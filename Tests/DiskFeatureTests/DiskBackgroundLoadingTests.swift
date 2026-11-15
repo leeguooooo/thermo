@@ -1,7 +1,7 @@
 import XCTest
 import CleanKit
 import ThermoL10n
-@testable import ThermoApp
+@testable import DiskFeature
 
 final class DiskBackgroundLoadingTests: XCTestCase {
     final class IO: @unchecked Sendable {

@@ -17,7 +17,7 @@ struct AIPickButton: View {
     var body: some View {
         let busy = model.aiPicking == category
         Button {
-            guard let backend = store.backend else { return }
+            guard model.acceptsWork, let backend = store.backend else { return }
             if store.consented { model.aiPick(category, using: backend) } else { preview = model.aiQuestion(category) }
         } label: {
             HStack(spacing: 4) {
@@ -26,11 +26,11 @@ struct AIPickButton: View {
             }
         }
         .buttonStyle(PillButtonStyle()).controlSize(.small)
-        .disabled(store.backend == nil || model.report == nil || model.scanning || model.cleaning || model.aiPicking != nil
+        .disabled(!model.acceptsWork || store.backend == nil || model.report == nil || model.scanning || model.cleaning || model.aiPicking != nil
                   || model.aiQuestion(category).items.isEmpty)
         .help(store.backend.map { tr("Ask %1$@ to tick what is safe to delete. Nothing is cleaned until you press Clean.", $0.label) }
               ?? tr("No AI found on this Mac (magpie, Ollama, LM Studio or Claude Code)."))
-        .onAppear { store.discover() }
+        .onAppear {if model.acceptsWork {store.discover()}}
         .sheet(item: Binding(get: { preview.map(PreviewBox.init) }, set: { preview = $0?.question })) { box in
             consent(box.question)
         }
@@ -56,6 +56,7 @@ struct AIPickButton: View {
                 Spacer()
                 Button(tr("Cancel")) { preview = nil }.keyboardShortcut(.cancelAction)
                 Button(tr("Send")) {
+                    guard model.acceptsWork else{return}
                     store.consented = true; preview = nil
                     if let backend = store.backend { model.aiPick(category, using: backend) }
                 }

@@ -181,7 +181,6 @@ enum MainWindow {
                 MainActor.assumeIsolated {
                     setSamplingVisibility(false)
                     models.nativeFeatures.retireVisibility()
-                    SpaceOverviewModel.shared.stop()
                     MemoryModel.shared.stop()
                     ComputeModel.shared.stop()
                     ComputeModel.cpu.stop()
@@ -372,7 +371,7 @@ struct MainSidebar: View {
         ForEach(nativeGroups.filter{$0.location==section}) {group in
             if titled {header(tr(group.manifest.name))}
             group.content {item in
-                AnyView(row(.native(item.route),tr(item.entry.title),item.entry.symbol ?? item.manifest.symbol,item.tint,trailing:nil,badge:item.badge,indent:item.entry.parent != nil,selected:item.selected,activate:item.open)
+                AnyView(row(.native(item.route),tr(item.entry.title),item.entry.symbol ?? item.manifest.symbol,item.tint,trailing:item.trailing,badge:item.badge,indent:item.entry.parent != nil,selected:item.selected,activate:item.open)
                     .padding(.leading,CGFloat(max(0,item.manifest.depth(of:item.entry.id)-1))*14))
             }
         }

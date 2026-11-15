@@ -31,6 +31,7 @@ package enum AgentDiagnosticsFeature {
         case let .sidebar(location,selection,rows):
             guard location == .agents else{return nil}
             return AnyView(AgentSidebar(scanner:scanner,selection:selection,rows:rows))
+        case .inlineSettings:return nil
         case .windowOverlay:return AnyView(AgentResultsOverlay(scanner:scanner))
         case let .backdrop(route):return AnyView(AgentBackdrop(scanner:scanner,glow:BuiltinModuleManifests.agents.entries.first{$0.id==route.entry}?.parent == nil))
         }

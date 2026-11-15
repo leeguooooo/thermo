@@ -721,7 +721,7 @@ if let i = CommandLine.arguments.firstIndex(of: "--render-preview"), i + 1 < Com
     let started = Date()
     MainWindow.snapshot(to: path) {
         // Check in the capture gate: a delayed check could be skipped by a fast successful snapshot.
-        if args.contains("--expect-no-disk-model"), models.diskLoaded {
+        if args.contains("--expect-no-disk-model"), models.nativeFeatures.status(BuiltinModuleManifests.disk.id).modelLoaded {
             FileHandle.standardError.write(Data("disk model was created\n".utf8)); exit(3)
         }
         // Give each page what it needs to be worth a picture, but never wait more than 90 s.

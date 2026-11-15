@@ -9,10 +9,12 @@ import XCTest
     private final class Session:NativeFeatureSession {
         var contributions:[NativeSidebarContribution]=[]
         var surfaces:[String]=[]
+        var settingsNavigation:NativeNavigation?
         func page(_ route:NativeFeatureRoute,navigation:NativeNavigation)->AnyView?{AnyView(EmptyView())}
         func ui(_ surface:NativeUISurface,navigation:NativeNavigation)->AnyView? {
             switch surface {
             case let .sidebar(_,_,rows):surfaces.append("sidebar");for item in contributions{_ = rows(item)}
+            case let .inlineSettings(ref):surfaces.append("settings:"+ref.entry);settingsNavigation=navigation
             case .windowOverlay:surfaces.append("overlay")
             case .backdrop:surfaces.append("backdrop")
             }
@@ -80,4 +82,38 @@ import XCTest
         XCTAssertThrowsError(try NativeFeatureCatalog(definitions:[.init(manifest:empty,ui:.init(sidebarLocations:[.agents]),makeSession:{_ in Session()})]))
         XCTAssertThrowsError(try NativeFeatureCatalog(definitions:[.init(manifest:empty,ui:.init(hasBackdrop:true),makeSession:{_ in Session()})]))
     }
+    func testSidebarTextProjectsExactlyAndRejectsMultilineOrNul()throws {
+        let session=Session()
+        session.contributions=[.init(route:.init(id,"home"),tint:.blue,trailing:"1.2 GB")]
+            + ["bad\ntext","bad\rtext","bad\r\ntext","bad\0text"].map{.init(route:.init(id,"home"),tint:.blue,trailing:$0)}
+        let definition=NativeFeatureDefinition(manifest:manifest,ui:.init(sidebarLocations:[.agents]),makeSession:{_ in session})
+        let store=NativeFeatureStore(definitions:[definition],enabled:{_ in true})
+        let group=try XCTUnwrap(store.windowUI(selection:nil,locations:[.agents]).sidebar.first)
+        var rows:[NativeSidebarRow]=[]
+        _=group.content{rows.append($0);return AnyView(EmptyView())}
+        XCTAssertEqual(rows.count,1);XCTAssertEqual(rows.first?.trailing,"1.2 GB")
+    }
+    func testInlineSettingsChecksKindBeforeAdmissionAndRevokesOldNavigation()async throws {
+        var schema=manifest
+        schema.entries.append(.init(id:"settings",kind:.settingsItem,title:"Settings",scene:"settings"))
+        var made=0,shown=0,enabled=false,sessions:[Session]=[]
+        let definition=NativeFeatureDefinition(manifest:schema,makeSession:{_ in made+=1;let session=Session();sessions.append(session);return session})
+        let store=NativeFeatureStore(definitions:[definition],enabled:{_ in enabled},navigation:.init{_ in shown+=1;return true})
+        let ref=NativeUIEntryRef(id,"settings")
+        XCTAssertNil(store.inlineSettings(ref));XCTAssertEqual(made,0)
+        enabled=true
+        for ref in [NativeUIEntryRef(id,"home"),.init(id,"action"),.init(id,"unknown"),.init("com.example.foreign","settings")] {
+            XCTAssertNil(store.inlineSettings(ref))
+        }
+        XCTAssertEqual(made,0)
+        XCTAssertNotNil(store.inlineSettings(ref));XCTAssertEqual(made,1);XCTAssertEqual(sessions[0].surfaces,["settings:settings"])
+        XCTAssertNil(store.page(.init(id,"settings")));XCTAssertFalse(store.activate(ref))
+        let old=try XCTUnwrap(sessions[0].settingsNavigation)
+        XCTAssertTrue(old.show(.init(id,"home")));XCTAssertEqual(shown,1)
+        let drain=try XCTUnwrap(store.prepareStop(id))
+        XCTAssertNil(store.inlineSettings(ref));XCTAssertFalse(old.show(.init(id,"home")))
+        await drain.finish();XCTAssertNotNil(store.inlineSettings(ref));XCTAssertEqual(made,2)
+        XCTAssertFalse(old.show(.init(id,"home")));XCTAssertEqual(shown,1)
+    }
+
 }

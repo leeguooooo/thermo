@@ -4,15 +4,18 @@ import CleanKit
 import SwiftUI
 import ThermoL10n
 
+@MainActor
 final class CleanupProtectionsModel: ObservableObject {
     let home: String
+    private let enabled:@MainActor ()->Bool
     @Published private(set) var review: Whitelist.ProtectionReview?
     @Published private(set) var issue: String?
     @Published private(set) var notice: String?
-    init(home: String = NSHomeDirectory()) { self.home = home }
+    init(home:String = NSHomeDirectory(),enabled:@escaping @MainActor ()->Bool = {true}) {self.home=home;self.enabled=enabled}
     var entries: [String] { review?.value.entries ?? [] }
-    var canChange: Bool { review != nil && issue == nil && review?.value.rejected.isEmpty == true }
+    var canChange: Bool { enabled() && review != nil && issue == nil && review?.value.rejected.isEmpty == true }
     func reload() {
+        guard enabled() else{return}
         review = nil; issue = nil; notice = nil
         do { review = try Whitelist.review(home: home) }
         catch { issue = error.localizedDescription }
@@ -27,7 +30,7 @@ final class CleanupProtectionsModel: ObservableObject {
             return true
         } catch { issue = error.localizedDescription; return false }
     }
-    func openFile() { NSWorkspace.shared.open(Whitelist.url(home: home)) }
+    func openFile() {if enabled() {NSWorkspace.shared.open(Whitelist.url(home:home))}}
 }
 
 struct CleanupProtectionsButton: View {
@@ -41,11 +44,11 @@ struct CleanupProtectionsButton: View {
     var body: some View {
         Group {
             if asRow {
-                Button { showing = true } label: {
+                Button {if disk.acceptsWork {showing=true}} label: {
                     FeatureRow(title: title ?? tr("Disk Cleanup protected locations"), symbol: symbol)
                 }.buttonStyle(.plain)
             } else {
-                Button { showing = true } label: {
+                Button {if disk.acceptsWork {showing=true}} label: {
                     if compact { Image(systemName: symbol) }
                     else { Label(title ?? tr("Protected locations"), systemImage: symbol) }
                 }
@@ -54,9 +57,9 @@ struct CleanupProtectionsButton: View {
         }
         .help(title ?? tr("Protected locations"))
         .accessibilityLabel(title ?? tr("Protected locations"))
-        .disabled(disk.cleaning || disk.scanning)
+        .disabled(!disk.acceptsWork || disk.cleaning || disk.scanning)
         .sheet(isPresented: $showing) {
-            CleanupProtectionsView(home: disk.cleanGuard.home, changed: { disk.protectionRulesChanged() }, close: { showing = false })
+            CleanupProtectionsView(home:disk.cleanGuard.home,enabled:{disk.acceptsWork},changed: { disk.protectionRulesChanged() }, close: { showing = false })
         }
     }
 }
@@ -65,8 +68,8 @@ struct CleanupProtectionsView: View {
     @StateObject private var model: CleanupProtectionsModel
     let changed: () -> Void
     let close: () -> Void
-    init(home: String = NSHomeDirectory(), changed: @escaping () -> Void, close: @escaping () -> Void) {
-        _model = StateObject(wrappedValue: CleanupProtectionsModel(home: home)); self.changed = changed; self.close = close
+    init(home:String = NSHomeDirectory(),enabled:@escaping @MainActor ()->Bool = {true},changed: @escaping () -> Void, close: @escaping () -> Void) {
+        _model = StateObject(wrappedValue: CleanupProtectionsModel(home:home,enabled:enabled)); self.changed = changed; self.close = close
     }
     /// Fits the list instead of a fixed 460 pt that left three rows floating in empty space; long lists still scroll.
     static func height(rows: Int, rejected: Int, banners: Int) -> CGFloat {

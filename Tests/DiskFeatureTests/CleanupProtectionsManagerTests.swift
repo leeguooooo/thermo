@@ -1,7 +1,8 @@
+import ThermoL10n
 import XCTest
 import CleanKit
 import Darwin
-@testable import ThermoApp
+@testable import DiskFeature
 
 final class CleanupProtectionsManagerTests: XCTestCase {
     var home = ""
@@ -10,7 +11,7 @@ final class CleanupProtectionsManagerTests: XCTestCase {
         try FileManager.default.createDirectory(atPath: home, withIntermediateDirectories: true)
     }
     override func tearDownWithError() throws { try FileManager.default.removeItem(atPath: home) }
-    func testReadFailureDoesNotBecomeAnEmptyList() throws {
+    @MainActor func testReadFailureDoesNotBecomeAnEmptyList() throws {
         try Whitelist.add([home + "/one"], home: home)
         let model = CleanupProtectionsModel(home: home); model.reload()
         XCTAssertEqual(model.entries.count, 1)
@@ -20,7 +21,7 @@ final class CleanupProtectionsManagerTests: XCTestCase {
         model.reload()
         XCTAssertNil(model.review); XCTAssertNotNil(model.issue); XCTAssertFalse(model.canChange)
     }
-    func testStaleListRequiresRefreshBeforeAllowingRule() throws {
+    @MainActor func testStaleListRequiresRefreshBeforeAllowingRule() throws {
         try Whitelist.add([home + "/one"], home: home)
         let model = CleanupProtectionsModel(home: home); model.reload()
         try Whitelist.add([home + "/two"], home: home)
@@ -31,7 +32,7 @@ final class CleanupProtectionsManagerTests: XCTestCase {
         XCTAssertEqual(model.entries, [home + "/two"])
         XCTAssertNotNil(model.notice)
     }
-    func testRuleManagementInvalidatesOldSelectionsAndLocalUndo() throws {
+    @MainActor func testRuleManagementInvalidatesOldSelectionsAndLocalUndo() throws {
         let item = CleanItem(id: "fixture", category: .system, title: "Fixture", safety: .safe, bytes: 1, paths: [home + "/cache"])
         let disk = DiskModel(report: .init(items: [item], denied: [], started: Date(), duration: 0))
         disk.alwaysKeep(item, home: home)
@@ -42,7 +43,7 @@ final class CleanupProtectionsManagerTests: XCTestCase {
         XCTAssertNil(disk.report); XCTAssertNil(disk.protectionUndo); XCTAssertTrue(disk.selected.isEmpty)
         XCTAssertNotNil(disk.protectionNotice)
     }
-    func testEarlierSuccessNoticeDoesNotSurviveARefusedDifferentRemoval() throws {
+    @MainActor func testEarlierSuccessNoticeDoesNotSurviveARefusedDifferentRemoval() throws {
         try Whitelist.add([home + "/one", home + "/two"], home: home)
         let model = CleanupProtectionsModel(home: home); model.reload()
         XCTAssertTrue(model.allow(home + "/one")); XCTAssertNotNil(model.notice)
@@ -51,6 +52,17 @@ final class CleanupProtectionsManagerTests: XCTestCase {
         XCTAssertNil(model.notice); XCTAssertNotNil(model.issue)
         model.reload()
         XCTAssertNil(model.notice); XCTAssertNil(model.issue)
+    }
+
+    @MainActor func testRetiredProtectionSheetCannotChangeRulesOrStartAnotherRead()throws {
+        try Whitelist.add([home+"/one"],home:home)
+        var enabled=true
+        let model=CleanupProtectionsModel(home:home,enabled:{enabled})
+        model.reload();XCTAssertTrue(model.canChange)
+        enabled=false
+        XCTAssertFalse(model.canChange);XCTAssertFalse(model.allow(home+"/one"))
+        XCTAssertEqual(try Whitelist.loadForRemoval(home:home).entries,[home+"/one"])
+        model.reload();XCTAssertEqual(model.entries,[home+"/one"],"Retired callbacks do not reload or replace the review")
     }
 
 }

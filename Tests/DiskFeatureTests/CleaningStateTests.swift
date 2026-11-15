@@ -1,10 +1,10 @@
 import XCTest
 import CleanKit
 import ThermoL10n
-@testable import ThermoApp
+@testable import DiskFeature
 
 final class CleaningStateTests: XCTestCase {
-    func testToolRemovalConfirmationNeverPromisesTrashRecovery() {
+    @MainActor func testToolRemovalConfirmationNeverPromisesTrashRecovery() {
         let item = CleanItem(id: "simulator/fixture", category: .xcode, title: "Fixture", safety: .review, bytes: 100,
                              commands: [["xcrun", "simctl", "erase", "fixture-id"]])
         let model = DiskModel(report: ScanReport(items: [item], denied: [], started: Date(), duration: 1))
@@ -17,7 +17,7 @@ final class CleaningStateTests: XCTestCase {
         XCTAssertFalse(model.confirmSummary.contains("goes to the Trash"))
     }
 
-    func testFreshCategoryScanDoesNotRequestAFullRescanOnItsOwnPage() {
+    @MainActor func testFreshCategoryScanDoesNotRequestAFullRescanOnItsOwnPage() {
         let model = DiskModel()
         var report = ScanReport(items: [], denied: [], started: Date(), duration: 1)
         report.categories = [.projects]
@@ -27,7 +27,7 @@ final class CleaningStateTests: XCTestCase {
         XCTAssertTrue(model.scopeNeedsRefresh(category: .xcode))
     }
 
-    func testCategoryScanDoesNotExpandToAllAIOrProjects() {
+    @MainActor func testCategoryScanDoesNotExpandToAllAIOrProjects() {
         let options = DiskModel.scanOptions(scope: .all, category: .aiSessions)
         XCTAssertEqual(options.categories, [.aiSessions])
         XCTAssertTrue(options.lowPriority)
@@ -36,7 +36,7 @@ final class CleaningStateTests: XCTestCase {
         XCTAssertEqual(DiskModel.scanOptions(scope: .all).categories, Set(CleanCategory.allCases))
     }
 
-    func testLanguageChangePreservesReportAndSelectionsWithStaleNotice() {
+    @MainActor func testLanguageChangePreservesReportAndSelectionsWithStaleNotice() {
         L10n.override = .english
         defer { L10n.override = nil }
         var report = ScanReport(items: [.init(id: "fixture", category: .devCaches, title: "Fixture", safety: .safe, bytes: 10, paths: ["/fixture/cache"])],
@@ -52,7 +52,7 @@ final class CleaningStateTests: XCTestCase {
         XCTAssertFalse(model.scanning)
     }
 
-    func testCompletedScanReflectsItsActualScope() {
+    @MainActor func testCompletedScanReflectsItsActualScope() {
         let model = DiskModel()
         var report = ScanReport(items: [], denied: [], started: Date(), duration: 1)
         report.categories = CleanCategory.allCases.filter(\.isAI)
@@ -63,7 +63,7 @@ final class CleaningStateTests: XCTestCase {
         XCTAssertFalse(model.stale)
     }
 
-    func testCompletingScanPreservesDeselectionAndSelectsNewSafeItems() {
+    @MainActor func testCompletingScanPreservesDeselectionAndSelectsNewSafeItems() {
         let first = CleanItem(id: "first", category: .system, title: "First", safety: .safe, bytes: 10, paths: ["/fixture/first"])
         let next = CleanItem(id: "next", category: .system, title: "Next", safety: .safe, bytes: 20, paths: ["/fixture/next"])
         let model = DiskModel(report: ScanReport(items: [first], denied: [], started: Date(), duration: 0))
@@ -73,7 +73,7 @@ final class CleaningStateTests: XCTestCase {
         XCTAssertEqual(model.selected, ["next"])
     }
 
-    func testSelectSafeAndScanCompletionKeepDevelopmentDependencies() {
+    @MainActor func testSelectSafeAndScanCompletionKeepDevelopmentDependencies() {
         let logs = CleanItem(id: "logs", category: .system, title: "Logs", safety: .safe, bytes: 10, paths: ["/fixture/logs"])
         let sdk = CleanItem(id: "sdk", category: .xcode, title: "SDK", safety: .safe, bytes: 100, paths: ["/fixture/sdk"])
         let report = ScanReport(items: [logs, sdk], denied: [], started: Date(), duration: 0)
@@ -87,7 +87,7 @@ final class CleaningStateTests: XCTestCase {
         XCTAssertTrue(model.selected.contains("sdk"), "An explicit choice remains possible")
     }
 
-    func testPartialSessionCleanupKeepsUnselectedSession() {
+    @MainActor func testPartialSessionCleanupKeepsUnselectedSession() {
         let remove = CleanPart(id: "remove", title: "Remove", bytes: 10, lastUsed: nil, paths: ["/fixture/remove"])
         let keep = CleanPart(id: "keep", title: "Keep", bytes: 20, lastUsed: nil, paths: ["/fixture/keep"])
         let item = CleanItem(id: "sessions", category: .aiSessions, title: "Codex · project · 2 sessions", safety: .review,
@@ -104,7 +104,7 @@ final class CleaningStateTests: XCTestCase {
         XCTAssertEqual(rest?.bytes, 20)
     }
 
-    func testFailedPathsRemainAndRemovedPathsDisappear() {
+    @MainActor func testFailedPathsRemainAndRemovedPathsDisappear() {
         let item = CleanItem(id: "cache", category: .devCaches, title: "Cache", safety: .safe, bytes: 30,
                              paths: ["/fixture/removed", "/fixture/failed"])
         var result = CleanResult(id: item.id, trashed: false)
@@ -116,7 +116,7 @@ final class CleaningStateTests: XCTestCase {
         XCTAssertEqual(rest?.bytes, 25)
     }
 
-    func testInaccessibleFailedPathIsNotReportedAsRemoved() {
+    @MainActor func testInaccessibleFailedPathIsNotReportedAsRemoved() {
         let item = CleanItem(id: "cache", category: .devCaches, title: "Cache", safety: .safe, bytes: 30, paths: ["/fixture/denied"])
         var result = CleanResult(id: item.id, trashed: false)
         result.failed = ["/fixture/denied": "permission denied"]
@@ -125,7 +125,7 @@ final class CleaningStateTests: XCTestCase {
         XCTAssertEqual(rest?.bytes, item.bytes)
     }
 
-    func testFullyRemovedItemDisappears() {
+    @MainActor func testFullyRemovedItemDisappears() {
         let item = CleanItem(id: "cache", category: .devCaches, title: "Cache", safety: .safe, bytes: 30, paths: ["/fixture/removed"])
         var result = CleanResult(id: item.id, trashed: false); result.removed = item.paths
         XCTAssertNil(DiskModel.remainder(item, attempted: item, result: result) { _ in nil })
@@ -133,7 +133,7 @@ final class CleaningStateTests: XCTestCase {
 }
 
 extension CleaningStateTests {
-    func testFailedToolBatchCannotReplayEarlierCommandsFromOldReport() throws {
+    @MainActor func testFailedToolBatchCannotReplayEarlierCommandsFromOldReport() throws {
         let item = CleanItem(id: "tool", category: .devCaches, title: "Fixture", safety: .review, bytes: 100,
                              commands: [["/usr/bin/true"], ["/usr/bin/false"]])
         var result = CleanResult(id: item.id, trashed: false)
@@ -143,7 +143,7 @@ extension CleaningStateTests {
         XCTAssertFalse(rest.cleanable)
         XCTAssertEqual(rest.commands, item.commands, "Keep the failed review inspectable; do not synthesize a new retry plan")
     }
-    func testBatchLevelFailureDoesNotHideAnUnreadableRemainingPath() throws {
+    @MainActor func testBatchLevelFailureDoesNotHideAnUnreadableRemainingPath() throws {
         let item = CleanItem(id: "cache", category: .system, title: "Fixture", safety: .safe, bytes: 100, paths: ["/fixture/remaining"])
         var result = CleanResult(id: item.id, trashed: false)
         result.failed = ["whitelist": "cannot read configuration"]
@@ -151,7 +151,7 @@ extension CleaningStateTests {
         XCTAssertEqual(rest.paths, item.paths)
         XCTAssertFalse(rest.cleanable)
     }
-    func testKnownRemovedPathCannotAdoptAReplacementDuringRemainderMeasurement() {
+    @MainActor func testKnownRemovedPathCannotAdoptAReplacementDuringRemainderMeasurement() {
         let item = CleanItem(id: "cache", category: .system, title: "Fixture", safety: .safe, bytes: 100, paths: ["/fixture/removed"])
         var result = CleanResult(id: item.id, trashed: true); result.removed = item.paths
         XCTAssertNil(DiskModel.remainder(item, attempted: item, result: result) { _ in
@@ -159,7 +159,7 @@ extension CleaningStateTests {
             return 200
         })
     }
-    func testFreshScanRestoresExplicitToolSelectionAfterFailedReview() throws {
+    @MainActor func testFreshScanRestoresExplicitToolSelectionAfterFailedReview() throws {
         let item = CleanItem(id: "tool", category: .devCaches, title: "Fixture", safety: .review, bytes: 100,
                              commands: [["/usr/bin/true"]])
         var result = CleanResult(id: item.id, trashed: false); result.failed = ["tool": "unavailable"]

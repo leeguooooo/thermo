@@ -67,9 +67,10 @@ import SwiftUI
                     guard availability.acceptsWork else{return AnyView(EmptyView())}
                     let rows=NativeSidebarRenderer {item in
                         guard availability.acceptsWork,item.badge>=0,item.route.module==id,
+                              item.trailing?.unicodeScalars.contains(where:{$0.value == 0 || $0.value == 10 || $0.value == 13}) != true,
                               let route=try? catalog.normalize(item.route),
                               let entry=definition.manifest.entries.first(where:{$0.id==route.entry && $0.kind == .page}) else{return AnyView(EmptyView())}
-                        return host.render(.init(route:route,manifest:definition.manifest,entry:entry,tint:item.tint,badge:item.badge,selected:selected==route,open:{_ = navigation.show(route)}))
+                        return host.render(.init(route:route,manifest:definition.manifest,entry:entry,tint:item.tint,badge:item.badge,trailing:item.trailing,selected:selected==route,open:{_ = navigation.show(route)}))
                     }
                     return AnyView((session.ui(.sidebar(location:location,selection:selected,rows:rows),navigation:navigation) ?? AnyView(EmptyView())).id(generation))
                 }))
@@ -85,6 +86,13 @@ import SwiftUI
             backdrop=AnyView(view.id(live.generation))
         }
         return .init(sidebar:groups,overlay:AnyView(NativeOverlays(parts:overlays)),backdrop:backdrop)
+    }
+    /// Inline UI is admitted only for an exact declared settings entry.
+    package func inlineSettings(_ ref:NativeUIEntryRef)->AnyView? {
+        guard catalog.definitions[ref.module]?.manifest.entries.contains(where:{$0.id==ref.entry && $0.kind == .settingsItem}) == true,
+              let session=admittedSession(ref.module),case let .live(live)=states[ref.module],
+              let view=session.ui(.inlineSettings(ref),navigation:scopedNavigation(ref.module)) else{return nil}
+        return AnyView(view.id(live.generation))
     }
     /// Explicit background contribution; metadata/status/quit queries remain cold.
     package func start(_ id:String) {
