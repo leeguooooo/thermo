@@ -4,6 +4,7 @@ import SwiftUI
 import ThermoL10n
 
 @MainActor final class CaptureBatchImageExportModel:ObservableObject {
+    var featureEnabled:()->Bool = {true}
     @Published var allGroups=false
     @Published var selectedGroupID:UUID?
     @Published var format:CaptureSaveFormat = .png
@@ -23,11 +24,11 @@ import ThermoL10n
     }
     func report(_ error:Error) {issue=captureFailureMessage(error)}
     func start(_ items:[CaptureBatchImageItem],destination:URL,format:CaptureSaveFormat,quality:Double=0.9) {
-        guard !running else{return}
+        guard featureEnabled(),!running else{return}
         let id=UUID();operationID=id;running=true;cancelling=false;completed=0;total=items.count;result=nil;issue=nil
         let progress:@Sendable(Int,Int)->Void={ [weak self] count,_ in
             Task { @MainActor [weak self] in
-                guard let self,self.operationID==id,self.running else{return};self.completed=max(self.completed,count)
+                guard let self,self.featureEnabled(),self.operationID==id,self.running else{return};self.completed=max(self.completed,count)
             }
         }
         task=Task { [weak self] in
@@ -36,10 +37,10 @@ import ThermoL10n
             }
             do {
                 let value=try await withTaskCancellationHandler(operation:{try await worker.value},onCancel:{worker.cancel()})
-                guard let self,self.operationID==id else{return};self.result=value;self.completed=value.images.count;self.issue=nil
+                guard let self,self.operationID==id else{return};if self.featureEnabled(){self.result=value};self.completed=value.images.count;self.issue=nil
             } catch {
                 guard let self,self.operationID==id else{return}
-                self.issue=error is CancellationError ? tr("Batch image export cancelled.") : captureFailureMessage(error)
+                if self.featureEnabled(){self.issue=error is CancellationError ? tr("Batch image export cancelled.") : captureFailureMessage(error)}
             }
             guard let self,self.operationID==id else{return};self.running=false;self.cancelling=false;self.task=nil
         }

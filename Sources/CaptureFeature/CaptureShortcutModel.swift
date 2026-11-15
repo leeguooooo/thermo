@@ -6,6 +6,7 @@ import CaptureScriptCore
 import ThermoL10n
 
 @MainActor final class CaptureShortcutModel:ObservableObject {
+    var featureEnabled:()->Bool = {true}
     static let preferenceKey="dev.thermo.capture.actions.v1"
     @Published private(set) var settings=CaptureActionSettings.defaults
     @Published private(set) var issue:String?
@@ -35,7 +36,7 @@ import ThermoL10n
     func withScriptExecutor(onIssue:@escaping()->Void={},_ value:@escaping(String)async throws->CaptureScriptResult) -> Self {executeScript=value;scriptFailureHandler=onIssue;return self}
     static func backend() -> CarbonCleanScreenHotkeys { CarbonCleanScreenHotkeys(validate:{ CaptureShortcut(keyCode:$0.keyCode,modifiers:$0.modifiers,keyLabel:$0.keyLabel).validGlobal }) }
     func activate() {
-        guard !activated,!uncertain else { return };activated=true
+        guard featureEnabled(),!activated,!uncertain else { return };activated=true
         if let data=read() {
             do { settings=try CaptureActionSettings.decode(data) }
             catch { settings = .init();settings.shortcutsEnabled=false;issue=tr(CaptureActionFailure.invalidSettings.localizedDescription);return }
@@ -54,6 +55,7 @@ import ThermoL10n
         try backend.register(.init(keyCode:key.keyCode,modifiers:key.modifiers,keyLabel:key.keyLabel)) { [weak self] down in self?.receive(key,down:down) }
     }
     @discardableResult func apply(_ next:CaptureActionSettings) -> Bool {
+        guard featureEnabled() else{issue=tr("This feature is switched off.");return false}
         if !activated { activate() }
         guard !uncertain else { return false }
         do { _=try next.data() } catch { issue=tr(CaptureActionFailure.invalidSettings.localizedDescription);return false }
@@ -85,7 +87,7 @@ import ThermoL10n
         guard localMonitor == nil else { return }
         localMonitor=NSEvent.addLocalMonitorForEvents(matching:[.keyDown,.keyUp]) { [weak self] event in
             MainActor.assumeIsolated {
-                guard let self else { return event }
+                guard let self,self.featureEnabled() else{return event}
                 let key=CaptureShortcut(keyCode:UInt32(event.keyCode),modifiers:CleanScreenKeyBinding.flags(event.modifierFlags),keyLabel:CleanScreenKeyBinding.captured(event).keyLabel)
                 if event.type == .keyUp { self.held=self.held.filter { !$0.hasSuffix(":"+String(event.keyCode)) };return event }
                 guard !event.isARepeat,self.settings.shortcutsEnabled,!self.uncertain,self.recordingOwner == nil,self.pinFocused() else { return event }
@@ -97,13 +99,14 @@ import ThermoL10n
     }
     func receive(_ key:CaptureShortcut,down:Bool) {
         if !down { held.remove(key.gesture);return }
-        guard activated,!uncertain,settings.shortcutsEnabled,!held.contains(key.gesture) else { return };held.insert(key.gesture)
+        guard featureEnabled(),activated,!uncertain,settings.shortcutsEnabled,!held.contains(key.gesture) else { return };held.insert(key.gesture)
         if let owner=recordingOwner { record(key,owner:owner);return }
         let matching=settings.entries.filter { $0.enabled && $0.shortcut?.gesture == key.gesture }
         let entry=pinFocused() ? matching.first(where:{ $0.scope == .pin }) ?? matching.first(where:{ $0.scope == .global }) : matching.first(where:{ $0.scope == .global })
         guard let entry else { return };run(entry)
     }
     func run(_ entry:CaptureShortcutEntry) {
+        guard featureEnabled() else{return}
         guard entry.action == .script else {run(entry.action);return}
         guard !dispatching,!scriptRunning else {issue=tr("Another capture action is in progress.");return}
         guard entry.valid,let source=entry.script else {issue=tr(CaptureScriptFailure.invalidSource.localizedDescription);return}
@@ -113,21 +116,23 @@ import ThermoL10n
             guard let self else{return};defer{self.scriptRunning=false;self.scriptTask=nil}
             do {
                 let result=try await executeScript(source)
+                guard self.featureEnabled(),!Task.isCancelled else{return}
                 self.scriptOutput=result.logs.joined(separator:"\n")
                 if let data=try? JSONEncoder().encode(result.value) {self.scriptOutput += "\n"+String(decoding:data,as:UTF8.self)}
-            } catch {self.issue=captureFailureMessage(error);if !Task.isCancelled{self.scriptFailureHandler?()}}
+            } catch {self.issue=captureFailureMessage(error);if self.featureEnabled(),!Task.isCancelled{self.scriptFailureHandler?()}}
         }
     }
     func cancelScript() {scriptTask?.cancel()}
     func run(_ action:CaptureAction) {
+        guard featureEnabled() else{return}
         guard !dispatching,!scriptRunning else { issue=tr("Another capture action is in progress.");return }
         dispatching=true;defer { dispatching=false }
         do { try execute(action);issue=nil } catch { issue=captureFailureMessage(error) }
     }
-    func beginRecording(_ owner:UUID,receive:@escaping(CaptureShortcut)->Void) { guard !uncertain else { return };recordingOwner=owner;recordingReceiver=receive;issue=nil }
+    func beginRecording(_ owner:UUID,receive:@escaping(CaptureShortcut)->Void) { guard featureEnabled(),!uncertain else{return};recordingOwner=owner;recordingReceiver=receive;issue=nil }
     func cancelRecording(_ owner:UUID) { if recordingOwner == owner { recordingOwner=nil;recordingReceiver=nil } }
     func record(_ key:CaptureShortcut,owner:UUID) {
-        guard recordingOwner == owner else { return }
+        guard featureEnabled(),recordingOwner == owner else { return }
         guard key.valid else { issue=tr("Use a supported key combination.");return }
         let receive=recordingReceiver;recordingOwner=nil;recordingReceiver=nil;held.insert(key.gesture);receive?(key)
     }

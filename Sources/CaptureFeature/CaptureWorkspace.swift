@@ -45,7 +45,7 @@ func captureFailureMessage(_ error:Error) -> String {
         self.featureEnabled=featureEnabled
         nativeScriptWork.enabled=featureEnabled;captureReads.enabled=featureEnabled;editorWork.enabled=featureEnabled
         self.providedShortcuts=shortcuts
-        self.pinSession=pinSession ?? CapturePinSession();self.pinSession.onCountChange={ [weak self] in self?.pinCount=$0 }
+        self.pinSession=pinSession ?? CapturePinSession();self.pinSession.enabled=featureEnabled;self.pinSession.onCountChange={ [weak self] in self?.pinCount=$0 }
         self.pinSession.configureEditor={ [weak self] model in
             guard let self else{return}
             model.featureEnabled=self.featureEnabled;model.work=self.editorWork
@@ -54,8 +54,11 @@ func captureFailureMessage(_ error:Error) -> String {
             model.showSaveSettings={ [weak self] in self?.showSavingSettings() }
         }
     }
-    lazy var shortcuts=providedShortcuts ?? CaptureShortcutModel(backend:CaptureShortcutModel.backend(),read:{ UserDefaults.standard.data(forKey:CaptureShortcutModel.preferenceKey) },write:{ data in UserDefaults.standard.set(data,forKey:CaptureShortcutModel.preferenceKey) },pinFocused:{ [weak self] in self?.pinSession.focusedEditor() != nil },execute:{ [weak self] action in try self?.perform(action) }).withScriptExecutor(onIssue:{ [weak self] in self?.showActionSettings() }) { [weak self] source in guard let self else {throw CaptureScriptFailure.unavailable};return try await self.executeScript(source) }
-    lazy var saving=CaptureSaveModel()
+    lazy var shortcuts:CaptureShortcutModel = {
+        let model=providedShortcuts ?? CaptureShortcutModel(backend:CaptureShortcutModel.backend(),read:{ UserDefaults.standard.data(forKey:CaptureShortcutModel.preferenceKey) },write:{ data in UserDefaults.standard.set(data,forKey:CaptureShortcutModel.preferenceKey) },pinFocused:{ [weak self] in self?.pinSession.focusedEditor() != nil },execute:{ [weak self] action in try self?.perform(action) }).withScriptExecutor(onIssue:{ [weak self] in self?.showActionSettings() }) { [weak self] source in guard let self else {throw CaptureScriptFailure.unavailable};return try await self.executeScript(source) }
+        model.featureEnabled=featureEnabled;return model
+    }()
+    lazy var saving:CaptureSaveModel = {let model=CaptureSaveModel();model.featureEnabled=featureEnabled;return model}()
     private var savingWindow:NSWindowController?
     private var afterTask:Task<Void,Never>?
     private var actionsWindow:NSWindowController?

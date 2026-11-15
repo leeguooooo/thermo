@@ -1,3 +1,4 @@
+import NativeFeatureAPI
 import AppKit
 import CaptureCore
 import SwiftUI
@@ -6,6 +7,8 @@ import ThermoL10n
 @MainActor final class CapturePinSession:ObservableObject {
     @Published private(set) var library:CapturePinLibrary
     @Published var issue:String?
+    var enabled:()->Bool = {true}{didSet{batchExport.featureEnabled=enabled}}
+    private func requireCurrent()throws{guard enabled() else{throw NativeFeatureBusy(tr("This feature is switched off."))}}
     let batchExport=CaptureBatchImageExportModel()
     private(set) var windows:[UUID:CaptureEditor]=[:]
     let store:CapturePinLibraryStore
@@ -23,7 +26,7 @@ import ThermoL10n
         do { library=try store.load(defaultName:tr("Default pin group")) }
         catch { library = .init(defaultName:tr("Default pin group"));issue=captureFailureMessage(error);loadFailed=true }
     }
-    func restoreWindows() {
+    func restoreWindows() {guard enabled() else{return};
         do { try checkLoaded();try prepareWindows(for:library.currentGroupID);displayCurrent() }
         catch { issue=captureFailureMessage(error) }
     }
@@ -38,7 +41,7 @@ import ThermoL10n
         windows.removeAll()
     }
     private func checkLoaded() throws { if loadFailed { throw CapturePinFailure.invalidLibrary } }
-    func retryLoad() {
+    func retryLoad() {guard enabled() else{return};
         do {
             saving?.cancel();saving=nil
             let saved=try store.load(defaultName:tr("Default pin group"))
@@ -50,6 +53,9 @@ import ThermoL10n
         } catch { loadFailed=true;issue=captureFailureMessage(error) }
     }
     private func commit(_ next:CapturePinLibrary,documents:[UUID:CaptureDocument]=[:],contents:[UUID:CapturePinContent]=[:]) throws {
+        try requireCurrent();try persist(next,documents:documents,contents:contents)
+    }
+    private func persist(_ next:CapturePinLibrary,documents:[UUID:CaptureDocument]=[:],contents:[UUID:CapturePinContent]=[:])throws{
         try checkLoaded();let saved=try store.save(next,documents:documents,contents:contents);library=saved;onCountChange?(count)
     }
     func flush() throws {
@@ -70,7 +76,7 @@ import ThermoL10n
             next.pins[index].pinned=model.pinned;next.pins[index].locked=model.locked;next.pins[index].shadow=model.shadow;next.pins[index].title=model.pinTitle
             if dirty.contains(id) { next.pins[index].snapshotID=UUID();documents[id]=model.document;contents[id]=model.pinContent;next.pins[index].contentKind=model.pinContent?.kind }
         }
-        try commit(next,documents:documents,contents:contents);dirty.removeAll();issue=nil
+        try persist(next,documents:documents,contents:contents);dirty.removeAll();issue=nil
     }
     /// Quitting is refused only when pin edits would be lost; window placement alone is not worth blocking it.
     func flushForQuit() throws {
@@ -78,6 +84,7 @@ import ThermoL10n
         catch CapturePinFailure.invalidLibrary where dirty.isEmpty { issue=captureFailureMessage(CapturePinFailure.invalidLibrary) }
     }
     private func changed(_ id:UUID,document:Bool) {
+        guard enabled() else{return}
         if document { dirty.insert(id) }
         saving?.cancel()
         saving=Task { [weak self] in
@@ -85,14 +92,14 @@ import ThermoL10n
             catch is CancellationError {} catch { self?.issue=captureFailureMessage(error) }
         }
     }
-    @discardableResult func open(_ image:CGImage,content:CapturePinContent? = nil) throws -> UUID {
+    @discardableResult func open(_ image:CGImage,content:CapturePinContent? = nil) throws -> UUID {try requireCurrent();
         try flush()
         var next=library
         for index in next.pins.indices where next.pins[index].groupID == next.currentGroupID { next.pins[index].hidden=false }
         var pin=CaptureSavedPin(groupID:next.currentGroupID);pin.contentKind=content?.kind;next.pins.append(pin)
         let doc=CaptureDocument(image:image);try commit(next,documents:[pin.id:doc],contents:content.map { [pin.id:$0] } ?? [:]);makeEditor(pin,document:doc,content:content);displayCurrent();NSApp.activate(ignoringOtherApps:true);windows[pin.id]?.window?.makeKeyAndOrderFront(nil);return pin.id
     }
-    @discardableResult func open(_ content:CapturePinContent) throws -> UUID { try open(content.previewImage(),content:content) }
+    @discardableResult func open(_ content:CapturePinContent) throws -> UUID {try requireCurrent(); try open(content.previewImage(),content:content) }
     private func makeEditor(_ pin:CaptureSavedPin,document:CaptureDocument,content:CapturePinContent? = nil) {
         let editor=CaptureEditor(image:document.image,onClose:{ [weak self] in self?.windows.removeValue(forKey:pin.id) },shouldClose:{ [weak self] in self?.willClose(pin.id) ?? true })
         let model=editor.model;model.document=document;model.pinContent=content;model.opacity=pin.opacity;model.zoom=pin.zoom;model.pan=pin.pan;model.pinned=pin.pinned;model.locked=pin.locked;model.shadow=pin.shadow;model.pinTitle=pin.title
@@ -123,6 +130,7 @@ import ThermoL10n
         onCountChange?(count)
     }
     private func willClose(_ id:UUID) -> Bool {
+        guard enabled() else{return true}
         guard !removing.contains(id) else { return true }
         do {
             try flush();var next=library
@@ -130,7 +138,7 @@ import ThermoL10n
             next.pins[index].closedAt=Date();next.pruneHistory();try commit(next);return true
         } catch { issue=captureFailureMessage(error);showLibrary();return false }
     }
-    func showPin(_ id:UUID) throws {
+    func showPin(_ id:UUID) throws {try requireCurrent();
         guard let pin=library.pins.first(where:{ $0.id == id }) else { throw CapturePinFailure.missingPin }
         try switchGroup(pin.groupID)
         if pin.closedAt != nil { try restore(id) }
@@ -141,7 +149,7 @@ import ThermoL10n
         NSApp.activate(ignoringOtherApps:true);windows[id]?.window?.makeKeyAndOrderFront(nil)
     }
     /// This recovery is independent of manifest validity, disk space and the active group.
-    func restoreMouseInteraction() {
+    func restoreMouseInteraction() {guard enabled() else{return};
         for editor in windows.values where editor.model.mousePassthrough || editor.window?.ignoresMouseEvents == true {editor.model.mousePassthrough=false}
     }
     func editorUnderMouse(at point:CGPoint?=nil) -> CaptureEditor? {
@@ -152,38 +160,38 @@ import ThermoL10n
         }
         return nil
     }
-    func restore(_ id:UUID? = nil) throws {
+    func restore(_ id:UUID? = nil) throws {try requireCurrent();
         try flush()
         let pin=library.pins.filter { $0.groupID == library.currentGroupID && $0.closedAt != nil && (id == nil || $0.id == id) }.sorted { $0.closedAt! > $1.closedAt! }.first
         guard var pin else { return }
         let doc=try store.snapshot(for:pin);pin.closedAt=nil;pin.hidden=false
         var next=library;next.pins[next.pins.firstIndex { $0.id == pin.id }!]=pin;try commit(next);makeEditor(pin,document:doc.document,content:doc.content);displayCurrent();NSApp.activate(ignoringOtherApps:true);windows[pin.id]?.window?.makeKeyAndOrderFront(nil)
     }
-    func switchGroup(_ id:UUID) throws {
+    func switchGroup(_ id:UUID) throws {try requireCurrent();
         guard library.groups.contains(where:{ $0.id == id }) else { throw CapturePinFailure.invalidLibrary }
         try flush();try prepareWindows(for:id)
         var next=library;next.currentGroupID=id;try commit(next);displayCurrent()
     }
-    @discardableResult func createGroup(name:String,color:String? = nil,switchTo:Bool=true) throws -> UUID {
+    @discardableResult func createGroup(name:String,color:String? = nil,switchTo:Bool=true) throws -> UUID {try requireCurrent();
         try flush();let group=CapturePinGroup(name:name.trimmingCharacters(in:.whitespacesAndNewlines),color:color)
         var next=library;next.groups.append(group);if switchTo { next.currentGroupID=group.id }
         guard next.valid else { throw CapturePinFailure.invalidName };try commit(next);displayCurrent();return group.id
     }
-    func updateGroup(_ id:UUID,name:String,color:String?) throws {
+    func updateGroup(_ id:UUID,name:String,color:String?) throws {try requireCurrent();
         try flush();var next=library;guard let index=next.groups.firstIndex(where:{ $0.id == id }) else { return }
         next.groups[index].name=name.trimmingCharacters(in:.whitespacesAndNewlines);next.groups[index].color=color
         guard next.valid else { throw CapturePinFailure.invalidName };try commit(next);displayCurrent()
     }
-    func reorderGroup(_ id:UUID,offset:Int) throws {
+    func reorderGroup(_ id:UUID,offset:Int) throws {try requireCurrent();
         try flush();var next=library;guard let index=next.groups.firstIndex(where:{ $0.id == id }),next.groups.indices.contains(index+offset) else { return }
         next.groups.swapAt(index,index+offset);try commit(next)
     }
-    func movePin(_ id:UUID,to group:UUID) throws {
+    func movePin(_ id:UUID,to group:UUID) throws {try requireCurrent();
         try flush();var next=library
         guard let index=next.pins.firstIndex(where:{ $0.id == id }),next.groups.contains(where:{ $0.id == group }) else { throw CapturePinFailure.missingPin }
         next.pins[index].groupID=group;try prepareWindows(for:next.currentGroupID,in:next);try commit(next);displayCurrent()
     }
-    func removeGroup(_ id:UUID,movingTo destination:UUID?) throws {
+    func removeGroup(_ id:UUID,movingTo destination:UUID?) throws {try requireCurrent();
         try flush();guard library.groups.count > 1 else { throw CapturePinFailure.invalidLibrary }
         var next=library
         if let destination {
@@ -194,10 +202,10 @@ import ThermoL10n
         if next.currentGroupID == id { next.currentGroupID=destination ?? next.groups[0].id }
         try prepareWindows(for:next.currentGroupID,in:next);try commit(next);discardRemovedWindows();displayCurrent()
     }
-    func clearGroup(_ id:UUID) throws {
+    func clearGroup(_ id:UUID) throws {try requireCurrent();
         try flush();var next=library;next.pins.removeAll { $0.groupID == id };try commit(next);discardRemovedWindows();displayCurrent()
     }
-    func destroyPin(_ id:UUID) throws {
+    func destroyPin(_ id:UUID) throws {try requireCurrent();
         try flush();var next=library;next.pins.removeAll { $0.id == id };try commit(next);discardRemovedWindows();displayCurrent()
     }
     private func discardRemovedWindows() {
@@ -205,14 +213,14 @@ import ThermoL10n
             removing.insert(id);windows[id]?.close();windows.removeValue(forKey:id);dirty.remove(id);removing.remove(id)
         }
     }
-    func setAllHidden(_ hidden:Bool) throws {
+    func setAllHidden(_ hidden:Bool) throws {try requireCurrent();
         try flush();var next=library
         for i in next.pins.indices where next.pins[i].groupID == next.currentGroupID && next.pins[i].closedAt == nil { next.pins[i].hidden=hidden }
         try commit(next);displayCurrent()
     }
-    func closeAll() { for pin in library.pins where pin.groupID == library.currentGroupID && pin.closedAt == nil { windows[pin.id]?.window?.performClose(nil) } }
-    func setHistoryLimit(_ value:Int) throws { try flush();var next=library;next.historyLimit=value;next.pruneHistory();try commit(next);discardRemovedWindows() }
-    func ensureAllVisible() { for editor in windows.values { if let window=editor.window { ensureVisible(window) } };do { try flush() } catch { issue=captureFailureMessage(error) } }
+    func closeAll() {guard enabled() else{return}; for pin in library.pins where pin.groupID == library.currentGroupID && pin.closedAt == nil { windows[pin.id]?.window?.performClose(nil) } }
+    func setHistoryLimit(_ value:Int) throws {try requireCurrent(); try flush();var next=library;next.historyLimit=value;next.pruneHistory();try commit(next);discardRemovedWindows() }
+    func ensureAllVisible() {guard enabled() else{return}; for editor in windows.values { if let window=editor.window { ensureVisible(window) } };do { try flush() } catch { issue=captureFailureMessage(error) } }
     private func ensureVisible(_ window:NSWindow) {
         let screens=NSScreen.screens.map(\.visibleFrame)
         guard !screens.contains(where:{ $0.intersection(window.frame).width >= 100 && $0.intersection(window.frame).height >= 40 }),let screen=NSScreen.main else { return }
@@ -226,7 +234,7 @@ import ThermoL10n
         for pin in library.pins.reversed() where pin.groupID == library.currentGroupID && pin.closedAt == nil && (includeHidden || !pin.hidden) { if let editor=windows[pin.id] { return editor } }
         return nil
     }
-    func batchImageItems(group:UUID?) throws -> [CaptureBatchImageItem] {
+    func batchImageItems(group:UUID?) throws -> [CaptureBatchImageItem] {try requireCurrent();
         try checkLoaded()
         if let group,!library.groups.contains(where:{$0.id==group}) {throw CaptureBatchExportFailure.invalidPlan}
         return library.pins.compactMap {pin in
@@ -244,7 +252,7 @@ import ThermoL10n
             return .init(id:pin.id,groupID:pin.groupID,groupName:groupName,title:windows[pin.id]?.model.pinTitle ?? pin.title,source:source)
         }
     }
-    func showLibrary() {
+    func showLibrary() {guard enabled() else{return};
         if libraryWindow == nil {
             let window=NSWindow(contentRect:NSRect(x:0,y:0,width:800,height:560),styleMask:[.titled,.closable,.resizable],backing:.buffered,defer:false)
             window.title=tr("Pin groups and history");window.level = .floating;window.isReleasedWhenClosed=false;window.minSize=NSSize(width:720,height:440)
