@@ -1,5 +1,5 @@
 import AgentDoctor
-import CleanKit
+@testable import CleanKit
 import ModuleKit
 import XCTest
 @testable import ThermoApp
@@ -91,4 +91,33 @@ import XCTest
         XCTAssertFalse(old === models.claudeCleanup);XCTAssertEqual(cleanup,2);XCTAssertEqual(accounts,0)
         if let finish=try ClaudeToolsModule.prepareStop(models:models){await finish()}
     }
+    func testResetRefusesOffAndQuitUntilTheReviewedOperationReturns() async throws {
+        let root=try root(),defaults=defaults(),entered=expectation(description:"fake reset"),release=DispatchSemaphore(value:0);defer{release.signal()}
+        let candidate=ClaudeResetCandidate(target:.settings,path:root.appendingPathComponent("settings.json").path,status:.available,reason:nil,bytes:0,snapshot:"owned")
+        let cleanup=ClaudeCleanupModel(scan:{([],[])},reset:{plan in
+            XCTAssertEqual(plan.count,1);entered.fulfill();_ = release.wait(timeout:.now()+5)
+            return ClaudeResetResult(batch:nil,succeeded:[.settings],failed:[:])
+        })
+        let models=AppModels(defaults:defaults,makeClaudeCleanup:{gate in cleanup.work.enabled=gate;return cleanup})
+        _=models.claudeCleanup;cleanup.reset([candidate]);await fulfillment(of:[entered],timeout:2)
+        XCTAssertEqual(models.claudeExitBlocker(),.claude(.reset))
+        XCTAssertThrowsError(try ClaudeToolsModule.prepareStop(models:models));XCTAssertFalse(cleanup.work.stopping)
+        release.signal();await cleanup.work.finish()
+        if let finish=try ClaudeToolsModule.prepareStop(models:models){await finish()}
+        XCTAssertFalse(models.claudeLoaded);XCTAssertNil(cleanup.outcome)
+    }
+    private nonisolated static var report:ClaudeLocalReport {
+        try! JSONDecoder().decode(ClaudeLocalReport.self,from:Data(#"{"schemaVersion":1,"kind":"fixture","generatedAt":"fixture","platform":"fixture","readOnly":true,"networkPerformed":false,"complete":true,"checks":[]}"#.utf8))
+    }
+    func testDisabledDiagnosticsDoesNotRead() async {
+        let calls=Calls(),model=ClaudeDiagnosticsModel(enabled:{false},scan:{calls.hit();return Self.report})
+        model.scan();await model.work.finish();XCTAssertEqual(calls.count,0);XCTAssertNil(model.report)
+    }
+    func testLateDiagnosticsAreDroppedAfterStop() async {
+        let entered=expectation(description:"diagnostics"),release=DispatchSemaphore(value:0);defer{release.signal()}
+        let model=ClaudeDiagnosticsModel(scan:{entered.fulfill();_ = release.wait(timeout:.now()+5);return Self.report})
+        model.scan();await fulfillment(of:[entered],timeout:2);model.stopFeature();release.signal()
+        await model.finishFeatureStop();XCTAssertNil(model.report);XCTAssertFalse(model.scanning)
+    }
+
 }
