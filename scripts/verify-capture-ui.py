@@ -83,12 +83,14 @@ def main():
     binary = app / 'Contents/MacOS/ThermoCaptureQA'
     binary.parent.mkdir(parents=True)
     copied_sources = []
+    package_written = False
     try:
         for name in ('verify-capture-ui.swift','verify-capture-live.swift'):
             destination = source_dir / name
             destination.write_bytes((root/'scripts'/name).read_bytes())
             copied_sources.append(destination)
         package_file.write_bytes(modified_package)
+        package_written = True
         subprocess.run(['swift','build','--jobs',str(args.jobs),'--product',target],check=True)
         subprocess.run(['swift','build','--jobs',str(args.jobs),'--product','thermo-capture-script'],check=True)
         if args.capture_cli_review:
@@ -96,7 +98,8 @@ def main():
         base = Path(subprocess.check_output(['swift','build','--show-bin-path'],text=True).strip()).resolve()
         subprocess.run(['ditto',str(base/target),str(binary)],check=True)
     finally:
-        if package_file.read_bytes() == modified_package:
+        current_package = package_file.read_bytes()
+        if current_package == modified_package or (not package_written and current_package == original_package):
             package_file.write_bytes(original_package)
             for source in copied_sources:
                 source.unlink()
