@@ -10,20 +10,24 @@ package enum PerformanceFeature {
         administration: @escaping @MainActor @Sendable () -> any HelperAdministration,
         fanFactory: @escaping @MainActor @Sendable () -> any FanPolicyAccessFactory,
         defaults: @escaping @MainActor @Sendable () -> UserDefaults = { .standard },
+        actionsAllowed: @escaping @MainActor @Sendable () -> Bool = { true },
         showSettings: @escaping @MainActor @Sendable () -> Void
     ) -> NativeFeatureDefinition {
+        definition { available in
+            PerformanceSession(availability:available,telemetry:telemetry(),administration:administration(),
+                               fanFactory:fanFactory(),defaults:defaults(),showSettings:showSettings,actionsAllowed:actionsAllowed)
+        }
+    }
+    static func definition(makeSession:@escaping @MainActor @Sendable (FeatureAvailability)->any NativeFeatureSession)->NativeFeatureDefinition {
         let manifest = BuiltinModuleManifests.performance
         return .init(manifest: manifest, pageContracts: [
-            .init(entry: "overview", optionFields: [.init("program",kind:.text,required:false)], checkOptions: checkText),
-            .init(entry: "memory", optionFields: [.init("inspect",kind:.text,required:false)], checkOptions: checkText)
+            .init(entry: "overview", optionFields: [.init("program",kind:.text,required:false)], checkOptions: {try checkText($0)}),
+            .init(entry: "memory", optionFields: [.init("inspect",kind:.text,required:false)], checkOptions: {try checkText($0)})
         ], ui: .init(sidebarLocations:[.overview,.machine,.resources],hasBackdrop:true,compactPanelEntry:"overview"),
         resolveLegacyPage: { raw in
             guard ["overview","sensors","fans","memory","cpu","gpu"].contains(raw) else { return nil }
             return .init(manifest.id,raw)
-        }, makeSession: { available in
-            PerformanceSession(availability:available,telemetry:telemetry(),administration:administration(),
-                               fanFactory:fanFactory(),defaults:defaults(),showSettings:showSettings)
-        })
+        }, makeSession:makeSession)
     }
     private static func checkText(_ options: [String:NativeContextValue]) throws {
         for value in options.values {

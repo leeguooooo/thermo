@@ -25,7 +25,7 @@ enum BuiltinNativeFeatures {
     static var registrations:[NativeFeatureDefinition] {
         registrations(performance:PerformanceFeature.registration(telemetry:{AppModels.shared.services.telemetry},
             administration:{AppModels.shared.services.helper},fanFactory:{AppModels.shared.services.helper},
-            defaults:{AppModels.shared.preferences},showSettings:{MainWindow.show(.settings)}),
+            defaults:{AppModels.shared.preferences},actionsAllowed:{!AppLaunchMode.suppressesAutomaticControl(arguments:CommandLine.arguments)},showSettings:{MainWindow.show(.settings)}),
             reading:{AppModels.shared.services.telemetry.latest.snapshot})
     }
     static func registrations(performance:NativeFeatureDefinition,reading:@escaping @MainActor @Sendable ()->Snapshot?)->[NativeFeatureDefinition] {

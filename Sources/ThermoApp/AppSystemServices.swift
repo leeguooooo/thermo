@@ -20,5 +20,5 @@ import ThermoKit
 }
 
 enum AppLaunchMode {
-    static func suppressesAutomaticControl(arguments:[String])->Bool{arguments.contains{["--offscreen","--snapshot","--render-preview","--verify-lifecycle","--ui-review"].contains($0)}}
+    static func suppressesAutomaticControl(arguments:[String])->Bool{Bundle.main.object(forInfoDictionaryKey:"ThermoReviewOnly") as? Bool == true || arguments.contains{["--offscreen","--snapshot","--render-preview","--verify-lifecycle","--ui-review"].contains($0)}}
 }

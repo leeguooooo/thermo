@@ -62,4 +62,13 @@ import XCTest
         XCTAssertNil(session.beginOperation());XCTAssertFalse(session.status.modelLoaded)
     }
 
+    func testReadOnlyReviewCannotAdmitProcessOperations() {
+        let name="thermo-private-review-"+UUID().uuidString,defaults=UserDefaults(suiteName:name)!
+        defer{defaults.removePersistentDomain(forName:name)}
+        let telemetry=PerformanceModelTests.Telemetry(),helper=PerformanceModelTests.Helper()
+        let session=PerformanceSession(availability:.init(enabled:{true}),telemetry:telemetry,administration:helper,fanFactory:helper,defaults:defaults,showSettings:{},actionsAllowed:{false})
+        XCTAssertNil(session.beginOperation());XCTAssertFalse(session.status.modelLoaded)
+        XCTAssertTrue(telemetry.leases.isEmpty);session.shutdown()
+    }
+
 }

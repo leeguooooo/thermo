@@ -22,7 +22,7 @@ final class AppModels {
         let services=services ?? AppSystemServices(defaults:defaults,helperInteraction:interactive,samplingAllowed:{interactive && ModulePreferences.isEnabled(BuiltinModuleManifests.performance,in:defaults)})
         self.services=services
         let definitions=nativeDefinitions ?? BuiltinNativeFeatures.registrations(performance:PerformanceFeature.registration(
-            telemetry:{services.telemetry},administration:{services.helper},fanFactory:{services.helper},defaults:{defaults},showSettings:{MainWindow.show(.settings)}),
+            telemetry:{services.telemetry},administration:{services.helper},fanFactory:{services.helper},defaults:{defaults},actionsAllowed:{!AppLaunchMode.suppressesAutomaticControl(arguments:CommandLine.arguments)},showSettings:{MainWindow.show(.settings)}),
             reading:{services.telemetry.latest.snapshot})
         let catalog=try! NativeFeatureCatalog(definitions:definitions)
         nativeFeatures=NativeFeatureStore(catalog:catalog,enabled:{id in

@@ -12,6 +12,7 @@ import ModuleKit
     private let administration: any HelperAdministration
     private let fanFactory: any FanPolicyAccessFactory
     private let defaults: UserDefaults
+    private let actionsAllowed: @MainActor () -> Bool
     private let available: @MainActor () -> Bool
     private var observations = Set<AnyCancellable>()
     private var sampling: (any TelemetrySamplingLease)?
@@ -25,9 +26,9 @@ import ModuleKit
     private var helper: HelperReading { acceptsWork ? administration.latest : .init() }
 
     init(telemetry: any TelemetryReadService, administration: any HelperAdministration,
-         fanFactory: any FanPolicyAccessFactory, defaults: UserDefaults = .standard, available: @escaping @MainActor () -> Bool) {
+         fanFactory: any FanPolicyAccessFactory, defaults: UserDefaults = .standard, actionsAllowed: @escaping @MainActor () -> Bool = { true }, available: @escaping @MainActor () -> Bool) {
         self.telemetry = telemetry; self.administration = administration
-        self.fanFactory = fanFactory; self.available = available; self.defaults = defaults
+        self.fanFactory = fanFactory; self.available = available; self.defaults = defaults; self.actionsAllowed = actionsAllowed
         telemetry.readings.sink { [weak self] _ in self?.objectWillChange.send(); self?.refreshHelperIfNeeded() }.store(in: &observations)
         administration.readings.sink { [weak self] _ in self?.objectWillChange.send() }.store(in: &observations)
     }
@@ -95,17 +96,17 @@ import ModuleKit
         guard acceptsWork else { return }
         lastHelperRefresh = Date(); fan?.refreshObservation()
     }
-    func refreshHelper() { guard acceptsWork else { return }; lastHelperRefresh = Date(); administration.refresh() }
+    func refreshHelper() { guard acceptsWork, actionsAllowed() else { return }; lastHelperRefresh = Date(); administration.refresh() }
     func refreshHelperIfNeeded(now: Date = Date()) {
         if visible, now.timeIntervalSince(lastHelperRefresh) >= 10 { refreshFanObservation() }
     }
     func setPolicy(_ policy: FanPolicy, fan: Int) { setPolicy(policy, fans: [fan]) }
-    func setPolicy(_ policy: FanPolicy, fans: [Int]) { guard acceptsWork else { return }; fan?.request(policy, fans: fans) }
-    func beginSetup() { guard acceptsWork else { return }; administration.install() }
+    func setPolicy(_ policy: FanPolicy, fans: [Int]) { guard acceptsWork, actionsAllowed() else { return }; fan?.request(policy, fans: fans) }
+    func beginSetup() { guard acceptsWork, actionsAllowed() else { return }; administration.install() }
     func installHelper() { beginSetup() }
-    func installHelperWithPassword() { guard acceptsWork else { return }; administration.installWithPassword() }
-    func stopSetup() { guard acceptsWork else { return }; administration.stopSetup() }
-    func openLoginItemsSettings() { guard acceptsWork else { return }; administration.openLoginItemsSettings() }
+    func installHelperWithPassword() { guard acceptsWork, actionsAllowed() else { return }; administration.installWithPassword() }
+    func stopSetup() { guard acceptsWork, actionsAllowed() else { return }; administration.stopSetup() }
+    func openLoginItemsSettings() { guard acceptsWork, actionsAllowed() else { return }; administration.openLoginItemsSettings() }
     func beginStopping() {
         guard !stopping else { return }
         stopping = true; observations = []

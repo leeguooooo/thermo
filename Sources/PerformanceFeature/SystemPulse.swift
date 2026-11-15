@@ -28,6 +28,7 @@ final class SystemPulse: ObservableObject {
     private let readSample: (@Sendable () -> MachinePulse)?
     private let samplingAllowed: @MainActor () -> Bool
     private let observe: @MainActor (MachinePulse) -> Void
+    private let actionsAllowed: @MainActor () -> Bool
     private let reviewDelay: TimeInterval
     private let readActionReview: (@Sendable (Hog, MachinePulse, PulseActionReview.Action) -> PulseActionReview)?
     private let recordActionReview: @Sendable (PulseActionReview) -> Void
@@ -36,9 +37,9 @@ final class SystemPulse: ObservableObject {
          reviewDelay: TimeInterval = 5,
          readActionReview: (@Sendable (Hog, MachinePulse, PulseActionReview.Action) -> PulseActionReview)? = nil,
          recordActionReview: @escaping @Sendable (PulseActionReview) -> Void = { $0.record() },
-         observe: @escaping @MainActor (MachinePulse) -> Void = { _ in }) {
+         observe: @escaping @MainActor (MachinePulse) -> Void = { _ in }, actionsAllowed: @escaping @MainActor () -> Bool = { true }) {
         self.readSample = readSample
-        self.observe = observe
+        self.observe = observe; self.actionsAllowed = actionsAllowed
         self.samplingAllowed = samplingAllowed
         self.reviewDelay = reviewDelay
         self.readActionReview = readActionReview
@@ -175,7 +176,7 @@ final class SystemPulse: ObservableObject {
 
     /// Apps are asked to quit (they may save or refuse); other processes get SIGTERM.
     @MainActor func quit(_ hog: Hog) {
-        guard samplingAllowed() else { return }
+        guard samplingAllowed(), actionsAllowed() else { return }
         quitProblem = nil
         guard hog.quittable, !quitting.contains(hog.id) else { return }
         let before = current
@@ -229,7 +230,7 @@ final class SystemPulse: ObservableObject {
     /// Quit like ⌘Q, wait until every process of it has gone, then open it again; it restores its
     /// own windows and tabs. Gives up (and says so) if it is still running after a minute.
     @MainActor func restart(_ hog: Hog) {
-        guard samplingAllowed() else { return }
+        guard samplingAllowed(), actionsAllowed() else { return }
         guard hog.quittable, restarting == nil, !quitting.contains(hog.id) else { return }
         guard let path = hog.app,
               let app = NSWorkspace.shared.runningApplications.first(where: { $0.bundleURL?.standardizedFileURL.path == path })

@@ -15,6 +15,7 @@ import ThermoUI
     private let administration: any HelperAdministration
     private let fanFactory: any FanPolicyAccessFactory
     private let defaults: UserDefaults
+    private let actionsAllowed: @MainActor @Sendable () -> Bool
     private let showSettings: @MainActor @Sendable () -> Void
     private let lifetime = FeatureSamplingLifetime()
     private let workerAllowed: @Sendable () -> Bool
@@ -35,9 +36,9 @@ import ThermoUI
     init(availability: FeatureAvailability, telemetry: any TelemetryReadService,
          administration: any HelperAdministration, fanFactory: any FanPolicyAccessFactory,
          defaults: UserDefaults, showSettings: @escaping @MainActor @Sendable () -> Void,
-         makeRecorder: (@MainActor () -> PulseRecorder)? = nil) {
+         makeRecorder: (@MainActor () -> PulseRecorder)? = nil, actionsAllowed: @escaping @MainActor @Sendable () -> Bool = { true }) {
         self.availability=availability; self.telemetry=telemetry; self.administration=administration
-        self.fanFactory=fanFactory; self.defaults=defaults; self.showSettings=showSettings; self.makeRecorder=makeRecorder
+        self.fanFactory=fanFactory; self.defaults=defaults; self.showSettings=showSettings; self.makeRecorder=makeRecorder; self.actionsAllowed=actionsAllowed
         let gate=lifetime; _ = gate.start()
         workerAllowed={gate.current() != nil && ModulePreferences.isEnabled(BuiltinModuleManifests.performance,in:defaults)}
     }
@@ -47,7 +48,7 @@ import ThermoUI
     private var pulseVisible: Bool { acceptsWork && (host.menuPanelVisible || visible("overview") || visible("memory")) }
     private var model: PerformanceModel {
         if let storedModel { return storedModel }
-        let value=PerformanceModel(telemetry:telemetry,administration:administration,fanFactory:fanFactory,defaults:defaults,available:{[weak self] in self?.acceptsWork == true})
+        let value=PerformanceModel(telemetry:telemetry,administration:administration,fanFactory:fanFactory,defaults:defaults,actionsAllowed:actionsAllowed,available:{[weak self] in self?.acceptsWork == true})
         storedModel=value; value.setHostPresentation(host); return value
     }
     private func compute(_ gpu: Bool) -> ComputeModel {
@@ -66,7 +67,7 @@ import ThermoUI
     }
     private var pulse: SystemPulse {
         if let storedPulse { return storedPulse }
-        let value=SystemPulse(samplingAllowed:{[weak self] in self?.pulseVisible == true},observe:{[weak self] in self?.events.observe($0)})
+        let value=SystemPulse(samplingAllowed:{[weak self] in self?.pulseVisible == true},observe:{[weak self] in self?.events.observe($0)},actionsAllowed:actionsAllowed)
         storedPulse=value; return value
     }
     private var memory: MemoryModel {
@@ -85,10 +86,10 @@ import ThermoUI
     }
     private var advice: MemoryReliefAdvice {
         if let storedAdvice { return storedAdvice }
-        let value=MemoryReliefAdvice(available:{[weak self] in self?.acceptsWork == true}); storedAdvice=value; return value
+        let value=MemoryReliefAdvice(available:{[weak self] in self.map{$0.acceptsWork && $0.actionsAllowed()} == true}); storedAdvice=value; return value
     }
     func beginOperation() -> UUID? {
-        guard acceptsWork else{return nil};let id=UUID();operations.insert(id);return id
+        guard acceptsWork,actionsAllowed() else{return nil};let id=UUID();operations.insert(id);return id
     }
     func endOperation(_ id:UUID){operations.remove(id)}
     private var operationAccess: PerformanceOperations {
@@ -138,7 +139,7 @@ import ThermoUI
         switch route.entry {
         case "cpu","gpu":
             let gpu=route.entry=="gpu"
-            return mounted(ComputePage(gpu:gpu,model:compute(gpu),available:{[weak self] in self?.visible(gpu ? "gpu":"cpu") == true}))
+            return mounted(ComputePage(gpu:gpu,model:compute(gpu),available:{[weak self] in self.map{$0.visible(gpu ? "gpu":"cpu") && $0.actionsAllowed()} == true}))
         case "sensors":return mounted(SensorsPage(monitor:model))
         case "fans":
             return mounted(WindowPage(title:tr("Fans"),subtitle:tr("Choose how fast each fan runs. Settings stay when Thermo quits or updates.")){FansView(monitor:self.model)})

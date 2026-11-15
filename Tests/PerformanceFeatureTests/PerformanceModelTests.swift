@@ -102,4 +102,14 @@ import XCTest
         XCTAssertEqual(telemetry.leases[0].finishes, 1); XCTAssertEqual(helper.clients[0].finishes, 1)
         await fresh.finishStopping()
     }
+    func testReadOnlyReviewCanReadTheCoreButCannotRequestSystemChanges() async throws {
+        let telemetry=Telemetry(),helper=Helper();telemetry.value.model="Live reading"
+        let model=PerformanceModel(telemetry:telemetry,administration:helper,fanFactory:helper,actionsAllowed:{false},available:{true})
+        try model.start()
+        model.setPolicy(.auto,fans:[0]);model.installHelper();model.installHelperWithPassword();model.refreshHelper()
+        XCTAssertEqual(model.model,"Live reading");XCTAssertEqual(helper.clients.count,1)
+        XCTAssertEqual(helper.clients[0].requests,0);XCTAssertEqual(helper.installs,0);XCTAssertEqual(helper.administrativeRefreshes,0)
+        await model.finishStopping()
+    }
+
 }
