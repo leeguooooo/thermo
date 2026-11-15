@@ -7,7 +7,9 @@ import ModuleKit
 // never shipped. Prints one line per check and exits 0 only when all passed.
 
 setvbuf(stdout, nil, _IOLBF, 0)
-let a = "dev.thermo.probe.a", b = "dev.thermo.probe.b"
+let runTag=ProcessInfo.processInfo.environment["THERMO_HARNESS_RUN"]
+let probePrefix=runTag.map{"dev.thermo.probe-r"+$0} ?? "dev.thermo.probe"
+let a = probePrefix+".a", b = probePrefix+".b"
 var failures = 0
 func check(_ ok: Bool, _ what: String) { print((ok ? "ok    " : "FAIL  ") + what); if !ok { failures += 1 } }
 func note(_ what: String) { print("      " + what) }
@@ -25,12 +27,12 @@ func uptime() -> Double { ProcessInfo.processInfo.systemUptime }
     let timing = ModuleLifecycle.Timing(idleTimeout: 2, firstBackoff: 0.5, longestBackoff: 4, stableRun: 60)
     let manager = ModuleManager(timing: timing)
     // The kernel side of the probe's requests: real file services, a yes to every confirmation, a throwaway log.
-    let scratch = "/private/tmp/thermo-probe"
+    let scratch = runTag.map{"/private/tmp/thermo-probe-"+$0} ?? "/private/tmp/thermo-probe"
     try? FileManager.default.removeItem(atPath: scratch)
     for folder in ["/logs", "/open", "/bin"] { try? FileManager.default.createDirectory(atPath: scratch + folder, withIntermediateDirectories: true) }
     FileManager.default.createFile(atPath: scratch + "/open/note.txt", contents: Data("hello".utf8))
     FileManager.default.createFile(atPath: scratch + "/bin/old.txt", contents: Data("old".utf8))
-    let outside = NSHomeDirectory() + "/.thermo-probe-outside.txt"
+    let outside = runTag == nil ? NSHomeDirectory()+"/.thermo-probe-outside.txt":scratch+"/outside.txt"
     FileManager.default.createFile(atPath: outside, contents: Data("private".utf8))
     let log = ModuleAccessLog(home: scratch + "/logs")
     manager.kernel = { manifest in
@@ -70,16 +72,16 @@ func uptime() -> Double { ProcessInfo.processInfo.systemUptime }
         guard let data = try? await manager.run(a, command: command, arguments: JSONSerialization.data(withJSONObject: arguments)) else { return [:] }
         return (try? JSONSerialization.jsonObject(with: data) as? [String: Any]) ?? [:]
     }
-    // The manifest gives read access to open/ and delete access to bin/.
+    // Declarations authorize broker requests, not direct filesystem access.
     let own = await call("peek", ["path": scratch + "/open/note.txt"])
-    check(own["readable"] as? Bool == true, "the module reads what its manifest lets it read by itself")
+    check(own["readable"] as? Bool == false, "a declared read still cannot bypass the kernel and its log")
     let poke = await call("poke", ["path": scratch + "/open"])
-    check(poke["writable"] as? Bool == false && poke["listed"] as? Int == 1, "it can list that folder but cannot write into it")
+    check(poke["writable"] as? Bool == false && (poke["listed"] as? Int ?? -1) <= 0, "it cannot list or write the declared folder without the kernel")
     let bin = await call("peek", ["path": scratch + "/bin/old.txt"])
     let away = await call("peek", ["path": outside])
     check(bin["readable"] as? Bool == false && away["readable"] as? Bool == false, "it cannot read where it may only delete, nor anywhere else")
     let read = await call("ask", ["capability": "files.read:" + scratch + "/open/note.txt", "payload": ["op": "read"]])
-    check(((read["answer"] as? [String: Any])?["base64"] as? String).flatMap { Data(base64Encoded: $0) } == Data("hello".utf8), "the kernel also reads it for the module, as its manifest allows")
+    check(((read["answer"] as? [String: Any])?["base64"] as? String).flatMap { Data(base64Encoded: $0) } == Data("hello".utf8), "the kernel reads what the manifest allows and records the request")
     let stray = await call("ask", ["capability": "files.read:" + outside, "payload": ["op": "read"]])
     check((stray["problem"] as? String)?.hasPrefix("denied") == true && stray["answer"] == nil, "a file its manifest does not cover is refused: \(stray["problem"] ?? "")")
     let end = await call("ask", ["capability": "processes.end", "payload": [:]])

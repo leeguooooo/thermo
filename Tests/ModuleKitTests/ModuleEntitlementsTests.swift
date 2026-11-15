@@ -7,16 +7,17 @@ final class ModuleEntitlementsTests: XCTestCase {
                        capabilities: capabilities.map { Capability($0)! })
     }
 
-    func testEveryModuleIsSandboxedAndOnlyReadScopesOpenAnything() {
+    func testDeclaredReadScopesStillUseTheKernelInsteadOfFilesystemExceptions() {
         let plain = ModuleEntitlements.values(for: manifest(["processes.read", "files.delete:~/Library/Caches", "network.connect:api.example.com"]))
         XCTAssertEqual(plain.keys.sorted(), [ModuleEntitlements.sandbox])
         XCTAssertEqual(plain[ModuleEntitlements.sandbox] as? Bool, true)
 
         let reading = ModuleEntitlements.values(for: manifest(["files.read:~/Library/Caches", "files.read:~/.npm/", "files.read:/private/var/folders",
                                                                "files.read:~", "files.delete:~/Library/Logs"]))
-        XCTAssertEqual(reading[ModuleEntitlements.homeReadOnly] as? [String], ["/", "/.npm/", "/Library/Caches/"])
-        XCTAssertEqual(reading[ModuleEntitlements.absoluteReadOnly] as? [String], ["/private/var/folders/"])
-        // Nothing a manifest can say makes a folder writable or opens the network.
+        XCTAssertEqual(reading.keys.sorted(),[ModuleEntitlements.sandbox])
+        XCTAssertNil(reading[ModuleEntitlements.homeReadOnly])
+        XCTAssertNil(reading[ModuleEntitlements.absoluteReadOnly])
+        // A declaration authorizes broker requests, without bypassing path protection or its log.
         XCTAssertFalse(reading.keys.contains { $0.contains("read-write") || $0.contains("network") })
     }
 
@@ -35,6 +36,12 @@ final class ModuleEntitlementsTests: XCTestCase {
         network["com.apple.security.network.client"] = true
         XCTAssertEqual(ModuleEntitlements.problems(signed: network, manifest: m).count, 1)
         XCTAssertTrue(ModuleEntitlements.problems(signed: [:], manifest: m).contains { $0.contains("lacks " + ModuleEntitlements.sandbox) })
-        XCTAssertEqual(ModuleEntitlements.problems(signed: [ModuleEntitlements.sandbox: true], manifest: m).count, 1)
+        XCTAssertEqual(ModuleEntitlements.problems(signed: [ModuleEntitlements.sandbox: true], manifest: m),[])
     }
+    func testEvenAnExactlyDeclaredReadExceptionIsRejectedAtTheSignatureGate() {
+        let m=manifest(["files.read:~/Library/Caches"])
+        let signed:[String:Any]=[ModuleEntitlements.sandbox:true,ModuleEntitlements.homeReadOnly:["/Library/Caches/"]]
+        XCTAssertFalse(ModuleEntitlements.problems(signed:signed,manifest:m).isEmpty)
+    }
+
 }
