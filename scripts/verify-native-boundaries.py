@@ -2,10 +2,21 @@
 """Check native feature source dependencies from SwiftPM's dump-package JSON."""
 import argparse
 import json
+from pathlib import Path
+import re
 import sys
 
 
-def problems(package, complete=False):
+def source_imports(text):
+    # Ignore embedded Swift examples and comments before inspecting import statements.
+    text = re.sub(r'(?s)(#*)""".*?"""\1', '', text)
+    text = re.sub(r'"(?:\\.|[^"\\])*"', '', text)
+    text = re.sub(r'/\*.*?\*/', '', text, flags=re.S)
+    text = re.sub(r'//[^\n]*', '', text)
+    return set(re.findall(r'(?m)^\s*(?:@\w+(?:\([^\n]*?\))?\s+)*(?:(?:public|package|internal|private)\s+)?import\s+(?:(?:struct|class|enum|protocol|typealias|func|var|let)\s+)?([A-Za-z_]\w*)', text))
+
+
+def problems(package, complete=False, source_root=None):
     graph = {}
     for target in package.get("targets", []):
         edges = set()
@@ -37,6 +48,28 @@ def problems(package, complete=False):
     for feature in sorted(features):
         for dependency in sorted(reachable(feature) & (hosts | (features - {feature}))):
             errors.append(f"{feature} reaches forbidden implementation target {dependency}")
+    if source_root is not None:
+        root = Path(source_root).resolve()
+        definitions = {target["name"]: target for target in package.get("targets", [])}
+        for name in sorted(graph):
+            target = definitions.get(name, {})
+            base = "Tests/" if target.get("type") == "test" else "Sources/"
+            directory = (root / (target.get("path") or base + name)).resolve()
+            if not directory.is_relative_to(root):
+                errors.append(f"{name} source path escapes package")
+                continue
+            excluded = [(directory / path).resolve() for path in target.get("exclude", [])]
+            excluded += [(directory / item["path"]).resolve() for item in target.get("resources", []) if "path" in item]
+            for file in directory.rglob("*.swift"):
+                path = file.resolve()
+                if not path.is_relative_to(root):
+                    errors.append(f"{name} source file escapes package: {file.name}")
+                    continue
+                if any(path == item or path.is_relative_to(item) for item in excluded):
+                    continue
+                for imported in sorted(source_imports(file.read_text()) & graph.keys()):
+                    if imported != name and imported not in reachable(name):
+                        errors.append(f"{name} imports undeclared target {imported} in {file.relative_to(root)}")
     if complete:
         for name in sorted(hosts):
             if name not in graph:
@@ -52,9 +85,10 @@ def problems(package, complete=False):
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--complete", action="store_true", help="require the finished #41 graph")
+    parser.add_argument("--source-root", type=Path, help="also reject imports missing from the package graph")
     args = parser.parse_args()
     try:
-        errors = problems(json.load(sys.stdin), args.complete)
+        errors = problems(json.load(sys.stdin), args.complete, args.source_root)
     except (ValueError, KeyError, TypeError) as error:
         print(f"invalid SwiftPM package graph: {error}", file=sys.stderr)
         return 2

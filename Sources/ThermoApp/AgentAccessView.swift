@@ -87,9 +87,9 @@ final class AgentAccess: ObservableObject {
 
     private func readStatus() -> Status {
         let linked = AgentCLILinks.ready(directory: binDir, cli: cli)
-        let claude = Self.find("claude") == nil ? .missing : Self.claudeState(home: home)
+        let claude = CommandRunner.findExecutable("claude") == nil ? .missing : Self.claudeState(home: home)
         var codex: Tool = .missing
-        if let binary = Self.find("codex") {
+        if let binary = CommandRunner.findExecutable("codex") {
             if let list = Self.run(binary, ["plugin", "list", "--json"], timeout: 15, captureError: false) {
                 codex = Self.codexState(json: list)
             } else { codex = .unavailable }
@@ -141,7 +141,7 @@ final class AgentAccess: ObservableObject {
     func addToCodex() { install(tool: "codex", label: "Codex", steps: [["plugin", "marketplace", "add", Self.marketplace], ["plugin", "add", Self.plugin]]) }
 
     private func install(tool: String, label: String, steps: [[String]]) {
-        guard busy == nil, let bin = Self.find(tool) else { return }
+        guard busy == nil, let bin = CommandRunner.findExecutable(tool) else { return }
         busy = label
         DispatchQueue.global(qos: .userInitiated).async {
             // Adding a marketplace that is already there fails harmlessly; the install is what counts.
@@ -164,13 +164,6 @@ final class AgentAccess: ObservableObject {
     }
 
     // MARK: helpers
-
-    /// GUI apps get a bare PATH; look where these CLIs usually live.
-    static func find(_ name: String) -> String? {
-        let home = NSHomeDirectory()
-        return [home + "/.local/bin", "/opt/homebrew/bin", "/usr/local/bin", home + "/.npm-global/bin", home + "/.bun/bin", "/usr/bin"]
-            .map { $0 + "/" + name }.first { FileManager.default.isExecutableFile(atPath: $0) }
-    }
 
     /// Returns complete combined output only when the tool succeeds within the time limit.
     static func run(_ bin: String, _ args: [String], timeout: TimeInterval, captureError: Bool = true) -> String? {

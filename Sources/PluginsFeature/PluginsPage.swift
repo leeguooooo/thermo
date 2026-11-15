@@ -93,14 +93,14 @@ final class PluginsModel: ObservableObject {
     private nonisolated static func localState(_ previous:UseManagerState) async->(UseManagerState,Bool,Bool,[InstalledPlugin]) {
         await Task.detached(priority:.userInitiated) {
             var state=previous
-            let bin=AgentAccess.find("use")
+            let bin=CommandRunner.findExecutable("use")
             if let bin,let result=execute(bin,["status","--json"],directory:nil,timeout:30,captureError:false),result.status==0 {state.read(status:Data(result.output.utf8))}
-            return (state,bin != nil,AgentAccess.find("claude") != nil,ClaudePlugins.installed())
+            return (state,bin != nil,CommandRunner.findExecutable("claude") != nil,ClaudePlugins.installed())
         }.value
     }
     private nonisolated static func updates() async->String? {
         await Task.detached(priority:.utility) {
-            guard let bin=AgentAccess.find("use") else{return nil as String?}
+            guard let bin=CommandRunner.findExecutable("use") else{return nil as String?}
             return execute(bin,["update","--check","--json"],directory:nil,timeout:120,captureError:false)?.output
         }.value
     }
@@ -158,8 +158,8 @@ final class PluginsModel: ObservableObject {
                 for step in steps {
                     let binary: String?
                     switch step.tool {
-                    case .claude: binary = AgentAccess.find("claude")
-                    case .use: binary = AgentAccess.find("use")
+                    case .claude: binary = CommandRunner.findExecutable("claude")
+                    case .use: binary = CommandRunner.findExecutable("use")
                     case let .path(path): binary = path
                     }
                     guard let binary else { return tr("The required command was not found.") }
@@ -186,7 +186,7 @@ final class PluginsModel: ObservableObject {
 
 struct PluginsPage: View {
     @ObservedObject var model: PluginsModel
-    let open: (MainPage) -> Void
+    let openDiagnostics: () -> Void
     @State private var removing: PluginRecord?
     @State private var confirmUse = false
 
@@ -196,7 +196,7 @@ struct PluginsPage: View {
                 if model.checkingUpdates {
                     ProgressView().controlSize(.small).help(tr("Checking for updates…"))
                 }
-                Button(tr("Installed plugin diagnostics")) { open(.agents(.area(.plugins))) }
+                Button(tr("Installed plugin diagnostics")) { openDiagnostics() }
                     .buttonStyle(PillButtonStyle()).controlSize(.small).fixedSize()
                 Button(tr("Refresh")) { model.refresh() }
                     .buttonStyle(PillButtonStyle()).controlSize(.small).fixedSize()
@@ -264,7 +264,7 @@ struct PluginsPage: View {
                         Text(verbatim: version).font(Theme.caption).foregroundStyle(Theme.textTertiary)
                     }
                     if let category = record.plugin.category {
-                        Text(verbatim: AppStorePage.category(category)).font(Theme.caption).foregroundStyle(Theme.textSecondary)
+                        Text(verbatim: StoreCategory.title(category,localize:{tr($0)})).font(Theme.caption).foregroundStyle(Theme.textSecondary)
                     }
                 }
                 if let description = record.plugin.description {

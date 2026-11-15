@@ -24,7 +24,6 @@ enum MainPage: Hashable {
     case compute(Bool)
     case history
     case yunx
-    case plugins
     /// A page drawn by a module: module id, entry id (empty: the module's first page).
     case module(String, String)
 
@@ -46,7 +45,6 @@ enum MainPage: Hashable {
         case "memory": self = .memory
         case "history": self = .history
         case "yunx": self = .yunx
-        case "plugins": self = .plugins
         case "module":
             // module:<module id>[:<entry id>]
             guard parts.count > 1 else { return nil }
@@ -334,8 +332,6 @@ struct MainView: View {
         case .claude:
             ModuleOffView().transition(.page)
         case .yunx:
-            ModuleOffView().transition(.page)
-        case .plugins:
             ModuleOffView().transition(.page)
         case .history:
             ModuleOffView().transition(.page)

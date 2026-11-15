@@ -8,12 +8,13 @@ import XCTest
     private final class Session:NativeFeatureSession {
         let availability:FeatureAvailability
         var refuses=false,pages=0,finishes=0
+        var blocker:NativeFeatureBlocker?
         var drain:() async->Void = {}
         init(_ availability:FeatureAvailability){self.availability=availability}
         func page(entry:String)->AnyView? {guard availability.acceptsWork else{return nil};pages += 1;return AnyView(EmptyView())}
         var status:NativeFeatureStatus {.init(modelLoaded:true)}
         func retireVisibility() {}
-        func quitBlocker()->NativeFeatureBlocker? {nil}
+        func quitBlocker()->NativeFeatureBlocker? {blocker}
         func prepareStop()throws->NativeFeatureDrain {
             if refuses {throw NativeFeatureBusy("owned operation")}
             return .init { [self] in await drain();finishes += 1}
@@ -56,4 +57,17 @@ import XCTest
         XCTAssertNotNil(store.page(route));XCTAssertEqual(sessions.count,2)
         XCTAssertFalse(old.availability.acceptsWork);XCTAssertTrue(sessions[1].availability.acceptsWork)
     }
+    func testFilteredQuitChecksPreserveLegacyGuardSlotsAndRegistrationOrder() {
+        var first:Session?,second:Session?
+        let other=ModuleManifest(id:"com.example.other",name:"Other",summary:"",symbol:"doc",version:"1.0.0",entries:[.init(id:"home",kind:.page,title:"Other",scene:"other")])
+        let a=NativeFeatureDefinition(manifest:manifest,makeSession:{availability in let made=Session(availability);first=made;return made})
+        let b=NativeFeatureDefinition(manifest:other,makeSession:{availability in let made=Session(availability);second=made;return made})
+        let store=NativeFeatureStore(definitions:[a,b],enabled:{_ in true})
+        _=store.page(.init(manifest.id,"home"));_ = store.page(.init(other.id,"home"))
+        second?.blocker = .init(reason:"second",route:.init(other.id,"home"))
+        XCTAssertNil(store.quitBlocker(manifest.id));XCTAssertEqual(store.quitBlocker()?.reason,"second")
+        first?.blocker = .init(reason:"first",route:.init(manifest.id,"home"))
+        XCTAssertEqual(store.quitBlocker()?.reason,"first");XCTAssertEqual(store.quitBlocker(other.id)?.reason,"second")
+    }
+
 }

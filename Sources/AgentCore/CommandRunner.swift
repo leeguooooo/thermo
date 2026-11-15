@@ -3,6 +3,14 @@ import Foundation
 
 /// Runs only its own child process; output is drained even when the retained text reaches its cap.
 public enum CommandRunner {
+    /// GUI apps get a bare PATH; look where these CLIs usually live.
+    package static func findExecutable(_ name: String) -> String? {
+        let home = NSHomeDirectory()
+        return [home + "/.local/bin", "/opt/homebrew/bin", "/usr/local/bin", home + "/.npm-global/bin", home + "/.bun/bin", "/usr/bin"]
+            .map { $0 + "/" + name }.first { FileManager.default.isExecutableFile(atPath: $0) }
+    }
+
+
     public struct Result: Sendable {
         public var status: Int32
         public var output: String
