@@ -17,11 +17,6 @@ package struct HistoryPoint:Identifiable,Sendable {
     package var id:Date{time}
     package init(time:Date,cpu:Double?,gpu:Double?,fans:[Double?],power:Double?,load:Double? = nil){self.time=time;self.cpu=cpu;self.gpu=gpu;self.fans=fans;self.power=power;self.load=load}
 }
-package struct MenuLiveValues:Sendable {
-    package var sampled=Date.distantPast
-    package var cpu:Double?,memory:Double?,download:Double?,upload:Double?
-    package init(sampled:Date = .distantPast,cpu:Double? = nil,memory:Double? = nil,download:Double? = nil,upload:Double? = nil){self.sampled=sampled;self.cpu=cpu;self.memory=memory;self.download=download;self.upload=upload}
-}
 /// A value from the unique core producer. Consumers cannot mutate its authority or create a sampler.
 package struct TelemetryReading:Sendable {
     package var snapshot:Snapshot?

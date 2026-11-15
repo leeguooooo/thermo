@@ -1,3 +1,4 @@
+import CleanKit
 import SystemServicesAPI
 import Foundation
 import ServiceManagement
@@ -72,7 +73,7 @@ final class Monitor: ObservableObject {
     var onUpdate: ((Snapshot) -> Void)?
     var onMenuUpdate: (() -> Void)?
     private(set) var menuLive = MenuLiveValues()
-    private let menuSampler = MenuLiveSampler()
+    private let menuSampler = MenuLiveSampler(readCPU:QuickLoad.cpuTicks,cpuPercent:QuickLoad.cpuPercent)
 
     func resetMenuBaselines() {
         menuLive = MenuLiveValues()

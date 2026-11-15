@@ -9,7 +9,7 @@ import ModuleKit
 
 private final class PanelReadingWorker: @unchecked Sendable {
     private let queue: DispatchQueue
-    private let liveSampler = MenuLiveSampler()
+    private let liveSampler = MenuLiveSampler(readCPU:QuickLoad.cpuTicks,cpuPercent:QuickLoad.cpuPercent)
     private let read: (@Sendable () -> PanelModel.Reading)?
 
     init(queue: DispatchQueue?, read: (@Sendable () -> PanelModel.Reading)?) {
