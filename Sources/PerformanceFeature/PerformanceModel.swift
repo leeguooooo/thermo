@@ -45,6 +45,9 @@ import ModuleKit
     var policiesAvailable: Bool { helper.policiesAvailable }
     var fanControlState: FanControlState? { helper.fanControl }
     var applyingPolicies: Bool { helper.applyingPolicies }
+    var installingHelper: Bool { helper.installing }
+    var uninstallingHelper: Bool { helper.uninstalling }
+    var interval: TimeInterval { Settings.intervalValue(UserDefaults.standard.double(forKey: Settings.interval)) }
     var helperBusy: Bool { helper.busy }
     var settingUp: Bool { helper.settingUp }
     var setupStarted: Date? { helper.setupStarted }
@@ -91,6 +94,7 @@ import ModuleKit
         guard acceptsWork else { return }
         lastHelperRefresh = Date(); fan?.refreshObservation()
     }
+    func refreshHelper() { guard acceptsWork else { return }; lastHelperRefresh = Date(); administration.refresh() }
     func refreshHelperIfNeeded(now: Date = Date()) {
         if visible, now.timeIntervalSince(lastHelperRefresh) >= 10 { refreshFanObservation() }
     }

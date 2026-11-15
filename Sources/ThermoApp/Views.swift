@@ -9,11 +9,6 @@ import ThermoL10n
 
 // MARK: - Formatting
 
-func tempText(_ c: Double?, fahrenheit: Bool) -> String {
-    guard let c else { return "—" }
-    return fahrenheit ? String(format: "%.0f°F", c * 9 / 5 + 32) : String(format: "%.0f°C", c)
-}
-
 /// A sensor group's name for people ("存储" rather than "Storage").
 func groupName(_ g: SensorGroup) -> String {
     switch g {
@@ -26,11 +21,6 @@ func groupName(_ g: SensorGroup) -> String {
     case .board: return tr("Board")
     case .other: return tr("Other")
     }
-}
-
-func heatColor(_ c: Double?) -> Color {
-    guard let c else { return Theme.textTertiary }
-    return c >= 85 ? Theme.danger : c >= 65 ? Theme.caution : Theme.good
 }
 
 /// Lightweight level bar (cheaper than ProgressView and tinted per value).
