@@ -72,6 +72,7 @@ let package = Package(
         .target(name: "ModuleKit"),
         .target(name: "NativeFeatureAPI", dependencies: ["ModuleKit"]),
         .target(name: "LocalAIUI", dependencies: ["NativeFeatureAPI", "ThermoUI", "ThermoL10n", "CleanKit"]),
+        .target(name: "ClaudeFeature", dependencies: ["NativeFeatureAPI", "ThermoUI", "ThermoL10n", "ModuleKit", "CleanKit", "AgentDoctor"]),
         .target(name: "CheckupFeature", dependencies: ["NativeFeatureAPI", "ThermoUI", "ThermoL10n", "ModuleKit", "CleanKit", "ThermoKit", "LocalAIUI"]),
         .target(name: "PluginsFeature", dependencies: ["NativeFeatureAPI", "ThermoUI", "ThermoL10n", "ModuleKit", "AgentCore"]),
         .target(name: "ConnectionsFeature", dependencies: ["NativeFeatureAPI", "ThermoUI", "ThermoL10n", "ModuleKit", "AgentCore"], linkerSettings: [.linkedFramework("CoreWLAN"), .linkedFramework("IOBluetooth"), .linkedFramework("CoreAudio"), .linkedFramework("AudioToolbox"), .linkedFramework("CoreLocation")]),
@@ -98,12 +99,13 @@ let package = Package(
         .executableTarget(name: "ThermoHelper", dependencies: ["ThermoKit"]),
         .executableTarget(
             name: "ThermoApp",
-            dependencies: ["CheckupFeature", "LocalAIUI", "PluginsFeature", "ConnectionsFeature", "NativeFeatureAPI", "ThermoUI", "PreviewCore", "ThermoKit", "AgentDoctor", "CleanKit", "ThermoL10n", "SearchCore", "CaptureCore", "CaptureScriptCore", "MenuBarCore", "CMenuBar", "CloudDriveKit", "DownloadKit", "MediaToolsKit", "VideoKit", "ModuleKit", "ModuleHost", .product(name: "Markdown", package: "swift-markdown"), .product(name: "Sparkle", package: "Sparkle")],
+            dependencies: ["ClaudeFeature", "CheckupFeature", "LocalAIUI", "PluginsFeature", "ConnectionsFeature", "NativeFeatureAPI", "ThermoUI", "PreviewCore", "ThermoKit", "AgentDoctor", "CleanKit", "ThermoL10n", "SearchCore", "CaptureCore", "CaptureScriptCore", "MenuBarCore", "CMenuBar", "CloudDriveKit", "DownloadKit", "MediaToolsKit", "VideoKit", "ModuleKit", "ModuleHost", .product(name: "Markdown", package: "swift-markdown"), .product(name: "Sparkle", package: "Sparkle")],
             linkerSettings: [.linkedFramework("AppKit"), .linkedFramework("SwiftUI"), .linkedFramework("Charts"), .linkedFramework("AVKit"), .linkedFramework("WebKit"), .linkedFramework("Quartz"),
                              .linkedFramework("CoreAudio"),
                              .linkedFramework("AudioToolbox")]
         ),
         .testTarget(name: "NativeFeatureAPITests", dependencies: ["NativeFeatureAPI", "ModuleKit"]),
+        .testTarget(name: "ClaudeFeatureTests", dependencies: ["ClaudeFeature", "NativeFeatureAPI", "ModuleKit", "CleanKit", "AgentDoctor"]),
         .testTarget(name: "CheckupFeatureTests", dependencies: ["CheckupFeature", "LocalAIUI", "NativeFeatureAPI", "ModuleKit", "CleanKit", "ThermoKit"]),
         .testTarget(name: "PluginsFeatureTests", dependencies: ["PluginsFeature", "NativeFeatureAPI", "ModuleKit", "AgentCore"]),
         .testTarget(name: "ConnectionsFeatureTests", dependencies: ["ConnectionsFeature", "NativeFeatureAPI", "ModuleKit"]),

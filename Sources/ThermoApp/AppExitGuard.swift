@@ -33,7 +33,7 @@ enum AppExitGuard {
         }
         if let page=AppModels.shared.downloadExitBlocker(){show(page);return .terminateCancel}
         if let blocker=AppModels.shared.nativeFeatures.quitBlocker(BuiltinModuleManifests.plugins.id){show(.module(blocker.route.module,blocker.route.entry));return .terminateCancel}
-        if let page=AppModels.shared.claudeExitBlocker(){show(page);return .terminateCancel}
+        if let blocker=AppModels.shared.nativeFeatures.quitBlocker(BuiltinModuleManifests.claude.id){show(.module(blocker.route.module,blocker.route.entry));return .terminateCancel}
         if let blocker=AppModels.shared.nativeFeatures.quitBlocker(BuiltinModuleManifests.checkup.id){show(.module(blocker.route.module,blocker.route.entry));return .terminateCancel}
         if let page=AppModels.shared.agentsExitBlocker(){show(page);return .terminateCancel}
         if let blocker=AppModels.shared.nativeFeatures.quitBlocker(BuiltinModuleManifests.connections.id){show(.module(blocker.route.module,blocker.route.entry));return .terminateCancel}

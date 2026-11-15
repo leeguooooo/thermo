@@ -4,6 +4,8 @@ import AppKit
 import CleanKit
 import SwiftUI
 
+enum ClaudeTab:String,Hashable,CaseIterable {case accounts,reset,privacy}
+
 @MainActor
 final class ClaudeCleanupModel: ObservableObject {
     let work=FeatureTasks()

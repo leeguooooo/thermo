@@ -7,7 +7,6 @@ import ThermoL10n
 
 @MainActor
 final class ClaudeAccountsModel: ObservableObject {
-    static var shared:ClaudeAccountsModel {AppModels.shared.claudeAccounts}
     let work=FeatureTasks()
     private let profilesService:ClaudeProfiles
     init(enabled:@escaping ()->Bool = {true},profiles:ClaudeProfiles = ClaudeProfiles()) {work.enabled=enabled;profilesService=profiles}

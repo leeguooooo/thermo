@@ -197,7 +197,7 @@ final class StatusMenu: NSObject, NSMenuDelegate {
             case .software:
                 submenu.addItem(page(tr("Software"), "square.grid.2x2", .apps(.installed)))
             case .claudeTools:
-                submenu.addItem(page(tr("Claude tools"), "person.2", .claude(.accounts)))
+                submenu.addItem(page(tr("Claude tools"), "person.2", .module(BuiltinModuleManifests.claude.id,"accounts")))
             case .smartCheck:
                 submenu.addItem(page(tr("Smart Check"), "stethoscope", .agents(.home)))
             case .cleanScreen:
