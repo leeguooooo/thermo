@@ -108,6 +108,13 @@ import SwiftUI
         case nil:return .init()
         }
     }
+    /// Restoration only invalidates already-owned state; it never admits a feature.
+    package func invalidateAfterRestore(_ paths:[String]) {
+        guard !paths.isEmpty else{return}
+        for state in states.values {
+            if case let .live(live)=state {live.session.invalidateAfterRestore(paths)}
+        }
+    }
     package func retireVisibility() {
         for state in states.values {
             switch state {

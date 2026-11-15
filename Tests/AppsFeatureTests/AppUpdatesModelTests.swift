@@ -1,5 +1,5 @@
 @testable import CleanKit
-@testable import ThermoApp
+@testable import AppsFeature
 import XCTest
 
 final class AppUpdatesModelTests: XCTestCase {

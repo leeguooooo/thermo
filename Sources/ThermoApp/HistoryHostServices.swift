@@ -1,6 +1,7 @@
 import AppKit
 import CleanKit
 import HistoryFeature
+import NativeFeatureAPI
 import ModuleKit
 import ThermoL10n
 
@@ -18,7 +19,7 @@ import ThermoL10n
              try TrashBatches.restore(id: id, reviewIdentity: review.reviewIdentity,
                  reviewedDestinations: Set(review.items.filter { $0.status == "restored" }.map(\.destination)))
          }, invalidate: @escaping @MainActor ([String]) -> Void = {
-             AppModels.shared.invalidateAppsAfterRestore()
+             AppModels.shared.nativeFeatures.invalidateAfterRestore($0)
              AppModels.shared.invalidateSpaceAfterRestore($0)
          }) {
         self.reader = reader; self.reviewer = reviewer; self.restore = restore; self.invalidate = invalidate
@@ -65,9 +66,12 @@ import ThermoL10n
     static func perform(_ destination: Destination, models: AppModels = .shared,
                         open: @MainActor (MainPage) -> Void = { MainWindow.show($0) }) {
         switch destination {
-        case .nativeRecovery: models.prepareNativeRecovery(); open(.apps(.updates))
-        case .appUpdates: open(.apps(.updates))
-        case .startup: open(.apps(.startup))
+        case .nativeRecovery:
+            let request=NativePresentationRequest(route:.init(BuiltinModuleManifests.apps.id,"updates"),options:["channel":.text("native"),"showRecovery":.boolean(true)])
+            if models.nativeFeatures.canPresent(request.route),!models.nativeFeatures.preparePresentation(request){return}
+            open(.native(request.route))
+        case .appUpdates: open(.native(.init(BuiltinModuleManifests.apps.id,"updates")))
+        case .startup: open(.native(.init(BuiltinModuleManifests.apps.id,"startup")))
         case .claudeReset: open(.module(BuiltinModuleManifests.claude.id, "reset"))
         case .privacy: open(.module(BuiltinModuleManifests.claude.id, "privacy"))
         case .searchSettings: LocalSearchPanel.shared.show(settings: true)

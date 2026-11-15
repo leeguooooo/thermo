@@ -1,3 +1,4 @@
+import ThermoL10n
 import ThermoUI
 import NativeFeatureAPI
 import AgentCore

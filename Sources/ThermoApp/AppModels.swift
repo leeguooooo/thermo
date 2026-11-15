@@ -11,7 +11,6 @@ final class AppModels {
     static let shared = AppModels()
     lazy var monitor = makeMonitor()
     private let makeMonitor: () -> Monitor
-    private let makeApps: @MainActor () -> AppsFeatureModels
     private let defaults: UserDefaults
     typealias SpaceFactory = @MainActor (@escaping () -> Bool) -> SpaceLensModel
     private let makeSpace: SpaceFactory
@@ -46,14 +45,6 @@ final class AppModels {
             if self?.storedSpace === model {self?.storedSpace=nil}
         }
     }
-    private var storedApps: AppsFeatureModels?
-    var appsLoaded: Bool { storedApps != nil }
-    private var software: AppsFeatureModels {
-        if let storedApps { return storedApps }
-        let created=makeApps(),defaults=self.defaults
-        created.setEnabled { ModulePreferences.isEnabled(BuiltinModuleManifests.apps,in:defaults) }
-        storedApps=created;return created
-    }
     let nativeFeatures:NativeFeatureStore
     lazy var updates = Updates()
     /// Whether disk cleanup's model exists. It is created on first use and never while the feature is off.
@@ -68,9 +59,9 @@ final class AppModels {
         set { storedDisk = newValue }
     }
 
-    init(defaults: UserDefaults = .standard, makeApps: @escaping @MainActor () -> AppsFeatureModels = { AppsFeatureModels() }, makeSpace: @escaping SpaceFactory = { SpaceLensModel(enabled:$0) }, invalidateSpaceCache: @escaping @MainActor () -> Void = { SpaceLens.invalidateCache() }, nativeDefinitions:[NativeFeatureDefinition]? = nil, makeAgents:@escaping AgentsFactory = {AgentScanner(enabled:$0)}, makeDisk: @escaping () -> DiskModel = { DiskModel(retentionPreferences:.stored(in:.standard)) },
+    init(defaults: UserDefaults = .standard, makeSpace: @escaping SpaceFactory = { SpaceLensModel(enabled:$0) }, invalidateSpaceCache: @escaping @MainActor () -> Void = { SpaceLens.invalidateCache() }, nativeDefinitions:[NativeFeatureDefinition]? = nil, makeAgents:@escaping AgentsFactory = {AgentScanner(enabled:$0)}, makeDisk: @escaping () -> DiskModel = { DiskModel(retentionPreferences:.stored(in:.standard)) },
          makeMonitor: @escaping () -> Monitor = { Monitor(samplingAllowed: { ModulePreferences.isEnabled(BuiltinModuleManifests.performance, in: .standard) }) }) {
-        self.makeAgents=makeAgents;self.makeDisk = makeDisk;self.makeApps=makeApps;self.makeSpace=makeSpace;self.invalidateSpaceCache=invalidateSpaceCache;self.defaults=defaults
+        self.makeAgents=makeAgents;self.makeDisk = makeDisk;self.makeSpace=makeSpace;self.invalidateSpaceCache=invalidateSpaceCache;self.defaults=defaults
         self.makeMonitor = makeMonitor
         let catalog=nativeDefinitions.map{try! NativeFeatureCatalog(definitions:$0)} ?? BuiltinNativeFeatures.catalog
         nativeFeatures=NativeFeatureStore(catalog:catalog,enabled:{id in
@@ -109,28 +100,6 @@ final class AppModels {
         return { [weak self] in
             await scanner.finishFeatureStop()
             if self?.storedAgents === scanner {self?.storedAgents=nil}
-        }
-    }
-    var apps: AppsModel { get {software.apps} set {software.apps=newValue} }
-    var startup: StartupItemsModel { software.startup }
-    var softwareUpdates: AppUpdatesModel { software.updates }
-    var nativeUpdates: NativeUpdatesModel { software.native }
-    var appStore: AppStoreModel { software.store }
-    func softwareExitBlocker() -> MainPage? { storedApps?.exitBlocker() }
-    func retireSoftwareViews() { storedApps?.retireViews() }
-    func invalidateAppsAfterRestore() { storedApps?.apps.invalidateAfterRestore() }
-    func prepareNativeRecovery() {
-        guard ModulePreferences.isEnabled(BuiltinModuleManifests.apps,in:defaults) else {return}
-        software.updates.channel="native";software.native.showRecovery=true
-    }
-    func prepareAppsStop() throws -> BuiltinModules.FinishStop? {
-        guard let session=storedApps else {return nil}
-        guard session.beginStopping() else {
-            throw BuiltinModules.StopRefused(description:tr("Wait for app removal, startup changes or updates before switching this feature off."))
-        }
-        return { [weak self] in
-            await session.finishStopping()
-            if self?.storedApps === session {self?.storedApps=nil}
         }
     }
 }

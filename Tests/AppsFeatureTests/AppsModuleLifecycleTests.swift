@@ -3,7 +3,8 @@ import AppKit
 @testable import CleanKit
 import ModuleKit
 import XCTest
-@testable import ThermoApp
+@testable import AppsFeature
+import NativeFeatureAPI
 
 @MainActor final class AppsModuleLifecycleTests: XCTestCase {
     private final class Calls: @unchecked Sendable {
@@ -19,20 +20,7 @@ import XCTest
     private func source()->NativeUpdateSource {
         NativeUpdateSource(app:InstalledApp(path:"/fixture.app",name:"Fixture",bundleID:"com.example.fixture"),kind:"sparkle")
     }
-    func testRegistryOwnsEverySoftwareTabAndItsShortcutWithoutLoadingModels() {
-        XCTAssertTrue(BuiltinModules.problems.isEmpty,BuiltinModules.problems.joined(separator:"\n"))
-        XCTAssertTrue(ModuleNavigation.conflicts(BuiltinModules.all).isEmpty)
-        XCTAssertFalse(HostPageSpecification.pages.contains{$0.argument == "apps"})
-        for tab in AppsTab.allCases {
-            let page=MainPage.apps(tab)
-            XCTAssertEqual(page.module,AppsModule.manifest.id)
-            XCTAssertEqual(BuiltinModules.page(page)?.target,page)
-            XCTAssertEqual(MainPage(argument:"apps:"+tab.rawValue),page)
-        }
-        XCTAssertEqual(MainPage(argument:"apps:feeds"),.apps(.updates))
-        XCTAssertTrue(AppsModule.manifest.entries.allSatisfy(AppsModule.supports))
-        XCTAssertEqual(AppsModule.manifest.entries.first?.navigationKey,"7")
-    }
+
     func testColdOffBlocksInventoriesPermissionsNetworkAndMutations() async {
         let calls=Calls(),app=InstalledApp(path:"/fixture.app",name:"Fixture",bundleID:nil)
         let apps=AppsModel(inventory:{_ in calls.hit();return []},reviewPlan:{app,_,_,_ in calls.hit();return .init(app:app,paths:[],bytes:0)},remove:{_ in calls.hit();return CleanResult(id:"fixture",trashed:true)},readOrphans:{_ in calls.hit();return []})
@@ -56,23 +44,7 @@ import XCTest
         XCTAssertNil(apps.planning)
         XCTAssertTrue(session.beginStopping());await session.finishStopping()
     }
-    func testOffNavigationDoesNotCreateSoftwareModelsOrKeepShortcutSeven() {
-        let name="thermo-apps-nav-"+UUID().uuidString,defaults=UserDefaults(suiteName:name)!
-        defer{defaults.removePersistentDomain(forName:name)}
-        var creations=0
-        let models=AppModels(defaults:defaults,makeApps:{creations += 1;return AppsFeatureModels()})
-        let center=ModuleCenter(defaults:defaults,prepareBuiltinStop:{_ in try AppsModule.prepareStop(models:models)})
-        let previous=MainWindow.state.page;defer{MainWindow.state.page=previous}
-        MainWindow.state.page = .apps(.updates)
-        XCTAssertEqual(center.navigationKey(.apps(.installed)),"7")
-        center.setEnabled(AppsModule.manifest.id,false)
-        for tab in AppsTab.allCases {XCTAssertFalse(center.shows(.apps(tab)))}
-        XCTAssertNil(center.navigationKey(.apps(.installed)))
-        XCTAssertNotEqual(MainWindow.state.page.module,AppsModule.manifest.id)
-        models.retireSoftwareViews();models.invalidateAppsAfterRestore();models.prepareNativeRecovery()
-        XCTAssertNil(models.softwareExitBlocker())
-        XCTAssertFalse(models.appsLoaded);XCTAssertEqual(creations,0)
-    }
+
     func testStoppingWaitsForUncooperativeReadAndDropsItsResult() async {
         let entered=expectation(description:"update catalog entered"),release=DispatchSemaphore(value:0),calls=Calls()
         defer{release.signal()}
@@ -123,19 +95,29 @@ import XCTest
         await gate.release();await finish.value
         XCTAssertNil(cache.read("app-store.json"));XCTAssertTrue(model.apps.isEmpty);XCTAssertFalse(model.loaded)
     }
+
     func testReenableCreatesFreshModelsAfterPhysicalRetirement() async throws {
         let name="thermo-apps-reopen-"+UUID().uuidString,defaults=UserDefaults(suiteName:name)!
         defer{defaults.removePersistentDomain(forName:name)}
         var creations=0
-        let models=AppModels(defaults:defaults,makeApps:{creations += 1;return AppsFeatureModels(apps:AppsModel(inventory:{_ in []}))})
-        let original=models.apps
-        defaults.set(false,forKey:ModulePreferences.key(AppsModule.manifest.id))
-        let stopping=try AppsModule.prepareStop(models:models)
-        let finish=try XCTUnwrap(stopping);await finish()
-        XCTAssertFalse(models.appsLoaded)
+        var sessions:[AppsFeatureSession]=[]
+        let definition=NativeFeatureDefinition(manifest:BuiltinModuleManifests.apps,makeSession:{availability in
+            creations += 1
+            let session=AppsFeatureSession(availability:availability,makeModels:{AppsFeatureModels(apps:AppsModel(inventory:{_ in []}))})
+            sessions.append(session);return session
+        })
+        let store=NativeFeatureStore(definitions:[definition],enabled:{_ in defaults.bool(forKey:ModulePreferences.key(BuiltinModuleManifests.apps.id))})
+        defaults.set(true,forKey:ModulePreferences.key(BuiltinModuleManifests.apps.id))
+        _=store.page(.init(BuiltinModuleManifests.apps.id,"installed"))
+        let original=sessions[0].models.apps
+        defaults.set(false,forKey:ModulePreferences.key(BuiltinModuleManifests.apps.id))
+        let stopping=try store.prepareStop(BuiltinModuleManifests.apps.id)
+        let finish=try XCTUnwrap(stopping);await finish.finish()
+        XCTAssertFalse(store.status(BuiltinModuleManifests.apps.id).modelLoaded)
         original.load();XCTAssertFalse(original.loading)
-        defaults.set(true,forKey:ModulePreferences.key(AppsModule.manifest.id))
-        XCTAssertFalse(models.apps === original);XCTAssertEqual(creations,2)
-        if let stop=try AppsModule.prepareStop(models:models){await stop()}
+        defaults.set(true,forKey:ModulePreferences.key(BuiltinModuleManifests.apps.id))
+        _=store.page(.init(BuiltinModuleManifests.apps.id,"installed"))
+        XCTAssertFalse(sessions[1].models.apps === original);XCTAssertEqual(creations,2)
+        if let stop=try store.prepareStop(BuiltinModuleManifests.apps.id){await stop.finish()}
     }
 }

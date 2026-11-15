@@ -1,6 +1,6 @@
 import XCTest
 @testable import CleanKit
-@testable import ThermoApp
+@testable import AppsFeature
 
 final class HistoryRestoreInvalidationTests: XCTestCase {
     @MainActor func testRestoreInvalidationClearsOldOutcomeAndCancelsAStaleReview() async {
