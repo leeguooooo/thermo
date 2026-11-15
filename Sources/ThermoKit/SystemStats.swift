@@ -3,12 +3,12 @@ import Foundation
 
 /// Memory in use and free disk space, for the Overview gauges. Cheap: one host_statistics64 call
 /// and one volume lookup.
-enum SystemStats {
-    struct Memory: Equatable, Sendable { var usedBytes: UInt64; var totalBytes: UInt64 }
-    struct Disk: Equatable, Sendable { var freeBytes: Int64; var totalBytes: Int64 }
+package enum SystemStats {
+    package struct Memory: Equatable, Sendable { package var usedBytes: UInt64; package var totalBytes: UInt64; package init(usedBytes:UInt64,totalBytes:UInt64){self.usedBytes=usedBytes;self.totalBytes=totalBytes} }
+    package struct Disk: Equatable, Sendable { package var freeBytes: Int64; package var totalBytes: Int64; package init(freeBytes:Int64,totalBytes:Int64){self.freeBytes=freeBytes;self.totalBytes=totalBytes} }
 
     /// "Used" as Activity Monitor counts it: app memory, wired and compressed.
-    static func memory() -> Memory? {
+    package static func memory() -> Memory? {
         var stats = vm_statistics64()
         var count = mach_msg_type_number_t(MemoryLayout<vm_statistics64>.size / MemoryLayout<integer_t>.size)
         let host = mach_host_self()
@@ -23,7 +23,7 @@ enum SystemStats {
         return Memory(usedBytes: used, totalBytes: ProcessInfo.processInfo.physicalMemory)
     }
 
-    static func disk() -> Disk? {
+    package static func disk() -> Disk? {
         let v = try? URL(fileURLWithPath: "/").resourceValues(forKeys: [.volumeAvailableCapacityForImportantUsageKey, .volumeTotalCapacityKey])
         guard let free = v?.volumeAvailableCapacityForImportantUsage, let total = v?.volumeTotalCapacity else { return nil }
         return Disk(freeBytes: free, totalBytes: Int64(total))

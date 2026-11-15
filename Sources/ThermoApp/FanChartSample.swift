@@ -1,3 +1,4 @@
+import SystemServicesAPI
 import Foundation
 
 struct FanChartSample: Identifiable {

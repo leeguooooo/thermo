@@ -85,14 +85,14 @@ import XCTest
     }
     func testSidebarTextProjectsExactlyAndRejectsMultilineOrNul()throws {
         let session=Session()
-        session.contributions=[.init(route:.init(id,"home"),tint:.blue,trailing:"1.2 GB")]
+        session.contributions=[.init(route:.init(id,"home"),tint:.blue,trailing:"1.2 GB",trailingColor:.orange)]
             + ["bad\ntext","bad\rtext","bad\r\ntext","bad\0text"].map{.init(route:.init(id,"home"),tint:.blue,trailing:$0)}
         let definition=NativeFeatureDefinition(manifest:manifest,ui:.init(sidebarLocations:[.agents]),makeSession:{_ in session})
         let store=NativeFeatureStore(definitions:[definition],enabled:{_ in true})
         let group=try XCTUnwrap(store.windowUI(selection:nil,locations:[.agents]).sidebar.first)
         var rows:[NativeSidebarRow]=[]
         _=group.content{rows.append($0);return AnyView(EmptyView())}
-        XCTAssertEqual(rows.count,1);XCTAssertEqual(rows.first?.trailing,"1.2 GB")
+        XCTAssertEqual(rows.count,1);XCTAssertEqual(rows.first?.trailing,"1.2 GB");XCTAssertEqual(rows.first?.trailingColor,.orange)
     }
     func testInlineSettingsChecksKindBeforeAdmissionAndRevokesOldNavigation()async throws {
         var schema=manifest

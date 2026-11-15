@@ -69,3 +69,43 @@ final class PulseSamplingLifetimeTests: XCTestCase {
         withExtendedLifetime(observation) {}
     }
 }
+
+extension PulseSamplingLifetimeTests {
+    @MainActor func testRetirementWaitsForDelayedActionReviewAndItsJournalWrite() async {
+        let queue = DispatchQueue(label: "test.pulse.action-review")
+        let readEntered = expectation(description: "follow-up reader entered")
+        let recordEntered = expectation(description: "journal write entered")
+        let finished = expectation(description: "retirement returned")
+        let releaseRead = DispatchSemaphore(value: 0), releaseRecord = DispatchSemaphore(value: 0)
+        defer { releaseRead.signal(); releaseRecord.signal() }
+        let before = MachinePulse(load1: 1, load5: 1, cores: 8, thermal: .nominal,
+                                  memory: .normal, swapUsedMB: 0, hogs: [], sampled: Date())
+        let hog = MachinePulse.Hog(id: "com.example.review", name: "Review fixture", cpu: 0,
+                                   memoryKB: 100, pids: [], app: nil, quittable: false)
+        let model = SystemPulse(samplingQueue: queue, reviewDelay: 0.1, readActionReview: { target, baseline, action in
+            readEntered.fulfill(); _ = releaseRead.wait(timeout: .now() + 10)
+            return PulseActionReview(action: action, target: target, before: baseline, after: baseline,
+                                     afterTarget: nil, inventoryAvailable: false)
+        }, recordActionReview: { _ in
+            recordEntered.fulfill(); _ = releaseRecord.wait(timeout: .now() + 10)
+        })
+        // Exercise the same promised follow-up path after restart completion, with no OS action.
+        model.review(hog, before: before, action: .restart)
+        model.stop()
+        var retired = false
+        let retirement = Task { await model.finishStoppingFeature(); retired = true; finished.fulfill() }
+        retirement.cancel() // Cancellation cannot release physical ownership or spin on the main actor.
+        let fence = expectation(description: "ordinary queue fence passed before delayed read")
+        queue.async { DispatchQueue.main.async { fence.fulfill() } }
+        await fulfillment(of: [fence, readEntered], timeout: 2)
+        XCTAssertFalse(retired, "An ordinary queue fence must not finish retirement while a promised review is pending")
+        releaseRead.signal()
+        await fulfillment(of: [recordEntered], timeout: 2)
+        XCTAssertFalse(retired, "Retirement must include the real journal write, not just the read")
+        releaseRecord.signal()
+        await fulfillment(of: [finished], timeout: 2)
+        await retirement.value
+        XCTAssertNotNil(model.actionFeedback)
+        XCTAssertNil(model.current)
+    }
+}

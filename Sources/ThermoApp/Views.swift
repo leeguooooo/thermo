@@ -1,3 +1,4 @@
+import SystemServicesAPI
 import ModuleKit
 import ThermoUI
 import CleanKit
@@ -666,11 +667,11 @@ struct FansView: View {
                 .font(Theme.caption).foregroundStyle(Theme.textTertiary)
                 .fixedSize(horizontal: false, vertical: true).padding(.horizontal, 2)
         }
-        .onAppear { monitor.refreshHelper() }
+        .onAppear { monitor.refreshFanObservation() }
     }
 
     func missingFan(_ id: Int) -> some View {
-        let policy = FanControlPresentation.policy(monitor.pendingPolicies[id] ?? monitor.policies[id] ?? .auto)
+        let policy = FanPolicyText.label(monitor.pendingPolicies[id] ?? monitor.policies[id] ?? .auto)
         let checked = monitor.fanControlState?.observations[id]?.checkedAt
         let detail = [tr("No current reading for this fan. Saved settings and last checks are shown below."),
                       FanControlPresentation.observation(monitor.fanControlState, fan: id),
@@ -978,7 +979,7 @@ struct FanControlCard: View {
     }
 
     var policyText: String {
-        FanControlPresentation.policy(policy)
+        FanPolicyText.label(policy)
     }
 
     func load(_ policy: FanPolicy) {

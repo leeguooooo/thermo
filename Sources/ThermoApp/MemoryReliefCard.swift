@@ -290,7 +290,12 @@ struct MemoryReliefCard: View {
         guard let operation = PerformanceModule.beginOperation() else { feedback = tr("This feature is switched off."); return }
         working = true; feedback = nil
         let confirmed = plan.safeIdentities
-        recorder.diagnoseFresh { fresh, processes in
+        recorder.diagnoseFresh(onSkipped: {
+            DispatchQueue.main.async {
+                PerformanceModule.endOperation(operation)
+                working = false; feedback = tr("This feature is switched off.")
+            }
+        }) { fresh, processes in
             // Off the recorder's queue: waiting for processes to stop must not hold up its ticks.
             DispatchQueue.global(qos: .userInitiated).async {
                 let targets = MemoryRelief.targets(confirmed: confirmed, fresh: fresh)

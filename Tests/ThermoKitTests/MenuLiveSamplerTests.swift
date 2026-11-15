@@ -1,7 +1,7 @@
+import CleanKit
 import Darwin
 import XCTest
 import ThermoKit
-@testable import ThermoApp
 
 final class MenuLiveSamplerTests: XCTestCase {
     private func ticks(busy: UInt32, idle: UInt32) -> [UInt32] {
@@ -11,7 +11,7 @@ final class MenuLiveSamplerTests: XCTestCase {
         return result
     }
     func testOnlySelectedResourcesAreReadAndStoppingClearsBaselines() {
-        let s = MenuLiveSampler()
+        let s = MenuLiveSampler(readCPU:QuickLoad.cpuTicks,cpuPercent:QuickLoad.cpuPercent)
         var cpuReads = 0, memoryReads = 0, networkReads = 0
         s.readCPU = { cpuReads += 1; return [10, 0, 0, 10] }
         s.readMemory = { memoryReads += 1; return 100 }
@@ -25,7 +25,7 @@ final class MenuLiveSamplerTests: XCTestCase {
     }
 
     func testCPUShowsBusyShareAndRejectsResetOrWrap() {
-        let s = MenuLiveSampler()
+        let s = MenuLiveSampler(readCPU:QuickLoad.cpuTicks,cpuPercent:QuickLoad.cpuPercent)
         var ticks = self.ticks(busy: 100, idle: 100)
         s.readCPU = { ticks }
         XCTAssertNil(s.sample(metrics: [.cpuUsage], now: 1).cpu)
@@ -40,7 +40,7 @@ final class MenuLiveSamplerTests: XCTestCase {
     }
 
     func testWakeAndLongGapRequireFreshBaselines() {
-        let s = MenuLiveSampler()
+        let s = MenuLiveSampler(readCPU:QuickLoad.cpuTicks,cpuPercent:QuickLoad.cpuPercent)
         var counter: UInt64 = 100
         var tick: UInt32 = 100
         s.readCPU = { [tick, 0, 0, tick] }
@@ -56,7 +56,7 @@ final class MenuLiveSamplerTests: XCTestCase {
     }
 
     func testNetworkRatesRejectInterfaceChangeResetAndWrap() {
-        let s = MenuLiveSampler()
+        let s = MenuLiveSampler(readCPU:QuickLoad.cpuTicks,cpuPercent:QuickLoad.cpuPercent)
         var name = "en0:1", rx: UInt64 = 100, tx: UInt64 = 200
         s.readNetwork = { [name: .init(received: rx, sent: tx)] }
         XCTAssertNil(s.sample(metrics: [.download, .upload], now: 1).download)
@@ -74,7 +74,7 @@ final class MenuLiveSamplerTests: XCTestCase {
     }
 
     func testFailedAndEmptyReadsDoNotBecomeZeroOrReuseOldBaseline() {
-        let s = MenuLiveSampler()
+        let s = MenuLiveSampler(readCPU:QuickLoad.cpuTicks,cpuPercent:QuickLoad.cpuPercent)
         var counters: [String: MenuLiveSampler.Network]? = ["en0": .init(received: 1, sent: 1)]
         var ticks: [UInt32]? = [1, 0, 0, 1]
         s.readNetwork = { counters }; s.readCPU = { ticks }; s.readMemory = { nil }
@@ -88,4 +88,19 @@ final class MenuLiveSamplerTests: XCTestCase {
         counters = [:]
         XCTAssertNil(s.sample(metrics: [.download], now: 4).download)
     }
+    func testIndependentConsumersKeepSeparateBaselinesWhenOneResetsOrChangesMetrics() {
+        let menu=MenuLiveSampler(readCPU:QuickLoad.cpuTicks,cpuPercent:QuickLoad.cpuPercent)
+        let panel=MenuLiveSampler(readCPU:QuickLoad.cpuTicks,cpuPercent:QuickLoad.cpuPercent)
+        var tick:UInt32=100,network:UInt64=100
+        for sampler in [menu,panel]{sampler.readCPU={ self.ticks(busy:tick,idle:tick) };sampler.readNetwork={ ["en0":.init(received:network,sent:network)] }}
+        _=menu.sample(metrics:[.cpuUsage,.download],now:1)
+        _=panel.sample(metrics:[.cpuUsage,.download],now:1)
+        menu.reset();_=menu.sample(metrics:[.fan],now:2)
+        tick+=20;network+=200
+        let preserved=panel.sample(metrics:[.cpuUsage,.download],now:3)
+        XCTAssertEqual(preserved.cpu,50);XCTAssertEqual(preserved.download,100)
+        let firstAgain=menu.sample(metrics:[.cpuUsage,.download],now:3)
+        XCTAssertNil(firstAgain.cpu);XCTAssertNil(firstAgain.download)
+    }
+
 }

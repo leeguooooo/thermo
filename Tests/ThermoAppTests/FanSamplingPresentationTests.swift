@@ -2,7 +2,7 @@ import XCTest
 import ThermoKit
 @testable import ThermoApp
 
-final class FanSamplingPresentationTests: XCTestCase {
+@MainActor final class FanSamplingPresentationTests: XCTestCase {
     func testMissingReadingsKeepSavedPendingAndObservationOnlyControlsSeparateFromLiveFans() {
         let state = FanControlState(policies: [0: .fixed(rpm: 3000)], observations: [1: .init(mode: .automatic)])
         let policies = state.policies, pending: [Int: FanPolicy] = [2: .curve(.quiet)]

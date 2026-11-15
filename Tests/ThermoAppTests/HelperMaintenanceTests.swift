@@ -1,3 +1,4 @@
+@testable import ThermoKernel
 import XCTest
 import ThermoKit
 @testable import ThermoApp
@@ -11,7 +12,7 @@ final class HelperMaintenanceTests: XCTestCase {
         let finished = expectation(description: "installer finished")
         let duplicate = expectation(description: "duplicate maintenance must not run")
         duplicate.isInverted = true
-        monitor.performHelperInstallation(operation: {
+        (monitor.administration as! CoreHelperAdministration).performInstallation(operation: {
             entered.fulfill()
             _ = release.wait(timeout: .now() + 5)
         }, finished: { finished.fulfill() })
@@ -20,8 +21,8 @@ final class HelperMaintenanceTests: XCTestCase {
         var pages: [MainPage] = []
         XCTAssertEqual(AppExitGuard.reply(show: { pages.append($0) }), .terminateCancel)
         XCTAssertEqual(pages, [.settings])
-        monitor.performHelperInstallation(operation: { duplicate.fulfill() })
-        monitor.uninstallHelper(operation: { duplicate.fulfill() })
+        (monitor.administration as! CoreHelperAdministration).performInstallation(operation: { duplicate.fulfill() })
+        (monitor.administration as! CoreHelperAdministration).performUninstallation(operation: { duplicate.fulfill() })
         release.signal()
         await fulfillment(of: [finished, duplicate], timeout: 2)
         XCTAssertFalse(monitor.installingHelper)
@@ -33,7 +34,7 @@ final class HelperMaintenanceTests: XCTestCase {
     @MainActor func testFailedInstallationReleasesQuitProtectionAndReportsFailure() async {
         let monitor = Monitor(startMonitoring: false, helperInteraction: false)
         let finished = expectation(description: "failed installer finished")
-        monitor.performHelperInstallation(operation: {
+        (monitor.administration as! CoreHelperAdministration).performInstallation(operation: {
             throw NSError(domain: "fixture", code: 1, userInfo: [NSLocalizedDescriptionKey: "fixture install failure"])
         }, finished: { finished.fulfill() })
         await fulfillment(of: [finished], timeout: 2)
@@ -49,7 +50,7 @@ final class HelperMaintenanceTests: XCTestCase {
         let finished = expectation(description: "removal finishes")
         let duplicate = expectation(description: "duplicate never runs")
         duplicate.isInverted = true
-        monitor.uninstallHelper(operation: {
+        (monitor.administration as! CoreHelperAdministration).performUninstallation(operation: {
             _ = release.wait(timeout: .now() + 2)
         }, finished: { finished.fulfill() })
         XCTAssertTrue(monitor.uninstallingHelper)
@@ -57,7 +58,7 @@ final class HelperMaintenanceTests: XCTestCase {
         var destinations: [MainPage] = []
         XCTAssertEqual(AppExitGuard.reply(show: { destinations.append($0) }), .terminateCancel)
         XCTAssertEqual(destinations, [.settings])
-        monitor.uninstallHelper(operation: { duplicate.fulfill() })
+        (monitor.administration as! CoreHelperAdministration).performUninstallation(operation: { duplicate.fulfill() })
         monitor.setPolicy(.auto, fan: 0)
         monitor.beginSetup()
         XCTAssertFalse(monitor.settingUp)
@@ -73,7 +74,7 @@ final class HelperMaintenanceTests: XCTestCase {
     @MainActor func testFailedRemovalReleasesBusyStateAndReportsFailure() async {
         let monitor = Monitor(startMonitoring: false)
         let finished = expectation(description: "failed removal finishes")
-        monitor.uninstallHelper(operation: {
+        (monitor.administration as! CoreHelperAdministration).performUninstallation(operation: {
             throw NSError(domain: "fixture", code: 1, userInfo: [NSLocalizedDescriptionKey: "fixture removal failure"])
         }, finished: { finished.fulfill() })
         await fulfillment(of: [finished], timeout: 2)

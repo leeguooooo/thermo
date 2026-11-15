@@ -1,13 +1,13 @@
 import ThermoKit
 
 /// Send each policy in order, then read back what the helper actually holds, even after a failed write.
-enum FanPolicyOperation {
-    struct Outcome {
-        var policies: [Int: FanPolicy]?
-        var error: String?
+package enum FanPolicyOperation {
+    package struct Outcome {
+        package var policies: [Int: FanPolicy]?
+        package var error: String?
     }
 
-    static func run(_ changes: [(Int, FanPolicy)],
+    package static func run(_ changes: [(Int, FanPolicy)],
                     set: (FanPolicy, Int) async throws -> Void,
                     read: () async throws -> [Int: FanPolicy]) async -> Outcome {
         var errors: [String] = []

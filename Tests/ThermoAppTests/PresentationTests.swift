@@ -1,3 +1,4 @@
+import SystemServicesAPI
 import ThermoUI
 import ModuleKit
 import XCTest

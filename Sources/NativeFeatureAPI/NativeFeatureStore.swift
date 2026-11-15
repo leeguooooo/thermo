@@ -26,6 +26,22 @@ import SwiftUI
     private let navigation:NativeNavigation
     private var states:[String:State]=[:]
     private var retainedShutdown:Set<String>=[]
+    package private(set) var hostPresentation = NativeHostPresentation()
+    package func setWindowPresentation(visible: Bool, selection: NativeFeatureRoute?) {
+        let checked = selection.flatMap { try? catalog.normalize($0) }
+        updateHostPresentation(.init(windowVisible: visible, menuPanelVisible: hostPresentation.menuPanelVisible, selection: checked))
+    }
+    package func setMenuPanelVisible(_ visible: Bool) {
+        updateHostPresentation(.init(windowVisible: hostPresentation.windowVisible, menuPanelVisible: visible, selection: hostPresentation.selection))
+    }
+    private func updateHostPresentation(_ next: NativeHostPresentation) {
+        guard next != hostPresentation else { return }
+        hostPresentation = next
+        for id in catalog.order {
+            guard case let .live(live) = states[id], live.availability.acceptsWork else { continue }
+            live.session.hostPresentationChanged(next)
+        }
+    }
     package init(catalog:NativeFeatureCatalog,enabled:@escaping (String)->Bool,navigation:NativeNavigation) {
         self.catalog=catalog;self.enabled=enabled;self.navigation=navigation
     }
@@ -56,6 +72,8 @@ import SwiftUI
             let availability=FeatureAvailability { [weak self] in self?.enabled(id) ?? false }
             let session=definition.makeSession(availability)
             states[id] = .live(.init(availability:availability,session:session))
+            // Replay once to this generation, including a panel opened while the feature was off.
+            session.hostPresentationChanged(hostPresentation)
             return session
         }
     }
@@ -78,7 +96,7 @@ import SwiftUI
                               item.trailing?.unicodeScalars.contains(where:{$0.value == 0 || $0.value == 10 || $0.value == 13}) != true,
                               let route=try? catalog.normalize(item.route),
                               let entry=definition.manifest.entries.first(where:{$0.id==route.entry && $0.kind == .page}) else{return AnyView(EmptyView())}
-                        return host.render(.init(route:route,manifest:definition.manifest,entry:entry,tint:item.tint,badge:item.badge,trailing:item.trailing,selected:selected==route,open:{_ = navigation.show(route)}))
+                        return host.render(.init(route:route,manifest:definition.manifest,entry:entry,tint:item.tint,badge:item.badge,trailing:item.trailing,trailingColor:item.trailingColor,selected:selected==route,open:{_ = navigation.show(route)}))
                     }
                     return AnyView((session.ui(.sidebar(location:location,selection:selected,rows:rows),navigation:navigation) ?? AnyView(EmptyView())).id(generation))
                 }))

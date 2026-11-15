@@ -2,6 +2,16 @@ import Foundation
 import ModuleKit
 import SwiftUI
 
+/// Cached host facts; publishing visibility never admits an optional feature.
+package struct NativeHostPresentation: Equatable, Sendable {
+    package let windowVisible: Bool
+    package let menuPanelVisible: Bool
+    package let selection: NativeFeatureRoute?
+    package init(windowVisible: Bool = false, menuPanelVisible: Bool = false, selection: NativeFeatureRoute? = nil) {
+        self.windowVisible = windowVisible; self.menuPanelVisible = menuPanelVisible; self.selection = selection
+    }
+}
+
 package enum NativeSidebarLocation:String,CaseIterable,Hashable,Sendable {
     case overview,machine,resources,storage,software,footer,agents
 }
@@ -20,7 +30,8 @@ package struct NativeUIContributions:Sendable {
     package let tint:Color
     package let badge:Int
     package let trailing:String?
-    package init(route:NativeFeatureRoute,tint:Color,badge:Int = 0,trailing:String? = nil){self.route=route;self.tint=tint;self.badge=badge;self.trailing=trailing}
+    package let trailingColor:Color?
+    package init(route:NativeFeatureRoute,tint:Color,badge:Int = 0,trailing:String? = nil,trailingColor:Color? = nil){self.route=route;self.tint=tint;self.badge=badge;self.trailing=trailing;self.trailingColor=trailingColor}
 }
 @MainActor package struct NativeSidebarRow {
     package let route:NativeFeatureRoute
@@ -29,6 +40,7 @@ package struct NativeUIContributions:Sendable {
     package let tint:Color
     package let badge:Int
     package let trailing:String?
+    package let trailingColor:Color?
     package let selected:Bool
     package let open:@MainActor ()->Void
 }

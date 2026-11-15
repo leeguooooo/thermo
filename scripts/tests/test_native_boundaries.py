@@ -45,6 +45,15 @@ class NativeBoundariesTests(unittest.TestCase):
         self.package["targets"][5]["dependencies"].append({"byName": ["ConnectionsFeature", None]})
         self.assertIn("ThermoKernel reaches feature implementation ConnectionsFeature", check.problems(self.package, complete=True))
 
+    def test_extracted_kernel_cannot_reach_optional_runtime_in_a_staged_graph(self):
+        self.package["targets"] += [target("Bridge", "ConnectionsFeature")]
+        self.package["targets"][5]["dependencies"].append({"byName": ["Bridge", None]})
+        self.assertIn("ThermoKernel reaches feature implementation ConnectionsFeature", check.problems(self.package))
+
+    def test_system_services_api_cannot_acquire_its_own_implementation(self):
+        self.package["targets"] += [target("SystemServicesAPI", "ThermoKit", "ThermoL10n", "ThermoKernel")]
+        self.assertIn("SystemServicesAPI must not depend on ThermoKernel", check.problems(self.package))
+
     def test_undeclared_import_is_rejected_even_when_compiler_search_path_contains_it(self):
         self.package["targets"].append(target("HiddenFeature"))
         with tempfile.TemporaryDirectory() as temporary:

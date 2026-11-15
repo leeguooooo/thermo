@@ -1,3 +1,5 @@
+import ThermoKernel
+import SystemServicesAPI
 import ThermoUI
 import ModuleKit
 import NativeFeatureAPI
@@ -48,7 +50,7 @@ enum MainPage: Hashable {
         return try? BuiltinNativeFeatures.catalog.normalize(.init(feature.module.id,feature.entry.id))
     }
 
-    var samplingSurface: SamplingSurface {
+    var samplingSurface: TelemetrySurface {
         switch self {
         case .overview: return .overview
         case .sensors: return .sensors
@@ -100,6 +102,7 @@ enum MainWindow {
     static func setSamplingVisibility(_ visible: Bool) {
         if state.visible != visible { state.visible = visible }
         AppModels.shared.monitor.windowOpen = visible
+        AppModels.shared.nativeFeatures.setWindowPresentation(visible: visible, selection: state.page.nativeRoute)
     }
 
     /// Keep the window placement, but release page-local state and appearance-owned tasks.
@@ -235,7 +238,10 @@ enum MainWindow {
             let _ = L10n.apply(preference: language)
             MainView(page: $state.page, monitor: models.monitor, models: models)
                 .environment(\.windowSamplingActive, state.visible)
-                .onChange(of: state.page) { models.monitor.setWindowSurface($0.samplingSurface) }
+                .onChange(of: state.page) {
+                    models.monitor.setWindowSurface($0.samplingSurface)
+                    models.nativeFeatures.setWindowPresentation(visible: state.visible, selection: $0.nativeRoute)
+                }
                 .id(language)
                 .sheet(item: $state.tool) { tool in
                     switch tool {
@@ -371,7 +377,7 @@ struct MainSidebar: View {
         ForEach(nativeGroups.filter{$0.location==section}) {group in
             if titled {header(tr(group.manifest.name))}
             group.content {item in
-                AnyView(row(.native(item.route),tr(item.entry.title),item.entry.symbol ?? item.manifest.symbol,item.tint,trailing:item.trailing,badge:item.badge,indent:item.entry.parent != nil,selected:item.selected,activate:item.open)
+                AnyView(row(.native(item.route),tr(item.entry.title),item.entry.symbol ?? item.manifest.symbol,item.tint,trailing:item.trailing,trailingColor:item.trailingColor,badge:item.badge,indent:item.entry.parent != nil,selected:item.selected,activate:item.open)
                     .padding(.leading,CGFloat(max(0,item.manifest.depth(of:item.entry.id)-1))*14))
             }
         }

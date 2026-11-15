@@ -1,3 +1,4 @@
+import SystemServicesAPI
 import ThermoUI
 import AppKit
 import CoreFoundation
@@ -204,7 +205,7 @@ struct BatteryCareButton: View {
 struct BatteryCarePanel: View {
     @ObservedObject var model: BatteryCareModel
     @Environment(\.dismiss) private var dismiss
-    var configureHelper: () -> Void = { AppModels.shared.monitor.installHelper() }
+    var configureHelper: () -> Void = { AppModels.shared.services.helper.install() }
     var openBatterySettings: () -> Void = {
         if let url = URL(string: "x-apple.systempreferences:com.apple.Battery-Settings.extension") { NSWorkspace.shared.open(url) }
     }
