@@ -1,3 +1,4 @@
+import AgentCore
 import XCTest
 import ModuleKit
 @testable import ThermoApp

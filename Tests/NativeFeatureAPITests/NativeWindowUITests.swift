@@ -118,3 +118,37 @@ import XCTest
     }
 
 }
+
+@MainActor final class NativeNonPageEntryTests:XCTestCase {
+    private final class Session:NativeFeatureSession {
+        var starts=0,activations:[String]=[],renders=0
+        func start(){starts+=1}
+        func page(_ route:NativeFeatureRoute,navigation:NativeNavigation)->AnyView?{nil}
+        var status:NativeFeatureStatus{.init()}
+        func ui(_ surface:NativeUISurface,navigation:NativeNavigation)->AnyView?{if case .renderPreview=surface{renders+=1};return AnyView(EmptyView())}
+        func activate(_ ref:NativeUIEntryRef,navigation:NativeNavigation)->Bool{activations.append(ref.entry);return true}
+        func retireVisibility(){}
+        func quitBlocker()->NativeFeatureBlocker?{nil}
+        func prepareStop()throws->NativeFeatureDrain{.init{}}
+    }
+    func testCheckedNonPageAdmissionNeverStartsBackgroundWorkAndFencesDrain() async throws {
+        let id="com.example.nonpage"
+        let manifest=ModuleManifest(id:id,name:"Nonpage",summary:"",symbol:"doc",version:"1.0.0",entries:[.init(id:"settings",kind:.settingsItem,title:"Settings"),.init(id:"menu",kind:.menuBarItem,title:"Menu"),.init(id:"page",kind:.page,title:"Page",scene:"page")])
+        var enabled=false,made=0;var sessions:[Session]=[]
+        let definition=NativeFeatureDefinition(manifest:manifest,makeSession:{_ in made+=1;let s=Session();sessions.append(s);return s})
+        let store=NativeFeatureStore(definitions:[definition],enabled:{_ in enabled})
+        let ref=NativeUIEntryRef(id,"settings")
+        XCTAssertFalse(store.admitUIEntryOwner(ref));XCTAssertFalse(store.activate(ref));XCTAssertNil(store.renderPreview(ref));XCTAssertEqual(made,0)
+        enabled=true
+        for wrong in [NativeUIEntryRef(id,"page"),.init(id,"unknown"),.init("com.example.foreign","settings")] {
+            XCTAssertFalse(store.admitUIEntryOwner(wrong));XCTAssertFalse(store.activate(wrong));XCTAssertNil(store.renderPreview(wrong))
+        }
+        XCTAssertNil(store.renderPreview(.init(id,"menu")));XCTAssertEqual(made,0)
+        XCTAssertTrue(store.admitUIEntryOwner(ref));XCTAssertEqual(made,1);XCTAssertEqual(sessions[0].starts,0)
+        XCTAssertTrue(store.activate(ref));XCTAssertEqual(sessions[0].activations,["settings"])
+        XCTAssertNotNil(store.renderPreview(ref));XCTAssertEqual(sessions[0].renders,1);XCTAssertEqual(sessions[0].starts,0)
+        let drain=try XCTUnwrap(store.prepareStop(id))
+        XCTAssertFalse(store.admitUIEntryOwner(ref));XCTAssertFalse(store.activate(ref));XCTAssertNil(store.renderPreview(ref));XCTAssertEqual(made,1)
+        await drain.finish();XCTAssertTrue(store.admitUIEntryOwner(ref));XCTAssertEqual(made,2);XCTAssertEqual(sessions[1].starts,0)
+    }
+}

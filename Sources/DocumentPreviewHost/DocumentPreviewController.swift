@@ -53,6 +53,7 @@ private struct DocumentPreviewSource: @unchecked Sendable {
     private var cleanups:[UUID:Task<Void,Never>]=[:]
     init(broker:DocumentPreviewBroker,available:@escaping @MainActor ()->Bool){self.broker=broker;self.available=available}
     private func owns(_ id:UUID)->Bool{available() && current == id && broker.owner == id}
+    func canAttach(_ id:UUID)->Bool{state == .ready(id) && owns(id)}
     func content(selection:SelectedDocument,roots:[String],request:UUID)->AnyView {
         AnyView(DocumentPreviewPane(preview:self,selection:selection,roots:roots,request:request).id(request))
     }
@@ -60,9 +61,9 @@ private struct DocumentPreviewSource: @unchecked Sendable {
         guard available() else{state = .failed(tr("This feature is switched off."));return}
         if let issue=broker.restartRequired(){state = .failed(issue);return}
         if current == request{return}
+        guard broker.sequence < UInt64.max else{state = .failed(tr("File preview stopped. Try previewing the file again."));return}
         stop()
         let id=request,cancel=SearchCancellation();current=id;broker.owner=id;cancellation=cancel;state = .preparing
-        guard broker.sequence < UInt64.max else{state = .failed(tr("File preview stopped. Try previewing the file again."));return}
         broker.sequence += 1;let sequence=broker.sequence;currentSequence=sequence
         let language=L10n.current.rawValue
         let task=Task{[weak self] in

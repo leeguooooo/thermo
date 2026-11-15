@@ -14,7 +14,7 @@ struct DocumentPreviewPane:View {
         Group {
             switch preview.state {
             case let .ready(id) where id == request:
-                DocumentPreviewScene(manager:preview.broker.manager,module:preview.worker).id(request)
+                DocumentPreviewScene(manager:preview.broker.manager,module:preview.worker,allowed:{[weak preview] in preview?.canAttach(request) == true}).id(request)
             case let .failed(issue):
                 VStack(spacing:16) {
                     Image(systemName:"exclamationmark.triangle").font(.system(size:32)).foregroundStyle(Theme.caution)
@@ -33,6 +33,7 @@ struct DocumentPreviewPane:View {
 private struct DocumentPreviewScene:NSViewControllerRepresentable {
     let manager:ModuleManager
     let module:String
+    let allowed:@MainActor ()->Bool
     final class Coordinator {
         let manager:ModuleManager
         var scene:ModuleManager.Scene?
@@ -40,7 +41,7 @@ private struct DocumentPreviewScene:NSViewControllerRepresentable {
     }
     func makeCoordinator()->Coordinator {Coordinator(manager:manager)}
     func makeNSViewController(context:Context)->NSViewController {
-        guard let scene=try? manager.attach(module,scene:"preview") else{return NSViewController()}
+        guard allowed(),let scene=try? manager.attach(module,scene:"preview") else{return NSViewController()}
         context.coordinator.scene=scene;return scene.controller
     }
     func updateNSViewController(_ view:NSViewController,context:Context){}
