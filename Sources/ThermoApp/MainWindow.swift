@@ -321,7 +321,7 @@ struct MainView: View {
         case .overview, .sensors, .fans, .memory, .compute:
             ModuleOffView().transition(.page)
         case .checkup:
-            CheckupPage(monitor: monitor, open: { page = $0 }).transition(.page)
+            ModuleOffView().transition(.page)
         case .settings:
             WindowPage(title: tr("Settings"), subtitle: "Thermo \(AppInfo.version)") {
                 SettingsView(monitor: monitor, updates: models.updates)
@@ -444,7 +444,6 @@ struct MainSidebar: View {
             ScrollView(showsIndicators: false) {
                 VStack(alignment: .leading, spacing: 1) {
                     moduleRows(.overview)
-                    row(.checkup, tr("AI Check-up"), "waveform.path.ecg", .mint, trailing: nil)
                     moduleRows(.machine)
 
                     header(tr("Resources"))

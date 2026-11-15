@@ -679,9 +679,6 @@ if let i = CommandLine.arguments.firstIndex(of: "--render-preview"), i + 1 < Com
     func value(after flag: String) -> String? { args.firstIndex(of: flag).flatMap { $0 + 1 < args.count ? args[$0 + 1] : nil } }
     var page = value(after: "--page").flatMap(MainPage.init(argument:)) ?? .overview
     for feature in BuiltinModules.implementations { feature.prepareReview(args, page: &page, models: models) }
-    if page == .checkup, let i = args.firstIndex(of: "--fixture"), i + 1 < args.count {
-        CheckupModel.shared.loadFixture(answer: args[i + 1])
-    }
     if page == .memory, let i = args.firstIndex(of: "--fixture"), i + 1 < args.count {
         MemoryReliefAdvice.shared.loadFixture(answer: args[i + 1])
     }
@@ -713,7 +710,6 @@ if let i = CommandLine.arguments.firstIndex(of: "--render-preview"), i + 1 < Com
         case .memory: return MemoryModel.shared.breakdown != nil && Date().timeIntervalSince(started) > 4
         case .space(.duplicates): return true
         case .space: return SpaceLensModel.shared.tree != nil && !SpaceLensModel.shared.scanning
-        case .checkup: return Date().timeIntervalSince(started) > 2
         case .overview: return models.monitor.snapshot != nil && SystemPulse.shared.sampled && PulseRecorder.shared.diagnosis != nil && Date().timeIntervalSince(started) > 4
         default: return models.monitor.snapshot != nil || !PerformanceModule.enabled
         }
