@@ -16,14 +16,14 @@ final class BoundedFileReadTests:XCTestCase {
         let root=try directory(),pipe=root.appendingPathComponent("pipe")
         XCTAssertEqual(mkfifo(pipe.path,0o600),0)
         do {_ = try await KernelServices.filesRead(request(pipe.path));XCTFail("read a pipe")}
-        catch let error as BrokerError {XCTAssertTrue(error.message.contains("regular file"))}
+        catch let error as BrokerError {XCTAssertTrue(error.message.contains("regular file"),error.message)}
     }
     func testOversizedRegularFileIsRefused() async throws {
         let root=try directory(),file=root.appendingPathComponent("large")
         FileManager.default.createFile(atPath:file.path,contents:Data())
         let handle=try FileHandle(forWritingTo:file);try handle.truncate(atOffset:UInt64(KernelServices.maxReadBytes+1));try handle.close()
         do {_ = try await KernelServices.filesRead(request(file.path));XCTFail("read oversized file")}
-        catch let error as BrokerError {XCTAssertTrue(error.message.contains("larger"))}
+        catch let error as BrokerError {XCTAssertTrue(error.message.contains("larger"),error.message)}
     }
     func testSwappedParentLinkCannotRedirectTheActualRead() async throws {
         let root=try directory(),target=root.appendingPathComponent("target"),link=root.appendingPathComponent("link")
