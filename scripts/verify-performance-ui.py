@@ -1,5 +1,9 @@
 #!/usr/bin/env python3
-"""Build the real private performance UI in a separate read-only review app; never launches it."""
+"""Build the real private performance UI in a separate read-only review app; never launches it.
+
+Whole-host review uses the built app's --main --ui-review --offscreen --snapshot PATH
+or --render-preview DIRECTORY. This fixture replaces the old Root-model UI prototypes.
+"""
 import argparse
 import hashlib
 import json

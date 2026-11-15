@@ -15,8 +15,6 @@ import ModuleKit
 /// before they feel it. One cheap incremental pass per tick (PulseSampler).
 final class PulseRecorder: ObservableObject {
     static let alertsKey = Settings.slowdownAlerts
-    /// Posted (on main) when a slowdown notification is clicked; userInfo["program"] is who to show.
-    static let showProgram = Notification.Name("dev.thermo.showPulseProgram")
 
     let history = PulseHistory()
     /// Each program's memory every five minutes, for telling a leak from a big program.

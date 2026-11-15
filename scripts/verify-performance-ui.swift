@@ -54,10 +54,10 @@ private struct PerformanceReviewPanel:View {
     @ObservedObject var state:PerformanceReviewState
     let store:NativeFeatureStore
     var body:some View {
-        Group{
+        ScrollView(.vertical){
             if let content=store.compactPanel(.init(BuiltinModuleManifests.performance.id,"overview")){content}
             else{Text(tr("This feature is switched off."))}
-        }.padding(Theme.Space.m).frame(width:372).background(Theme.canvas).preferredColorScheme(.dark)
+        }.frame(minHeight:120,idealHeight:640,maxHeight:640).padding(Theme.Space.m).frame(width:372).background(Theme.canvas).preferredColorScheme(.dark)
     }
 }
 @MainActor final class PerformanceReview:NSObject,NSApplicationDelegate,NSPopoverDelegate {
@@ -92,7 +92,8 @@ private struct PerformanceReviewPanel:View {
         window.isReleasedWhenClosed=false;window.title="Thermo Performance QA";self.window=window
         window.contentViewController=NSHostingController(rootView:PerformanceReviewWindow(state:state,store:store,toggle:{[weak self] in self?.toggle()}))
         popover.behavior = .transient;popover.animates=false;popover.delegate=self
-        popover.contentViewController=NSHostingController(rootView:PerformanceReviewPanel(state:state,store:store))
+        let panelHost=NSHostingController(rootView:PerformanceReviewPanel(state:state,store:store));panelHost.sizingOptions=[]
+        popover.contentViewController=panelHost
         status=NSStatusBar.system.statusItem(withLength:NSStatusItem.variableLength)
         status?.button?.title="PQ";status?.button?.setAccessibilityLabel("Thermo Performance QA")
         status?.button?.target=self;status?.button?.action=#selector(showPanel)
@@ -115,7 +116,12 @@ private struct PerformanceReviewPanel:View {
     @objc func showPanel(){
         if popover.isShown{popover.performClose(nil);return}
         guard let button=status?.button else{return}
-        store.setMenuPanelVisible(true);popover.show(relativeTo:button.bounds,of:button,preferredEdge:.minY)
+        store.setMenuPanelVisible(true)
+        if let host=popover.contentViewController as? NSHostingController<PerformanceReviewPanel>{
+            let size=host.sizeThatFits(in:.init(width:372,height:.greatestFiniteMagnitude))
+            popover.contentSize = .init(width:size.width,height:min(size.height,(button.window?.screen ?? NSScreen.main)?.visibleFrame.height ?? size.height)-24)
+        }
+        popover.show(relativeTo:button.bounds,of:button,preferredEdge:.minY)
     }
     func popoverDidClose(_ notification:Notification){store.setMenuPanelVisible(false)}
     func toggle(){
