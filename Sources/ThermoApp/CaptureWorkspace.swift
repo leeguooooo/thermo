@@ -23,6 +23,7 @@ func captureFailureMessage(_ error:Error) -> String {
     private let screenCaptureAccess:()->Bool
     private let featureEnabled:()->Bool
     private let providedShortcuts:CaptureShortcutModel?
+    let nativeScriptAction:((String) async throws->CaptureScriptValue)?
     /// nil uses Thermo's own selector on macOS 14+, and the system `screencapture -i` before that.
     private let makeCaptureProcess:((URL)->Process)?
     static func systemCaptureProcess(_ output:URL) -> Process {
@@ -34,7 +35,8 @@ func captureFailureMessage(_ error:Error) -> String {
     init(pinSession:CapturePinSession? = nil,
          screenCaptureAccess:@escaping()->Bool={CGPreflightScreenCaptureAccess() || CGRequestScreenCaptureAccess()},
          makeCaptureProcess:((URL)->Process)? = nil,
-         featureEnabled:@escaping()->Bool={ true }, shortcuts:CaptureShortcutModel?=nil) {
+         featureEnabled:@escaping()->Bool={ true }, shortcuts:CaptureShortcutModel?=nil, nativeScriptAction:((String) async throws->CaptureScriptValue)? = nil) {
+        self.nativeScriptAction=nativeScriptAction
         self.screenCaptureAccess=screenCaptureAccess;self.makeCaptureProcess=makeCaptureProcess
         self.featureEnabled=featureEnabled
         self.providedShortcuts=shortcuts
