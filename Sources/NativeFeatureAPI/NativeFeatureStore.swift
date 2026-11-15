@@ -111,8 +111,9 @@ import SwiftUI
     /// Restoration only invalidates already-owned state; it never admits a feature.
     package func invalidateAfterRestore(_ paths:[String]) {
         guard !paths.isEmpty else{return}
-        for state in states.values {
-            if case let .live(live)=state {live.session.invalidateAfterRestore(paths)}
+        for id in catalog.order {
+            if case let .live(live)=states[id] {live.session.invalidateAfterRestore(paths)}
+            else {catalog.definitions[id]?.invalidateColdState(paths)}
         }
     }
     package func retireVisibility() {

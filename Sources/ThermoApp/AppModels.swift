@@ -12,39 +12,6 @@ final class AppModels {
     lazy var monitor = makeMonitor()
     private let makeMonitor: () -> Monitor
     private let defaults: UserDefaults
-    typealias SpaceFactory = @MainActor (@escaping () -> Bool) -> SpaceLensModel
-    private let makeSpace: SpaceFactory
-    private let invalidateSpaceCache: @MainActor () -> Void
-    private var storedSpace: SpaceLensModel?
-    private var spaceInvalidated = false
-    var spaceLoaded: Bool { storedSpace != nil }
-    var space: SpaceLensModel {
-        if let storedSpace {return storedSpace}
-        let defaults=self.defaults
-        let created=makeSpace {ModulePreferences.isEnabled(BuiltinModuleManifests.space,in:defaults)}
-        if spaceInvalidated {created.invalidateAfterRestore([created.root]);spaceInvalidated=false}
-        storedSpace=created;return created
-    }
-    @discardableResult func revealInSpace(_ path:String)->Bool {
-        guard ModulePreferences.isEnabled(BuiltinModuleManifests.space,in:defaults) else{return false}
-        space.reveal(path);return true
-    }
-    func stopSpaceViews() {storedSpace?.stop();storedSpace?.stopDuplicates()}
-    func invalidateSpaceAfterRestore(_ paths:[String]) {
-        if let storedSpace {storedSpace.invalidateAfterRestore(paths)}
-        else if !paths.isEmpty {spaceInvalidated=true;invalidateSpaceCache()}
-    }
-    func prepareSpaceStop() throws -> BuiltinModules.FinishStop? {
-        guard let model=storedSpace else{return nil}
-        guard model.canStopFeature else {
-            throw BuiltinModules.StopRefused(description:tr("Wait for file removal or the current AI request before switching this feature off."))
-        }
-        model.stopFeature()
-        return { [weak self] in
-            await model.finishFeatureStop()
-            if self?.storedSpace === model {self?.storedSpace=nil}
-        }
-    }
     let nativeFeatures:NativeFeatureStore
     lazy var updates = Updates()
     /// Whether disk cleanup's model exists. It is created on first use and never while the feature is off.
@@ -59,9 +26,9 @@ final class AppModels {
         set { storedDisk = newValue }
     }
 
-    init(defaults: UserDefaults = .standard, makeSpace: @escaping SpaceFactory = { SpaceLensModel(enabled:$0) }, invalidateSpaceCache: @escaping @MainActor () -> Void = { SpaceLens.invalidateCache() }, nativeDefinitions:[NativeFeatureDefinition]? = nil, makeAgents:@escaping AgentsFactory = {AgentScanner(enabled:$0)}, makeDisk: @escaping () -> DiskModel = { DiskModel(retentionPreferences:.stored(in:.standard)) },
+    init(defaults: UserDefaults = .standard, nativeDefinitions:[NativeFeatureDefinition]? = nil, makeAgents:@escaping AgentsFactory = {AgentScanner(enabled:$0)}, makeDisk: @escaping () -> DiskModel = { DiskModel(retentionPreferences:.stored(in:.standard)) },
          makeMonitor: @escaping () -> Monitor = { Monitor(samplingAllowed: { ModulePreferences.isEnabled(BuiltinModuleManifests.performance, in: .standard) }) }) {
-        self.makeAgents=makeAgents;self.makeDisk = makeDisk;self.makeSpace=makeSpace;self.invalidateSpaceCache=invalidateSpaceCache;self.defaults=defaults
+        self.makeAgents=makeAgents;self.makeDisk = makeDisk;self.defaults=defaults
         self.makeMonitor = makeMonitor
         let catalog=nativeDefinitions.map{try! NativeFeatureCatalog(definitions:$0)} ?? BuiltinNativeFeatures.catalog
         nativeFeatures=NativeFeatureStore(catalog:catalog,enabled:{id in

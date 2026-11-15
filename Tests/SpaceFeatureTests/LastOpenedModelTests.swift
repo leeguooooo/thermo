@@ -1,5 +1,6 @@
 @testable import CleanKit
-@testable import ThermoApp
+@testable import SpaceFeature
+import NativeFeatureAPI
 import XCTest
 
 final class LastOpenedModelTests: XCTestCase {
@@ -18,7 +19,7 @@ final class LastOpenedModelTests: XCTestCase {
     @MainActor func testRepeatedRequestsKeepOneReaderAndUnknownResultsAreCached() async throws {
         let calls = Calls(), began = expectation(description: "reader"), release = DispatchSemaphore(value: 0)
         defer { release.signal() }
-        let model = SpaceLensModel(root: root.path, cache: cache, readLastOpened: { _ in
+        let model = SpaceLensModel(services:FixtureSpaceServices(),root: root.path, cache: cache, readLastOpened: { _ in
             if calls.next() == 1 { began.fulfill(); _ = release.wait(timeout: .now() + 5) }
             return nil
         })
@@ -35,7 +36,7 @@ final class LastOpenedModelTests: XCTestCase {
     @MainActor func testStopRetainsPhysicalSlotAndCoalescesReopen() async throws {
         let calls = Calls(), began = expectation(description: "reader"), release = DispatchSemaphore(value: 0)
         defer { release.signal() }
-        let model = SpaceLensModel(root: root.path, cache: cache, readLastOpened: { _ in
+        let model = SpaceLensModel(services:FixtureSpaceServices(),root: root.path, cache: cache, readLastOpened: { _ in
             if calls.next() == 1 { began.fulfill(); _ = release.wait(timeout: .now() + 5) }
             return Date(timeIntervalSince1970: 123)
         })
@@ -50,7 +51,7 @@ final class LastOpenedModelTests: XCTestCase {
     @MainActor func testLeaveDiscardsLateResultsAndDoesNotStartAnotherRead() async throws {
         let calls = Calls(), began = expectation(description: "reader"), release = DispatchSemaphore(value: 0)
         defer { release.signal() }
-        let model = SpaceLensModel(root: root.path, cache: cache, readLastOpened: { _ in
+        let model = SpaceLensModel(services:FixtureSpaceServices(),root: root.path, cache: cache, readLastOpened: { _ in
             _ = calls.next(); began.fulfill(); _ = release.wait(timeout: .now() + 5)
             return Date()
         })
@@ -62,7 +63,7 @@ final class LastOpenedModelTests: XCTestCase {
     @MainActor func testRestoreInvalidationCancelsMetadataAndDoesNotReadInBackground() async throws {
         let calls = Calls(), began = expectation(description: "reader"), release = DispatchSemaphore(value: 0)
         defer { release.signal() }
-        let model = SpaceLensModel(root: root.path, cache: cache, readLastOpened: { _ in
+        let model = SpaceLensModel(services:FixtureSpaceServices(),root: root.path, cache: cache, readLastOpened: { _ in
             _ = calls.next(); began.fulfill(); _ = release.wait(timeout: .now() + 5)
             return Date()
         })
@@ -76,7 +77,7 @@ final class LastOpenedModelTests: XCTestCase {
         let tree = try XCTUnwrap(SpaceLens.cached(root: root.path, from: cache))
         try FileManager.default.removeItem(at: cache)
         let calls = Calls()
-        let model = SpaceLensModel(root: root.path, cache: cache, measure: { _, _, _ in tree }, readLastOpened: { _ in _ = calls.next(); return nil })
+        let model = SpaceLensModel(services:FixtureSpaceServices(),root: root.path, cache: cache, measure: { _, _, _ in tree }, readLastOpened: { _ in _ = calls.next(); return nil })
         model.scan(); model.loadLastOpened()
         for _ in 0..<200 where model.scanning || model.loadingLastOpened { try await Task.sleep(nanoseconds: 10_000_000) }
         XCTAssertFalse(model.scanning); XCTAssertFalse(model.loadingLastOpened)

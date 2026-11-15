@@ -193,7 +193,7 @@ final class StatusMenu: NSObject, NSMenuDelegate {
                     submenu.addItem(page(declared.title, declared.symbol, declared.target))
                 }
             case .spaceLens:
-                submenu.addItem(page(tr("Space Lens"), "square.grid.3x3.topleft.filled", .space(.browse)))
+                submenu.addItem(page(tr("Space Lens"), "square.grid.3x3.topleft.filled", .native(.init(BuiltinModuleManifests.space.id,"browse"))))
             case .software:
                 submenu.addItem(page(tr("Software"), "square.grid.2x2", .native(.init(BuiltinModuleManifests.apps.id,"installed"))))
             case .claudeTools:

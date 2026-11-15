@@ -14,7 +14,6 @@ enum MainPage: Hashable {
     case native(NativeFeatureRoute)
     static func browser(_ app:String)->MainPage {.native(.init(BuiltinModuleManifests.browser.id,"home",context:["app":.text(app)]))}
     case agents(SidebarEntry)
-    case space(SpaceTab)
     case memory
     case compute(Bool)
     /// A page drawn by a module: module id, entry id (empty: the module's first page).
@@ -41,7 +40,6 @@ enum MainPage: Hashable {
             self = .module(rest[0], rest.count > 1 ? rest[1] : "")
         case "cpu": self = .compute(false)
         case "gpu": self = .compute(true)
-        case "space": self = .space(parts.count > 1 ? (SpaceTab(rawValue: parts[1]) ?? .browse) : .browse)
         default: return nil
         }
     }
@@ -54,7 +52,6 @@ enum MainPage: Hashable {
         }
     }
     var isAgents: Bool { if case .agents = self { return true } else { return false } }
-    var spaceTab: SpaceTab? { if case let .space(t) = self { return t } else { return nil } }
 }
 
 /// The main window: everything Thermo does, in the Disk Cleanup look — a sidebar of places and a
@@ -184,7 +181,6 @@ enum MainWindow {
                     setSamplingVisibility(false)
                     models.nativeFeatures.retireVisibility()
                     SpaceOverviewModel.shared.stop()
-                    models.stopSpaceViews()
                     MemoryModel.shared.stop()
                     ComputeModel.shared.stop()
                     ComputeModel.cpu.stop()
@@ -326,8 +322,6 @@ struct MainView: View {
             ModuleOffView().transition(.page)
         case let .module(id, entry):
             ModulePageView(center: .shared, module: id, entry: entry).id(id + ":" + entry).transition(.page)
-        case .space:
-            ModuleOffView().transition(.page)
         }
     }
 }

@@ -20,7 +20,6 @@ import ThermoL10n
                  reviewedDestinations: Set(review.items.filter { $0.status == "restored" }.map(\.destination)))
          }, invalidate: @escaping @MainActor ([String]) -> Void = {
              AppModels.shared.nativeFeatures.invalidateAfterRestore($0)
-             AppModels.shared.invalidateSpaceAfterRestore($0)
          }) {
         self.reader = reader; self.reviewer = reviewer; self.restore = restore; self.invalidate = invalidate
     }

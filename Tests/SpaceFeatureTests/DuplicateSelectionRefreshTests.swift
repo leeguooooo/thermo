@@ -1,5 +1,6 @@
 @testable import CleanKit
-@testable import ThermoApp
+@testable import SpaceFeature
+import NativeFeatureAPI
 import Foundation
 import XCTest
 
@@ -22,7 +23,7 @@ final class DuplicateSelectionRefreshTests: XCTestCase {
     @MainActor func testRescanDropsOnlyDuplicateDerivedSelectionsBeforeReaderStarts() async throws {
         let group = try group(), began = expectation(description: "rescan"), release = DispatchSemaphore(value: 0), calls = Calls()
         defer { release.signal() }
-        let model = SpaceLensModel(root: root.path, cache: root.appendingPathComponent("cache"), searchDuplicates: { _, _, _ in
+        let model = SpaceLensModel(services:FixtureSpaceServices(),root: root.path, cache: root.appendingPathComponent("cache"), searchDuplicates: { _, _, _ in
             if calls.next() == 2 { began.fulfill(); _ = release.wait(timeout: .now() + 5) }
             return .init(groups: [group])
         })
@@ -37,7 +38,7 @@ final class DuplicateSelectionRefreshTests: XCTestCase {
     @MainActor func testBulkSelectionAddsRetainedProofToAnAlreadySelectedManualFile() async throws {
         let group = try group(), moved = expectation(description: "reviewed removal")
         let extra = extra, keeper = keeper
-        let model = SpaceLensModel(root: root.path, cache: root.appendingPathComponent("cache"), remove: { paths, sizes, _, _, identities, required in
+        let model = SpaceLensModel(services:FixtureSpaceServices(),root: root.path, cache: root.appendingPathComponent("cache"), remove: { paths, sizes, _, _, identities, required in
             XCTAssertEqual(paths, [extra]); XCTAssertEqual(sizes[extra], 4)
             XCTAssertEqual(identities[extra], group.reviewIdentities?[extra])
             XCTAssertEqual(required[keeper], group.reviewIdentities?[keeper]); moved.fulfill()
@@ -50,7 +51,7 @@ final class DuplicateSelectionRefreshTests: XCTestCase {
     }
     @MainActor func testKeepOldestRefusesASelectedKeeperWithoutChangingManualChoices() async throws {
         let group = try group()
-        let model = SpaceLensModel(root: root.path, cache: root.appendingPathComponent("cache"), searchDuplicates: { _, _, _ in .init(groups: [group]) })
+        let model = SpaceLensModel(services:FixtureSpaceServices(),root: root.path, cache: root.appendingPathComponent("cache"), searchDuplicates: { _, _, _ in .init(groups: [group]) })
         model.findDuplicates(); try await idle(model)
         model.toggle(keeper, bytes: 13); model.toggle(extra, bytes: 13)
         let before = model.basket
@@ -67,7 +68,7 @@ final class DuplicateSelectionRefreshTests: XCTestCase {
         try FileManager.default.moveItem(atPath: keeper, toPath: movedKeeper)
         let group = DuplicateGroup(hash: "fixture", size: 13, paths: [movedKeeper, extra], reclaimable: 4,
             reviewIdentities: [movedKeeper: try XCTUnwrap(ManualRemoval.reviewIdentity(movedKeeper)), extra: try XCTUnwrap(ManualRemoval.reviewIdentity(extra))], privateBytes: [extra: 4])
-        let model = SpaceLensModel(root: root.path, cache: root.appendingPathComponent("cache"), searchDuplicates: { _, _, _ in .init(groups: [group]) })
+        let model = SpaceLensModel(services:FixtureSpaceServices(),root: root.path, cache: root.appendingPathComponent("cache"), searchDuplicates: { _, _, _ in .init(groups: [group]) })
         model.findDuplicates(); try await idle(model)
         model.toggle(folder.path, bytes: 13); model.toggleDuplicate(extra, group: group)
         XCTAssertNil(model.basket[extra]); XCTAssertEqual(model.basket[folder.path], 13); XCTAssertTrue(model.outcomeIsWarning)
@@ -76,7 +77,7 @@ final class DuplicateSelectionRefreshTests: XCTestCase {
         let old = try group(), calls = Calls()
         var updated = old; updated.reclaimable = 8; updated.privateBytes = [extra: 8]
         let fresh = updated
-        let model = SpaceLensModel(root: root.path, cache: root.appendingPathComponent("cache"), searchDuplicates: { _, _, _ in .init(groups: [calls.next() == 1 ? old : fresh]) })
+        let model = SpaceLensModel(services:FixtureSpaceServices(),root: root.path, cache: root.appendingPathComponent("cache"), searchDuplicates: { _, _, _ in .init(groups: [calls.next() == 1 ? old : fresh]) })
         model.findDuplicates(); try await idle(model)
         model.findDuplicates(); try await idle(model)
         model.toggleDuplicate(extra, group: old); XCTAssertTrue(model.basket.isEmpty); XCTAssertTrue(model.outcomeIsWarning)
@@ -87,7 +88,7 @@ final class DuplicateSelectionRefreshTests: XCTestCase {
         for file in [c, d] { try Data("second owned group".utf8).write(to: file) }
         let second = DuplicateGroup(hash: "other", size: 18, paths: [c.path, d.path], reclaimable: 4,
             reviewIdentities: [c.path: try XCTUnwrap(ManualRemoval.reviewIdentity(c.path)), d.path: try XCTUnwrap(ManualRemoval.reviewIdentity(d.path))], privateBytes: [d.path: 4])
-        let model = SpaceLensModel(root: root.path, cache: root.appendingPathComponent("cache"), searchDuplicates: { _, _, _ in .init(groups: [first, second]) })
+        let model = SpaceLensModel(services:FixtureSpaceServices(),root: root.path, cache: root.appendingPathComponent("cache"), searchDuplicates: { _, _, _ in .init(groups: [first, second]) })
         model.findDuplicates(); try await idle(model)
         try Data("changed second group".utf8).write(to: d)
         model.pickAllButOldest(); XCTAssertTrue(model.basket.isEmpty); XCTAssertTrue(model.outcomeIsWarning)

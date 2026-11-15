@@ -57,9 +57,10 @@ package struct NativeFeatureDefinition:Sendable {
     package let pageContracts:[NativePageContract]
     package let menuShortcuts:[String:String]
     let resolveLegacyPage:@Sendable (String)->NativeFeatureRoute?
+    let invalidateColdState:@MainActor @Sendable ([String])->Void
     let makeSession:@MainActor @Sendable (FeatureAvailability)->any NativeFeatureSession
-    package init(manifest:ModuleManifest,pageContracts:[NativePageContract] = [],menuShortcuts:[String:String] = [:],resolveLegacyPage:@escaping @Sendable (String)->NativeFeatureRoute? = {_ in nil},makeSession:@escaping @MainActor @Sendable (FeatureAvailability)->any NativeFeatureSession) {
-        self.manifest=manifest;self.pageContracts=pageContracts;self.menuShortcuts=menuShortcuts;self.resolveLegacyPage=resolveLegacyPage;self.makeSession=makeSession
+    package init(manifest:ModuleManifest,pageContracts:[NativePageContract] = [],menuShortcuts:[String:String] = [:],resolveLegacyPage:@escaping @Sendable (String)->NativeFeatureRoute? = {_ in nil},invalidateColdState:@escaping @MainActor @Sendable ([String])->Void = {_ in},makeSession:@escaping @MainActor @Sendable (FeatureAvailability)->any NativeFeatureSession) {
+        self.manifest=manifest;self.pageContracts=pageContracts;self.menuShortcuts=menuShortcuts;self.resolveLegacyPage=resolveLegacyPage;self.invalidateColdState=invalidateColdState;self.makeSession=makeSession
     }
 }
 

@@ -28,7 +28,7 @@ final class MainOnlyExitTests: XCTestCase {
         defer { AppExitGuard.endManualRemoval(token) }
         XCTAssertEqual(delegate.applicationShouldTerminate(NSApplication.shared), .terminateCancel)
         XCTAssertEqual(notices, 1)
-        XCTAssertEqual(pages, [.space(.browse)])
+        XCTAssertEqual(pages, [.native(.init(BuiltinModuleManifests.space.id,"browse"))])
         AppExitGuard.endManualRemoval(token)
         XCTAssertEqual(delegate.applicationShouldTerminate(NSApplication.shared), .terminateNow)
         XCTAssertEqual(notices, 1)
@@ -83,7 +83,7 @@ final class MainOnlyExitTests: XCTestCase {
             switch kind {
             case "restore": XCTAssertEqual(pages, [.module(BuiltinModuleManifests.history.id,"home")])
             case "helper": XCTAssertEqual(pages, [.settings])
-            case "manual": XCTAssertEqual(pages, [.space(.browse)]); XCTAssertEqual(notices, 1)
+            case "manual": XCTAssertEqual(pages, [.native(.init(BuiltinModuleManifests.space.id,"browse"))]); XCTAssertEqual(notices, 1)
             default: XCTAssertTrue(pages.isEmpty)
             }
         }

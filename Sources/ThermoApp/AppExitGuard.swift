@@ -12,8 +12,8 @@ enum AppExitGuard {
     private static var restores = Set<UUID>()
     static func beginRestore() -> UUID { let token = UUID(); restores.insert(token); return token }
     static func endRestore(_ token: UUID) { restores.remove(token) }
-    private static var manualRemovals: [UUID: () -> Void] = [:]
-    static func beginManualRemoval(onQuit: @escaping () -> Void) -> UUID {
+    private static var manualRemovals: [UUID: @MainActor () -> Void] = [:]
+    static func beginManualRemoval(onQuit: @escaping @MainActor () -> Void) -> UUID {
         let token = UUID(); manualRemovals[token] = onQuit; return token
     }
     static func endManualRemoval(_ token: UUID) { manualRemovals[token] = nil }
@@ -29,7 +29,7 @@ enum AppExitGuard {
         }
         if !manualRemovals.isEmpty {
             for notify in manualRemovals.values { notify() }
-            show(.space(.browse))
+            show(.native(.init(BuiltinModuleManifests.space.id,"browse")))
             return .terminateCancel
         }
         if let blocker=nativeBlocker(BuiltinModuleManifests.download.id){show(.native(blocker.route));return .terminateCancel}
@@ -40,6 +40,7 @@ enum AppExitGuard {
         if let blocker=nativeBlocker(BuiltinModuleManifests.connections.id){show(.native(blocker.route));return .terminateCancel}
         if let blocker=nativeBlocker(BuiltinModuleManifests.browser.id){show(.native(blocker.route));return .terminateCancel}
         if let blocker=nativeBlocker(BuiltinModuleManifests.apps.id){show(.native(blocker.route));return .terminateCancel}
+        if let blocker=nativeBlocker(BuiltinModuleManifests.space.id){show(.native(blocker.route));return .terminateCancel}
         if BatteryCareModel.shared.requestQuit() {show(.settings);return .terminateCancel}
         if AWDLModel.shared.requestQuit() {show(.settings);return .terminateCancel}
         return .terminateNow
