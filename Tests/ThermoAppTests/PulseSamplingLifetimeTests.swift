@@ -94,6 +94,7 @@ extension PulseSamplingLifetimeTests {
         model.stop()
         var retired = false
         let retirement = Task { await model.finishStoppingFeature(); retired = true; finished.fulfill() }
+        retirement.cancel() // Cancellation cannot release physical ownership or spin on the main actor.
         let fence = expectation(description: "ordinary queue fence passed before delayed read")
         queue.async { DispatchQueue.main.async { fence.fulfill() } }
         await fulfillment(of: [fence, readEntered], timeout: 2)

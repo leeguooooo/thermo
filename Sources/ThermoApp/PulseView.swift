@@ -19,6 +19,7 @@ final class SystemPulse: ObservableObject {
     private var reviewID = UUID()
     // Main-thread ownership lasts from scheduling through the real read, journal write and UI receipt.
     private var pendingActionReviews = Set<UUID>()
+    private var actionReviewWaiters: [CheckedContinuation<Void, Never>] = []
     var actionReviewInFlight: Bool { !pendingActionReviews.isEmpty }
     private let queue: DispatchQueue
     private var timer: DispatchSourceTimer?
@@ -147,7 +148,7 @@ final class SystemPulse: ObservableObject {
             }
             self.recordActionReview(result)
             DispatchQueue.main.async {
-                defer { self.pendingActionReviews.remove(id) }
+                defer { self.finishActionReview(id) }
                 guard self.reviewID == id else { return }
                 self.actionFeedback = MachinePulse.sentences(result.summary, result.detail)
             }
@@ -155,9 +156,17 @@ final class SystemPulse: ObservableObject {
         }
     }
 
+    private func finishActionReview(_ id: UUID) {
+        pendingActionReviews.remove(id)
+        guard pendingActionReviews.isEmpty else { return }
+        let waiting = actionReviewWaiters; actionReviewWaiters = []
+        for continuation in waiting { continuation.resume() }
+    }
+
     @MainActor func finishStoppingFeature() async {
         // A queue fence alone misses work scheduled with asyncAfter but not enqueued yet.
-        while actionReviewInFlight { try? await Task.sleep(nanoseconds: 20_000_000) }
+        // Cancellation must still yield until the promised journal has actually finished.
+        if actionReviewInFlight { await withCheckedContinuation { actionReviewWaiters.append($0) } }
         await withCheckedContinuation { done in queue.async { done.resume() } }
         if timer == nil { current = nil }
     }
