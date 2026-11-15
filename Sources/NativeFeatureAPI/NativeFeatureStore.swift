@@ -25,6 +25,7 @@ import SwiftUI
     private let enabled:(String)->Bool
     private let navigation:NativeNavigation
     private var states:[String:State]=[:]
+    private var retainedShutdown:Set<String>=[]
     package init(catalog:NativeFeatureCatalog,enabled:@escaping (String)->Bool,navigation:NativeNavigation) {
         self.catalog=catalog;self.enabled=enabled;self.navigation=navigation
     }
@@ -102,6 +103,16 @@ import SwiftUI
               let content=session.menuContent(ref) else{return nil}
         return content.scoped(to:live.availability,generation:live.generation)
     }
+    /// Only already-owned recovery state, independent of normal admission. Never constructs a session.
+    package func retainedMenuContent()->[NativeRetainedMenu] {
+        catalog.order.compactMap{id in
+            guard !retainedShutdown.contains(id),let definition=catalog.definitions[id],
+                  let value=definition.retained.menu(),value.owner.module==id,
+                  definition.manifest.entries.contains(where:{$0.id==value.owner.entry && $0.kind == .menuBarItem}) else{return nil}
+            let content=value.content.checkedContent(available:{[weak self] in self.map{!$0.retainedShutdown.contains(id)} ?? false},generation:UUID())
+            return .init(owner:value.owner,content:content)
+        }
+    }
     /// Inline UI is admitted only for an exact declared settings entry.
     package func inlineSettings(_ ref:NativeUIEntryRef)->AnyView? {
         guard catalog.definitions[ref.module]?.manifest.entries.contains(where:{$0.id==ref.entry && $0.kind == .settingsItem}) == true,
@@ -129,6 +140,9 @@ import SwiftUI
     /// Final exit cleanup only. Normal feature disable still requires prepareStop + drain.
     package func shutdown(_ feature:String? = nil) {
         for id in feature.map({[$0]}) ?? catalog.order {
+            // Mark before invoking user code so reentrant shutdown cannot repeat retained cleanup.
+            let cleanup=retainedShutdown.insert(id).inserted
+            defer {if cleanup{catalog.definitions[id]?.retained.shutdown()}}
             let live:Live
             switch states[id] {
             case let .live(value):live=value

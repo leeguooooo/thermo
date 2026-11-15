@@ -316,7 +316,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate, UNU
 
     func applicationWillTerminate(_ notification: Notification) {
         if featureLaunch.isSelecting { return }
-        MenuBarManager.shared.shutdown()
+        AppModels.shared.nativeFeatures.shutdown(BuiltinModuleManifests.menuBar.id)
         AppModels.shared.nativeFeatures.shutdown(BuiltinModuleManifests.search.id)
         CaptureControlBridge.cancelActive()
         AppModels.shared.nativeFeatures.shutdown(BuiltinModuleManifests.capture.id)
@@ -447,7 +447,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate, UNU
             ("tool-low-latency", AnyView(AWDLPanel(model: AWDLModel.shared))),
             ("tool-battery-care", AnyView(BatteryCarePanel(model: BatteryCareModel.shared))),
             ("tool-focus", AnyView(FocusPanel(model: FocusTimerModel.shared))),
-            ("tool-menu-bar", AnyView(MenuBarManagerView(model: .shared).frame(width: 940, height: 740))),
+            ("tool-menu-bar", AppModels.shared.nativeFeatures.renderPreview(.init(BuiltinModuleManifests.menuBar.id,"management")) ?? AnyView(EmptyView())),
             // The search panel at its window size, with a query so the result rows and footer show.
             ("tool-search", AnyView((AppModels.shared.nativeFeatures.renderPreview(.init(BuiltinModuleManifests.search.id,"settings")) ?? AnyView(ModuleOffView())).frame(width:680,height:520))),
             // The shared confirmation, as three pages fill it.

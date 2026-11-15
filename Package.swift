@@ -41,6 +41,7 @@ let package = Package(
         ),
         .target(name: "ThermoKit", dependencies: ["CSMC"]),
         .target(name: "MenuBarCore"),
+        .target(name:"MenuBarFeature",dependencies:["NativeFeatureAPI","MenuBarCore","CMenuBar","HotkeyCore","ThermoUI","ThermoL10n","ModuleKit"]),
         .target(name: "HotkeyCore"),
         .target(name:"DocumentPreviewAPI"),
         .target(name:"CaptureControlAdapter",dependencies:["CaptureFeature","CaptureScriptCore","AgentCore"]),
@@ -114,7 +115,7 @@ let package = Package(
         .executableTarget(name: "ThermoHelper", dependencies: ["ThermoKit"]),
         .executableTarget(
             name: "ThermoApp",
-            dependencies: ["CaptureControlAdapter", "CaptureFeature", "SearchFeature", "DocumentPreviewHost", "DocumentPreviewAPI", "HotkeyCore", "DiskFeature", "AgentDiagnosticsFeature", "SpaceFeature", "AppsFeature", "BrowserFeature", "DownloadFeature", "HistoryFeature", "ModuleKernelCore", "ClaudeFeature", "CheckupFeature", "LocalAIUI", "PluginsFeature", "ConnectionsFeature", "NativeFeatureAPI", "ThermoUI", "ThermoKit", "AgentDoctor", "CleanKit", "ThermoL10n", "CaptureCore", "CaptureScriptCore", "MenuBarCore", "CMenuBar", "CloudDriveKit", "DownloadKit", "MediaToolsKit", "VideoKit", "ModuleKit", "ModuleHost", .product(name: "Markdown", package: "swift-markdown"), .product(name: "Sparkle", package: "Sparkle")],
+            dependencies: ["MenuBarFeature", "CaptureControlAdapter", "CaptureFeature", "SearchFeature", "DocumentPreviewHost", "DocumentPreviewAPI", "HotkeyCore", "DiskFeature", "AgentDiagnosticsFeature", "SpaceFeature", "AppsFeature", "BrowserFeature", "DownloadFeature", "HistoryFeature", "ModuleKernelCore", "ClaudeFeature", "CheckupFeature", "LocalAIUI", "PluginsFeature", "ConnectionsFeature", "NativeFeatureAPI", "ThermoUI", "ThermoKit", "AgentDoctor", "CleanKit", "ThermoL10n", "CaptureCore", "CaptureScriptCore", "MenuBarCore", "CMenuBar", "CloudDriveKit", "DownloadKit", "MediaToolsKit", "VideoKit", "ModuleKit", "ModuleHost", .product(name: "Markdown", package: "swift-markdown"), .product(name: "Sparkle", package: "Sparkle")],
             linkerSettings: [.linkedFramework("AppKit"), .linkedFramework("SwiftUI"), .linkedFramework("Charts"), .linkedFramework("AVKit"), .linkedFramework("WebKit"), .linkedFramework("Quartz"),
                              .linkedFramework("CoreAudio"),
                              .linkedFramework("AudioToolbox")]
@@ -135,7 +136,7 @@ let package = Package(
         .testTarget(name: "PluginsFeatureTests", dependencies: ["PluginsFeature", "NativeFeatureAPI", "ModuleKit", "AgentCore"]),
         .testTarget(name: "ConnectionsFeatureTests", dependencies: ["ConnectionsFeature", "NativeFeatureAPI", "ModuleKit"]),
         .testTarget(name: "ThermoCLITests", dependencies: ["thermo", "ModuleKit", .product(name: "MCP", package: "swift-sdk")]),
-        .testTarget(name: "ThermoAppTests", dependencies: ["CaptureControlAdapter", "CaptureFeature", "SearchFeature", "DocumentPreviewHost", "DocumentPreviewAPI", "HotkeyCore", "DiskFeature", "AgentDiagnosticsFeature", "SpaceFeature", "AppsFeature", "HistoryFeature", "ModuleKernelCore", "LocalAIUI", "NativeFeatureAPI", "ThermoUI", "PreviewCore", "PreviewUI", "ThermoApp", "ModuleKit", "ModuleHost", "ThermoKit", "CleanKit", "AgentCore", "AgentDoctor", "SearchCore", "MenuBarCore", "CloudDriveKit", "DownloadKit", "MediaToolsKit", "VideoKit"]),
+        .testTarget(name: "ThermoAppTests", dependencies: ["MenuBarFeature", "CaptureControlAdapter", "CaptureFeature", "SearchFeature", "DocumentPreviewHost", "DocumentPreviewAPI", "HotkeyCore", "DiskFeature", "AgentDiagnosticsFeature", "SpaceFeature", "AppsFeature", "HistoryFeature", "ModuleKernelCore", "LocalAIUI", "NativeFeatureAPI", "ThermoUI", "PreviewCore", "PreviewUI", "ThermoApp", "ModuleKit", "ModuleHost", "ThermoKit", "CleanKit", "AgentCore", "AgentDoctor", "SearchCore", "MenuBarCore", "CloudDriveKit", "DownloadKit", "MediaToolsKit", "VideoKit"]),
         .testTarget(name: "ThermoKitTests", dependencies: ["ThermoKit", "CSMC"]),
         .testTarget(name: "ThermoHelperTests", dependencies: ["ThermoHelper", "ThermoKit"]),
         .testTarget(name: "AgentDoctorTests", dependencies: ["AgentDoctor", "ThermoL10n", "AgentCore"], exclude: ["Fixtures"]),
@@ -144,6 +145,7 @@ let package = Package(
         .testTarget(name: "SearchCoreTests", dependencies: ["SearchCore"]),
         .testTarget(name:"CaptureScriptCoreTests",dependencies:["CaptureScriptCore"]),
         .testTarget(name: "CaptureCoreTests", dependencies: ["CaptureCore"]),
+        .testTarget(name:"MenuBarFeatureTests",dependencies:["MenuBarFeature","MenuBarCore","NativeFeatureAPI","HotkeyCore","ModuleKit"]),
         .testTarget(name: "MenuBarCoreTests", dependencies: ["MenuBarCore"]),
         .testTarget(name: "CloudDriveKitTests", dependencies: ["CloudDriveKit"]),
         .testTarget(name: "DownloadKitTests", dependencies: ["DownloadKit"]),

@@ -1,0 +1,107 @@
+import Foundation
+import MenuBarCore
+import ModuleKit
+import NativeFeatureAPI
+import SwiftUI
+import XCTest
+@testable import MenuBarFeature
+
+@MainActor final class MenuBarOwnershipTests:XCTestCase {
+    private final class NativeSession:MenuBarVisibilitySession {
+        var completion:(@MainActor (String?)->Void)?
+        var failure:String?
+        var releases=0
+        func activate(completion:@escaping @MainActor (String?)->Void){self.completion=completion}
+        func invalidate()->String?{releases+=1;return failure}
+    }
+    private final class Gate:@unchecked Sendable {
+        let began=DispatchSemaphore(value:0),release=DispatchSemaphore(value:0)
+        private let lock=NSLock()
+        private var reads=0
+        var count:Int{lock.lock();defer{lock.unlock()};return reads}
+        func awaitStart()->Bool{began.wait(timeout:.now()+5) == .success}
+        func read()->[ManagedMenuBarApp]{lock.lock();reads+=1;lock.unlock();began.signal();release.wait();return [.init(id:"org.example.stale",name:"Stale")]}
+    }
+    func testNeverAdmittedOffMenuAndQuitAndEnabledInlineSettingsStayModelCold() {
+        var made=0,controllers=0,keys=0,enabled=false
+        let recovery=MenuBarRecoveryAuthority(makeController:{controllers+=1;return MenuBarSessionController{_ in NativeSession()}},makeShortcuts:{_,_ in keys+=1;return MenuBarShortcuts(defaults:.standard,toggle:{},restore:{})})
+        let definition=MenuBarFeature.registration(recovery:recovery,makeManager:{_,_ in made+=1;fatalError("cold query constructed manager")})
+        let store=NativeFeatureStore(definitions:[definition],enabled:{_ in enabled}),id=BuiltinModuleManifests.menuBar.id
+        XCTAssertTrue(store.retainedMenuContent().isEmpty);XCTAssertNil(store.inlineSettings(.init(id,"management")))
+        enabled=true;XCTAssertNotNil(store.inlineSettings(.init(id,"management")))
+        XCTAssertTrue(store.retainedMenuContent().isEmpty);store.shutdown();store.shutdown()
+        XCTAssertEqual(made,0);XCTAssertEqual(controllers,0);XCTAssertEqual(keys,0)
+    }
+    func testAcceptedStopJoinsActualDiscoveryAndDoesNotPublishOrRestartOldRead() async throws {
+        let suite="MenuBarOwnership."+UUID().uuidString
+        let defaults=UserDefaults(suiteName:suite)!
+        defer{defaults.removePersistentDomain(forName:suite)}
+        let gate=Gate(),backend=MenuBarShortcutTests.Backend()
+        defer{gate.release.signal()}
+        let recovery=MenuBarRecoveryAuthority(makeController:{MenuBarSessionController{_ in NativeSession()}},makeShortcuts:{toggle,restore in MenuBarShortcuts(defaults:defaults,backend:backend,toggle:toggle,restore:restore)})
+        var model:MenuBarManager?,enabled=true
+        let definition=MenuBarFeature.registration(recovery:recovery,makeManager:{availability,authority in
+            let value=MenuBarManager(defaults:defaults,accessibilityTrusted:{true},shortcutBackend:backend,featureEnabled:{availability.acceptsWork},recovery:authority,capabilityAvailable:{true},discover:{gate.read()});model=value;return value
+        })
+        // Supply fake resource factories too; no private native API or Carbon registration.
+        let store=NativeFeatureStore(definitions:[definition],enabled:{_ in enabled}),id=BuiltinModuleManifests.menuBar.id
+        store.start(id);let existing=try XCTUnwrap(model)
+        existing.setPanelOpen(true);let began=await Task.detached{gate.awaitStart()}.value;XCTAssertTrue(began)
+        existing.setPanelOpen(false);existing.setPanelOpen(true)
+        let drain=try XCTUnwrap(store.prepareStop(id));enabled=false
+        var drained=false;let finish=Task{await drain.finish();drained=true}
+        await Task.yield();XCTAssertFalse(drained);XCTAssertTrue(existing.discoveryRunning)
+        gate.release.signal();await finish.value
+        XCTAssertFalse(existing.discoveryRunning);XCTAssertFalse(existing.apps.contains{$0.id=="org.example.stale"})
+        XCTAssertNil(recovery.manager);model=nil;store.shutdown()
+    }
+    func testLateNativeFailureSurvivesManagerReleaseAndOffRecoveryUsesSameHandle() throws {
+        let suite="MenuBarLateRecovery."+UUID().uuidString,defaults=UserDefaults(suiteName:suite)!,native=NativeSession(),backend=MenuBarShortcutTests.Backend()
+        defer{defaults.removePersistentDomain(forName:suite)}
+        var controllers=0
+        let recovery=MenuBarRecoveryAuthority(makeController:{controllers+=1;return MenuBarSessionController{_ in native}},makeShortcuts:{toggle,restore in MenuBarShortcuts(defaults:defaults,backend:backend,toggle:toggle,restore:restore)})
+        var model:MenuBarManager?=MenuBarManager(defaults:defaults,accessibilityTrusted:{true},featureEnabled:{true},recovery:recovery,capabilityAvailable:{true})
+        model?.start();let controller=recovery.controller
+        controller.apply(.init(allowedBundles:["org.example.fixture"]))
+        try model?.stopFeature();if let model{recovery.detach(model)}
+        weak var old=model;model=nil;XCTAssertNil(old)
+        let before=defaults.dictionaryRepresentation()
+        native.failure="late invalidation failed";native.completion?(nil)
+        XCTAssertNotEqual(recovery.state,.visible)
+        let content=try XCTUnwrap(recovery.retainedMenu()?.content)
+        native.failure=nil
+        for node in content.items(.status){if case let .action(action)=node{action.perform()}}
+        XCTAssertEqual(recovery.state,.visible);XCTAssertEqual(controllers,1)
+        XCTAssertEqual(defaults.dictionaryRepresentation() as NSDictionary,before as NSDictionary)
+        recovery.shutdown()
+    }
+    func testCloseAndReopenCoalesceDiscoveryWithoutOverlappingPhysicalReaders() async throws {
+        let suite="MenuBarCoalescing."+UUID().uuidString,defaults=UserDefaults(suiteName:suite)!,gate=Gate()
+        defer{gate.release.signal();gate.release.signal();defaults.removePersistentDomain(forName:suite)}
+        let model=MenuBarManager(defaults:defaults,accessibilityTrusted:{true},shortcutBackend:MenuBarShortcutTests.Backend(),controller:MenuBarSessionController{_ in NativeSession()},capabilityAvailable:{true},discover:{gate.read()})
+        defer{model.shutdown()}
+        model.setPanelOpen(true);let first=await Task.detached{gate.awaitStart()}.value;XCTAssertTrue(first)
+        model.setPanelOpen(false);model.setPanelOpen(true);XCTAssertEqual(gate.count,1)
+        gate.release.signal();let second=await Task.detached{gate.awaitStart()}.value;XCTAssertTrue(second);XCTAssertEqual(gate.count,2)
+        model.setPanelOpen(false);gate.release.signal();await model.finishDiscovery()
+        XCTAssertFalse(model.discoveryRunning);XCTAssertFalse(model.apps.contains{$0.id=="org.example.stale"});XCTAssertEqual(gate.count,2)
+    }
+    func testOldManagerCannotWritePreferencesAfterReenableCreatesNewGeneration() async throws {
+        let suite="MenuBarGeneration."+UUID().uuidString,defaults=UserDefaults(suiteName:suite)!,backend=MenuBarShortcutTests.Backend()
+        defer{defaults.removePersistentDomain(forName:suite)}
+        let recovery=MenuBarRecoveryAuthority(makeController:{MenuBarSessionController{_ in NativeSession()}},makeShortcuts:{toggle,restore in MenuBarShortcuts(defaults:defaults,backend:backend,toggle:toggle,restore:restore)})
+        var models:[MenuBarManager]=[],enabled=true
+        let definition=MenuBarFeature.registration(recovery:recovery,makeManager:{availability,recovery in
+            let model=MenuBarManager(defaults:defaults,featureEnabled:{availability.acceptsWork},recovery:recovery,capabilityAvailable:{true});models.append(model);return model
+        })
+        let store=NativeFeatureStore(definitions:[definition],enabled:{_ in enabled}),id=BuiltinModuleManifests.menuBar.id
+        store.start(id);let old=try XCTUnwrap(models.first),drain=try XCTUnwrap(store.prepareStop(id))
+        enabled=false;await drain.finish();enabled=true;store.start(id)
+        XCTAssertEqual(models.count,2);XCTAssertFalse(old.featureOn);XCTAssertTrue(models[1].featureOn)
+        let before=defaults.dictionaryRepresentation()
+        old.setAutoCollapseDelay(.tenSeconds);old.assign("org.example.stale",to:.hidden);old.setEnabled(true);old.setEnabled(false);old.resetUnreadableSettings();old.refresh()
+        XCTAssertEqual(defaults.dictionaryRepresentation() as NSDictionary,before as NSDictionary)
+        XCTAssertTrue(recovery.manager === models[1]);store.shutdown()
+    }
+
+}

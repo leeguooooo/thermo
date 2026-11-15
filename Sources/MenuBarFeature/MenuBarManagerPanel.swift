@@ -6,14 +6,10 @@ import ThermoL10n
 import UniformTypeIdentifiers
 
 @MainActor final class MenuBarManagerPanel: NSWindowController, NSWindowDelegate {
-    private static var panel: MenuBarManagerPanel?
-    static var shared: MenuBarManagerPanel {
-        if let panel { return panel }
-        let value = MenuBarManagerPanel(model: .shared); panel = value; return value
-    }
-    static func closeIfOpen() { panel?.close(); panel = nil }
     private let model: MenuBarManager
-    init(model: MenuBarManager) {
+    private let closeHostMenuPanel:@MainActor ()->Void
+    init(model: MenuBarManager,closeHostMenuPanel:@escaping @MainActor ()->Void = {}) {
+        self.closeHostMenuPanel=closeHostMenuPanel
         self.model = model
         let window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 940, height: 740),
                               styleMask: [.titled, .closable, .resizable], backing: .buffered, defer: false)
@@ -29,7 +25,7 @@ import UniformTypeIdentifiers
     required init?(coder: NSCoder) { fatalError("init(coder:) is not used") }
     func show() {
         guard model.featureOn else { return }
-        (NSApp.delegate as? AppDelegate)?.closeMenuPanel()
+        closeHostMenuPanel()
         model.setPanelOpen(true)
         if window?.isVisible != true { window?.center() }
         NSApp.activate(ignoringOtherApps: true)
@@ -102,7 +98,7 @@ struct MenuBarManagerView: View {
                 Text(tr("Auto-collapse pauses while managing groups. Restoring all icons cancels it."))
                     .font(Theme.caption).foregroundStyle(Theme.textSecondary).fixedSize(horizontal: false, vertical: true)
             }
-            MenuBarShortcutControls(shortcuts: model.shortcuts, available: model.canEdit)
+            MenuBarShortcutControls(shortcuts: model.shortcuts, available: model.canEdit, acceptsWork:{[weak model] in model?.featureOn == true})
             HStack {
                 TextField(tr("Search menu bar apps"), text: $query).textFieldStyle(.roundedBorder)
                 if model.loading { ProgressView().controlSize(.small) }
@@ -133,10 +129,11 @@ struct MenuBarManagerView: View {
 private struct MenuBarShortcutControls: View {
     @ObservedObject var shortcuts: MenuBarShortcuts
     let available: Bool
+    let acceptsWork:@MainActor ()->Bool
     var body: some View {
         VStack(alignment: .leading, spacing: 5) {
             HStack {
-                Toggle(tr("Global menu bar shortcuts"), isOn: Binding(get: { shortcuts.requested }, set: shortcuts.setRequested))
+                Toggle(tr("Global menu bar shortcuts"), isOn: Binding(get: { shortcuts.requested }, set:{if acceptsWork(){shortcuts.setRequested($0)}}))
                     .disabled(!available || shortcuts.uncertain)
                     .accessibilityIdentifier("menubar.globalShortcuts")
                 Spacer()
@@ -146,7 +143,7 @@ private struct MenuBarShortcutControls: View {
             if let issue = shortcuts.issue {
                 HStack {
                     Text(issue).font(Theme.caption).foregroundStyle(Theme.caution)
-                    if !shortcuts.uncertain { Button(tr("Retry shortcuts")) { shortcuts.retry() }.controlSize(.small) }
+                    if !shortcuts.uncertain { Button(tr("Retry shortcuts")) { if acceptsWork(){shortcuts.retry()} }.controlSize(.small) }
                 }
             } else if shortcuts.requested && !shortcuts.active {
                 Text(tr("Enable menu bar management to activate these shortcuts."))

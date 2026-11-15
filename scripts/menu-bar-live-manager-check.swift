@@ -1,3 +1,5 @@
+@testable import MenuBarFeature
+import ThermoUI
 // Explicit integration check only. Never run by the builder or shipped App.
 import AppKit
 import ApplicationServices
