@@ -92,7 +92,7 @@ final class MenuLiveSamplerTests: XCTestCase {
         let menu=MenuLiveSampler(readCPU:QuickLoad.cpuTicks,cpuPercent:QuickLoad.cpuPercent)
         let panel=MenuLiveSampler(readCPU:QuickLoad.cpuTicks,cpuPercent:QuickLoad.cpuPercent)
         var tick:UInt32=100,network:UInt64=100
-        for sampler in [menu,panel]{sampler.readCPU={ [tick,0,0,tick] };sampler.readNetwork={ ["en0":.init(received:network,sent:network)] }}
+        for sampler in [menu,panel]{sampler.readCPU={ self.ticks(busy:tick,idle:tick) };sampler.readNetwork={ ["en0":.init(received:network,sent:network)] }}
         _=menu.sample(metrics:[.cpuUsage,.download],now:1)
         _=panel.sample(metrics:[.cpuUsage,.download],now:1)
         menu.reset();_=menu.sample(metrics:[.fan],now:2)
