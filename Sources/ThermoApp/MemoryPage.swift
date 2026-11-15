@@ -29,6 +29,7 @@ final class MemoryModel: ObservableObject {
     private let samplingAllowed: () -> Bool
     private var sampling = false
     private var dayLoaded = Date.distantPast
+    private var dayTask:Task<Void,Never>?
     private var generation = UUID()
     private var cancellation: ScanCancellation?
     private var visibility = SamplingLeases()
@@ -55,7 +56,7 @@ final class MemoryModel: ObservableObject {
         return Reading(breakdown: b, inventory: inventory, history: [])
     }
     var samplingActive: Bool { timer != nil }
-    var sampleInFlight: Bool { sampling }
+    var sampleInFlight: Bool { sampling || dayTask != nil }
     func setVisible(_ active: Bool, owner: UUID) {
         visibility.set(owner, active: active)
         if visibility.active { start() } else { stop() }
@@ -70,10 +71,10 @@ final class MemoryModel: ObservableObject {
         sample()
     }
 
-    func stop() { timer?.invalidate(); timer = nil; generation = UUID(); cancellation?.cancel() }
+    func stop() { timer?.invalidate(); timer = nil; generation = UUID(); cancellation?.cancel();dayTask?.cancel() }
 
     func releaseReadingsIfIdle() {
-        guard timer == nil, !sampling else { return }
+        guard timer == nil, !sampleInFlight else { return }
         activity = nil; breakdown = nil; programs = []; suspects = []; day = []; programReadings = []
         liveReadings = []; historyReadings = []; sampled = nil; inventoryAvailable = false
     }
@@ -144,12 +145,20 @@ final class MemoryModel: ObservableObject {
     }
 
     func loadDay() {
-        dayLoaded = Date()
+        guard timer != nil,samplingAllowed(),dayTask == nil else{return}
         let token = generation
         let readDay = self.readDay
-        Task.detached(priority: .utility) {
-            let records = readDay()
-            await MainActor.run { if self.generation == token { self.day = records } }
+        let physical=Task.detached(priority:.utility){readDay()}
+        // Cancellation retires publication; the handle remains until actual IO returns.
+        dayTask=Task {
+            let records=await physical.value
+            dayTask=nil
+            guard generation==token,!Task.isCancelled,timer != nil,samplingAllowed() else{
+                // A reopened page coalesces behind the old reader, then requests fresh history.
+                if timer != nil,samplingAllowed(),generation != token{loadDay()}
+                return
+            }
+            dayLoaded=Date();day=records
         }
     }
 }
