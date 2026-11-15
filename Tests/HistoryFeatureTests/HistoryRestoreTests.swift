@@ -60,8 +60,6 @@ final class HistoryRestoreTests: XCTestCase {
               undo: .init(kind: "trashBatch", ref: UUID().uuidString))
     }
 
-
-
     @MainActor func testRestoreCancelledBeforePhysicalWorkClearsBusy() async {
         let model = HistoryModel(reader: { .init(records: []) }, restoreBatch: { _, _ in
             XCTFail("cancelled restore must not touch files")
@@ -83,6 +81,5 @@ final class HistoryRestoreTests: XCTestCase {
         for _ in 0..<100 where model.busy { try? await Task.sleep(nanoseconds: 10_000_000) }
         XCTAssertFalse(model.busy); XCTAssertNotNil(model.notice)
     }
-
 
 }

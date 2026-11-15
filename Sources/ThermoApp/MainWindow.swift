@@ -34,7 +34,7 @@ enum MainPage: Hashable {
         case "agents": self = .agents(parts.count > 1 ? (Area(rawValue: parts[1]).map { .area($0) } ?? .home) : .home)
         case "apps": self = .apps(parts.count > 1 ? (parts[1] == "feeds" ? .updates : AppsTab(rawValue: parts[1]) ?? .installed) : .installed)
         case "memory": self = .memory
-                case "yunx": self = .yunx
+        case "yunx": self = .yunx
         case "module":
             // module:<module id>[:<entry id>]
             guard parts.count > 1 else { return nil }
