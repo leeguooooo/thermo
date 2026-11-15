@@ -98,4 +98,15 @@ import ModuleKit
         XCTAssertEqual(session.invalidations,[["/restored"]]);await drain.finish()
         store.invalidateAfterRestore(["/cold"]);XCTAssertEqual(made,1)
     }
+    func testColdRestoreInvalidationDoesNotAdmitOrPublishIntoDrainingSession()async throws {
+        let session=Session();var made=0,cold:[[String]]=[]
+        let definition=NativeFeatureDefinition(manifest:manifest,invalidateColdState:{cold.append($0)},makeSession:{_ in made+=1;return session})
+        let store=NativeFeatureStore(definitions:[definition],enabled:{_ in true})
+        store.invalidateAfterRestore(["/first"]);XCTAssertEqual(made,0);XCTAssertEqual(cold,[["/first"]])
+        _=store.page(.init(id,"home"));store.invalidateAfterRestore(["/live"])
+        XCTAssertEqual(session.invalidations,[["/live"]]);XCTAssertEqual(cold.count,1)
+        let drain=try XCTUnwrap(store.prepareStop(id));store.invalidateAfterRestore(["/draining"])
+        XCTAssertEqual(session.invalidations,[["/live"]]);XCTAssertEqual(cold,[["/first"],["/draining"]])
+        await drain.finish();XCTAssertEqual(made,1)
+    }
 }

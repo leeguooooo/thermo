@@ -1,5 +1,6 @@
 import ThermoUI
-@testable import ThermoApp
+@testable import SpaceFeature
+import NativeFeatureAPI
 @testable import CleanKit
 import Foundation
 import XCTest
@@ -35,7 +36,7 @@ final class SpaceRevealTests: XCTestCase {
         let dir = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
         try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
         defer { try? FileManager.default.removeItem(at: dir) }
-        let model = SpaceLensModel(root: dir.path, cache: dir.appendingPathComponent("cache.json"), readLastOpened: { _ in nil })
+        let model = SpaceLensModel(services:FixtureSpaceServices(),root: dir.path, cache: dir.appendingPathComponent("cache.json"), readLastOpened: { _ in nil })
         model.reveal(dir.path + "/sub")
         XCTAssertEqual(model.path, dir.path + "/sub")
     }

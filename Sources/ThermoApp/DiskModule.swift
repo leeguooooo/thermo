@@ -161,8 +161,7 @@ struct DiskPages: View {
                 if let target = DiskModule.route(category.map(DiskPage.category) ?? .home) { page = target }
             }, cleanupDisabled: disk.scanning || disk.cleaning, openInSpaceLens: { path in
                 SpaceOverviewModel.shared.stop()
-                AppModels.shared.revealInSpace(path)
-                page = .space(.browse)
+                if let target=SpaceModule.reveal(path) {page=target}
             }).transition(.page)
         case let .category(c):
             DiskCategoryPage(model: disk, category: c, clean: startClean, cleanOne: { item in if cleanReview == nil { cleanReview = disk.cleanupReview(of: item) } }).id(c)

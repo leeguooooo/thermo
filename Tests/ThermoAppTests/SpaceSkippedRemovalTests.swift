@@ -1,4 +1,5 @@
 import AppKit
+@testable import SpaceFeature
 import XCTest
 @testable import CleanKit
 @testable import ThermoApp
@@ -15,7 +16,7 @@ import XCTest
         defer{try? FileManager.default.removeItem(at:root)}
         let file=root.appendingPathComponent("Downloads/item"),bytes=Data("fixture".utf8),calls=Calls()
         try bytes.write(to:file)
-        let model=SpaceLensModel(root:root.path,cache:root.appendingPathComponent("cache.json"),remove:{_,_,_,_,_,_ in calls.hit();return .init(id:"fixture",trashed:true)},delete:{_,_,_,_,_,_ in calls.hit();return .init(id:"fixture",trashed:false)})
+        let model=SpaceLensModel(services:SpaceHostServices(),root:root.path,cache:root.appendingPathComponent("cache.json"),remove:{_,_,_,_,_,_ in calls.hit();return .init(id:"fixture",trashed:true)},delete:{_,_,_,_,_,_ in calls.hit();return .init(id:"fixture",trashed:false)})
         model.toggle(file.path,bytes:Int64(bytes.count))
         XCTAssertNotNil(model.removalReview())
         model.trash(permanent:permanent)

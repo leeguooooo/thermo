@@ -1,4 +1,4 @@
-@testable import ThermoApp
+@testable import SpaceFeature
 import XCTest
 
 final class TreemapTests: XCTestCase {

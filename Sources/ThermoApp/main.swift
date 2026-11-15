@@ -735,8 +735,6 @@ if let i = CommandLine.arguments.firstIndex(of: "--render-preview"), i + 1 < Com
             return status?.enabled != true || (status?.phase == .running && Date().timeIntervalSince(started) > 3)
         case .compute: return ComputeModel.shared.current?.cpu != nil && Date().timeIntervalSince(started) > 4
         case .memory: return MemoryModel.shared.breakdown != nil && Date().timeIntervalSince(started) > 4
-        case .space(.duplicates): return true
-        case .space: return SpaceLensModel.shared.tree != nil && !SpaceLensModel.shared.scanning
         case .overview: return models.monitor.snapshot != nil && SystemPulse.shared.sampled && PulseRecorder.shared.diagnosis != nil && Date().timeIntervalSince(started) > 4
         default: return models.monitor.snapshot != nil || !PerformanceModule.enabled
         }

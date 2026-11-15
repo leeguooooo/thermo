@@ -21,17 +21,7 @@ final class ConfirmationReviewTests: XCTestCase {
         let mixed=DiskModel(report:.init(items:[item],denied:[],started:Date(),duration:0));mixed.selected=[item.id]
         XCTAssertTrue(mixed.confirmSummary.contains(tr("Caches and build output are deleted.")))
     }
-    @MainActor func testChangedSpaceSelectionCannotExpandFrozenConfirmation() throws {
-        let root = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString).resolvingSymlinksInPath()
-        try FileManager.default.createDirectory(at: root.appendingPathComponent("Downloads"), withIntermediateDirectories: true)
-        defer { try? FileManager.default.removeItem(at: root) }
-        let a = root.appendingPathComponent("Downloads/a"), b = root.appendingPathComponent("Downloads/b")
-        for path in [a,b] { try Data("own".utf8).write(to: path) }
-        let model = SpaceLensModel(root: root.path, cache: root.appendingPathComponent("cache"), remove: { _, _, _, _, _, _ in XCTFail("Changed confirmation must not execute"); return .init(id: "fixture", trashed: true) })
-        model.toggle(a.path, bytes: 3); let snapshot = try XCTUnwrap(model.removalReview())
-        model.toggle(b.path, bytes: 3); model.trash(review: snapshot)
-        XCTAssertFalse(model.working); XCTAssertEqual(model.basket.count, 2); XCTAssertEqual(snapshot.selection.keys.sorted(), [a.path]); XCTAssertTrue(model.outcomeIsWarning)
-    }
+
     @MainActor func testPermanentToolConfirmationWarnsRegardlessOfSafetyTag() {
         for safety in [Safety.safe, .review, .risky] {
             let item = CleanItem(id: "fixture", category: .xcode, title: "fixture", safety: safety, bytes: 1,

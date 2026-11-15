@@ -28,8 +28,8 @@ struct ManualRemovalReview: Identifiable, Sendable {
 /// the Trash only after a confirmation that lists every path.
 @MainActor
 final class SpaceLensModel: ObservableObject {
-    static var shared: SpaceLensModel { AppModels.shared.space }
     let work=FeatureTasks()
+    private let services:any SpaceServices
     var canStopFeature: Bool { !working && !work.hasOperations }
 
     /// Where measuring starts: the whole disk, so the folders add up to what the disk uses.
@@ -76,7 +76,7 @@ final class SpaceLensModel: ObservableObject {
     /// Same contract as `remove`, but deletes for good instead of moving to the Trash.
     private let delete: @Sendable ([String], [String: Int64], String, Set<String>, [String: String], [String: String]) -> CleanResult
 
-    init(enabled: @escaping () -> Bool = {true}, root: String = "/", home: String? = nil, cache: URL = SpaceLens.cacheURL,
+    init(services:any SpaceServices,enabled: @escaping () -> Bool = {true}, root: String = "/", home: String? = nil, cache: URL = SpaceLens.cacheURL,
          measure: @escaping @Sendable (String, ScanCancellation, ((SpaceLens.Progress) -> Void)?) -> SpaceTree = { SpaceLens.scan($0, cancellation: $1, progress: $2) },
          remove: @escaping @Sendable ([String], [String: Int64], String, Set<String>, [String: String], [String: String]) -> CleanResult = {
              ManualRemoval.trash($0, sizes: $1, home: $2, incompletePaths: $3, reviewIdentities: $4, requiredIdentities: $5, allowGitMetadata: true)
@@ -86,6 +86,7 @@ final class SpaceLensModel: ObservableObject {
          }, searchDuplicates: @escaping @Sendable ([String], ScanCancellation, ((Duplicates.Progress) -> Void)?) -> DuplicateScanReport = {
              Duplicates.scan(in: $0, cancellation: $1, progress: $2)
          }, readLastOpened: @escaping @Sendable (String) -> Date? = { SpaceLens.lastOpened($0) }) {
+        self.services=services
         self.readLastOpened = readLastOpened
         self.root = root; self.home = home ?? (root == "/" ? NSHomeDirectory() : root)
         self.cache = cache; self.measure = measure; self.remove = remove; self.delete = delete
@@ -230,7 +231,7 @@ final class SpaceLensModel: ObservableObject {
 
     /// One line per path for the confirmation, biggest first.
     var basketLines: [String] {
-        basket.sorted { $0.value > $1.value }.map { AppSize.text($0.value, state: sizeState($0.key)) + "  " + FSPath.tilde($0.key) }
+        basket.sorted { $0.value > $1.value }.map { AppSize.text($0.value, state: sizeState($0.key)) + "  " + FS.tilde($0.key) }
     }
 
     func removalReview() -> ManualRemovalReview? {
@@ -242,7 +243,7 @@ final class SpaceLensModel: ObservableObject {
             required: basket.keys.reduce(into: [String: String]()) { result, path in
                 result.merge(selectionRequirements[path] ?? [:]) { first, _ in first }
             }, sizeText: basketSizeText, lines: basketLines,
-            cautions: basket.keys.sorted().compactMap { p in ManualRemoval.caution(p).map { FSPath.tilde(p) + "  " + $0 } })
+            cautions: basket.keys.sorted().compactMap { p in ManualRemoval.caution(p).map { FS.tilde(p) + "  " + $0 } })
     }
 
     func trash(review: ManualRemovalReview? = nil, permanent: Bool = false) {
@@ -261,13 +262,13 @@ final class SpaceLensModel: ObservableObject {
         let identities = frozen.identities, required = frozen.required, remove = permanent ? self.delete : self.remove, home = home
         stopDuplicates()
         working = true; exitRequested = false
-        let lease = AppExitGuard.beginManualRemoval { self.exitRequested = true }
+        let lease = services.protectRemoval { self.exitRequested = true }
         work.run(priority: .userInitiated,onSkipped:{ [self] in
             working=false;exitRequested=false
-            AppExitGuard.endManualRemoval(lease)
+            lease.finish()
         }) {
             let result = remove(picked.keys.sorted(), measured, home, incomplete, identities, required)
-            await MainActor.run { self.afterTrash(result); AppExitGuard.endManualRemoval(lease) }
+            await MainActor.run { self.afterTrash(result); lease.finish() }
         }
     }
 
@@ -823,7 +824,7 @@ struct SpacePage: View {
             Image(nsImage: NSWorkspace.shared.icon(forFile: f.path)).resizable().frame(width: 22, height: 22).accessibilityHidden(true)
             VStack(alignment: .leading, spacing: 2) {
                 Text(name).font(Theme.rowTitle).foregroundStyle(Theme.textPrimary).lineLimit(1).truncationMode(.middle)
-                Text(FSPath.tilde((f.path as NSString).deletingLastPathComponent)).font(Theme.caption).foregroundStyle(Theme.textTertiary)
+                Text(FS.tilde((f.path as NSString).deletingLastPathComponent)).font(Theme.caption).foregroundStyle(Theme.textTertiary)
                     .lineLimit(1).truncationMode(.middle)
             }
             Spacer(minLength: Theme.Space.s)
@@ -882,7 +883,7 @@ struct SpacePage: View {
                             .font(Theme.secondary).foregroundStyle(Theme.caution)
                         DisclosureGroup(tr("Locations requiring another check")) {
                             ForEach(Array(report.issues.enumerated()), id: \.offset) { _, issue in
-                                Text(FSPath.tilde(issue.path) + ": " + issue.reason).font(Theme.caption).foregroundStyle(Theme.textSecondary).textSelection(.enabled)
+                                Text(FS.tilde(issue.path) + ": " + issue.reason).font(Theme.caption).foregroundStyle(Theme.textSecondary).textSelection(.enabled)
                             }
                             if report.omittedIssueCount > 0 {
                                 Text(tr("%1$@ additional scan issues were omitted.", String(report.omittedIssueCount))).font(Theme.caption)
@@ -943,7 +944,7 @@ struct SpacePage: View {
                 InspectorDivider(inset: 46)
                 HStack(spacing: Theme.Space.s) {
                     tick(p, bytes: g.privateBytes?[p] ?? 0, picked: picked, refusal: i == 0 ? tr("This copy is kept as the comparison reference") : model.refusal(p), name: (p as NSString).lastPathComponent, action: { model.toggleDuplicate(p, group: g) })
-                    Text(FSPath.tilde(p)).font(Theme.mono).foregroundStyle(Theme.textSecondary).lineLimit(1).truncationMode(.middle)
+                    Text(FS.tilde(p)).font(Theme.mono).foregroundStyle(Theme.textSecondary).lineLimit(1).truncationMode(.middle)
                         .textSelection(.enabled)
                     if i == 0 { StatusTag(text: tr("oldest"), color: Theme.good) }
                     Spacer()
@@ -1097,7 +1098,7 @@ struct AIFolderReviewSheet: View {
                 Image(nsImage: NSWorkspace.shared.icon(forFile: question.path)).resizable().frame(width: 32, height: 32).accessibilityHidden(true)
                 VStack(alignment: .leading, spacing: 2) {
                     Text(tr("Tidy this folder with AI")).font(Theme.heading).foregroundStyle(Theme.textPrimary)
-                    Text(FSPath.tilde(question.path)).font(Theme.mono).foregroundStyle(Theme.textTertiary).lineLimit(1).truncationMode(.middle)
+                    Text(FS.tilde(question.path)).font(Theme.mono).foregroundStyle(Theme.textTertiary).lineLimit(1).truncationMode(.middle)
                 }
                 Spacer()
                 if let b = question.bytes { Text(ByteFormat.string(b)).font(Theme.figure(.metric)).foregroundStyle(Theme.textPrimary) }
