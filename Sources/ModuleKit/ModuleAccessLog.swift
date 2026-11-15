@@ -143,12 +143,23 @@ public final class ModuleAccessLog: @unchecked Sendable {
         }
         var seen = Set<UUID>()
         return (changes + access).enumerated().filter { _, record in
-            record.eventID.map { seen.insert($0).inserted } ?? true
+            record.module == module && (record.eventID.map { seen.insert($0).inserted } ?? true)
         }.sorted { a, b in
             let left = a.element.loggedAt ?? a.element.time.timeIntervalSince1970
             let right = b.element.loggedAt ?? b.element.time.timeIntervalSince1970
             return left == right ? a.offset < b.offset : left < right
         }.map(\.element)
+    }
+
+    /// Newest requests first, including repeated targets. Private workers stay in one timeline.
+    public func recent(modules:[String],limit:Int = 20)->[ModuleAccessRecord] {
+        guard limit>0 else{return []}
+        let records=Set(modules).sorted().flatMap{self.records(module:$0)}.enumerated().sorted{a,b in
+            let left=a.element.loggedAt ?? a.element.time.timeIntervalSince1970
+            let right=b.element.loggedAt ?? b.element.time.timeIntervalSince1970
+            return left==right ? a.offset>b.offset:left>right
+        }
+        return records.prefix(min(limit,200)).map(\.element)
     }
 
     /// What the module read, deleted, reached and ended; each target once, in first-seen order.

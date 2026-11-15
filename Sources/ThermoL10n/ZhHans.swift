@@ -4580,4 +4580,9 @@ let zhHans: [String: String] = [
     "Access records": "访问记录",
     "Declared access": "声明的访问范围",
 
+    "Loading access records…": "正在读取访问记录…",
+    "Recent requests": "最近请求",
+    "Refused": "已拒绝",
+    "Not confirmed": "未确认",
+
 ]
