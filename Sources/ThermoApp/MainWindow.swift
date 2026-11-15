@@ -102,6 +102,7 @@ enum MainWindow {
     static func setSamplingVisibility(_ visible: Bool) {
         if state.visible != visible { state.visible = visible }
         AppModels.shared.monitor.windowOpen = visible
+        AppModels.shared.nativeFeatures.setWindowPresentation(visible: visible, selection: state.page.nativeRoute)
     }
 
     /// Keep the window placement, but release page-local state and appearance-owned tasks.
@@ -237,7 +238,10 @@ enum MainWindow {
             let _ = L10n.apply(preference: language)
             MainView(page: $state.page, monitor: models.monitor, models: models)
                 .environment(\.windowSamplingActive, state.visible)
-                .onChange(of: state.page) { models.monitor.setWindowSurface($0.samplingSurface) }
+                .onChange(of: state.page) {
+                    models.monitor.setWindowSurface($0.samplingSurface)
+                    models.nativeFeatures.setWindowPresentation(visible: state.visible, selection: $0.nativeRoute)
+                }
                 .id(language)
                 .sheet(item: $state.tool) { tool in
                     switch tool {

@@ -2,6 +2,16 @@ import Foundation
 import ModuleKit
 import SwiftUI
 
+/// Cached host facts; publishing visibility never admits an optional feature.
+package struct NativeHostPresentation: Equatable, Sendable {
+    package let windowVisible: Bool
+    package let menuPanelVisible: Bool
+    package let selection: NativeFeatureRoute?
+    package init(windowVisible: Bool = false, menuPanelVisible: Bool = false, selection: NativeFeatureRoute? = nil) {
+        self.windowVisible = windowVisible; self.menuPanelVisible = menuPanelVisible; self.selection = selection
+    }
+}
+
 package enum NativeSidebarLocation:String,CaseIterable,Hashable,Sendable {
     case overview,machine,resources,storage,software,footer,agents
 }

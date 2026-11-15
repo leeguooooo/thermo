@@ -48,6 +48,7 @@ package struct NativeFeatureBusy:Error,LocalizedError,CustomStringConvertible {
     func prepareTermination()->NativeTerminationDecision
     func invalidateAfterRestore(_ paths:[String])
     func retireVisibility()
+    func hostPresentationChanged(_ presentation: NativeHostPresentation)
     func quitBlocker()->NativeFeatureBlocker?
     func preparePresentation(_ route:NativeFeatureRoute,options:[String:NativeContextValue])
     func prepareReview(_ route:NativeFeatureRoute,arguments:[String])
@@ -70,6 +71,7 @@ package struct NativeFeatureDefinition:Sendable {
 }
 
 extension NativeFeatureSession {
+    package func hostPresentationChanged(_ presentation: NativeHostPresentation) {}
     package func menuContent(_ ref:NativeUIEntryRef)->NativeMenuContent?{nil}
     package func ui(_ surface:NativeUISurface,navigation:NativeNavigation)->AnyView?{nil}
     package func invalidateAfterRestore(_ paths:[String]) {}

@@ -8,6 +8,8 @@ import XCTest
     private final class Session:NativeFeatureSession {
         let availability:FeatureAvailability
         var refuses=false,pages=0,finishes=0,starts=0,shutdowns=0
+        var presentations: [NativeHostPresentation] = []
+        func hostPresentationChanged(_ value: NativeHostPresentation) { presentations.append(value) }
         var blocker:NativeFeatureBlocker?
         var drain:() async->Void = {}
         init(_ availability:FeatureAvailability){self.availability=availability}
@@ -88,6 +90,45 @@ import XCTest
         store.start(manifest.id)
         XCTAssertEqual(sessions.count,2);XCTAssertEqual(sessions[1].starts,1)
         XCTAssertEqual(sessions[1].pages,0);XCTAssertFalse(first.availability.acceptsWork)
+    }
+
+    func testHostVisibilityStaysColdAndReplaysOnlyToAdmittedLiveGeneration() async throws {
+        var enabled = false, sessions: [Session] = []
+        let definition = NativeFeatureDefinition(manifest: manifest, makeSession: { availability in
+            let made = Session(availability); sessions.append(made); return made
+        })
+        let store = NativeFeatureStore(definitions: [definition], enabled: { _ in enabled })
+        let route = NativeFeatureRoute(manifest.id, "home")
+        store.setWindowPresentation(visible: true, selection: route)
+        store.setMenuPanelVisible(true)
+        XCTAssertTrue(sessions.isEmpty)
+        XCTAssertFalse(store.status(manifest.id).modelLoaded)
+        enabled = true; store.start(manifest.id)
+        let first = try XCTUnwrap(sessions.first)
+        XCTAssertEqual(first.presentations, [.init(windowVisible: true, menuPanelVisible: true, selection: route)])
+        store.setMenuPanelVisible(true)
+        XCTAssertEqual(first.presentations.count, 1, "Unchanged host facts must not duplicate holders")
+        let drain = try XCTUnwrap(store.prepareStop(manifest.id))
+        store.setWindowPresentation(visible: false, selection: nil)
+        XCTAssertEqual(first.presentations.count, 1, "Retired generations cannot regain sampling demand")
+        await drain.finish()
+        store.start(manifest.id)
+        XCTAssertEqual(sessions.count, 2)
+        XCTAssertEqual(sessions[1].presentations, [.init(windowVisible: false, menuPanelVisible: true)])
+        enabled = false
+        store.setMenuPanelVisible(false)
+        XCTAssertEqual(sessions[1].presentations.count, 1, "An externally disabled owner cannot receive work")
+        XCTAssertFalse(store.hostPresentation.menuPanelVisible)
+    }
+    func testHostSelectionRejectsUndeclaredRouteWithoutAdmittingFeature() {
+        var creations = 0
+        let definition = NativeFeatureDefinition(manifest: manifest, makeSession: { availability in
+            creations += 1; return Session(availability)
+        })
+        let store = NativeFeatureStore(definitions: [definition], enabled: { _ in true })
+        store.setWindowPresentation(visible: true, selection: .init(manifest.id, "undeclared"))
+        XCTAssertNil(store.hostPresentation.selection)
+        XCTAssertEqual(creations, 0)
     }
 
 }

@@ -26,6 +26,22 @@ import SwiftUI
     private let navigation:NativeNavigation
     private var states:[String:State]=[:]
     private var retainedShutdown:Set<String>=[]
+    package private(set) var hostPresentation = NativeHostPresentation()
+    package func setWindowPresentation(visible: Bool, selection: NativeFeatureRoute?) {
+        let checked = selection.flatMap { try? catalog.normalize($0) }
+        updateHostPresentation(.init(windowVisible: visible, menuPanelVisible: hostPresentation.menuPanelVisible, selection: checked))
+    }
+    package func setMenuPanelVisible(_ visible: Bool) {
+        updateHostPresentation(.init(windowVisible: hostPresentation.windowVisible, menuPanelVisible: visible, selection: hostPresentation.selection))
+    }
+    private func updateHostPresentation(_ next: NativeHostPresentation) {
+        guard next != hostPresentation else { return }
+        hostPresentation = next
+        for id in catalog.order {
+            guard case let .live(live) = states[id], live.availability.acceptsWork else { continue }
+            live.session.hostPresentationChanged(next)
+        }
+    }
     package init(catalog:NativeFeatureCatalog,enabled:@escaping (String)->Bool,navigation:NativeNavigation) {
         self.catalog=catalog;self.enabled=enabled;self.navigation=navigation
     }
@@ -56,6 +72,8 @@ import SwiftUI
             let availability=FeatureAvailability { [weak self] in self?.enabled(id) ?? false }
             let session=definition.makeSession(availability)
             states[id] = .live(.init(availability:availability,session:session))
+            // Replay once to this generation, including a panel opened while the feature was off.
+            session.hostPresentationChanged(hostPresentation)
             return session
         }
     }

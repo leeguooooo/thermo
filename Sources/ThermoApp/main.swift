@@ -263,6 +263,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate, UNU
             popover.close()
         }
         monitor.popoverOpen = true
+        AppModels.shared.nativeFeatures.setMenuPanelVisible(true)
         PanelModel.shared.setActive(true)
         let screen = panelScreen(hidden: hidden)
         PanelPopover.size(popover, visibleHeight: screen.visibleFrame.height)
@@ -363,6 +364,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate, UNU
 
     func popoverDidClose(_ notification: Notification) {
         monitor.popoverOpen = false
+        AppModels.shared.nativeFeatures.setMenuPanelVisible(false)
         PanelModel.shared.setActive(false)
     }
 
