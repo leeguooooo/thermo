@@ -1,6 +1,6 @@
 import XCTest
 import ThermoL10n
-import CleanKit
+@testable import CleanKit
 @testable import DiskFeature
 
 final class DiskPresentationTests:XCTestCase {
