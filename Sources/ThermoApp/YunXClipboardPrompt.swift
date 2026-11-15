@@ -19,21 +19,28 @@ import ThermoL10n
         override func acceptsFirstMouse(for event: NSEvent?) -> Bool { true }
     }
 
+    private let enabled:()->Bool
+    init(enabled:(()->Bool)? = nil) {self.enabled=enabled ?? {DownloadModule.enabled}}
+    var active:Bool {timer != nil || panel != nil || current != nil}
     private var timer: Timer?
     private var hideTimer: Timer?
     private var panel: Panel?
     private var current: YunXClipboardHit?
-    private lazy var watcher = YunXClipboardWatcher(source: YunXSystemClipboard(), canPrompt: { [weak self] in
-        self?.current == nil && MainWindow.window?.isKeyWindow != true
-    }, present: { [weak self] in self?.show($0) })
+    private var storedWatcher:YunXClipboardWatcher?
+    private var watcher:YunXClipboardWatcher {
+        if let storedWatcher{return storedWatcher}
+        let watcher=YunXClipboardWatcher(source:YunXSystemClipboard(),canPrompt:{[weak self] in
+            self?.enabled() == true && self?.current == nil && MainWindow.window?.isKeyWindow != true
+        },present:{[weak self] in self?.show($0)})
+        storedWatcher=watcher;return watcher
+    }
+    func stop() {
+        timer?.invalidate();timer=nil;dismiss();panel=nil;storedWatcher=nil
+    }
 
     /// Starts or stops polling to match the setting. Disabled means no timer at all.
     func refresh() {
-        guard YunXClipboardSetting.enabled() else {
-            timer?.invalidate(); timer = nil
-            dismiss()
-            return
-        }
+        guard enabled(),YunXClipboardSetting.enabled() else {stop();return}
         guard timer == nil else { return }
         watcher.rebaseline()
         let timer = Timer(timeInterval: Self.pollInterval, repeats: true) { [weak self] _ in
@@ -45,6 +52,7 @@ import ThermoL10n
     }
 
     private func show(_ hit: YunXClipboardHit) {
+        guard enabled() else{return}
         current = hit
         let panel = self.panel ?? makePanel()
         self.panel = panel
@@ -90,7 +98,7 @@ import ThermoL10n
     }
 
     private func open() {
-        guard let hit = current else { return }
+        guard enabled(),let hit = current else { return }
         dismiss()
         MainWindow.show(.yunx)
         Task { await YunXDownloadModel.shared.openCopied(hit.link, passcode: hit.passcode) }

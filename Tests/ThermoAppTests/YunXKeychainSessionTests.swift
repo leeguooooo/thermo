@@ -4,6 +4,18 @@ import XCTest
 @testable import ThermoApp
 
 final class YunXKeychainSessionTests: XCTestCase {
+    func testForgettingCachedSecretsRetainsDurableItemsAndDeniedBackoff() throws {
+        var reads=0,writes=0
+        let session=YunXKeychainSession(read:{account,_ in
+            reads += 1
+            if account=="blocked" {throw YunXKeychainError.status(errSecInteractionNotAllowed)}
+            return Data("owned".utf8)
+        },write:{_,_ in writes += 1})
+        _ = try session.read("vault");XCTAssertThrowsError(try session.read("blocked"))
+        session.forgetCachedValues()
+        XCTAssertEqual(try session.read("vault"),Data("owned".utf8));XCTAssertThrowsError(try session.read("blocked"))
+        XCTAssertEqual(reads,3);XCTAssertEqual(writes,0);XCTAssertTrue(session.authorizationRequired)
+    }
     func testAutomaticReadsNeverRequestAuthorizationAndReuseUnlockedData() throws {
         var requests: [Bool] = []
         let session = YunXKeychainSession(read: { _, interactive in

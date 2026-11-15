@@ -63,6 +63,11 @@ final class YunXKeychainSession: @unchecked Sendable {
         }
     }
 
+    /// Release cached secrets while retaining denied-read backoff. Durable Keychain items stay put.
+    func forgetCachedValues() {
+        lock.withLock {values=values.filter {if case .failure=$0.value{return true};return false}}
+    }
+
     func authorize() throws {
         for account in ["vault", "downloads", "trackers"] {
             _ = try read(account, interactive: true)

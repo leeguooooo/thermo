@@ -17,7 +17,11 @@ import ThermoL10n
     /// Runs one argv and hands over its output line by line; returns the exit status.
     typealias Run = @Sendable (String, [String], [String: String], @escaping @Sendable (String) -> Void) async -> Int32
 
-    static let shared = YunXChromeUseSetup()
+    static var shared:YunXChromeUseSetup {AppModels.shared.downloadSetup}
+    let work=FeatureTasks()
+    var canStopFeature:Bool {!working && work.count==0 && !work.hasOperations}
+    func stopFeature(){work.stop();launchCard?.delegate=nil;launchCard?.orderOut(nil);launchCard?.contentView=nil;launchCard=nil}
+    func finishFeatureStop() async {await work.finish();probe=Probe();output=[];failure=nil;state = .checking}
     static let installerURL = "https://raw.githubusercontent.com/leeguooooo/chrome-use/main/install.sh"
     static let extensionURL = "https://chromewebstore.google.com/detail/chrome-use/knfcmbamhjmaonkfnjhldjedeobeafmk"
     private static let dismissedKey = "yunx.chromeuse.cardDismissedVersion"
@@ -34,8 +38,9 @@ import ThermoL10n
     private var probe = Probe()
     private var launchCard: NSWindow?
 
-    init(detect: @escaping @Sendable () -> Probe = YunXChromeUseSetup.liveDetect, run: @escaping Run = YunXChromeUseSetup.liveRun,
+    init(enabled:@escaping ()->Bool = {true},detect: @escaping @Sendable () -> Probe = YunXChromeUseSetup.liveDetect, run: @escaping Run = YunXChromeUseSetup.liveRun,
          temporary: URL = FileManager.default.temporaryDirectory, defaults: UserDefaults = .standard) {
+        work.enabled=enabled
         self.detect = detect
         self.run = run
         self.temporary = temporary
@@ -77,8 +82,10 @@ import ThermoL10n
     }
 
     func refresh() async {
+        guard let operation=work.beginOperation() else{return};defer{work.endOperation(operation)}
         let detect = self.detect
         let found = await Task.detached { detect() }.value
+        guard work.acceptsWork else{return}
         probe = found
         state = found.tool == nil ? .missing : found.connected ? .ready : .notConnected
     }
@@ -87,7 +94,7 @@ import ThermoL10n
         let box = LineBox()
         let status = await run(tool, args, env) { text in
             box.add(text)
-            Task { @MainActor [weak self] in self?.output.append(contentsOf: box.take()) }
+            Task { @MainActor [weak self] in guard self?.work.acceptsWork == true else{return};self?.output.append(contentsOf: box.take()) }
         }
         output.append(contentsOf: box.take())
         if status != 0 { failure = tr("The step failed (exit code %1$@). See the output below.", String(status)) }
@@ -96,7 +103,8 @@ import ThermoL10n
 
     /// The button: fetches the official installer, runs it, registers the Chrome bridge, checks again.
     func install() async {
-        guard !working else { return }
+        guard work.acceptsWork,!working,let operation=work.beginOperation() else {return}
+        defer{work.endOperation(operation)}
         working = true
         failure = nil
         output = []
@@ -117,7 +125,8 @@ import ThermoL10n
 
     /// Registers the bridge, then lets chrome-use open the store page or a window in that profile.
     func connect() async {
-        guard !working, let tool = probe.tool else { return }
+        guard work.acceptsWork,!working, let tool = probe.tool,let operation=work.beginOperation() else {return}
+        defer{work.endOperation(operation)}
         working = true
         failure = nil
         output = []
@@ -134,9 +143,10 @@ import ThermoL10n
     private var version: String { Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "dev" }
 
     func offerOnLaunch() async {
+        guard work.acceptsWork else{return}
         guard defaults.string(forKey: Self.dismissedKey) != version else { return }
         await refresh()
-        guard state != .ready else { return }
+        guard work.acceptsWork,state != .ready else { return }
         let window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 460, height: 240), styleMask: [.titled, .closable, .fullSizeContentView], backing: .buffered, defer: true)
         window.titlebarAppearsTransparent = true
         window.isReleasedWhenClosed = false
@@ -150,6 +160,7 @@ import ThermoL10n
     private lazy var closeWatcher = CloseWatcher { [weak self] in self?.dismissLaunchCard() }
 
     func dismissLaunchCard() {
+        guard work.acceptsWork else{return}
         defaults.set(version, forKey: Self.dismissedKey)
         launchCard?.delegate = nil
         launchCard?.close()
