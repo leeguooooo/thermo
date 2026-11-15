@@ -152,7 +152,7 @@ final class PluginsModel: ObservableObject {
         loading=false;checkingUpdates=false;loaded=false;usingCachedCopy=false;message=nil
     }
     private nonisolated static func commands(_ steps:[StoreCommand]) async->String? {
-        await Task.detached(priority:.userInitiated) {
+        await Task.detached(priority:.userInitiated) { () -> String? in
                 for step in steps {
                     let binary: String?
                     switch step.tool {
