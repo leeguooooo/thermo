@@ -1,3 +1,4 @@
+import ModuleKernelCore
 import ThermoUI
 import AppKit
 import ExtensionKit
