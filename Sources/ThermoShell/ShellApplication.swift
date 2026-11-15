@@ -1,6 +1,8 @@
 import AppKit
 import Foundation
 import ModuleKit
+import SwiftUI
+import SystemServicesAPI
 import ThermoKit
 import ThermoL10n
 
