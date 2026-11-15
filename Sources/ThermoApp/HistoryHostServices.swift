@@ -63,7 +63,7 @@ import ThermoL10n
         return .init(title: title, symbol: symbol, perform: { Self.perform(destination) })
     }
     static func perform(_ destination: Destination, models: AppModels = .shared,
-                        open: (MainPage) -> Void = { MainWindow.show($0) }) {
+                        open: @MainActor (MainPage) -> Void = { MainWindow.show($0) }) {
         switch destination {
         case .nativeRecovery: models.prepareNativeRecovery(); open(.apps(.updates))
         case .appUpdates: open(.apps(.updates))
