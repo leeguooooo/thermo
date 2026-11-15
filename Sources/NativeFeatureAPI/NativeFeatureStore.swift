@@ -229,6 +229,13 @@ import SwiftUI
             else {catalog.definitions[id]?.invalidateColdState(paths)}
         }
     }
+    /// Host wake only reaches existing, admitted owners; metadata never starts work.
+    package func didWake() {
+        for id in catalog.order {
+            guard case let .live(live)=states[id],live.availability.acceptsWork else{continue}
+            live.session.didWake()
+        }
+    }
     package func retireVisibility() {
         for state in states.values {
             switch state {

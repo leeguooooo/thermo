@@ -116,7 +116,7 @@ import ThermoUI
     }
     @discardableResult private func ensureTelemetry() -> Bool {
         guard acceptsWork else{return false}
-        do { try model.start(); issue=nil; return true } catch { issue=error.localizedDescription;return false }
+        do { try model.start(); if issue != nil {issue=nil}; return true } catch { issue=error.localizedDescription;return false }
     }
     func start() {
         guard acceptsWork,!started else{return}
@@ -134,19 +134,18 @@ import ThermoUI
     func page(_ route: NativeFeatureRoute, navigation: NativeNavigation) -> AnyView? {
         guard acceptsWork,route.module==BuiltinModuleManifests.performance.id else{return nil}
         let open=self.navigation(navigation).open
+        func mounted<V:View>(_ view:V)->AnyView {wrap(view.onAppear{[weak self] in _=self?.ensureTelemetry()},navigation:navigation)}
         switch route.entry {
         case "cpu","gpu":
-            _=ensureTelemetry();let gpu=route.entry=="gpu"
-            return wrap(ComputePage(gpu:gpu,model:compute(gpu),available:{[weak self] in self?.visible(gpu ? "gpu":"cpu") == true}),navigation:navigation)
-        case "sensors":_ = ensureTelemetry();return wrap(SensorsPage(monitor:model),navigation:navigation)
+            let gpu=route.entry=="gpu"
+            return mounted(ComputePage(gpu:gpu,model:compute(gpu),available:{[weak self] in self?.visible(gpu ? "gpu":"cpu") == true}))
+        case "sensors":return mounted(SensorsPage(monitor:model))
         case "fans":
-            _=ensureTelemetry();return wrap(WindowPage(title:tr("Fans"),subtitle:tr("Choose how fast each fan runs. Settings stay when Thermo quits or updates.")){FansView(monitor:self.model)},navigation:navigation)
+            return mounted(WindowPage(title:tr("Fans"),subtitle:tr("Choose how fast each fan runs. Settings stay when Thermo quits or updates.")){FansView(monitor:self.model)})
         case "overview":
-            _=ensureTelemetry()
-            return wrap(OverviewPage(monitor:model,open:open).environmentObject(pulse).environmentObject(recorder).environmentObject(events),navigation:navigation)
+            return mounted(OverviewPage(monitor:model,open:open).environmentObject(pulse).environmentObject(recorder).environmentObject(events))
         case "memory":
-            _=ensureTelemetry()
-            return wrap(MemoryPage(model:memory,open:open).environmentObject(pulse).environmentObject(recorder).environmentObject(advice),navigation:navigation)
+            return mounted(MemoryPage(model:memory,open:open).environmentObject(pulse).environmentObject(recorder).environmentObject(advice))
         default:return nil
         }
     }
@@ -155,8 +154,10 @@ import ThermoUI
         switch surface {
         case let .compactPanel(route):
             guard route == .init(BuiltinModuleManifests.performance.id,"overview") else{return nil}
-            _=ensureTelemetry();let panel=self.panel;panel.setActive(host.menuPanelVisible)
-            return wrap(PerformanceCompactView(monitor:model).environmentObject(panel).environmentObject(pulse),navigation:navigation)
+            let panel=self.panel
+            return wrap(PerformanceCompactView(monitor:model).environmentObject(panel).environmentObject(pulse).onAppear{[weak self] in
+                guard let self,self.acceptsWork else{return};_=self.ensureTelemetry();panel.setActive(self.host.menuPanelVisible)
+            },navigation:navigation)
         case let .sidebar(location,_,rows):return wrap(PerformanceSidebar(monitor:model,location:location,rows:rows),navigation:navigation)
         case let .backdrop(route):return wrap(PerformanceBackdrop(monitor:model,glow:route.entry=="overview"),navigation:navigation)
         default:return nil
@@ -176,10 +177,11 @@ import ThermoUI
     func preparePresentation(_ route:NativeFeatureRoute,options:[String:NativeContextValue]) {
         guard acceptsWork else{return}
         if route.entry=="memory",case let .text(name)?=options["inspect"] {memory.inspect=name}
-        if route.entry=="overview",case let .text(name)?=options["program"] {recorder.highlighted=name}
+        if route.entry=="overview",case let .text(name)?=options["program"] {recorder.highlighted=name.isEmpty ? nil:name}
     }
     func prepareReview(_ route:NativeFeatureRoute,arguments:[String]) {
         guard acceptsWork else{return}
+        if route.entry=="overview",arguments.contains("--render-preview") {_=ensureTelemetry();panel.setActive(host.menuPanelVisible)}
         if route.entry=="memory",let i=arguments.firstIndex(of:"--fixture"),i+1<arguments.count {advice.loadFixture(answer:arguments[i+1])}
     }
     func snapshotReady(_ route:NativeFeatureRoute,arguments:[String],started:Date)->Bool {
@@ -192,6 +194,7 @@ import ThermoUI
         default:return storedModel?.snapshot != nil
         }
     }
+    func didWake(){guard acceptsWork else{return};storedPanel?.resetBaselines();storedModel?.sampleNow()}
     func retireVisibility() {
         hostPresentationChanged(.init(windowVisible:false,menuPanelVisible:host.menuPanelVisible,selection:host.selection))
         storedCPU?.stop();storedGPU?.stop();storedMemory?.stop()

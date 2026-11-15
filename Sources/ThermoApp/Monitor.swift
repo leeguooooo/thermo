@@ -94,7 +94,7 @@ import ThermoL10n
     private func visibilityChanged(){objectWillChange.send();updateDemand();if watched{sampleNow();refreshFanObservation()}}
     func setWindowSurface(_ surface:TelemetrySurface){guard self.surface != surface else{return};self.surface=surface;updateDemand();if watched{sampleNow()}}
     func showUnnamedSensors(_ value:Bool){unnamed=value;updateDemand();sampleNow()}
-    func sampleNow(){sampling?.refresh()}
+    func sampleNow(){if let sampling{sampling.refresh()}else{telemetry.refreshCurrent()}}
     func reschedule(){telemetry.preferencesDidChange()}
     func resetMenuBaselines(){telemetry.resetMenuBaselines()}
     func beginStoppingFeature(){

@@ -22,6 +22,7 @@ import XCTest
         var readings: AnyPublisher<TelemetryReading,Never> { Empty().eraseToAnyPublisher() }
         var menuReadings: AnyPublisher<MenuTelemetryReading,Never> { Empty().eraseToAnyPublisher() }
         func dismissError() {}
+        func refreshCurrent() {}
         func preferencesDidChange() {}
         func resetMenuBaselines() {}
         func beginPerformanceSampling(available: @escaping @MainActor () -> Bool) throws -> any TelemetrySamplingLease {

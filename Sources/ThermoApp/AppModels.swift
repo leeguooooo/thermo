@@ -1,3 +1,4 @@
+import PerformanceFeature
 import NativeFeatureAPI
 import Foundation
 import ModuleKit
@@ -6,17 +7,24 @@ import ModuleKit
 @MainActor
 final class AppModels {
     static let shared = AppModels()
-    lazy var services=AppSystemServices(defaults:defaults,samplingAllowed:{[defaults] in ModulePreferences.isEnabled(BuiltinModuleManifests.performance,in:defaults)})
-    lazy var monitor=makeMonitor?() ?? Monitor(services:services,samplingAllowed:{[defaults] in ModulePreferences.isEnabled(BuiltinModuleManifests.performance,in:defaults)})
+    let services:AppSystemServices
+    var preferences:UserDefaults{defaults}
+    lazy var monitor=makeMonitor?() ?? Monitor(services:services,startMonitoring:false,samplingAllowed:{[defaults] in ModulePreferences.isEnabled(BuiltinModuleManifests.performance,in:defaults)})
     private let defaults:UserDefaults
     private let makeMonitor:(() -> Monitor)?
     let nativeFeatures:NativeFeatureStore
     lazy var updates = Updates()
-    init(defaults: UserDefaults = .standard, nativeDefinitions:[NativeFeatureDefinition]? = nil,
+    init(defaults: UserDefaults = .standard, services:AppSystemServices? = nil,nativeDefinitions:[NativeFeatureDefinition]? = nil,
          makeMonitor:(() -> Monitor)? = nil) {
         self.defaults=defaults
         self.makeMonitor = makeMonitor
-        let catalog=nativeDefinitions.map{try! NativeFeatureCatalog(definitions:$0)} ?? BuiltinNativeFeatures.catalog
+        let interactive=NSClassFromString("XCTestCase") == nil
+        let services=services ?? AppSystemServices(defaults:defaults,helperInteraction:interactive,samplingAllowed:{interactive && ModulePreferences.isEnabled(BuiltinModuleManifests.performance,in:defaults)})
+        self.services=services
+        let definitions=nativeDefinitions ?? BuiltinNativeFeatures.registrations(performance:PerformanceFeature.registration(
+            telemetry:{services.telemetry},administration:{services.helper},fanFactory:{services.helper},defaults:{defaults},showSettings:{MainWindow.show(.settings)}),
+            reading:{services.telemetry.latest.snapshot})
+        let catalog=try! NativeFeatureCatalog(definitions:definitions)
         nativeFeatures=NativeFeatureStore(catalog:catalog,enabled:{id in
             guard let manifest=catalog.manifest(id) else{return false}
             return ModulePreferences.isEnabled(manifest,in:defaults)

@@ -27,7 +27,7 @@ package enum PerformanceFeature {
     }
     private static func checkText(_ options: [String:NativeContextValue]) throws {
         for value in options.values {
-            guard case let .text(text) = value, !text.isEmpty, text.count <= 512,
+            guard case let .text(text) = value, text.count <= 512,
                   !text.unicodeScalars.contains(where: { CharacterSet.controlCharacters.contains($0) }) else {
                 throw NativeRouteError("Invalid performance presentation text.")
             }

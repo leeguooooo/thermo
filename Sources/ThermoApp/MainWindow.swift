@@ -184,11 +184,6 @@ enum MainWindow {
                 MainActor.assumeIsolated {
                     setSamplingVisibility(false)
                     models.nativeFeatures.retireVisibility()
-                    MemoryModel.shared.stop()
-                    ComputeModel.shared.stop()
-                    ComputeModel.cpu.stop()
-                    ComputeModel.shared.releaseReadingsIfIdle()
-                    ComputeModel.cpu.releaseReadingsIfIdle()
                     retireContent(in: w)
                 }
             }

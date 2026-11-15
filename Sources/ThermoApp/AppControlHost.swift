@@ -195,18 +195,19 @@ import ThermoKit
             return result(["accessibility":String(screen.hasAccessibility),"notifications":String(describing:notifications.state)])
         default:
             let awake = idleAwake.inspect()
+            let store=AppModels.shared.nativeFeatures,performance=store.status(BuiltinModuleManifests.performance.id)
             return result(["appVersion":AppInfo.version,"controlProtocol":"1","busy":String(mutating),"screenActive":String(screen.active),
                            "keepAwakeRequested":String(awake.requested),"keepAwakePhase":awake.phase.rawValue,
-                           "windowVisible":String(AppModels.shared.monitor.windowOpen),
+                           "windowVisible":String(store.hostPresentation.windowVisible),
                            "mainPage":String(describing: MainWindow.state.page),
-                           "cpuPageSampling":String(ComputeModel.cpu.samplingActive),
-                           "gpuPageSampling":String(ComputeModel.shared.samplingActive),
-                           "memoryPageSampling":String(MemoryModel.shared.samplingActive),
+                           "cpuPageSampling":String(performance.readers["cpu"]?.sampling ?? false),
+                           "gpuPageSampling":String(performance.readers["gpu"]?.sampling ?? false),
+                           "memoryPageSampling":String(performance.readers["memory"]?.sampling ?? false),
                            "connectionsSampling":String(AppModels.shared.nativeFeatures.status(BuiltinModuleManifests.connections.id).sampling),
-                           "menuPanelOpen":String(AppModels.shared.monitor.popoverOpen),
-                           "menuPanelSampling":String(PanelModel.shared.samplingActive),
-                           "pulseSampling":String(SystemPulse.shared.samplingActive),
-                           "pulseHolders":String(SystemPulse.shared.holderCount)])
+                           "menuPanelOpen":String(store.hostPresentation.menuPanelVisible),
+                           "menuPanelSampling":String(performance.readers["panel"]?.sampling ?? false),
+                           "pulseSampling":String(performance.readers["pulse"]?.sampling ?? false),
+                           "pulseHolders":String(performance.readers["pulse"]?.holders ?? 0)])
         }
     }
     private func screenState() -> [String:String] {
