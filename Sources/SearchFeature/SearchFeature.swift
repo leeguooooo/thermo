@@ -1,3 +1,4 @@
+import SearchControlAPI
 import AppKit
 import DocumentPreviewAPI
 import ModuleKit
@@ -6,17 +7,6 @@ import SwiftUI
 import ThermoL10n
 import ThermoUI
 
-package struct SearchShortcutResult:Sendable {
-    package let label:String
-    package let spotlightReleased:Bool
-    package let confirmed:Bool
-    package let issue:String?
-}
-@MainActor package protocol SearchApplicationAccess:AnyObject {
-    func show(settings:Bool)->Bool
-    func takeOverSpotlight()->SearchShortcutResult
-    func giveBackSpotlight()->SearchShortcutResult
-}
 package struct SearchRegistration:Sendable {
     package let definition:NativeFeatureDefinition
     package let makeAccess:@MainActor @Sendable (NativeFeatureStore)->any SearchApplicationAccess

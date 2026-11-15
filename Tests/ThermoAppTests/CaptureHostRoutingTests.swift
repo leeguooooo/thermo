@@ -1,3 +1,4 @@
+import CaptureControlAPI
 import CaptureControlAdapter
 import AppKit
 import AgentCore

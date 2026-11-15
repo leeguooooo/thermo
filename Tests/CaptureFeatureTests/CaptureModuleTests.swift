@@ -1,3 +1,4 @@
+import CaptureControlAPI
 import HotkeyCore
 import AppKit
 import AgentCore

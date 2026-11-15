@@ -1,3 +1,4 @@
+import CaptureControlAPI
 import AppKit
 import CaptureCore
 import CaptureScriptCore

@@ -1,4 +1,4 @@
-import SearchFeature
+import SearchControlAPI
 
 @MainActor enum SearchHost {
     static var access:any SearchApplicationAccess {BuiltinNativeFeatures.search.makeAccess(AppModels.shared.nativeFeatures)}
