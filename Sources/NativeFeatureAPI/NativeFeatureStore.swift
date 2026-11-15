@@ -31,16 +31,23 @@ import SwiftUI
     package convenience init(definitions:[NativeFeatureDefinition],enabled:@escaping (String)->Bool,navigation:NativeNavigation = .unavailable) {
         self.init(catalog:try! NativeFeatureCatalog(definitions:definitions),enabled:enabled,navigation:navigation)
     }
-    package func canPresent(_ route:NativeFeatureRoute)->Bool {
-        guard (try? catalog.normalize(route)) != nil,enabled(route.module) else{return false}
-        switch states[route.module] {
+    private func acceptsWork(_ id:String)->Bool {
+        guard enabled(id),catalog.definitions[id] != nil else{return false}
+        switch states[id] {
         case .draining:return false
         case let .live(live):return live.availability.acceptsWork
         case nil:return true
         }
     }
+    package func canPresent(_ route:NativeFeatureRoute)->Bool {
+        (try? catalog.normalize(route)) != nil && acceptsWork(route.module)
+    }
+    /// Policy-only probe: validation/dry-run may inspect admission without constructing a session.
+    package func canAdmitUIEntryOwner(_ ref:NativeUIEntryRef)->Bool {
+        catalog.accepts(ref) && acceptsWork(ref.module)
+    }
     private func admittedSession(_ id:String)->(any NativeFeatureSession)? {
-        guard enabled(id),let definition=catalog.definitions[id] else{return nil}
+        guard acceptsWork(id),let definition=catalog.definitions[id] else{return nil}
         switch states[id] {
         case .draining:return nil
         case let .live(live):return live.availability.acceptsWork ? live.session:nil
@@ -103,7 +110,7 @@ import SwiftUI
     }
     /// Inert checked owner admission for an existing UI-related system operation. Returns no model.
     package func admitUIEntryOwner(_ ref:NativeUIEntryRef)->Bool {
-        guard catalog.accepts(ref) else{return false}
+        guard canAdmitUIEntryOwner(ref) else{return false}
         return admittedSession(ref.module) != nil
     }
     /// Explicit background contribution; metadata/status/quit queries remain cold.

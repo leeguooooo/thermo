@@ -138,17 +138,18 @@ import XCTest
         let definition=NativeFeatureDefinition(manifest:manifest,makeSession:{_ in made+=1;let s=Session();sessions.append(s);return s})
         let store=NativeFeatureStore(definitions:[definition],enabled:{_ in enabled})
         let ref=NativeUIEntryRef(id,"settings")
-        XCTAssertFalse(store.admitUIEntryOwner(ref));XCTAssertFalse(store.activate(ref));XCTAssertNil(store.renderPreview(ref));XCTAssertEqual(made,0)
+        XCTAssertFalse(store.canAdmitUIEntryOwner(ref));XCTAssertFalse(store.admitUIEntryOwner(ref));XCTAssertFalse(store.activate(ref));XCTAssertNil(store.renderPreview(ref));XCTAssertEqual(made,0)
         enabled=true
+        XCTAssertTrue(store.canAdmitUIEntryOwner(ref));XCTAssertEqual(made,0)
         for wrong in [NativeUIEntryRef(id,"page"),.init(id,"unknown"),.init("com.example.foreign","settings")] {
-            XCTAssertFalse(store.admitUIEntryOwner(wrong));XCTAssertFalse(store.activate(wrong));XCTAssertNil(store.renderPreview(wrong))
+            XCTAssertFalse(store.canAdmitUIEntryOwner(wrong));XCTAssertFalse(store.admitUIEntryOwner(wrong));XCTAssertFalse(store.activate(wrong));XCTAssertNil(store.renderPreview(wrong))
         }
         XCTAssertNil(store.renderPreview(.init(id,"menu")));XCTAssertEqual(made,0)
         XCTAssertTrue(store.admitUIEntryOwner(ref));XCTAssertEqual(made,1);XCTAssertEqual(sessions[0].starts,0)
         XCTAssertTrue(store.activate(ref));XCTAssertEqual(sessions[0].activations,["settings"])
         XCTAssertNotNil(store.renderPreview(ref));XCTAssertEqual(sessions[0].renders,1);XCTAssertEqual(sessions[0].starts,0)
         let drain=try XCTUnwrap(store.prepareStop(id))
-        XCTAssertFalse(store.admitUIEntryOwner(ref));XCTAssertFalse(store.activate(ref));XCTAssertNil(store.renderPreview(ref));XCTAssertEqual(made,1)
-        await drain.finish();XCTAssertTrue(store.admitUIEntryOwner(ref));XCTAssertEqual(made,2);XCTAssertEqual(sessions[1].starts,0)
+        XCTAssertFalse(store.canAdmitUIEntryOwner(ref));XCTAssertFalse(store.admitUIEntryOwner(ref));XCTAssertFalse(store.activate(ref));XCTAssertNil(store.renderPreview(ref));XCTAssertEqual(made,1)
+        await drain.finish();XCTAssertTrue(store.canAdmitUIEntryOwner(ref));XCTAssertEqual(made,1);XCTAssertTrue(store.admitUIEntryOwner(ref));XCTAssertEqual(made,2);XCTAssertEqual(sessions[1].starts,0)
     }
 }
