@@ -9,8 +9,14 @@ import XCTest
 
 @MainActor final class ModuleCenterTests: XCTestCase {
     func testPageArgumentNamesAModuleAndOptionallyItsEntry() {
-        XCTAssertEqual(MainPage(argument: "module:dev.thermo.disk"), .module("dev.thermo.disk", ""))
-        XCTAssertEqual(MainPage(argument: "module:dev.thermo.disk:scan"), .module("dev.thermo.disk", "scan"))
+        let expected=MainPage.native(.init(BuiltinModuleManifests.disk.id,"scan"))
+        XCTAssertEqual(MainPage(argument:"module:dev.thermo.disk"),expected)
+        XCTAssertEqual(MainPage(argument:"module:dev.thermo.disk:scan"),expected)
+        XCTAssertEqual(MainPage.module("dev.thermo.disk","").nativeRoute,expected.nativeRoute)
+        XCTAssertEqual(MainPage.module("dev.thermo.disk","scan").nativeRoute,expected.nativeRoute)
+        XCTAssertEqual(MainPage(argument:"module:com.example.external"),.module("com.example.external",""))
+        XCTAssertEqual(MainPage(argument:"module:com.example.external:home"),.module("com.example.external","home"))
+        XCTAssertNil(MainPage(argument:"module:dev.thermo.disk:unknown"))
         XCTAssertNil(MainPage(argument: "module"))
     }
 
