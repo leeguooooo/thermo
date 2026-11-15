@@ -42,6 +42,7 @@ final class PulseRecorder: ObservableObject {
     private var timer: DispatchSourceTimer?
     private var interval: TimeInterval = 0
     private var memory: [PulseRecord] = []
+    @MainActor private var readOnlySession=false
 
     init(queue: DispatchQueue? = nil, readHistory: (@Sendable () -> [PulseRecord])? = nil,
          samplingAllowed: @escaping @Sendable () -> Bool = { true },
@@ -54,16 +55,19 @@ final class PulseRecorder: ObservableObject {
         self.samplingAllowed = samplingAllowed
     }
 
-    var samplingActive: Bool { lifetime.current() != nil }
-    @MainActor func start() {
+    @MainActor var samplingActive: Bool { lifetime.current() != nil && !readOnlySession }
+    @MainActor func start(readOnly:Bool = false) {
         guard samplingAllowed(), lifetime.current() == nil else { return }
-        let token = lifetime.start()
+        let token = lifetime.start();readOnlySession=readOnly
         queue.async {
             guard self.lifetime.accepts(token) else { return }
             self.memory = self.readHistory?() ?? self.history.records(since: Date().addingTimeInterval(-6 * 3600))
             let snapshot = self.memory
             DispatchQueue.main.async { if self.lifetime.accepts(token) { self.recent = snapshot } }
-            self.reschedule()
+            if readOnly {
+                guard self.samplingAllowed(),self.lifetime.accepts(token) else{return}
+                self.diagnose(token:token)
+            } else {self.reschedule()}
         }
     }
 

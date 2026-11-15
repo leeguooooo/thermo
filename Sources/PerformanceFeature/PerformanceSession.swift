@@ -121,7 +121,7 @@ import ThermoUI
     }
     func start() {
         guard acceptsWork,!started else{return}
-        guard ensureTelemetry() else{return};started=true;recorder.start()
+        guard ensureTelemetry() else{return};started=true;recorder.start(readOnly:!actionsAllowed())
     }
     func hostPresentationChanged(_ value: NativeHostPresentation) {
         guard acceptsWork else{return}

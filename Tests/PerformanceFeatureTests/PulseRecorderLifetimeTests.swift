@@ -124,4 +124,16 @@ import XCTest
         XCTAssertNil(recorder.diagnosis)
     }
 
+    func testReadOnlyReviewLoadsDiagnosisWithoutSchedulingRecordingOrPowerReads() async {
+        let diagnosed=expectation(description:"one read-only diagnosis")
+        let system=SlowdownSystem(memoryBytes:16<<30,swapUsed:0,swapTotal:0,pressure:.normal,load1:1,cores:8)
+        let found=SlowdownDiagnosis(sampled:Date(),system:system,memoryStrain:.none,cpuStrain:.none,headline:"Read-only",culprits:[],also:[])
+        let queue=DispatchQueue(label:"thermo-readonly-recorder")
+        let recorder=PulseRecorder(queue:queue,readHistory:{[]},readDiagnosis:{diagnosed.fulfill();return(found,[])},
+            readOnBattery:{XCTFail("Read-only mode must not schedule the recording timer");return false})
+        recorder.start(readOnly:true);await fulfillment(of:[diagnosed],timeout:2);await drain(queue)
+        XCTAssertFalse(recorder.samplingActive);XCTAssertEqual(recorder.diagnosis?.headline,"Read-only")
+        await recorder.stop()
+    }
+
 }
