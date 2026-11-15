@@ -30,6 +30,7 @@ enum AppExitGuard {
             show(.space(.browse))
             return .terminateCancel
         }
+        if let page=AppModels.shared.downloadExitBlocker(){show(page);return .terminateCancel}
         if let page=AppModels.shared.pluginsExitBlocker(){show(page);return .terminateCancel}
         if let page=AppModels.shared.claudeExitBlocker(){show(page);return .terminateCancel}
         if let page=AppModels.shared.checkupExitBlocker(){show(page);return .terminateCancel}

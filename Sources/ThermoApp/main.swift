@@ -50,8 +50,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate, UNU
         _ = AppModels.shared.updates  // Sparkle starts checking with the app
         // Slowdown history and alerts, in the background whether or not the panel is open.
         // PerformanceModule owns background slowdown history.
-        YunXClipboardPrompt.shared.refresh()
-        Task { await YunXChromeUseSetup.shared.offerOnLaunch() }
         if Bundle.main.bundleIdentifier != nil { UNUserNotificationCenter.current().delegate = self }
 
         statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
@@ -322,7 +320,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate, UNU
         CaptureCLIHost.shared.cancelActive()
         CaptureWorkspace.shared.shutdown()
         LocalSearchModel.shared.stop()
-        YunXDownloadModel.shared.shutdown()
+        AppModels.shared.shutdownDownloadIfLoaded()
         // Fan policies live in the helper and intentionally survive the app quitting.
     }
 

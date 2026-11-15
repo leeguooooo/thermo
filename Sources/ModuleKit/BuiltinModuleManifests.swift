@@ -137,7 +137,11 @@ public enum BuiltinModuleManifests {
         entries:[.init(id:"accounts",kind:.page,title:"Claude tools",symbol:"person.2",scene:"claude:accounts"),
                  .init(id:"reset",kind:.page,title:"Reset",symbol:"arrow.counterclockwise.circle",scene:"claude:reset",parent:"accounts"),
                  .init(id:"privacy",kind:.page,title:"Privacy & network",symbol:"hand.raised",scene:"claude:privacy",parent:"accounts")])
-    public static let all = [disk, search, capture, menuBar, performance, apps, space, browser, connections, history, agents, checkup, plugins, claude]
+    public static let download=ModuleManifest(
+        id:"dev.thermo.download",name:"YunX Download",summary:"Cloud and media downloads, account sign-in and reviewed media tool installation.",
+        symbol:"arrow.down.circle",version:"1.0.0",launch:.prewarm,enabledByDefault:true,
+        entries:[.init(id:"home",kind:.page,title:"YunX Download",symbol:"arrow.down.circle",scene:"yunx")])
+    public static let all = [disk, search, capture, menuBar, performance, apps, space, browser, connections, history, agents, checkup, plugins, claude, download]
 }
 
 public enum ModulePreferences {

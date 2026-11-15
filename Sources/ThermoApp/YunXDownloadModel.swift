@@ -227,7 +227,23 @@ final class YunXDownloadModel: ObservableObject {
         case drive(any CloudDriveProvider, DriveCredential)
     }
 
-    static let shared = YunXDownloadModel()
+    static var shared:YunXDownloadModel {AppModels.shared.download}
+    let work=FeatureTasks()
+    var canStopFeature:Bool {
+        work.count==0 && !work.hasOperations && runners.isEmpty && !busy && !installingP2P && !installingFfmpeg && !authorizingKeychain && !importingLogin
+    }
+    func stopFeature(){work.stop();refresher?.cancel();chromeWait?.cancel()}
+    func finishFeatureStop() async {
+        await work.finish();await refresher?.value;refresher=nil;chromeWait=nil
+        preview?.player.pause();preview=nil
+        if let cleanup=previewCleanup {previewCleanup=nil;await cleanup()}
+        if let gopeed {await gopeed.stop()}
+        engine=nil;gopeed=nil;source=nil;videoLink=nil;shareLink=nil
+        files=[];path=[];selected=[];video=nil;jobs=[];accounts=[];tasks=[:];runners=[:];p2pTasks=[:];retryAfter=[:]
+        link="";passcode="";passcodeAsked=false;error=nil;notice=nil;login=nil;chromeWaiting=nil
+        savePicker=nil;torrentPick=nil;pendingP2P=nil;pendingFfmpeg=nil;drivesOverride=nil
+        settings=YunXSettings();limit.value=0;YunXKeychainSession.shared.forgetCachedValues()
+    }
 
     @Published var link = ""
     @Published var passcode = ""
@@ -296,11 +312,12 @@ final class YunXDownloadModel: ObservableObject {
     private var skipFfmpeg = false
     private var previewCleanup: (() async -> Void)?
 
-    init(vault: YunXVault = YunXVault(), settingsStore: YunXSettingsStore = YunXSettingsStore(), jobStore: YunXJobStore = YunXJobStore(),
+    init(enabled:@escaping ()->Bool = {true},vault: YunXVault = YunXVault(), settingsStore: YunXSettingsStore = YunXSettingsStore(), jobStore: YunXJobStore = YunXJobStore(),
          drives: CloudDriveRegistry? = nil, downloadStore: DownloadStore? = nil, xunlei: XunleiAPI = XunleiAPI(),
          toolsRoot: @escaping () throws -> MediaToolsRoot = { try MediaToolsRoot.applicationSupport() },
          gopeed: GopeedEngine? = nil, chromeCookies: YunXChromeCookies = .live,
          makeEngine: ((DownloadConfiguration) throws -> DownloadEngine)? = nil) {
+        work.enabled=enabled
         self.vault = vault
         self.settingsStore = settingsStore
         self.jobStore = jobStore
@@ -311,16 +328,19 @@ final class YunXDownloadModel: ObservableObject {
         self.gopeed = gopeed
         self.chromeCookies = chromeCookies
         self.makeEngine = makeEngine ?? { try DownloadEngine(configuration: $0) }
-        let loaded = settingsStore.load()
+        let loaded = enabled() ? settingsStore.load():YunXSettings()
         settings = loaded
         limit = YunXLimitBox(loaded.speedLimitBytes)
     }
 
-    func provider(_ platform: DrivePlatform) -> (any CloudDriveProvider)? { drives.provider(platform) }
+    func provider(_ platform: DrivePlatform) -> (any CloudDriveProvider)? {
+        guard work.acceptsWork else{return nil}
+        return drives.provider(platform) }
 
     // MARK: Accounts
 
     func reloadAccounts() {
+        guard work.acceptsWork else{return}
         do { accounts = try vault.accounts() } catch {
             if !YunXKeychainSession.shared.authorizationRequired { self.error = error.localizedDescription }
         }
@@ -328,6 +348,7 @@ final class YunXDownloadModel: ObservableObject {
     }
 
     func updateKeychainAuthorization() {
+        guard work.acceptsWork else{return}
         keychainAuthorizationRequired = YunXKeychainSession.shared.authorizationRequired
     }
 
@@ -335,14 +356,15 @@ final class YunXDownloadModel: ObservableObject {
     /// dialog for the saved accounts, and the window must stay responsive behind it. Later reads
     /// hit the session cache, so the synchronous `reloadAccounts()` stays right for actions.
     func reloadAccountsInBackground() {
+        guard work.acceptsWork else{return}
         let vault = self.vault, jobStore = self.jobStore
-        Task.detached(priority: .userInitiated) { [weak self] in
+        work.run(priority:.userInitiated) { [weak self] in
             let result = Result { try vault.accounts() }
             // Saved jobs live in the same keychain; reading them here fills the session cache, so
             // restoreJobs() on the main thread below no longer waits on the keychain.
             _ = try? jobStore.load()
             await MainActor.run {
-                guard let self else { return }
+                guard let self,self.work.acceptsWork else { return }
                 switch result {
                 case let .success(list): self.accounts = list
                 case let .failure(error):
@@ -355,6 +377,8 @@ final class YunXDownloadModel: ObservableObject {
     }
 
     func authorizeKeychain() async {
+        guard let operation=work.beginOperation() else{return}
+        defer{work.endOperation(operation)}
         guard !authorizingKeychain else { return }
         authorizingKeychain = true
         defer { authorizingKeychain = false }
@@ -372,10 +396,16 @@ final class YunXDownloadModel: ObservableObject {
         updateKeychainAuthorization()
     }
 
-    func accounts(for platform: String) -> [YunXAccount] { accounts.filter { $0.platform == platform } }
+    func accounts(for platform: String) -> [YunXAccount] {
+        guard work.acceptsWork else{return []}
+        return accounts.filter { $0.platform == platform } }
 
-    func remove(_ account: YunXAccount) { edit { try vault.remove(id: account.id) } }
-    func makePrimary(_ account: YunXAccount) { edit { try vault.setPrimary(id: account.id) } }
+    func remove(_ account: YunXAccount) {
+        guard work.acceptsWork else{return}
+        edit { try vault.remove(id: account.id) } }
+    func makePrimary(_ account: YunXAccount) {
+        guard work.acceptsWork else{return}
+        edit { try vault.setPrimary(id: account.id) } }
 
     private func edit(_ change: () throws -> Void) {
         do { try change() } catch { self.error = error.localizedDescription }
@@ -386,6 +416,8 @@ final class YunXDownloadModel: ObservableObject {
     /// has is imported, otherwise Chrome opens on the login page and is watched until a login appears.
     /// An account that is already saved also goes to Chrome, or a second one could never be added.
     func addAccount(_ target: YunXLoginTarget) async {
+        guard let operation=work.beginOperation() else{return}
+        defer{work.endOperation(operation)}
         guard !importingLogin, chromeWaiting == nil else { return }
         guard let url = target.chromeURL else {
             login = target
@@ -413,12 +445,13 @@ final class YunXDownloadModel: ObservableObject {
             return
         }
         chromeWaiting = target
-        let waiter = Task<Void, Never> { [weak self] in await self?.watchChrome(target, known: known) }
+        let waiter = work.runOnMain { [weak self] in await self?.watchChrome(target, known: known) }
         chromeWait = waiter
         await waiter.value
     }
 
     func cancelChromeLogin() {
+        guard work.acceptsWork else{return}
         chromeWait?.cancel()
         chromeWait = nil
         chromeWaiting = nil
@@ -467,6 +500,8 @@ final class YunXDownloadModel: ObservableObject {
     /// Validates a captured secret, then stores it. Throws what the sheet should show.
     /// `requireVerified` refuses a login the provider could not confirm, as when it is unreachable.
     func saveLogin(_ target: YunXLoginTarget, secret: String, extra: [String: String] = [:], requireVerified: Bool = false) async throws {
+        guard let operation=work.beginOperation() else{throw CancellationError()}
+        defer{work.endOperation(operation)}
         switch target {
         case let .drive(platform):
             guard let provider = provider(platform) else { throw DriveError.providerUnavailable(platform) }
@@ -501,6 +536,8 @@ final class YunXDownloadModel: ObservableObject {
     }
 
     func sendSms(_ platform: DrivePlatform, phone: String) async throws -> YunXSmsChallenge {
+        guard let operation=work.beginOperation() else{throw CancellationError()}
+        defer{work.endOperation(operation)}
         try await sendSms(platform, phone: phone, device: .generate())
     }
 
@@ -519,6 +556,8 @@ final class YunXDownloadModel: ObservableObject {
     }
 
     func smsLogin(phone: String, code: String, challenge: YunXSmsChallenge) async throws {
+        guard let operation=work.beginOperation() else{throw CancellationError()}
+        defer{work.endOperation(operation)}
         switch challenge {
         case let .xunlei(creditKey, token, device):
             let step = try await xunlei.smsLogin(mobile: phone, smsCode: code, creditKey: creditKey, smsToken: token, device: device)
@@ -548,6 +587,8 @@ final class YunXDownloadModel: ObservableObject {
 
     /// Password logins. The password is sent once and never stored.
     func formLogin(_ platform: DrivePlatform, account: String, password: String) async throws {
+        guard let operation=work.beginOperation() else{throw CancellationError()}
+        defer{work.endOperation(operation)}
         let secret: String
         switch platform {
         case .pan123:
@@ -591,6 +632,7 @@ final class YunXDownloadModel: ObservableObject {
 
     /// Starts with the page rather than the app, so the Keychain is not touched until it is wanted.
     func startBackgroundRefresh() {
+        guard work.acceptsWork else{return}
         guard refresher == nil else { return }
         refresher = Task { [weak self] in
             while !Task.isCancelled {
@@ -603,6 +645,8 @@ final class YunXDownloadModel: ObservableObject {
     /// Rotates sessions that are due on every account, not only the active one, and fills in missing
     /// names. A failure leaves the old credential and waits before asking that drive again.
     func refreshAccounts(now: Date = Date()) async {
+        guard let operation=work.beginOperation() else{return}
+        defer{work.endOperation(operation)}
         guard !authorizingKeychain else { return }
         // Read off the main actor: the first keychain read can wait on a system authorization dialog.
         let vault = self.vault
@@ -633,12 +677,12 @@ final class YunXDownloadModel: ObservableObject {
     // MARK: Settings
 
     private func settingsChanged(from old: YunXSettings) {
-        guard settings != old else { return }
+        guard work.acceptsWork,settings != old else { return }
         limit.value = settings.speedLimitBytes
         do { try settingsStore.save(settings, previous: old) } catch { self.error = error.localizedDescription }
         guard settings.gopeed != old.gopeed || settings.p2pMaxRunning != old.p2pMaxRunning, let gopeed else { return }
         let current = settings
-        Task { _ = try? await gopeed.applyRuntimeConfig(maxRunning: current.p2pMaxRunning, settings: current.gopeed) }
+        work.runOnMain { _ = try? await gopeed.applyRuntimeConfig(maxRunning: current.p2pMaxRunning, settings: current.gopeed) }
     }
 
     var saveDirectoryLabel: String { saveDirectory().path }
@@ -646,6 +690,8 @@ final class YunXDownloadModel: ObservableObject {
     // MARK: Backup
 
     func exportBackup(password: String, to url: URL) async {
+        guard let operation=work.beginOperation() else{return}
+        defer{work.endOperation(operation)}
         do {
             let content = try await AuthBackupManager(store: YunXBackupStore(vault: vault)).export(password: password)
             try AuthBackupManager.save(content, to: url)
@@ -653,6 +699,8 @@ final class YunXDownloadModel: ObservableObject {
     }
 
     func importBackup(_ url: URL, password: String) async {
+        guard let operation=work.beginOperation() else{return}
+        defer{work.endOperation(operation)}
         do {
             let content = try String(contentsOf: url, encoding: .utf8)
             _ = try await AuthBackupManager(store: YunXBackupStore(vault: vault)).import(content, password: password.isEmpty ? nil : password)
@@ -667,6 +715,7 @@ final class YunXDownloadModel: ObservableObject {
     }
 
     private func working(_ body: () async throws -> Void) async {
+        guard work.acceptsWork else{return}
         busy = true
         defer { busy = false }
         do { try await body() } catch is CancellationError {} catch let failure as VideoParseException {
@@ -675,6 +724,8 @@ final class YunXDownloadModel: ObservableObject {
     }
 
     func open() async {
+        guard let operation=work.beginOperation() else{return}
+        defer{work.endOperation(operation)}
         clearResults()
         guard let kind = YunXLink.classify(link) else { error = tr("That link is not recognised."); return }
         await working {
@@ -688,6 +739,8 @@ final class YunXDownloadModel: ObservableObject {
 
     /// A link from the clipboard prompt. A running open keeps going; the link waits in the field.
     func openCopied(_ link: String, passcode: String?) async {
+        guard let operation=work.beginOperation() else{return}
+        defer{work.endOperation(operation)}
         self.link = link
         self.passcode = passcode ?? ""
         guard !busy else { return }
@@ -714,6 +767,8 @@ final class YunXDownloadModel: ObservableObject {
     }
 
     func browseDrive(_ platform: DrivePlatform) async {
+        guard let operation=work.beginOperation() else{return}
+        defer{work.endOperation(operation)}
         clearResults()
         await working {
             guard let provider = provider(platform) else { throw DriveError.providerUnavailable(platform) }
@@ -737,6 +792,8 @@ final class YunXDownloadModel: ObservableObject {
     }
 
     func enter(_ folder: DriveFile) async {
+        guard let operation=work.beginOperation() else{return}
+        defer{work.endOperation(operation)}
         await working {
             try await list(folder.id)
             path.append((folder.id, folder.name))
@@ -744,6 +801,8 @@ final class YunXDownloadModel: ObservableObject {
     }
 
     func goUp(to index: Int) async {
+        guard let operation=work.beginOperation() else{return}
+        defer{work.endOperation(operation)}
         await working {
             try await list(index == 0 ? nil : path[index].id)
             path = Array(path.prefix(index + 1))
@@ -762,8 +821,11 @@ final class YunXDownloadModel: ObservableObject {
     }
 
     #if DEBUG
-    func loadVideoForTesting(_ result: VideoParseResult) { video = result }
+    func loadVideoForTesting(_ result: VideoParseResult) {
+        guard work.acceptsWork else{return}
+        video = result }
     func loadPageForTesting(files: [DriveFile] = [], path: [String] = [], jobs: [YunXJob] = [], accounts: [YunXAccount] = []) {
+        guard work.acceptsWork else{return}
         self.files = files
         self.path = path.map { ("", $0) }
         browsing = !path.isEmpty
@@ -773,6 +835,8 @@ final class YunXDownloadModel: ObservableObject {
     #endif
 
     func selectQuality(_ qn: Int) async {
+        guard let operation=work.beginOperation() else{return}
+        defer{work.endOperation(operation)}
         guard let videoLink else { return }
         await working { try await openVideo(videoLink, qn: qn) }
     }
@@ -893,6 +957,7 @@ final class YunXDownloadModel: ObservableObject {
 
     /// Downloads the ticked items, or just `only`. Folders are walked first, then each file is one job.
     func downloadSelected(only: DriveFile? = nil) {
+        guard work.acceptsWork else{return}
         guard let source else { return }
         let picked = only.map { [$0] } ?? files.filter { selected.contains($0.id) }
         selected = []
@@ -900,7 +965,7 @@ final class YunXDownloadModel: ObservableObject {
         for file in picked where !file.isDirectory { download(file, name: file.name, source: source, share: share) }
         let folders = picked.filter(\.isDirectory)
         guard !folders.isEmpty else { return }
-        Task {
+        work.runOnMain { [self] in
             await working {
                 for folder in folders {
                     let found = try await YunXFolderWalker.walk(folder) { id in try await Self.list(source, directory: id) }
@@ -988,6 +1053,7 @@ final class YunXDownloadModel: ObservableObject {
     }
 
     func download(_ media: VideoMedia) {
+        guard work.acceptsWork else{return}
         guard let title = video?.title else { return }
         let separate = !media.isHls && !media.audioUrl.isEmpty
         if separate, !skipFfmpeg, let root = try? toolsRoot(), !FfmpegProvisioner(root: root).isInstalled {
@@ -1045,6 +1111,8 @@ final class YunXDownloadModel: ObservableObject {
 
     /// Fetches FFmpeg after the page has asked, then starts the download that was waiting for it.
     func installFfmpeg() async {
+        guard let operation=work.beginOperation() else{return}
+        defer{work.endOperation(operation)}
         guard let media = pendingFfmpeg else { return }
         pendingFfmpeg = nil
         installingFfmpeg = true
@@ -1057,6 +1125,7 @@ final class YunXDownloadModel: ObservableObject {
 
     /// Declined: the built-in muxer handles fragmented MP4 for the rest of this run.
     func declineFfmpeg() {
+        guard work.acceptsWork else{return}
         guard let media = pendingFfmpeg else { return }
         pendingFfmpeg = nil
         skipFfmpeg = true
@@ -1071,6 +1140,8 @@ final class YunXDownloadModel: ObservableObject {
     }
 
     func beginSave(only: DriveFile? = nil) async {
+        guard let operation=work.beginOperation() else{return}
+        defer{work.endOperation(operation)}
         guard canSaveToDrive, let opened = source else { return }
         let refreshed = await current(opened)
         source = refreshed
@@ -1089,17 +1160,23 @@ final class YunXDownloadModel: ObservableObject {
     }
 
     func pickerEnter(_ folder: DriveFile) async {
+        guard let operation=work.beginOperation() else{return}
+        defer{work.endOperation(operation)}
         savePicker?.trail.append((folder.id, folder.name))
         await listPicker(folder.id)
     }
 
     func pickerUp(to index: Int) async {
+        guard let operation=work.beginOperation() else{return}
+        defer{work.endOperation(operation)}
         guard let trail = savePicker?.trail, trail.indices.contains(index) else { return }
         savePicker?.trail = Array(trail.prefix(index + 1))
         await listPicker(index == 0 ? nil : trail[index].id)
     }
 
     func confirmSave() async {
+        guard let operation=work.beginOperation() else{return}
+        defer{work.endOperation(operation)}
         guard let picker = savePicker, case let .share(provider, session, credential?)? = source else { return }
         savePicker = nil
         selected = []
@@ -1114,11 +1191,17 @@ final class YunXDownloadModel: ObservableObject {
 
     // MARK: Preview
 
-    func previewable(_ file: DriveFile) -> Bool { !file.isDirectory && MediaPreview.kind(of: URL(fileURLWithPath: file.name)) != nil }
+    func previewable(_ file: DriveFile) -> Bool {
+        guard work.acceptsWork else{return false}
+        return !file.isDirectory && MediaPreview.kind(of: URL(fileURLWithPath: file.name)) != nil }
     /// A video-only DASH track would play silently, so only combined media are offered.
-    func previewable(_ media: VideoMedia) -> Bool { media.kind == .video && media.audioUrl.isEmpty }
+    func previewable(_ media: VideoMedia) -> Bool {
+        guard work.acceptsWork else{return false}
+        return media.kind == .video && media.audioUrl.isEmpty }
 
     func preview(_ file: DriveFile) async {
+        guard let operation=work.beginOperation() else{return}
+        defer{work.endOperation(operation)}
         guard let opened = source else { return }
         await working {
             let source = await current(opened)
@@ -1134,6 +1217,8 @@ final class YunXDownloadModel: ObservableObject {
     }
 
     func preview(_ media: VideoMedia) async {
+        guard let operation=work.beginOperation() else{return}
+        defer{work.endOperation(operation)}
         await working {
             guard let url = URL(string: media.url) else { throw VideoParseException(.unknown, "") }
             let title = Self.fileName(media, title: video?.title ?? "")
@@ -1147,11 +1232,12 @@ final class YunXDownloadModel: ObservableObject {
     }
 
     func closePreview() {
+        guard work.acceptsWork else{return}
         preview?.player.pause()
         preview = nil
         if let cleanup = previewCleanup {
             previewCleanup = nil
-            Task { await cleanup() }
+            work.runOnMain {await cleanup()}
         }
     }
 
@@ -1160,6 +1246,7 @@ final class YunXDownloadModel: ObservableObject {
     /// Lists what the last run left unfinished, paused. Nothing restarts or touches the network
     /// until Resume, when the current account resolves a new link.
     func restoreJobs() {
+        guard work.acceptsWork else{return}
         guard !restored else { return }
         restored = true
         let store = downloadStore ?? (try? DownloadStore(root: DownloadStore.defaultRoot()))
@@ -1243,24 +1330,27 @@ final class YunXDownloadModel: ObservableObject {
     }
 
     func pause(_ job: YunXJob) {
-        Task {
+        guard work.acceptsWork else{return}
+        work.runOnMain { [self] in
             if let task = p2pTasks[job.id], let gopeed { try? await gopeed.pauseTask(task) } else { await tasks[job.id]?.pause() }
             update(job.id) { $0.state = .paused }
         }
     }
 
     func resume(_ job: YunXJob) {
+        guard work.acceptsWork else{return}
         if runners[job.id] == nil, let record = jobStore.load().first(where: { $0.id == job.id }) {
             continueRecord(record)
             return
         }
-        Task {
+        work.runOnMain { [self] in
             if let task = p2pTasks[job.id], let gopeed { try? await gopeed.continueTask(task) } else { await tasks[job.id]?.start() }
             update(job.id) { $0.state = .running }
         }
     }
 
     func cancel(_ job: YunXJob) {
+        guard work.acceptsWork else{return}
         if let runner = runners[job.id] { runner.cancel(); return }
         // A job restored from the last run has nothing running yet.
         forget(job)
@@ -1273,7 +1363,7 @@ final class YunXDownloadModel: ObservableObject {
            let store = downloadStore ?? (try? DownloadStore(root: DownloadStore.defaultRoot())) { store.remove(id: task) }
         if let task = record?.gopeedTask, !task.isEmpty, let engine = try? p2pEngine() {
             let keepRunning = p2pRunning(except: job.id)
-            Task { [weak self] in
+            work.runOnMain { [weak self] in
                 // The kernel is down after a restart, and only it can drop the URL from its store.
                 guard await engine.isInstalled else { return }
                 try? await self?.ensureCurrentKernel(engine)
@@ -1286,6 +1376,7 @@ final class YunXDownloadModel: ObservableObject {
 
     /// Removes one ended download from the list and deletes what it left in Thermo's download store.
     func discard(_ job: YunXJob) {
+        guard work.acceptsWork else{return}
         guard !job.state.isActive else { return }
         forget(job)
         jobs.removeAll { $0.id == job.id }
@@ -1302,11 +1393,14 @@ final class YunXDownloadModel: ObservableObject {
     }
 
     func clearFinished() {
+        guard work.acceptsWork else{return}
         for job in jobs where !job.state.isActive { forget(job) }
         jobs.removeAll { !$0.state.isActive }
     }
 
-    func reveal(_ url: URL) { NSWorkspace.shared.activateFileViewerSelecting([url]) }
+    func reveal(_ url: URL) {
+        guard work.acceptsWork else{return}
+        NSWorkspace.shared.activateFileViewerSelecting([url]) }
 
     // MARK: P2P through Gopeed
 
@@ -1319,6 +1413,8 @@ final class YunXDownloadModel: ObservableObject {
 
     /// A local `.torrent`; Gopeed opens the path itself.
     func openTorrent(_ url: URL) async {
+        guard let operation=work.beginOperation() else{return}
+        defer{work.endOperation(operation)}
         await working { await addP2P(url.path) }
     }
 
@@ -1332,6 +1428,8 @@ final class YunXDownloadModel: ObservableObject {
 
     /// Fetches the Gopeed kernel, only after the page has asked.
     func installP2P() async {
+        guard let operation=work.beginOperation() else{return}
+        defer{work.endOperation(operation)}
         guard let url = pendingP2P else { return }
         pendingP2P = nil
         installingP2P = true
@@ -1370,10 +1468,11 @@ final class YunXDownloadModel: ObservableObject {
 
     /// Gopeed was started only to list the torrent, so with no job on it, it stops again.
     func cancelTorrent() {
+        guard work.acceptsWork else{return}
         guard torrentPick != nil else { return }
         torrentPick = nil
         guard let gopeed else { return }
-        Task { [weak self] in
+        work.runOnMain { [weak self] in
             guard let self, !(await gopeed.hasActiveTasks()) else { return }
             // Checked after the await, so a torrent added meanwhile keeps its kernel.
             guard !self.p2pRunning(except: nil), self.torrentPick == nil else { return }
@@ -1387,6 +1486,7 @@ final class YunXDownloadModel: ObservableObject {
     }
 
     func confirmTorrent() {
+        guard work.acceptsWork else{return}
         guard let pick = torrentPick, !pick.selected.isEmpty, let gopeed else { return }
         torrentPick = nil
         startP2P(pick.url, engine: gopeed, select: pick.selection)

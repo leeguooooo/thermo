@@ -4546,6 +4546,8 @@ let zhHans: [String: String] = [
     "Wait for the confirmed agent configuration changes before switching diagnostics off.": "请等待已确认的 agent 配置变更完成，再关闭诊断。",
     "Review a local health snapshot before sending it to the selected AI.": "发送给所选 AI 前，先核对本机体检快照。",
     "Browse, install and update Claude Code plugins with reviewed commands.": "浏览 Claude Code 插件，核对命令后安装或更新。",
+    "Cloud and media downloads, account sign-in and reviewed media tool installation.": "网盘和媒体下载、账号登录，以及经确认的媒体工具安装。",
+    "Wait for downloads, sign-in or tool installation before switching this feature off.": "请等待下载、登录或工具安装结束，再关闭此功能。",
     "Wait for plugin installation or updates before switching this feature off.": "请等待插件安装或更新完成，再关闭此功能。",
     "Local account profiles, reviewed data reset and privacy controls.": "本机账号配置、经确认的数据重置和隐私设置。",
     "Wait for Claude reset, recovery or privacy changes before switching this feature off.": "请等待 Claude 重置、恢复或隐私设置操作完成，再关闭此功能。",

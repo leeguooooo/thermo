@@ -337,7 +337,7 @@ struct MainView: View {
         case .connections:
             ModuleOffView().transition(.page)
         case .yunx:
-            YunXDownloadPage(model: YunXDownloadModel.shared).transition(.page)
+            ModuleOffView().transition(.page)
         case .plugins:
             ModuleOffView().transition(.page)
         case .history:
@@ -453,7 +453,6 @@ struct MainSidebar: View {
                     moduleRows(.storage, titled: true)
 
                     moduleRows(.software)
-                    row(.yunx, tr("YunX Download"), "arrow.down.circle", .blue, trailing: nil)
                     // Pages of the modules that are on; a module that is off has no row.
                     ForEach(modules.pageGroups) { group in
                         header(group.module.name)
