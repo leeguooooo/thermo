@@ -46,7 +46,7 @@ def main():
         'workingTreeDiffSHA256':hashlib.sha256(subprocess.check_output(['git','diff','HEAD'],cwd=root)).hexdigest(),
         'fixtureSourceSHA256':hashlib.sha256((root/'scripts/verify-shell-ui.swift').read_bytes()).hexdigest(),
         'executableSHA256':hashlib.sha256(binary.read_bytes()).hexdigest(),'launched':False,
-        'composition':'production factory and MainWindow','systemActions':False,'historyRecording':False,
+        'composition':'production factory and MainWindow','performanceActionsEnabled':False,'historyRecording':False,
         'automaticHelperInteraction':False,'appControlServer':False,'home':str(home),
     },indent=2)+'\n')
     print(app)

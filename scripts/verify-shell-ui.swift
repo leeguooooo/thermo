@@ -52,7 +52,7 @@ import SystemServicesAPI
             "cpuSampling":readers["cpu"]?.sampling ?? false,"gpuSampling":readers["gpu"]?.sampling ?? false,
             "memorySampling":readers["memory"]?.sampling ?? false,"pulseSampling":readers["pulse"]?.sampling ?? false,
             "pulseHolders":readers["pulse"]?.holders ?? 0,"historyRecording":readers["history"]?.sampling ?? false,
-            "systemActions":false,"automaticHelperInteraction":false,"appControlServer":false]
+            "performanceActionsEnabled":false,"automaticHelperInteraction":false,"appControlServer":false]
         guard var data=try? JSONSerialization.data(withJSONObject:value,options:.sortedKeys) else{return};data.append(10)
         let file=root.appendingPathComponent("samples.jsonl")
         if let handle=try? FileHandle(forWritingTo:file){defer{try? handle.close()};_=try? handle.seekToEnd();try? handle.write(contentsOf:data)}else{try? data.write(to:file)}
