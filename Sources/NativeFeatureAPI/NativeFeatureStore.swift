@@ -20,12 +20,13 @@ import SwiftUI
     }
     private enum State {case live(Live),draining(Draining)}
     private let definitions:[String:NativeFeatureDefinition]
+    private let order:[String]
     private let enabled:(String)->Bool
     private var states:[String:State]=[:]
     package init(definitions:[NativeFeatureDefinition],enabled:@escaping (String)->Bool) {
         precondition(Set(definitions.map{$0.manifest.id}).count==definitions.count,"duplicate native feature")
         self.definitions=Dictionary(uniqueKeysWithValues:definitions.map{($0.manifest.id,$0)})
-        self.enabled=enabled
+        self.enabled=enabled;order=definitions.map{$0.manifest.id}
     }
     package func page(_ route:NativeFeatureRoute)->AnyView? {
         guard enabled(route.module),let definition=definitions[route.module],
@@ -56,7 +57,7 @@ import SwiftUI
         }
     }
     package func quitBlocker()->NativeFeatureBlocker? {
-        for id in definitions.keys.sorted() {
+        for id in order {
             switch states[id] {
             case let .live(live):if let blocker=live.session.quitBlocker(){return blocker}
             case let .draining(pending):if let blocker=pending.live.session.quitBlocker(){return blocker}

@@ -97,8 +97,8 @@ let package = Package(
             name: "ThermoApp",
             dependencies: ["ConnectionsFeature", "NativeFeatureAPI", "ThermoUI", "PreviewCore", "ThermoKit", "AgentDoctor", "CleanKit", "ThermoL10n", "SearchCore", "CaptureCore", "CaptureScriptCore", "MenuBarCore", "CMenuBar", "CloudDriveKit", "DownloadKit", "MediaToolsKit", "VideoKit", "ModuleKit", "ModuleHost", .product(name: "Markdown", package: "swift-markdown"), .product(name: "Sparkle", package: "Sparkle")],
             linkerSettings: [.linkedFramework("AppKit"), .linkedFramework("SwiftUI"), .linkedFramework("Charts"), .linkedFramework("AVKit"), .linkedFramework("WebKit"), .linkedFramework("Quartz"),
-                             .linkedFramework("CoreWLAN"), .linkedFramework("IOBluetooth"), .linkedFramework("CoreAudio"),
-                             .linkedFramework("AudioToolbox"), .linkedFramework("CoreLocation")]
+                             .linkedFramework("CoreAudio"),
+                             .linkedFramework("AudioToolbox")]
         ),
         .testTarget(name: "NativeFeatureAPITests", dependencies: ["NativeFeatureAPI", "ModuleKit"]),
         .testTarget(name: "ConnectionsFeatureTests", dependencies: ["ConnectionsFeature", "NativeFeatureAPI", "ModuleKit"]),
