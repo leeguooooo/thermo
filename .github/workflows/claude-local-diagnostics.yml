@@ -34,3 +34,7 @@ jobs:
         run: swift test --jobs 3 --filter 'ClaudeLocalDiagnosticsTests|ClaudeLocalCommandTests|CLICompletenessTests|PrivacyToolsTests|FeatureTests|CaptureScriptLifetimeTests|CaptureCLIHostTests|CaptureScriptActionTests|CaptureScriptRunnerTests|ScrollCaptureLifecycleTests|CaptureLifecycleTests|CaptureModuleTests|DocumentPreviewHostTests|SearchHostIntegrationTests|NativeFeatureAPITests|FeatureLaunch.*Tests|FirstRunPrewarmTests|FeatureTasksTests|ThermoKernelTests|PulseSamplingLifetimeTests|PulseRecorderLifetimeTests|HelperMaintenanceTests|VerificationHelperIsolationTests|AppControlHostTests|MenuLiveSamplerTests|SamplingPlanTests|SettingsValidationTests|MemorySamplingCancellationTests|PerformanceModuleTests|VisibleSamplingTests|SpaceSkippedRemovalTests|SpaceLensModelTests|MainOnlyExitTests|NativeFeatureStopMessageTests|[A-Za-z]+HostRoutingTests|[A-Za-z]+ExitGuardIntegrationTests|SpaceRemovalProtectionIntegrationTests|HistoryHostServicesTests'
       - name: Build App
         run: swift build --jobs 3 --product ThermoApp
+      - name: Build isolated performance UI fixture and verify source restoration
+        run: |
+          python3 scripts/verify-performance-ui.py --jobs 3 --output-dir "$RUNNER_TEMP/thermo-performance-review-ci.noindex"
+          test -z "$(git status --porcelain)"
