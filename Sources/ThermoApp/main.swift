@@ -183,8 +183,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate, UNU
         main.addItem(appItem)
         let appMenu = NSMenu()
         appMenu.addItem(withTitle: tr("Open Console"), action: #selector(openFromMenu), keyEquivalent: "o").target = self
-        let searchItem = appMenu.addItem(withTitle: tr("Search apps and files"), action: #selector(openSearchFromMenu), keyEquivalent: "")
-        searchItem.target = self; searchItem.representedObject = SearchModule.manifest.id
         appMenu.addItem(withTitle: tr("Capture screen…"), action: #selector(captureFromMenu), keyEquivalent: "").target = self
         appMenu.addItem(withTitle: tr("Pin clipboard"), action: #selector(pinFromMenu), keyEquivalent: "").target = self
         appMenu.addItem(withTitle: tr("Open image…"), action: #selector(openImageFromMenu), keyEquivalent: "").target = self
@@ -197,11 +195,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate, UNU
         let panelItem = appMenu.addItem(withTitle: tr("Open Menu Panel"), action: #selector(openPanelFromMenu), keyEquivalent: "p")
         panelItem.target = self
         panelItem.keyEquivalentModifierMask = [.command, .shift]
-        for entry in BuiltinNativeFeatures.catalog.menuEntries where ModuleCenter.shared.isOn(entry.ref.module) {
-            let item=appMenu.addItem(withTitle:tr(entry.title),action:#selector(activateNativeMenu(_:)),keyEquivalent:entry.shortcut)
-            item.target=self;item.representedObject=entry.ref
-            item.keyEquivalentModifierMask=[.command,.shift]
-        }
+        NativeMenuItems.append(to:appMenu,entries:BuiltinNativeFeatures.catalog.menuEntries,target:self,action:#selector(activateNativeMenu(_:)),enabled:ModuleCenter.shared.isOn)
         appMenu.addItem(.separator())
         appMenu.addItem(withTitle: tr("Hide Thermo"), action: #selector(NSApplication.hide(_:)), keyEquivalent: "h")
         appMenu.addItem(withTitle: tr("Quit Thermo"), action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q")
@@ -210,10 +204,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate, UNU
         installStandardMenus()
     }
 
-    @objc private func openSearchFromMenu() { SearchModule.show() }
     func menuNeedsUpdate(_ menu: NSMenu) {
+        NativeMenuItems.updateVisibility(in:menu,enabled:ModuleCenter.shared.isOn)
         for item in menu.items {
-            if let ref=item.representedObject as? NativeUIEntryRef {item.isHidden = !ModuleCenter.shared.isOn(ref.module)}
             if let id = item.representedObject as? String, BuiltinModules.manifest(id) != nil {
                 item.isHidden = !ModuleCenter.shared.isOn(id)
             }

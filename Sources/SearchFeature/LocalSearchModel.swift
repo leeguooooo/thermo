@@ -34,12 +34,16 @@ import UniformTypeIdentifiers
     private var queries: [UUID: Task<Void, Never>] = [:]
     private var retiringIndexers: [SearchIndexer] = []
     private var appObservers: [NSObjectProtocol] = []
+    typealias OpenCompletion = @Sendable (NSRunningApplication?,Error?)->Void
+    typealias Launcher = @MainActor (URL,SearchItemKind,URL?,@escaping OpenCompletion)->Void
+    private let launch:Launcher
     private let executeQuery: (@Sendable (String, SearchCancellation) throws -> SearchResponse)?
     var selected: SearchItem? {
         guard response.query == query else { return nil }
         return response.items.first { $0.id == selection }
     }
-    init(directory: URL = SearchStore.defaultDirectory, module: ModuleManifest? = nil, defaults: UserDefaults = .standard, enabled:@escaping ()->Bool = {true}, executeQuery: (@Sendable (String, SearchCancellation) throws -> SearchResponse)? = nil) {
+    init(directory: URL = SearchStore.defaultDirectory, module: ModuleManifest? = nil, defaults: UserDefaults = .standard, enabled:@escaping ()->Bool = {true}, launch:Launcher? = nil, executeQuery: (@Sendable (String, SearchCancellation) throws -> SearchResponse)? = nil) {
+        self.launch=launch ?? Self.launchItem
         self.acceptsWork=enabled
         self.executeQuery = executeQuery
         self.directory = directory
@@ -161,7 +165,7 @@ import UniformTypeIdentifiers
     /// because reading these folders can bring up macOS's folder-access prompts. Folders the user
     /// removes later stay removed.
     func applyDefaultFoldersOnce(defaults: UserDefaults = .standard, home: String = NSHomeDirectory()) {
-        guard !defaults.bool(forKey: Self.defaultFoldersKey) else { return }
+        guard enabled,!defaults.bool(forKey: Self.defaultFoldersKey) else { return }
         defaults.set(true, forKey: Self.defaultFoldersKey)
         guard preferences.roots.isEmpty else { return }
         let roots = ["Desktop", "Documents", "Downloads"].compactMap { name -> String? in
@@ -220,8 +224,6 @@ import UniformTypeIdentifiers
         guard response.query == query, response.items.contains(where: { $0.id == item.id }) else { return }
         guard FileManager.default.fileExists(atPath: item.path) else { error = tr("This item is no longer available. Check its location and try again."); return }
         let url = URL(fileURLWithPath: item.path)
-        let configuration = NSWorkspace.OpenConfiguration()
-        configuration.activates = true
         let epoch=lifecycle
         let completion: @Sendable (NSRunningApplication?, Error?) -> Void = { [weak self] _, error in
             Task { @MainActor in
@@ -231,10 +233,15 @@ import UniformTypeIdentifiers
             }
         }
         panel?.hide(restoreFocus: false)
-        if let application { NSWorkspace.shared.open([url], withApplicationAt: application, configuration: configuration, completionHandler: completion) }
-        else if item.kind == .application { NSWorkspace.shared.openApplication(at: url, configuration: configuration, completionHandler: completion) }
-        else { NSWorkspace.shared.open(url, configuration: configuration, completionHandler: completion) }
+        launch(url,item.kind,application,completion)
     }
+    private static func launchItem(_ url:URL,kind:SearchItemKind,application:URL?,completion:@escaping OpenCompletion) {
+        let configuration=NSWorkspace.OpenConfiguration();configuration.activates=true
+        if let application {NSWorkspace.shared.open([url],withApplicationAt:application,configuration:configuration,completionHandler:completion)}
+        else if kind == .application {NSWorkspace.shared.openApplication(at:url,configuration:configuration,completionHandler:completion)}
+        else {NSWorkspace.shared.open(url,configuration:configuration,completionHandler:completion)}
+    }
+
     func revealSelected() {
         guard enabled else{return}
         guard let selected else { return }

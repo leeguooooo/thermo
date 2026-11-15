@@ -5,7 +5,7 @@ import SearchCore
 import SwiftUI
 import ThermoL10n
 
-/// The kernel owns the file actions; all document parsing and preview UI live in the sandbox renderer.
+/// Native actions surround document content supplied by the sandbox preview service.
 struct SearchFilePreviewView:View {
     let item:SearchItem
     let roots:[String]

@@ -139,4 +139,22 @@ import SearchCore
         XCTAssertEqual(chosen.preferences.roots, mine.roots)
     }
 
+    func testLateOpenFailureCannotMutateOrReopenARetiredSearch() async throws {
+        let root=FileManager.default.temporaryDirectory.appendingPathComponent("thermo-search-open-"+UUID().uuidString)
+        try FileManager.default.createDirectory(at:root,withIntermediateDirectories:true)
+        defer{try? FileManager.default.removeItem(at:root)}
+        let file=root.appendingPathComponent("owned.txt");try Data("owned".utf8).write(to:file)
+        let item=SearchItem(path:file.path,name:file.lastPathComponent,kind:.file)
+        var completion:LocalSearchModel.OpenCompletion?
+        let model=LocalSearchModel(directory:root.appendingPathComponent("index"),launch:{_,_,_,callback in completion=callback},executeQuery:{term,_ in .init(query:term,items:[item])})
+        model.query="owned"
+        for _ in 0..<100 where model.selected == nil {try await Task.sleep(nanoseconds:10_000_000)}
+        model.open(item);let callback=try XCTUnwrap(completion)
+        model.stop();await model.finishStopping()
+        callback(nil,NSError(domain:"owned-launch-failure",code:1))
+        try await Task.sleep(nanoseconds:20_000_000)
+        XCTAssertNil(model.error);XCTAssertNil(model.panel);XCTAssertNil(model.store)
+        XCTAssertEqual(try Data(contentsOf:file),Data("owned".utf8))
+    }
+
 }
