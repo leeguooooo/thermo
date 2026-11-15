@@ -99,7 +99,7 @@ import ThermoL10n
         var pin=CaptureSavedPin(groupID:next.currentGroupID);pin.contentKind=content?.kind;next.pins.append(pin)
         let doc=CaptureDocument(image:image);try commit(next,documents:[pin.id:doc],contents:content.map { [pin.id:$0] } ?? [:]);makeEditor(pin,document:doc,content:content);displayCurrent();NSApp.activate(ignoringOtherApps:true);windows[pin.id]?.window?.makeKeyAndOrderFront(nil);return pin.id
     }
-    @discardableResult func open(_ content:CapturePinContent) throws -> UUID {try requireCurrent(); try open(content.previewImage(),content:content) }
+    @discardableResult func open(_ content:CapturePinContent) throws -> UUID {try requireCurrent();return try open(content.previewImage(),content:content)}
     private func makeEditor(_ pin:CaptureSavedPin,document:CaptureDocument,content:CapturePinContent? = nil) {
         let editor=CaptureEditor(image:document.image,onClose:{ [weak self] in self?.windows.removeValue(forKey:pin.id) },shouldClose:{ [weak self] in self?.willClose(pin.id) ?? true })
         let model=editor.model;model.document=document;model.pinContent=content;model.opacity=pin.opacity;model.zoom=pin.zoom;model.pan=pin.pan;model.pinned=pin.pinned;model.locked=pin.locked;model.shadow=pin.shadow;model.pinTitle=pin.title

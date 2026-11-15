@@ -282,12 +282,12 @@ func captureFailureMessage(_ error:Error) -> String {
         }
         recordingWindow?.close()
         if draftsOnly {
-            let window = CaptureRecordingWindow(region:nil); recordingWindow = window; window.showWindow(nil); return
+            let window = CaptureRecordingWindow(region:nil,available:featureEnabled); recordingWindow = window; window.showWindow(nil); return
         }
         selectRegion(confirmTitle: tr("Start recording")) { [weak self] region in
             guard let self,self.enabled,let region else{return}
             if let recording=self.recordingWindow,recording.model.active || recording.model.exporting{recording.showWindow(nil);return}
-            let window = CaptureRecordingWindow(region:region); self.recordingWindow = window; window.showWindow(nil)
+            let window = CaptureRecordingWindow(region:region,available:self.featureEnabled); self.recordingWindow = window; window.showWindow(nil)
         }
     }
     /// Region picking for long screenshots and recording: the screenshot selector on macOS 14+,

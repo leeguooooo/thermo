@@ -18,7 +18,7 @@ struct CaptureSaveSettingsView:View {
                     GroupBox(tr("Save location")) {
                         VStack(alignment:.leading,spacing:6) {
                             Text(tr("Save in the screenshot toolbar writes here. Without a folder it asks where to save.")).font(.caption).foregroundStyle(.secondary)
-                            CaptureDestinationEditor(destination:$draft.quick)
+                            CaptureDestinationEditor(destination:$draft.quick,available:{model.featureEnabled()})
                         }
                     }
                     HStack { Text(tr("JPEG quality"));Slider(value:$draft.quality,in:0...1);Text("\(Int(draft.quality*100))%").monospacedDigit() }
@@ -28,7 +28,7 @@ struct CaptureSaveSettingsView:View {
                     DisclosureGroup(tr("Advanced")) {
                         VStack(alignment:.leading,spacing:14) {
                             Toggle(tr("Automatically save an extra copy after each successful screenshot"),isOn:$draft.autoSave)
-                            GroupBox(tr("Automatic copy")) { CaptureDestinationEditor(destination:$draft.automatic) }
+                            GroupBox(tr("Automatic copy")) { CaptureDestinationEditor(destination:$draft.automatic,available:{model.featureEnabled()}) }
                             Toggle(tr("Copy image after a successful manual save"),isOn:$draft.copyAfterManualSave)
                             GroupBox(tr("After-capture chain for scripts")) {
                                 VStack(alignment:.leading,spacing:8) {
@@ -61,7 +61,8 @@ struct CaptureSaveSettingsView:View {
         }.padding(16).frame(minWidth:760,minHeight:650).onAppear{draft=model.settings}
     }
     private func importSettings() {
-        let panel=NSOpenPanel();panel.allowedContentTypes=[.json];guard panel.runModal() == .OK,let url=panel.url else{return}
+        guard model.featureEnabled() else{return}
+        let panel=NSOpenPanel();panel.allowedContentTypes=[.json];guard panel.runModal() == .OK,model.featureEnabled(),let url=panel.url else{return}
         do {
             let values=try url.resourceValues(forKeys:[.isRegularFileKey,.isSymbolicLinkKey,.fileSizeKey]);guard values.isRegularFile == true,values.isSymbolicLink != true,(values.fileSize ?? Int.max)<=65536 else {throw CaptureSaveFailure.invalidSettings}
             var value=try CaptureSaveSettings.decode(Data(contentsOf:url))
@@ -70,12 +71,14 @@ struct CaptureSaveSettingsView:View {
         } catch {self.error=captureFailureMessage(error)}
     }
     private func exportSettings() {
-        let panel=NSSavePanel();panel.allowedContentTypes=[.json];panel.nameFieldStringValue="Thermo-capture-saving.json";guard panel.runModal() == .OK,let url=panel.url else{return}
+        guard model.featureEnabled() else{return}
+        let panel=NSSavePanel();panel.allowedContentTypes=[.json];panel.nameFieldStringValue="Thermo-capture-saving.json";guard panel.runModal() == .OK,model.featureEnabled(),let url=panel.url else{return}
         do {var value=try model.snapshot();value.quick.bookmark=nil;value.automatic.bookmark=nil;try value.data().write(to:url,options:.atomic)} catch {self.error=captureFailureMessage(error)}
     }
 }
 private struct CaptureDestinationEditor:View {
     @Binding var destination:CaptureSaveDestination
+    var available:()->Bool = {true}
     @State private var error:String?
     var body:some View {
         VStack(alignment:.leading,spacing:8) {
@@ -86,8 +89,9 @@ private struct CaptureDestinationEditor:View {
         }.padding(6)
     }
     private func choose() {
+        guard available() else{return}
         let panel=NSOpenPanel();panel.canChooseFiles=false;panel.canChooseDirectories=true;panel.canCreateDirectories=true
-        guard panel.runModal() == .OK,let url=panel.url else{return}
+        guard panel.runModal() == .OK,available(),let url=panel.url else{return}
         do { let bookmark=try url.bookmarkData(options:.withSecurityScope,includingResourceValuesForKeys:nil,relativeTo:nil);destination.directory=url.path;destination.bookmark=bookmark;error=nil }
         catch {self.error=captureFailureMessage(error)}
     }

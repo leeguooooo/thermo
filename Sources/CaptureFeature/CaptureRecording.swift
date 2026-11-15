@@ -44,7 +44,8 @@ private final class RecordingOutput: NSObject, SCStreamOutput, SCStreamDelegate,
     }
 }
 
-@MainActor final class CaptureRecordingModel: ObservableObject {
+@MainActor final class CaptureRecordingModel:ObservableObject {
+    var featureEnabled:()->Bool = {true}
     enum Phase { case ready, starting, recording, paused, stopping, rendering, preview, failed }
     enum Quality: String, CaseIterable { case compact, standard, high }
     static var defaultStore: CaptureRecordingDraftStore {
@@ -113,10 +114,11 @@ private final class RecordingOutput: NSObject, SCStreamOutput, SCStreamDelegate,
     var active: Bool { [.starting,.recording,.paused,.stopping,.rendering].contains(phase) }
     var currentDraft: CaptureRecordingDraft? { draft }
     func refreshDrafts() {
+        guard featureEnabled() else{return}
         do { drafts = try store.list().filter { $0.id != draft?.id } } catch { issue = tr(error.localizedDescription) }
     }
     func start() {
-        guard let region, !active, !exporting else { return }
+        guard featureEnabled(),let region,!active,!exporting else { return }
         issue = nil; phase = .starting; player?.pause(); player = nil; source = nil; draft = nil; normalSource = nil; archive = nil; normalEdits=CaptureNormalEdits()
         let chosenFPS = fps, quality = quality, audio = systemAudio, cursor = showsCursor, delay = delay,mode=mode
         let camera=mode == .normal && captureCamera,microphone=mode == .normal && captureMicrophone
@@ -209,14 +211,17 @@ private final class RecordingOutput: NSObject, SCStreamOutput, SCStreamDelegate,
         }
     }
     func refreshCaptureDevices() {
+        guard featureEnabled() else{return}
         if captureCamera { cameraDevices=CaptureAVDevices.choices(for:.video) }
         if captureMicrophone { microphoneDevices=CaptureAVDevices.choices(for:.audio) }
     }
     func togglePause() {
+        guard featureEnabled() else{return}
         if phase == .recording { writer?.pause(at:recordingClock()); phase = .paused }
         else if phase == .paused { writer?.resume(at:recordingClock()); phase = .recording }
     }
     func playPreview() {
+        guard featureEnabled() else{return}
         player?.seek(to:CMTime(seconds:trimStart,preferredTimescale:60000),toleranceBefore:.zero,toleranceAfter:.zero)
         player?.playImmediately(atRate:Float(speed))
     }
@@ -260,6 +265,7 @@ private final class RecordingOutput: NSObject, SCStreamOutput, SCStreamDelegate,
         } catch { issue = tr(error.localizedDescription); phase = .failed }
     }
     func reopen(_ draft:CaptureRecordingDraft) {
+        guard featureEnabled() else{return}
         guard !active, !exporting else { return }; self.draft = draft
         Task {
             if draft.effectiveMode == .normal {
@@ -270,6 +276,7 @@ private final class RecordingOutput: NSObject, SCStreamOutput, SCStreamDelegate,
         }
     }
     func discard(_ draft:CaptureRecordingDraft) {
+        guard featureEnabled() else{return}
         guard !active, !exporting else { return }
         let alert = NSAlert(); alert.messageText = tr("Discard recording draft?")
         alert.informativeText = tr("The local draft will be removed. Exported files are kept.")
@@ -321,6 +328,7 @@ private final class RecordingOutput: NSObject, SCStreamOutput, SCStreamDelegate,
     }
     func cancelRendering() { renderTask?.cancel() }
     func renderNormalPreview(preserveTrim:Bool = false) async {
+        guard featureEnabled() else{return}
         guard let normalSource,let draft else { return }
         let selectedStart=trimStart,selectedEnd=trimEnd
         phase = .rendering;renderProgress=0;player?.pause()
@@ -343,11 +351,13 @@ private final class RecordingOutput: NSObject, SCStreamOutput, SCStreamDelegate,
         await renderTask?.value;renderTask=nil
     }
     func applyNormalEdits() {
+        guard featureEnabled() else{return}
         guard !active,!exporting,let normalSource else { return }
         do { try normalEdits.save(to:normalSource.root);Task { await renderNormalPreview(preserveTrim:true) } }
         catch { issue=tr(error.localizedDescription) }
     }
     func editNormalAnnotations() {
+        guard featureEnabled() else{return}
         guard !active,!exporting,let normalSource else { return }
         do {
             var base=CaptureNormalEdits();base.showCursor=false;base.showClicks=false
@@ -360,6 +370,7 @@ private final class RecordingOutput: NSObject, SCStreamOutput, SCStreamDelegate,
         } catch { issue=tr(error.localizedDescription) }
     }
     func export() {
+        guard featureEnabled() else{return}
         guard !exporting, let source, let window else { return }
         NSApp.activate(ignoringOtherApps:true); window.makeKeyAndOrderFront(nil)
         let panel = NSSavePanel(); panel.allowedContentTypes = [UTType(filenameExtension:format.fileExtension) ?? .data]
@@ -376,7 +387,7 @@ private final class RecordingOutput: NSObject, SCStreamOutput, SCStreamDelegate,
         exportTask=Task {
             defer { exporting = false;exportTask=nil }
             let response = await withCheckedContinuation { continuation in panel.beginSheetModal(for:window) { continuation.resume(returning:$0) } }
-            guard response == .OK, let url = panel.url else { return }
+            guard response == .OK,featureEnabled(),!Task.isCancelled,let url=panel.url else { return }
             do {
                 if let normal { try edits.save(to:normal.root);try await CaptureNormalExport.export(source:normal,to:url,edits:edits,options:options) }
                 else { try await CaptureMovieExport.export(source:source,to:url,options:options) }
@@ -393,8 +404,8 @@ private final class RecordingOutput: NSObject, SCStreamOutput, SCStreamDelegate,
 
 @MainActor final class CaptureRecordingWindow: NSWindowController, NSWindowDelegate {
     let model: CaptureRecordingModel
-    init(region:CaptureRegionSelector.Region?, store:CaptureRecordingDraftStore? = nil) {
-        model = CaptureRecordingModel(region:region,store:store)
+    init(region:CaptureRegionSelector.Region?,store:CaptureRecordingDraftStore? = nil,available:@escaping ()->Bool = {true}) {
+        model=CaptureRecordingModel(region:region,store:store);model.featureEnabled=available
         let panel = NSPanel(contentRect:NSRect(x:0,y:0,width:660,height:620),styleMask:[.titled,.closable,.resizable],backing:.buffered,defer:false)
         panel.title = tr("Screen recording"); panel.level = .floating; panel.isReleasedWhenClosed = false
         panel.hidesOnDeactivate = false; panel.becomesKeyOnlyIfNeeded = false

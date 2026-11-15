@@ -48,12 +48,14 @@ struct CaptureActionSettingsView:View {
         }.padding(16).onAppear { draft=model.settings;selected=draft.entries.first?.id }
     }
     private func importSettings() {
-        let panel=NSOpenPanel();panel.allowedContentTypes=[.json];guard panel.runModal() == .OK,let url=panel.url else { return }
+        guard model.featureEnabled() else{return}
+        let panel=NSOpenPanel();panel.allowedContentTypes=[.json];guard panel.runModal() == .OK,model.featureEnabled(),let url=panel.url else { return }
         do { let values=try url.resourceValues(forKeys:[.isRegularFileKey,.isSymbolicLinkKey,.fileSizeKey]);guard values.isRegularFile == true,values.isSymbolicLink != true,(values.fileSize ?? Int.max) <= 65536 else { throw CaptureActionFailure.invalidSettings };draft=try .decode(Data(contentsOf:url));selected=draft.entries.first?.id;error=nil }
         catch { self.error=captureFailureMessage(error) }
     }
     private func exportSettings() {
-        let panel=NSSavePanel();panel.allowedContentTypes=[.json];panel.nameFieldStringValue="Thermo-capture-shortcuts.json";guard panel.runModal() == .OK,let url=panel.url else { return }
+        guard model.featureEnabled() else{return}
+        let panel=NSSavePanel();panel.allowedContentTypes=[.json];panel.nameFieldStringValue="Thermo-capture-shortcuts.json";guard panel.runModal() == .OK,model.featureEnabled(),let url=panel.url else { return }
         do { try model.settings.data().write(to:url,options:.atomic) } catch { self.error=captureFailureMessage(error) }
     }
 }
@@ -96,7 +98,7 @@ private struct CaptureShortcutRecorder:NSViewRepresentable {
     let model:CaptureShortcutModel
     @Binding var value:CaptureShortcut?
     func makeNSView(context:Context) -> Button { let button=Button();button.model=model;return button }
-    func updateNSView(_ button:Button,context:Context) { button.model=model;button.receive={ value=$0 };button.title=model.recordingOwner == button.owner ? tr("Press a shortcut; Esc cancels") : value?.label ?? tr("Record shortcut…");button.isEnabled = !model.uncertain;button.setAccessibilityLabel(tr("Record capture shortcut")) }
+    func updateNSView(_ button:Button,context:Context) { button.model=model;button.receive={ value=$0 };button.title=model.recordingOwner == button.owner ? tr("Press a shortcut; Esc cancels") : value?.label ?? tr("Record shortcut…");button.isEnabled=model.featureEnabled() && !model.uncertain;button.setAccessibilityLabel(tr("Record capture shortcut")) }
     final class Button:NSButton {
         let owner=UUID()
         weak var model:CaptureShortcutModel?
