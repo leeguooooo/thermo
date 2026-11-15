@@ -50,7 +50,7 @@ import NativeFeatureAPI
         var actions=actions(calls)
         actions.restore={_,_ in entered.fulfill();_ = release.wait(timeout:.now()+5);return .init(name:"Fixture",app:"Fixture",entries:[])}
         let model=TabWorkspaceModel(app:"Fixture",actions:actions)
-        let session=BrowserSession(availability:FeatureAvailability(enabled:{true}),makeWorkspace:{gate,_ in model.work.enabled=gate;return model})
+        let session=BrowserFeatureSession(availability:FeatureAvailability(enabled:{true}),makeWorkspace:{gate,_ in model.work.enabled=gate;return model})
         _=session.workspace("Fixture")
         model.restore(.init(name:"Fixture",app:"Fixture",entries:[]))
         await fulfillment(of:[entered],timeout:2)
@@ -126,7 +126,7 @@ import NativeFeatureAPI
             return .init(pulse:pulse,browserMemoryKB:0)
         },wait:{})
         let model=ChromePagesModel(app:"Fixture",appMemoryKB:nil,gpuKB:nil,actions:actions)
-        let session=BrowserSession(availability:FeatureAvailability(enabled:{true}),makeDiagnostics:{gate,_,_,_ in model.work.enabled=gate;return model})
+        let session=BrowserFeatureSession(availability:FeatureAvailability(enabled:{true}),makeDiagnostics:{gate,_,_,_ in model.work.enabled=gate;return model})
         _=session.diagnostics("Fixture")
         model.close([tab]);await fulfillment(of:[entered],timeout:2)
         session.retireVisibility()

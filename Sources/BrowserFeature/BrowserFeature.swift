@@ -21,12 +21,12 @@ package enum BrowserFeature {
             guard argument == "pages" || argument.hasPrefix("pages:") else{return nil}
             let app=argument.hasPrefix("pages:") ? String(argument.dropFirst(6)):""
             return route(app.isEmpty ? "Google Chrome":app)
-        },makeSession:{BrowserSession(availability:$0)})
+        },makeSession:{BrowserFeatureSession(availability:$0)})
     }
     static func route(_ app:String)->NativeFeatureRoute {.init(BuiltinModuleManifests.browser.id,"home",context:["app":.text(app)])}
 }
 
-@MainActor final class BrowserSession:NativeFeatureSession {
+@MainActor final class BrowserFeatureSession:NativeFeatureSession {
     typealias DiagnosticsFactory = @MainActor (@escaping ()->Bool,String,Int?,Int?)->ChromePagesModel
     typealias WorkspaceFactory = @MainActor (@escaping ()->Bool,String)->TabWorkspaceModel
     let availability:FeatureAvailability
@@ -131,7 +131,7 @@ struct BrowserHeader:View {
     }
 }
 private struct BrowserRoot:View {
-    let session:BrowserSession
+    let session:BrowserFeatureSession
     let app:String
     @State private var section:BrowserSection = {
         let args=CommandLine.arguments

@@ -41,8 +41,9 @@ enum BrowserModule: BuiltinModule {
         if let gpu=hog.parts?.first(where:{$0.role=="GPU"})?.memoryKB {options["gpuMemoryKB"] = .integer(Int64(gpu))}
         let request=NativePresentationRequest(route:.init(manifest.id,"home",context:["app":.text(hog.name)]),options:options)
         guard NSApp.modalWindow == nil,MainWindow.window?.attachedSheet == nil,
-              let canonical=try? BuiltinNativeFeatures.catalog.normalizePresentation(request),
-              AppModels.shared.nativeFeatures.preparePresentation(canonical) else{return}
+              let canonical=try? BuiltinNativeFeatures.catalog.normalizePresentation(request) else{return}
+        let store=AppModels.shared.nativeFeatures
+        if store.canPresent(canonical.route),!store.preparePresentation(canonical) {return}
         open(.native(canonical.route))
     }
     @MainActor static func settings(_ entry:ModuleManifest.Entry,models:AppModels)->AnyView {AnyView(EmptyView())}

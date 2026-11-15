@@ -1,10 +1,10 @@
 import XCTest
-import CleanKit
+@testable import CleanKit
 import ModuleKit
 import NativeFeatureAPI
 @testable import BrowserFeature
 
-@MainActor final class BrowserSessionTests:XCTestCase {
+@MainActor final class BrowserFeatureSessionTests:XCTestCase {
     private let id=BuiltinModuleManifests.browser.id
     private func diagnostic(_ app:String,_ memory:Int?,_ gpu:Int?)->ChromePagesModel {
         ChromePagesModel(app:app,appMemoryKB:memory,gpuKB:gpu,actions:.init(tabs:{_ in []},close:{_,_ in XCTFail("no close requested");return []},reading:{_ in fatalError("no reading requested")},wait:{}))
@@ -25,7 +25,7 @@ import NativeFeatureAPI
     }
     func testDiagnosticsAndWorkspaceAreIndependentAndSnapshotIsSubjectSpecific() {
         var diagnosticApps:[String]=[],workspaceApps:[String]=[]
-        let session=BrowserSession(availability:FeatureAvailability(enabled:{true}),makeDiagnostics:{_,app,m,g in diagnosticApps.append(app);return self.diagnostic(app,m,g)},makeWorkspace:{_,app in workspaceApps.append(app);return self.workspace(app)})
+        let session=BrowserFeatureSession(availability:FeatureAvailability(enabled:{true}),makeDiagnostics:{_,app,m,g in diagnosticApps.append(app);return self.diagnostic(app,m,g)},makeWorkspace:{_,app in workspaceApps.append(app);return self.workspace(app)})
         XCTAssertFalse(session.status.modelLoaded)
         XCTAssertFalse(session.snapshotReady(BrowserFeature.route("Arc"),arguments:[],started:Date()))
         XCTAssertTrue(diagnosticApps.isEmpty);XCTAssertTrue(workspaceApps.isEmpty)
@@ -41,7 +41,7 @@ import NativeFeatureAPI
     }
     func testResourceHintsReachInitializerAndLaterOmissionsPreserveOwnedReadings() {
         var hints:[[Int?]]=[],workspaceCreations=0
-        let session=BrowserSession(availability:FeatureAvailability(enabled:{true}),makeDiagnostics:{_,app,m,g in hints.append([m,g]);return self.diagnostic(app,m,g)},makeWorkspace:{_,app in workspaceCreations+=1;return self.workspace(app)})
+        let session=BrowserFeatureSession(availability:FeatureAvailability(enabled:{true}),makeDiagnostics:{_,app,m,g in hints.append([m,g]);return self.diagnostic(app,m,g)},makeWorkspace:{_,app in workspaceCreations+=1;return self.workspace(app)})
         let route=BrowserFeature.route("Arc")
         session.preparePresentation(route,options:["appMemoryKB":.integer(42),"gpuMemoryKB":.integer(7)])
         XCTAssertEqual(hints,[[42,7]]);XCTAssertEqual(workspaceCreations,0)
@@ -56,7 +56,7 @@ import NativeFeatureAPI
         XCTAssertEqual(hints.count,1);XCTAssertFalse(model.running);XCTAssertNotNil(model.diagnosis)
     }
     func testArchiveUsesDeclaredMenuEntryAndRollsBackIfNavigationRefused() {
-        let session=BrowserSession(availability:FeatureAvailability(enabled:{true}))
+        let session=BrowserFeatureSession(availability:FeatureAvailability(enabled:{true}))
         XCTAssertFalse(session.activate(.init(id,"home"),navigation:.unavailable));XCTAssertFalse(session.archive.requested)
         XCTAssertFalse(session.activate(.init(id,"archive"),navigation:.unavailable));XCTAssertFalse(session.archive.requested)
         var selected:NativeFeatureRoute?
@@ -65,9 +65,9 @@ import NativeFeatureAPI
         XCTAssertFalse(session.status.modelLoaded)
     }
     func testOldGenerationCannotReviveAfterDrainAndNewSessionHasNoPendingArchive()async throws {
-        var enabled=true,sessions:[BrowserSession]=[]
+        var enabled=true,sessions:[BrowserFeatureSession]=[]
         let definition=NativeFeatureDefinition(manifest:BuiltinModuleManifests.browser,pageContracts:BrowserFeature.registration.pageContracts,makeSession:{gate in
-            let session=BrowserSession(availability:gate,makeDiagnostics:{gate,app,m,g in
+            let session=BrowserFeatureSession(availability:gate,makeDiagnostics:{gate,app,m,g in
                 let model=self.diagnostic(app,m,g);model.work.enabled=gate;return model
             },makeWorkspace:{gate,app in let model=self.workspace(app);model.work.enabled=gate;return model})
             sessions.append(session);return session
