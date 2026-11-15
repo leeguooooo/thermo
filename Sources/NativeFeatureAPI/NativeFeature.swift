@@ -1,3 +1,4 @@
+import Foundation
 import ModuleKit
 import SwiftUI
 
@@ -27,9 +28,10 @@ package struct NativeFeatureBlocker {
     package let route:NativeFeatureRoute
     package init(reason:String,route:NativeFeatureRoute) {self.reason=reason;self.route=route}
 }
-package struct NativeFeatureBusy:Error,CustomStringConvertible {
+package struct NativeFeatureBusy:Error,LocalizedError,CustomStringConvertible {
     package let description:String
     package init(_ reason:String){description=reason}
+    package var errorDescription:String?{description}
 }
 @MainActor package struct NativeFeatureDrain {
     package let finish:() async->Void

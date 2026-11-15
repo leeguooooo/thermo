@@ -14,7 +14,7 @@ import Foundation
 
     @discardableResult
     package func run(priority: TaskPriority? = nil, onSkipped:@escaping @MainActor ()->Void = {}, operation: @escaping @Sendable () async -> Void) -> Task<Void, Never> {
-        guard acceptsWork else { return Task {} }
+        guard acceptsWork else { onSkipped(); return Task {} }
         let id = UUID()
         let task = Task.detached(priority: priority) { [weak self] in
             let admitted=await self?.acceptsWork ?? false
