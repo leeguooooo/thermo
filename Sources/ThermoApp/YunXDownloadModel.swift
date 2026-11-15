@@ -544,7 +544,7 @@ final class YunXDownloadModel: ObservableObject {
     func sendSms(_ platform: DrivePlatform, phone: String) async throws -> YunXSmsChallenge {
         guard let operation=work.beginOperation() else{throw CancellationError()}
         defer{work.endOperation(operation)}
-        try await sendSms(platform, phone: phone, device: .generate())
+        return try await sendSms(platform, phone: phone, device: .generate())
     }
 
     private func sendSms(_ platform: DrivePlatform, phone: String, device: XunleiDevice) async throws -> YunXSmsChallenge {
