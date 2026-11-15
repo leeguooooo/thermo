@@ -1,3 +1,4 @@
+import ThermoUI
 import AgentCore
 import AgentDoctor
 import AppKit

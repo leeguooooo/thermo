@@ -1,3 +1,5 @@
+import ThermoUI
+import NativeFeatureAPI
 import SwiftUI
 import AppKit
 import CleanKit

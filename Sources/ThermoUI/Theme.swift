@@ -8,49 +8,49 @@ import ThermoL10n
 // for what you can act on); one surface level for panels, hairlines between rows, no shadows;
 // figures in rounded monospaced digits; motion only to show that something changed.
 
-enum Theme {
+package enum Theme {
     // MARK: Color
 
     /// The window: near-black graphite with a hint of blue.
-    static let canvas = Color(red: 0.075, green: 0.082, blue: 0.098)
-    static let canvasDeep = Color(red: 0.055, green: 0.060, blue: 0.072)
+    package static let canvas = Color(red: 0.075, green: 0.082, blue: 0.098)
+    package static let canvasDeep = Color(red: 0.055, green: 0.060, blue: 0.072)
     /// The sidebar sits a step darker than the page.
-    static let sidebar = Color(red: 0.050, green: 0.055, blue: 0.066)
+    package static let sidebar = Color(red: 0.050, green: 0.055, blue: 0.066)
     /// A panel on the canvas.
-    static let surface = Color.white.opacity(0.045)
+    package static let surface = Color.white.opacity(0.045)
     /// A hovered or selected row, or a control's track.
-    static let surfaceRaised = Color.white.opacity(0.075)
-    static let surfaceActive = Color.white.opacity(0.12)
-    static let hairline = Color.white.opacity(0.075)
-    static let border = Color.white.opacity(0.10)
+    package static let surfaceRaised = Color.white.opacity(0.075)
+    package static let surfaceActive = Color.white.opacity(0.12)
+    package static let hairline = Color.white.opacity(0.075)
+    package static let border = Color.white.opacity(0.10)
 
-    static let textPrimary = Color.white.opacity(0.94)
-    static let textSecondary = Color.white.opacity(0.62)
-    static let textTertiary = Color.white.opacity(0.40)
+    package static let textPrimary = Color.white.opacity(0.94)
+    package static let textSecondary = Color.white.opacity(0.62)
+    package static let textTertiary = Color.white.opacity(0.40)
 
     /// What you can act on.
-    static let accent = Color(red: 0.33, green: 0.62, blue: 1.0)
-    static let good = Color(red: 0.32, green: 0.82, blue: 0.52)
-    static let caution = Color(red: 1.0, green: 0.66, blue: 0.26)
-    static let danger = Color(red: 1.0, green: 0.38, blue: 0.36)
+    package static let accent = Color(red: 0.33, green: 0.62, blue: 1.0)
+    package static let good = Color(red: 0.32, green: 0.82, blue: 0.52)
+    package static let caution = Color(red: 1.0, green: 0.66, blue: 0.26)
+    package static let danger = Color(red: 1.0, green: 0.38, blue: 0.36)
 
     // MARK: Shape and space
 
-    static let radius: CGFloat = 12
-    static let radiusSmall: CGFloat = 8
-    static let pagePadding: CGFloat = 32
-    static let pageTop: CGFloat = 44
-    static let pageWidth: CGFloat = 960
+    package static let radius: CGFloat = 12
+    package static let radiusSmall: CGFloat = 8
+    package static let pagePadding: CGFloat = 32
+    package static let pageTop: CGFloat = 44
+    package static let pageWidth: CGFloat = 960
 
     /// Every gap is one of these (a 4-point grid): inside a row, between rows, between a header and
     /// its panel, between sections, page edges.
-    enum Space {
-        static let xs: CGFloat = 4
-        static let s: CGFloat = 8
-        static let m: CGFloat = 12
-        static let l: CGFloat = 16
-        static let xl: CGFloat = 24
-        static let xxl: CGFloat = 32
+    package enum Space {
+        package static let xs: CGFloat = 4
+        package static let s: CGFloat = 8
+        package static let m: CGFloat = 12
+        package static let l: CGFloat = 16
+        package static let xl: CGFloat = 24
+        package static let xxl: CGFloat = 32
     }
 
     // MARK: Type
@@ -59,51 +59,52 @@ enum Theme {
     // 13 body and row titles, 12 secondary lines, 11 labels and meta. Figures use the rounded
     // face at 40 (the page's one hero), 24 (a metric), 15 or 13 (in rows).
 
-    static let pageTitle = Font.system(size: 24, weight: .semibold)
-    static let heading = Font.system(size: 15, weight: .semibold)
-    static let pageSubtitle = Font.system(size: 13)
-    static let rowTitle = Font.system(size: 13, weight: .medium)
-    static let body = Font.system(size: 13)
-    static let secondary = Font.system(size: 12)
-    static let sectionTitle = Font.system(size: 12, weight: .semibold)
-    static let caption = Font.system(size: 11)
-    static let label = Font.system(size: 11, weight: .medium)
-    static let mono = Font.system(size: 11, design: .monospaced)
+    package static let pageTitle = Font.system(size: 24, weight: .semibold)
+    package static let heading = Font.system(size: 15, weight: .semibold)
+    package static let pageSubtitle = Font.system(size: 13)
+    package static let rowTitle = Font.system(size: 13, weight: .medium)
+    package static let body = Font.system(size: 13)
+    package static let secondary = Font.system(size: 12)
+    package static let sectionTitle = Font.system(size: 12, weight: .semibold)
+    package static let caption = Font.system(size: 11)
+    package static let label = Font.system(size: 11, weight: .medium)
+    package static let mono = Font.system(size: 11, design: .monospaced)
 
-    enum FigureSize: CGFloat { case hero = 40, metric = 24, large = 15, row = 13 }
+    package enum FigureSize: CGFloat { case hero = 40, metric = 24, large = 15, row = 13 }
 
-    static func figure(_ size: FigureSize, weight: Font.Weight = .semibold) -> Font {
+    package static func figure(_ size: FigureSize, weight: Font.Weight = .semibold) -> Font {
         .system(size: size.rawValue, weight: weight, design: .rounded).monospacedDigit()
     }
 
     /// Only for figures drawn to the size of a graphic (the inside of a ring gauge).
-    static func figure(points: CGFloat, weight: Font.Weight = .semibold) -> Font {
+    package static func figure(points: CGFloat, weight: Font.Weight = .semibold) -> Font {
         .system(size: points, weight: weight, design: .rounded).monospacedDigit()
     }
 
     // MARK: Motion
 
-    static let quick = Animation.easeOut(duration: 0.16)
-    static let standard = Animation.spring(response: 0.34, dampingFraction: 0.86)
-    static let gentle = Animation.easeInOut(duration: 0.6)
+    package static let quick = Animation.easeOut(duration: 0.16)
+    package static let standard = Animation.spring(response: 0.34, dampingFraction: 0.86)
+    package static let gentle = Animation.easeInOut(duration: 0.6)
 }
 
 extension Animation {
     /// The animation, or none when Reduce Motion is on.
-    func unlessReduced(_ reduce: Bool) -> Animation? { reduce ? nil : self }
+    package func unlessReduced(_ reduce: Bool) -> Animation? { reduce ? nil : self }
 }
 
 // MARK: - Page header
 
 /// Title, one line under it, optional actions on the right and optional tabs below. Every page
 /// starts with this, so the title sits at the same place whichever page is open.
-struct PageHeader<Trailing: View, Below: View>: View {
+package struct PageHeader<Trailing: View, Below: View>: View {
+    package init(title:String,subtitle:String? = nil,@ViewBuilder trailing:@escaping ()->Trailing,@ViewBuilder below:@escaping ()->Below) {self.title=title;self.subtitle=subtitle;self.trailing=trailing;self.below=below}
     let title: String
     var subtitle: String? = nil
     @ViewBuilder var trailing: () -> Trailing
     @ViewBuilder var below: () -> Below
 
-    var body: some View {
+    package var body: some View {
         VStack(alignment: .leading, spacing: 14) {
             HStack(alignment: .center, spacing: 12) {
                 VStack(alignment: .leading, spacing: 4) {
@@ -125,13 +126,13 @@ struct PageHeader<Trailing: View, Below: View>: View {
 }
 
 extension PageHeader where Below == EmptyView {
-    init(title: String, subtitle: String? = nil, @ViewBuilder trailing: @escaping () -> Trailing) {
+    package init(title: String, subtitle: String? = nil, @ViewBuilder trailing: @escaping () -> Trailing) {
         self.init(title: title, subtitle: subtitle, trailing: trailing, below: { EmptyView() })
     }
 }
 
 extension PageHeader where Trailing == EmptyView, Below == EmptyView {
-    init(title: String, subtitle: String? = nil) {
+    package init(title: String, subtitle: String? = nil) {
         self.init(title: title, subtitle: subtitle, trailing: { EmptyView() }, below: { EmptyView() })
     }
 }
@@ -139,8 +140,9 @@ extension PageHeader where Trailing == EmptyView, Below == EmptyView {
 // MARK: - Tabs
 
 /// A segmented control drawn for the dark window: the selection slides between the options.
-struct ThermoTabs<Value: Hashable>: View {
-    enum Size { case regular, small }
+package struct ThermoTabs<Value: Hashable>: View {
+    package init(selection:Binding<Value>,options:[(Value,String)],size:Size = .regular,label:String = "") {self._selection=selection;self.options=options;self.size=size;self.label=label}
+    package enum Size { case regular, small }
 
     @Binding var selection: Value
     let options: [(Value, String)]
@@ -150,7 +152,7 @@ struct ThermoTabs<Value: Hashable>: View {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var hovered: Value?
 
-    var body: some View {
+    package var body: some View {
         HStack(spacing: 2) {
             ForEach(Array(options.enumerated()), id: \.offset) { _, option in
                 let on = option.0 == selection
@@ -193,14 +195,15 @@ struct ThermoTabs<Value: Hashable>: View {
 // MARK: - Search
 
 /// A search box that matches the panels; ⌘F focuses it when `shortcut` is on.
-struct SearchField: View {
+package struct SearchField: View {
+    package init(text:Binding<String>,prompt:String = tr("Search"),shortcut:Bool = true,width:CGFloat? = nil) {self._text=text;self.prompt=prompt;self.shortcut=shortcut;self.width=width}
     @Binding var text: String
     var prompt: String = tr("Search")
     var shortcut = true
     var width: CGFloat? = nil
     @FocusState private var focused: Bool
 
-    var body: some View {
+    package var body: some View {
         HStack(spacing: 7) {
             Image(systemName: "magnifyingglass").font(.system(size: 11, weight: .medium)).foregroundStyle(Theme.textTertiary)
             TextField(prompt, text: $text).textFieldStyle(.plain).font(.system(size: 12)).focused($focused)
@@ -231,14 +234,15 @@ struct SearchField: View {
 // MARK: - Loading
 
 /// A grey bar standing in for text that is still loading; it breathes instead of spinning.
-struct SkeletonBar: View {
+package struct SkeletonBar: View {
+    package init(width:CGFloat? = nil,height:CGFloat = 10) {self.width=width;self.height=height}
     var width: CGFloat? = nil
     var height: CGFloat = 10
     @State private var bright = false
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.windowSamplingActive) private var visible
 
-    var body: some View {
+    package var body: some View {
         RoundedRectangle(cornerRadius: height / 2, style: .continuous)
             .fill(Color.white.opacity(bright ? 0.11 : 0.06))
             .frame(width: width, height: height)
@@ -256,9 +260,10 @@ struct SkeletonBar: View {
 }
 
 /// Rows of skeleton bars in a panel, for a list that is still loading.
-struct SkeletonList: View {
+package struct SkeletonList: View {
+    package init(rows:Int = 4) {self.rows=rows}
     var rows = 4
-    var body: some View {
+    package var body: some View {
         InspectorPanel {
             ForEach(0..<rows, id: \.self) { i in
                 if i > 0 { InspectorDivider(inset: 14) }
@@ -280,10 +285,11 @@ struct SkeletonList: View {
 // MARK: - Rows
 
 /// Lights a row up under the pointer.
-struct HoverHighlight: ViewModifier {
+package struct HoverHighlight: ViewModifier {
+    package init(radius:CGFloat = 0) {self.radius=radius}
     var radius: CGFloat = 0
     @State private var hover = false
-    func body(content: Content) -> some View {
+    package func body(content: Content) -> some View {
         content
             .background(RoundedRectangle(cornerRadius: radius, style: .continuous).fill(Color.white.opacity(hover ? 0.035 : 0)))
             .onHover { hover = $0 }
@@ -292,17 +298,18 @@ struct HoverHighlight: ViewModifier {
 }
 
 extension View {
-    func hoverHighlight(radius: CGFloat = 0) -> some View { modifier(HoverHighlight(radius: radius)) }
+    package func hoverHighlight(radius: CGFloat = 0) -> some View { modifier(HoverHighlight(radius: radius)) }
 }
 
 /// A label + figure pair, the unit of every stats strip.
-struct Metric: View {
+package struct Metric: View {
+    package init(label:String,value:String,detail:String? = nil,color:Color = Theme.textPrimary) {self.label=label;self.value=value;self.detail=detail;self.color=color}
     let label: String
     let value: String
     var detail: String? = nil
     var color: Color = Theme.textPrimary
 
-    var body: some View {
+    package var body: some View {
         VStack(alignment: .leading, spacing: 3) {
             Text(label).font(.system(size: 11, weight: .medium)).foregroundStyle(Theme.textTertiary).lineLimit(1)
             Text(value).font(Theme.figure(.metric)).foregroundStyle(color).lineLimit(1).minimumScaleFactor(0.7)
@@ -319,10 +326,11 @@ struct Metric: View {
 // MARK: - Panels
 
 /// One quiet panel per group; rows inside it are separated by hairlines.
-struct InspectorPanel<Content: View>: View {
+package struct InspectorPanel<Content: View>: View {
+    package init(@ViewBuilder content:@escaping ()->Content) {self.content=content}
     @ViewBuilder let content: () -> Content
     @Environment(\.colorSchemeContrast) private var contrast
-    var body: some View {
+    package var body: some View {
         VStack(alignment: .leading, spacing: 0) { content() }
             .frame(maxWidth: .infinity, alignment: .leading)
             .background(RoundedRectangle(cornerRadius: Theme.radius, style: .continuous).fill(Theme.surface))
@@ -332,16 +340,18 @@ struct InspectorPanel<Content: View>: View {
     }
 }
 
-struct InspectorDivider: View {
+package struct InspectorDivider: View {
+    package init(inset:CGFloat = 44) {self.inset=inset}
     var inset: CGFloat = 44
-    var body: some View { Rectangle().fill(Theme.hairline).frame(height: 1).padding(.leading, inset) }
+    package var body: some View { Rectangle().fill(Theme.hairline).frame(height: 1).padding(.leading, inset) }
 }
 
 /// The title over a panel, with room for a figure or a control on the right.
-struct SectionHeader<Trailing: View>: View {
+package struct SectionHeader<Trailing: View>: View {
+    package init(title:String,@ViewBuilder trailing:@escaping ()->Trailing) {self.title=title;self.trailing=trailing}
     let title: String
     @ViewBuilder var trailing: () -> Trailing
-    var body: some View {
+    package var body: some View {
         HStack(alignment: .lastTextBaseline) {
             Text(title).font(Theme.sectionTitle).foregroundStyle(Theme.textSecondary)
                 .accessibilityAddTraits(.isHeader)
@@ -352,15 +362,16 @@ struct SectionHeader<Trailing: View>: View {
 }
 
 extension SectionHeader where Trailing == EmptyView {
-    init(title: String) { self.init(title: title) { EmptyView() } }
+    package init(title: String) { self.init(title: title) { EmptyView() } }
 }
 
 /// A neutral status line: results may mix successes and failures, so none of them is drawn as success.
-struct NoticeBanner: View {
+package struct NoticeBanner: View {
+    package init(text:String,busy:Bool = false,dismiss:(()->Void)? = nil) {self.text=text;self.busy=busy;self.dismiss=dismiss}
     let text: String
     var busy = false
     var dismiss: (() -> Void)?
-    var body: some View {
+    package var body: some View {
         HStack(alignment: .top, spacing: 10) {
             if busy { ProgressView().controlSize(.small) } else {
                 Image(systemName: "info.circle").foregroundStyle(Theme.textSecondary).accessibilityHidden(true)
@@ -381,10 +392,11 @@ struct NoticeBanner: View {
 }
 
 /// Small grey capsule naming a requirement or consequence of an action.
-struct RequirementTag: View {
+package struct RequirementTag: View {
+    package init(text:String,warning:Bool = false) {self.text=text;self.warning=warning}
     let text: String
     var warning = false
-    var body: some View {
+    package var body: some View {
         Text(text).font(.system(size: 11, weight: .medium))
             .foregroundStyle(warning ? Theme.caution : Theme.textSecondary)
             .padding(.horizontal, 6).padding(.vertical, 2)
@@ -394,7 +406,7 @@ struct RequirementTag: View {
 
 extension AnyTransition {
     /// How pages swap: the new one fades in while rising a few points, the old one just fades.
-    static var page: AnyTransition {
+    package static var page: AnyTransition {
         .asymmetric(insertion: .opacity.combined(with: .offset(y: 8)), removal: .opacity)
     }
 }
@@ -403,9 +415,10 @@ extension AnyTransition {
 
 /// The bar under a list page for what applies to the whole list (select all, scan again, the
 /// main action); it stays put while the list scrolls.
-struct ActionBar<Content: View>: View {
+package struct ActionBar<Content: View>: View {
+    package init(@ViewBuilder content:@escaping ()->Content) {self.content=content}
     @ViewBuilder let content: () -> Content
-    var body: some View {
+    package var body: some View {
         HStack(spacing: 8) { content() }
             .padding(.horizontal, Theme.pagePadding).padding(.vertical, 12)
             .frame(maxWidth: .infinity)
@@ -416,12 +429,13 @@ struct ActionBar<Content: View>: View {
 }
 
 /// A long list in one panel: rows separated by hairlines, built lazily.
-struct RowList<Item: Identifiable, Row: View>: View {
+package struct RowList<Item: Identifiable, Row: View>: View {
+    package init(items:[Item],inset:CGFloat = 14,@ViewBuilder row:@escaping (Item)->Row) {self.items=items;self.inset=inset;self.row=row}
     let items: [Item]
     var inset: CGFloat = 14
     @ViewBuilder let row: (Item) -> Row
 
-    var body: some View {
+    package var body: some View {
         LazyVStack(alignment: .leading, spacing: 0) {
             ForEach(Array(items.enumerated()), id: \.element.id) { i, item in
                 if i > 0 { InspectorDivider(inset: inset) }
@@ -434,10 +448,11 @@ struct RowList<Item: Identifiable, Row: View>: View {
 }
 
 /// A small colored label on a row ("Running", "Protected").
-struct StatusTag: View {
+package struct StatusTag: View {
+    package init(text:String,color:Color = Theme.textSecondary) {self.text=text;self.color=color}
     let text: String
     var color: Color = Theme.textSecondary
-    var body: some View {
+    package var body: some View {
         Text(text).font(.system(size: 10, weight: .semibold)).foregroundStyle(color)
             .padding(.horizontal, 5).padding(.vertical, 1.5)
             .background(RoundedRectangle(cornerRadius: 4, style: .continuous).fill(color.opacity(0.15)))
@@ -445,10 +460,11 @@ struct StatusTag: View {
 }
 
 /// A disclosure chevron that turns when its row opens.
-struct DisclosureChevron: View {
+package struct DisclosureChevron: View {
+    package init(expanded:Bool) {self.expanded=expanded}
     let expanded: Bool
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
-    var body: some View {
+    package var body: some View {
         Image(systemName: "chevron.right").font(.system(size: 10, weight: .bold)).foregroundStyle(Theme.textTertiary)
             .rotationEffect(.degrees(expanded ? 90 : 0))
             .animation(Theme.standard.unlessReduced(reduceMotion), value: expanded)
@@ -457,11 +473,12 @@ struct DisclosureChevron: View {
 }
 
 /// What a page shows when there is nothing to list: a symbol, one line, and maybe what to do.
-struct EmptyState: View {
+package struct EmptyState: View {
+    package init(symbol:String,title:String,detail:String? = nil) {self.symbol=symbol;self.title=title;self.detail=detail}
     let symbol: String
     let title: String
     var detail: String? = nil
-    var body: some View {
+    package var body: some View {
         VStack(spacing: 8) {
             Image(systemName: symbol).font(.system(size: 26, weight: .light)).foregroundStyle(Theme.textTertiary)
             Text(title).font(.system(size: 13, weight: .medium)).foregroundStyle(Theme.textSecondary)
@@ -478,12 +495,13 @@ struct EmptyState: View {
 
 /// A (?) that opens the explanation in a popover. Pages keep their numbers in front and put the
 /// sentences that explain them here, so a page reads at a glance and the facts stay one click away.
-struct InfoButton: View {
+package struct InfoButton: View {
+    package init(text:String,title:String? = nil) {self.text=text;self.title=title}
     let text: String
     var title: String? = nil
     @State private var shown = false
 
-    var body: some View {
+    package var body: some View {
         Button { shown.toggle() } label: {
             Image(systemName: "questionmark.circle").font(.system(size: 12, weight: .medium))
                 .foregroundStyle(shown ? Theme.accent : Theme.textTertiary)
@@ -507,16 +525,17 @@ struct InfoButton: View {
 
 // MARK: - Selection
 
-enum SelectionState { case none, some, all }
+package enum SelectionState { case none, some, all }
 
 /// The one checkbox of the app: empty, a dash for part of a group, a tick for all, or a lock
 /// for an item that cannot be picked.
-struct SelectionBox: View {
+package struct SelectionBox: View {
+    package init(state:SelectionState,locked:Bool = false) {self.state=state;self.locked=locked}
     let state: SelectionState
     var locked = false
     @Environment(\.isEnabled) private var isEnabled
 
-    var body: some View {
+    package var body: some View {
         ZStack {
             RoundedRectangle(cornerRadius: 4.5, style: .continuous)
                 .fill(state == .none || locked ? Color.white.opacity(0.06) : Theme.accent)
@@ -540,13 +559,14 @@ struct SelectionBox: View {
 }
 
 /// A checkbox for one item, tappable with room around it.
-struct SelectToggle: View {
+package struct SelectToggle: View {
+    package init(selected:Bool,locked:Bool = false,label:String,toggle:@escaping ()->Void) {self.selected=selected;self.locked=locked;self.label=label;self.toggle=toggle}
     let selected: Bool
     var locked = false
     let label: String
     let toggle: () -> Void
 
-    var body: some View {
+    package var body: some View {
         Button(action: toggle) {
             SelectionBox(state: selected ? .all : .none, locked: locked)
                 .frame(width: 24, height: 24).contentShape(Rectangle())
@@ -561,7 +581,8 @@ struct SelectToggle: View {
 /// Selects or clears a whole list or group at once: a tri-state checkbox, the group's name, and
 /// how many of its items are picked. Clicking picks every item that can be picked, or clears them
 /// when all already are. Put one in each group header and one in the action bar.
-struct SelectAllButton: View {
+package struct SelectAllButton: View {
+    package init(title:String? = nil,available:Int,selected:Int,selectAll:@escaping ()->Void,clear:@escaping ()->Void) {self.title=title;self.available=available;self.selected=selected;self.selectAll=selectAll;self.clear=clear}
     var title: String? = nil
     /// Items that can be picked (locked ones do not count).
     let available: Int
@@ -571,7 +592,7 @@ struct SelectAllButton: View {
 
     var state: SelectionState { selected == 0 ? .none : selected >= available ? .all : .some }
 
-    var body: some View {
+    package var body: some View {
         Button { state == .all ? clear() : selectAll() } label: {
             HStack(spacing: Theme.Space.s) {
                 SelectionBox(state: available == 0 ? .none : state)

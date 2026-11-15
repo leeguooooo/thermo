@@ -1,3 +1,4 @@
+import ThermoUI
 import CleanKit
 import AppKit
 import SwiftUI

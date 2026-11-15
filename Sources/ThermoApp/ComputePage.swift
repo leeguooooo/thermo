@@ -1,3 +1,4 @@
+import ThermoUI
 import Charts
 import AgentCore
 import AppKit

@@ -1,3 +1,4 @@
+import NativeFeatureAPI
 import XCTest
 @testable import ThermoApp
 

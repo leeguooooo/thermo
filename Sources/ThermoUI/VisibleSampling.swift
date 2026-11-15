@@ -5,17 +5,18 @@ private struct WindowSamplingActiveKey: EnvironmentKey {
 }
 
 extension EnvironmentValues {
-    var windowSamplingActive: Bool {
+    package var windowSamplingActive: Bool {
         get { self[WindowSamplingActiveKey.self] }
         set { self[WindowSamplingActiveKey.self] = newValue }
     }
 }
 
 /// Overlapping page transitions must not let an old view stop its replacement.
-struct SamplingLeases {
+package struct SamplingLeases {
+    package init() {}
     private var owners = Set<UUID>()
-    var active: Bool { !owners.isEmpty }
-    mutating func set(_ owner: UUID, active: Bool) {
+    package var active: Bool { !owners.isEmpty }
+    package mutating func set(_ owner: UUID, active: Bool) {
         if active { owners.insert(owner) } else { owners.remove(owner) }
     }
 }
@@ -41,7 +42,7 @@ private struct VisibleSampling: ViewModifier {
 }
 
 extension View {
-    func samplingWhileVisible(_ update: @escaping (UUID, Bool) -> Void) -> some View {
+    package func samplingWhileVisible(_ update: @escaping (UUID, Bool) -> Void) -> some View {
         modifier(VisibleSampling(update: update))
     }
 }

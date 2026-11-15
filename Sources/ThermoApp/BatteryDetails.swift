@@ -1,3 +1,4 @@
+import ThermoUI
 import IOKit.ps
 import SwiftUI
 import ThermoKit
