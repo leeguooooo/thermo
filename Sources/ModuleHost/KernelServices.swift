@@ -98,7 +98,7 @@ public enum KernelServices {
     /// validation cannot redirect a read; nonblocking open also keeps FIFOs from stalling a worker.
     private static func openRegularFile(_ path:String)throws->Int32 {
         let parts=path.split(separator:"/").map(String.init)
-        guard !parts.isEmpty,!parts.contains("."),!parts.contains("..") else{throw bad("read takes an absolute file path")}
+        guard path.hasPrefix("/"),!parts.isEmpty,!parts.contains("."),!parts.contains("..") else{throw bad("read takes an absolute file path")}
         var fd=open("/",O_RDONLY|O_DIRECTORY|O_CLOEXEC)
         guard fd>=0 else{throw bad("cannot open filesystem root")}
         for (index,part) in parts.enumerated() {
