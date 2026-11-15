@@ -6,7 +6,7 @@ import CloudDriveKit
 import ThermoL10n
 import VideoKit
 import XCTest
-@testable import ThermoApp
+@testable import DownloadFeature
 
 private class MemoryBackend: YunXSecretBackend, @unchecked Sendable {
     var data: Data?

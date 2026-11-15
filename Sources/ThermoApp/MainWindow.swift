@@ -15,7 +15,6 @@ enum MainPage: Hashable {
     case space(SpaceTab)
     case memory
     case compute(Bool)
-    case yunx
     /// A page drawn by a module: module id, entry id (empty: the module's first page).
     case module(String, String)
 
@@ -34,7 +33,6 @@ enum MainPage: Hashable {
         case "agents": self = .agents(parts.count > 1 ? (Area(rawValue: parts[1]).map { .area($0) } ?? .home) : .home)
         case "apps": self = .apps(parts.count > 1 ? (parts[1] == "feeds" ? .updates : AppsTab(rawValue: parts[1]) ?? .installed) : .installed)
         case "memory": self = .memory
-        case "yunx": self = .yunx
         case "module":
             // module:<module id>[:<entry id>]
             guard parts.count > 1 else { return nil }
@@ -313,8 +311,6 @@ struct MainView: View {
         case .agents:
             ModuleOffView().transition(.page)
         case .apps:
-            ModuleOffView().transition(.page)
-        case .yunx:
             ModuleOffView().transition(.page)
         case let .module(id, entry):
             ModulePageView(center: .shared, module: id, entry: entry).id(id + ":" + entry).transition(.page)

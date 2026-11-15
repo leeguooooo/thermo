@@ -130,6 +130,7 @@ struct YunXAccountTile: View {
 
 struct YunXSettingsSheet: View {
     @ObservedObject var model: YunXDownloadModel
+    var refreshClipboard: () -> Void = {}
     @AppStorage(YunXClipboardSetting.key) private var clipboardPrompt = true
     @Environment(\.dismiss) private var dismiss
 
@@ -152,7 +153,7 @@ struct YunXSettingsSheet: View {
                 line(tr("Offer to open supported links I copy")) {
                     Toggle("", isOn: Binding(get: { clipboardPrompt }, set: {
                         clipboardPrompt = $0
-                        YunXClipboardPrompt.shared.refresh()
+                        refreshClipboard()
                     })).labelsHidden().toggleStyle(.switch).controlSize(.small)
                 }
                 InspectorDivider(inset: 14)

@@ -1,7 +1,7 @@
 import Foundation
 import Security
 import XCTest
-@testable import ThermoApp
+@testable import DownloadFeature
 
 final class YunXKeychainSessionTests: XCTestCase {
     func testForgettingCachedSecretsRetainsDurableItemsAndDeniedBackoff() throws {

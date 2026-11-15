@@ -7,12 +7,14 @@ import XCTest
     private let manifest=ModuleManifest(id:"com.example.native",name:"Fixture",summary:"",symbol:"doc",version:"1.0.0",entries:[.init(id:"home",kind:.page,title:"Fixture",scene:"fixture")])
     private final class Session:NativeFeatureSession {
         let availability:FeatureAvailability
-        var refuses=false,pages=0,finishes=0
+        var refuses=false,pages=0,finishes=0,starts=0,shutdowns=0
         var blocker:NativeFeatureBlocker?
         var drain:() async->Void = {}
         init(_ availability:FeatureAvailability){self.availability=availability}
         func page(entry:String)->AnyView? {guard availability.acceptsWork else{return nil};pages += 1;return AnyView(EmptyView())}
         var status:NativeFeatureStatus {.init(modelLoaded:true)}
+        func start(){starts+=1}
+        func shutdown(){shutdowns+=1}
         func retireVisibility() {}
         func quitBlocker()->NativeFeatureBlocker? {blocker}
         func prepareStop()throws->NativeFeatureDrain {
@@ -24,7 +26,7 @@ import XCTest
         var creations=0
         let definition=NativeFeatureDefinition(manifest:manifest,makeSession:{availability in creations += 1;return Session(availability)})
         let store=NativeFeatureStore(definitions:[definition],enabled:{_ in false})
-        XCTAssertNil(store.page(.init(manifest.id,"home")));XCTAssertNil(store.page(.init("unknown","home")))
+        store.start(manifest.id);store.start("unknown");store.shutdown();XCTAssertNil(store.page(.init(manifest.id,"home")));XCTAssertNil(store.page(.init("unknown","home")))
         XCTAssertFalse(store.status(manifest.id).modelLoaded);store.retireVisibility();XCTAssertNil(store.quitBlocker());XCTAssertEqual(creations,0)
     }
     func testUndeclaredEntryCannotCreateSessionEvenWhenEnabled() {
@@ -68,6 +70,24 @@ import XCTest
         XCTAssertNil(store.quitBlocker(manifest.id));XCTAssertEqual(store.quitBlocker()?.reason,"second")
         first?.blocker = .init(reason:"first",route:.init(manifest.id,"home"))
         XCTAssertEqual(store.quitBlocker()?.reason,"first");XCTAssertEqual(store.quitBlocker(other.id)?.reason,"second")
+    }
+    func testBackgroundStartAndExitCleanupAreOncePerGenerationAndNeverRenderPages() async throws {
+        var sessions:[Session]=[]
+        let definition=NativeFeatureDefinition(manifest:manifest,makeSession:{availability in
+            let session=Session(availability);sessions.append(session);return session
+        })
+        let store=NativeFeatureStore(definitions:[definition],enabled:{_ in true})
+        store.shutdown();XCTAssertTrue(sessions.isEmpty)
+        store.start(manifest.id);store.start(manifest.id)
+        let first=try XCTUnwrap(sessions.first)
+        XCTAssertEqual(first.starts,1);XCTAssertEqual(first.pages,0)
+        store.shutdown(manifest.id);store.shutdown(manifest.id)
+        XCTAssertEqual(first.shutdowns,1);XCTAssertFalse(first.availability.acceptsWork)
+        XCTAssertNil(store.page(.init(manifest.id,"home")))
+        if let drain=try store.prepareStop(manifest.id){await drain.finish()}
+        store.start(manifest.id)
+        XCTAssertEqual(sessions.count,2);XCTAssertEqual(sessions[1].starts,1)
+        XCTAssertEqual(sessions[1].pages,0);XCTAssertFalse(first.availability.acceptsWork)
     }
 
 }

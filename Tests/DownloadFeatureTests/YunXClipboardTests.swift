@@ -1,6 +1,6 @@
 import ThermoL10n
 import XCTest
-@testable import ThermoApp
+@testable import DownloadFeature
 
 @MainActor private final class FakeClipboard: YunXClipboardSource {
     var changeCount = 0

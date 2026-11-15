@@ -3,7 +3,7 @@ import AppKit
 import CloudDriveKit
 import SwiftUI
 import XCTest
-@testable import ThermoApp
+@testable import DownloadFeature
 
 private final class ChromeMemoryBackend: YunXSecretBackend, @unchecked Sendable {
     private var data: Data?

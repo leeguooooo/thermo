@@ -38,6 +38,8 @@ package struct NativeFeatureBusy:Error,CustomStringConvertible {
 @MainActor package protocol NativeFeatureSession:AnyObject {
     func page(entry:String)->AnyView?
     var status:NativeFeatureStatus {get}
+    func start()
+    func shutdown()
     func retireVisibility()
     func quitBlocker()->NativeFeatureBlocker?
     func prepareReview(_ arguments:[String])
@@ -52,5 +54,7 @@ package struct NativeFeatureDefinition {
 }
 
 extension NativeFeatureSession {
+    package func start() {}
+    package func shutdown() {}
     package func prepareReview(_ arguments:[String]) {}
 }

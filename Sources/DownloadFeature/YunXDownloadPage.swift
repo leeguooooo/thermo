@@ -13,7 +13,8 @@ import VideoKit
 /// settings are a click away in the toolbar, not part of the flow.
 struct YunXDownloadPage: View {
     @ObservedObject var model: YunXDownloadModel
-    @ObservedObject var setup: YunXChromeUseSetup = .shared
+    @ObservedObject var setup: YunXChromeUseSetup
+    var refreshClipboard: () -> Void = {}
     @State private var accountsShown = false
     @State private var settingsShown = false
 
@@ -54,7 +55,7 @@ struct YunXDownloadPage: View {
         }
         .onChange(of: model.link) { _ in if model.passcode.isEmpty { model.passcodeAsked = false } }
         .sheet(isPresented: $accountsShown) { YunXAccountsSheet(model: model, setup: setup) }
-        .sheet(isPresented: $settingsShown) { YunXSettingsSheet(model: model) }
+        .sheet(isPresented: $settingsShown) { YunXSettingsSheet(model: model, refreshClipboard: refreshClipboard) }
         .sheet(item: Binding(get: { model.preview }, set: { if $0 == nil { model.closePreview() } })) { preview in
             VStack(alignment: .leading, spacing: Theme.Space.s) {
                 HStack {

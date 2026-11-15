@@ -1,4 +1,4 @@
-name: Claude local diagnostics
+name: Native modules and CLI
 on:
   pull_request:
     paths:
@@ -24,7 +24,7 @@ jobs:
         run: |
           xcrun swift --version
           echo "SDKROOT=$(xcrun --sdk macosx --show-sdk-path)" >> "$GITHUB_ENV"
-      - name: Test local diagnostics, CLI contracts and existing privacy behavior
-        run: swift test --jobs 3 --filter 'ClaudeLocalDiagnosticsTests|ClaudeLocalCommandTests|CLICompletenessTests|PrivacyToolsTests'
+      - name: Test native modules, diagnostics and CLI contracts
+        run: swift test --jobs 3 --filter 'ClaudeLocalDiagnosticsTests|ClaudeLocalCommandTests|CLICompletenessTests|PrivacyToolsTests|FeatureTests|NativeFeatureAPITests|FeatureLaunch.*Tests|FirstRunPrewarmTests'
       - name: Build App
         run: swift build --jobs 3 --product ThermoApp

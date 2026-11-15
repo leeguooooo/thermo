@@ -333,7 +333,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate, UNU
         CaptureCLIHost.shared.cancelActive()
         CaptureWorkspace.shared.shutdown()
         LocalSearchModel.shared.stop()
-        AppModels.shared.shutdownDownloadIfLoaded()
+        AppModels.shared.nativeFeatures.shutdown(BuiltinModuleManifests.download.id)
         // Fan policies live in the helper and intentionally survive the app quitting.
     }
 

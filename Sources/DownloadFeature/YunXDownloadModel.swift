@@ -228,7 +228,6 @@ final class YunXDownloadModel: ObservableObject {
         case drive(any CloudDriveProvider, DriveCredential)
     }
 
-    static var shared:YunXDownloadModel {AppModels.shared.download}
     let work=FeatureTasks()
     var canStopFeature:Bool {
         work.count==0 && !work.hasOperations && runners.isEmpty && !busy && !installingP2P && !installingFfmpeg && !authorizingKeychain && !importingLogin

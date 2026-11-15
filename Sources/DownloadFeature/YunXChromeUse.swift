@@ -19,7 +19,6 @@ import ThermoL10n
     /// Runs one argv and hands over its output line by line; returns the exit status.
     typealias Run = @Sendable (String, [String], [String: String], @escaping @Sendable (String) -> Void) async -> Int32
 
-    static var shared:YunXChromeUseSetup {AppModels.shared.downloadSetup}
     let work=FeatureTasks()
     var canStopFeature:Bool {!working && work.count==0 && !work.hasOperations}
     func stopFeature(){work.stop();launchCard?.delegate=nil;launchCard?.orderOut(nil);launchCard?.contentView=nil;launchCard=nil}
