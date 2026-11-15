@@ -5,7 +5,6 @@ import ThermoL10n
 
 /// Watches the clipboard from launch. Holds no model: `YunXDownloadModel` and Gopeed start only on Open.
 @MainActor final class YunXClipboardPrompt {
-    static let shared = YunXClipboardPrompt()
     private static let pollInterval: TimeInterval = 1
     private static let visibleSeconds: TimeInterval = 10
     private static let size = NSSize(width: 372, height: 76)
@@ -21,7 +20,12 @@ import ThermoL10n
     }
 
     private let enabled:()->Bool
-    init(enabled:(()->Bool)? = nil) {self.enabled=enabled ?? {DownloadModule.enabled}}
+    private let appWindowActive: () -> Bool
+    private let openLink: (YunXClipboardHit) -> Void
+    init(enabled: @escaping () -> Bool, appWindowActive: @escaping () -> Bool = {false},
+         open: @escaping (YunXClipboardHit) -> Void = {_ in}) {
+        self.enabled=enabled;self.appWindowActive=appWindowActive;self.openLink=open
+    }
     var active:Bool {timer != nil || panel != nil || current != nil}
     private var timer: Timer?
     private var hideTimer: Timer?
@@ -31,7 +35,7 @@ import ThermoL10n
     private var watcher:YunXClipboardWatcher {
         if let storedWatcher{return storedWatcher}
         let watcher=YunXClipboardWatcher(source:YunXSystemClipboard(),canPrompt:{[weak self] in
-            self?.enabled() == true && self?.current == nil && MainWindow.window?.isKeyWindow != true
+            self?.enabled() == true && self?.current == nil && self?.appWindowActive() != true
         },present:{[weak self] in self?.show($0)})
         storedWatcher=watcher;return watcher
     }
@@ -101,8 +105,7 @@ import ThermoL10n
     private func open() {
         guard enabled(),let hit = current else { return }
         dismiss()
-        MainWindow.show(.yunx)
-        Task { await YunXDownloadModel.shared.openCopied(hit.link, passcode: hit.passcode) }
+        openLink(hit)
     }
 }
 

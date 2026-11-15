@@ -31,7 +31,7 @@ enum AppExitGuard {
             show(.space(.browse))
             return .terminateCancel
         }
-        if let page=AppModels.shared.downloadExitBlocker(){show(page);return .terminateCancel}
+        if let blocker=AppModels.shared.nativeFeatures.quitBlocker(BuiltinModuleManifests.download.id){show(.module(blocker.route.module,blocker.route.entry));return .terminateCancel}
         if let blocker=AppModels.shared.nativeFeatures.quitBlocker(BuiltinModuleManifests.plugins.id){show(.module(blocker.route.module,blocker.route.entry));return .terminateCancel}
         if let blocker=AppModels.shared.nativeFeatures.quitBlocker(BuiltinModuleManifests.claude.id){show(.module(blocker.route.module,blocker.route.entry));return .terminateCancel}
         if let blocker=AppModels.shared.nativeFeatures.quitBlocker(BuiltinModuleManifests.checkup.id){show(.module(blocker.route.module,blocker.route.entry));return .terminateCancel}

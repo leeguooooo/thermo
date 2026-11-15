@@ -3,9 +3,11 @@ import SwiftUI
 /// Owns native session generations, never the concrete models inside them.
 /// ModuleCenter remains the one authority for persisted preferences and external CLI admission.
 @MainActor package final class NativeFeatureStore {
-    private struct Live {
+    @MainActor private final class Live {
         let availability:FeatureAvailability
         let session:any NativeFeatureSession
+        var started=false, didShutdown=false
+        init(availability:FeatureAvailability,session:any NativeFeatureSession) {self.availability=availability;self.session=session}
     }
     @MainActor private final class Draining {
         let live:Live
@@ -34,12 +36,30 @@ import SwiftUI
         guard enabled(id),let definition=definitions[id] else{return nil}
         switch states[id] {
         case .draining:return nil
-        case let .live(live):return live.session
+        case let .live(live):return live.availability.acceptsWork ? live.session:nil
         case nil:
             let availability=FeatureAvailability { [weak self] in self?.enabled(id) ?? false }
             let session=definition.makeSession(availability)
             states[id] = .live(.init(availability:availability,session:session))
             return session
+        }
+    }
+    /// Explicit background contribution; metadata/status/quit queries remain cold.
+    package func start(_ id:String) {
+        guard let session=admittedSession(id),case let .live(live)=states[id],!live.started else{return}
+        live.started=true;session.start()
+    }
+    /// Final exit cleanup only. Normal feature disable still requires prepareStop + drain.
+    package func shutdown(_ feature:String? = nil) {
+        for id in feature.map({[$0]}) ?? order {
+            let live:Live
+            switch states[id] {
+            case let .live(value):live=value
+            case let .draining(value):live=value.live
+            case nil:continue
+            }
+            guard !live.didShutdown else{continue}
+            live.didShutdown=true;live.availability.revoke();live.session.shutdown()
         }
     }
     package func page(_ route:NativeFeatureRoute)->AnyView? {

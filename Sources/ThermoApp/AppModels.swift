@@ -68,9 +68,9 @@ final class AppModels {
         set { storedDisk = newValue }
     }
 
-    init(defaults: UserDefaults = .standard, makeApps: @escaping @MainActor () -> AppsFeatureModels = { AppsFeatureModels() }, makeSpace: @escaping SpaceFactory = { SpaceLensModel(enabled:$0) }, invalidateSpaceCache: @escaping @MainActor () -> Void = { SpaceLens.invalidateCache() }, makeBrowser: @escaping BrowserFactory = {ChromePagesModel(enabled:$0,app:$1,appMemoryKB:$2,gpuKB:$3)}, makeWorkspace: @escaping WorkspaceFactory = {TabWorkspaceModel(enabled:$0,app:$1)}, nativeDefinitions:[NativeFeatureDefinition]? = nil, makeAgents:@escaping AgentsFactory = {AgentScanner(enabled:$0)}, makeDownload:@escaping DownloadFactory = {YunXDownloadModel(enabled:$0)}, makeDownloadSetup:@escaping DownloadSetupFactory = {YunXChromeUseSetup(enabled:$0)}, makeDisk: @escaping () -> DiskModel = { DiskModel(retentionPreferences:.stored(in:.standard)) },
+    init(defaults: UserDefaults = .standard, makeApps: @escaping @MainActor () -> AppsFeatureModels = { AppsFeatureModels() }, makeSpace: @escaping SpaceFactory = { SpaceLensModel(enabled:$0) }, invalidateSpaceCache: @escaping @MainActor () -> Void = { SpaceLens.invalidateCache() }, makeBrowser: @escaping BrowserFactory = {ChromePagesModel(enabled:$0,app:$1,appMemoryKB:$2,gpuKB:$3)}, makeWorkspace: @escaping WorkspaceFactory = {TabWorkspaceModel(enabled:$0,app:$1)}, nativeDefinitions:[NativeFeatureDefinition]? = nil, makeAgents:@escaping AgentsFactory = {AgentScanner(enabled:$0)}, makeDisk: @escaping () -> DiskModel = { DiskModel(retentionPreferences:.stored(in:.standard)) },
          makeMonitor: @escaping () -> Monitor = { Monitor(samplingAllowed: { ModulePreferences.isEnabled(BuiltinModuleManifests.performance, in: .standard) }) }) {
-        self.makeDownload=makeDownload;self.makeDownloadSetup=makeDownloadSetup;self.makeAgents=makeAgents;self.makeDisk = makeDisk;self.makeApps=makeApps;self.makeSpace=makeSpace;self.invalidateSpaceCache=invalidateSpaceCache;self.makeBrowser=makeBrowser;self.makeWorkspace=makeWorkspace;self.defaults=defaults
+        self.makeAgents=makeAgents;self.makeDisk = makeDisk;self.makeApps=makeApps;self.makeSpace=makeSpace;self.invalidateSpaceCache=invalidateSpaceCache;self.makeBrowser=makeBrowser;self.makeWorkspace=makeWorkspace;self.defaults=defaults
         self.makeMonitor = makeMonitor
         let definitions=nativeDefinitions ?? BuiltinNativeFeatures.registrations
         nativeFeatures=NativeFeatureStore(definitions:definitions,enabled:{id in
@@ -115,40 +115,6 @@ final class AppModels {
     var startup: StartupItemsModel { software.startup }
     var softwareUpdates: AppUpdatesModel { software.updates }
     var nativeUpdates: NativeUpdatesModel { software.native }
-    typealias DownloadFactory = @MainActor (@escaping ()->Bool)->YunXDownloadModel
-    typealias DownloadSetupFactory = @MainActor (@escaping ()->Bool)->YunXChromeUseSetup
-    private let makeDownload:DownloadFactory
-    private let makeDownloadSetup:DownloadSetupFactory
-    private var storedDownload:YunXDownloadModel?
-    private var storedDownloadSetup:YunXChromeUseSetup?
-    var downloadLoaded:Bool {storedDownload != nil}
-    var downloadSetupLoaded:Bool {storedDownloadSetup != nil}
-    var download:YunXDownloadModel {
-        if let storedDownload{return storedDownload}
-        let defaults=self.defaults
-        let model=makeDownload {ModulePreferences.isEnabled(BuiltinModuleManifests.download,in:defaults)}
-        storedDownload=model;return model
-    }
-    var downloadSetup:YunXChromeUseSetup {
-        if let storedDownloadSetup{return storedDownloadSetup}
-        let defaults=self.defaults
-        let setup=makeDownloadSetup {ModulePreferences.isEnabled(BuiltinModuleManifests.download,in:defaults)}
-        storedDownloadSetup=setup;return setup
-    }
-    func downloadExitBlocker()->MainPage? {
-        storedDownload?.canStopFeature == false || storedDownloadSetup?.canStopFeature == false ? .yunx:nil
-    }
-    func shutdownDownloadIfLoaded(){storedDownload?.shutdown()}
-    func prepareDownloadStop()throws->BuiltinModules.FinishStop? {
-        guard storedDownload?.canStopFeature != false,storedDownloadSetup?.canStopFeature != false else{throw BuiltinModules.StopRefused(description:tr("Wait for downloads, sign-in or tool installation before switching this feature off."))}
-        let model=storedDownload,setup=storedDownloadSetup
-        model?.stopFeature();setup?.stopFeature();YunXClipboardPrompt.shared.stop()
-        return { [weak self] in
-            await model?.finishFeatureStop();await setup?.finishFeatureStop()
-            if self?.storedDownload === model {self?.storedDownload=nil}
-            if self?.storedDownloadSetup === setup {self?.storedDownloadSetup=nil}
-        }
-    }
     var appStore: AppStoreModel { software.store }
     func softwareExitBlocker() -> MainPage? { storedApps?.exitBlocker() }
     func retireSoftwareViews() { storedApps?.retireViews() }

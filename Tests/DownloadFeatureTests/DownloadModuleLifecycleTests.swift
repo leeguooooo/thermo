@@ -2,7 +2,8 @@ import CloudDriveKit
 @testable import DownloadKit
 import ModuleKit
 import XCTest
-@testable import ThermoApp
+import NativeFeatureAPI
+@testable import DownloadFeature
 
 @MainActor final class DownloadModuleLifecycleTests:XCTestCase {
     private final class Backend:YunXSecretBackend,@unchecked Sendable {
@@ -30,11 +31,6 @@ import XCTest
         let root=try root()
         return YunXDownloadModel(enabled:enabled,vault:YunXVault(backend:vault),settingsStore:YunXSettingsStore(defaults:defaults(),trackers:trackers),jobStore:YunXJobStore(backend:jobs),downloadStore:try DownloadStore(root:root.appendingPathComponent("store")),toolsRoot:{XCTFail("no media tools should start");throw CancellationError()},makeEngine:{_ in XCTFail("no download engine should start");throw CancellationError()})
     }
-    func testRegistryOwnsLegacyAndGenericDownloadPages() {
-        XCTAssertTrue(BuiltinModules.problems.isEmpty)
-        XCTAssertEqual(MainPage.yunx.module,DownloadModule.manifest.id)
-        XCTAssertEqual(BuiltinModules.page(.module(DownloadModule.manifest.id,"home"))?.target,.yunx)
-    }
     func testColdOffNeverReadsKeychainStartsEngineOrSignsIn() async throws {
         let vault=Backend(),trackers=Backend(),jobs=Backend(),model=try model(enabled:{false},vault:vault,trackers:trackers,jobs:jobs)
         XCTAssertEqual(trackers.calls,0)
@@ -50,13 +46,14 @@ import XCTest
         let defaults=defaults(),entered=expectation(description:"fake vault"),release=DispatchSemaphore(value:0),vault=Backend();defer{release.signal()}
         vault.onRead={entered.fulfill();_ = release.wait(timeout:.now()+5)}
         let model=try model(vault:vault)
-        let models=AppModels(defaults:defaults,makeDownload:{gate in model.work.enabled=gate;return model})
-        _=models.download;model.reloadAccountsInBackground();await fulfillment(of:[entered],timeout:2)
-        XCTAssertFalse(model.canStopFeature);XCTAssertEqual(models.downloadExitBlocker(),.yunx)
-        XCTAssertThrowsError(try DownloadModule.prepareStop(models:models));XCTAssertFalse(model.work.stopping)
+        let setup=YunXChromeUseSetup(detect:{.init()},run:{_,_,_,_ in 1},defaults:defaults)
+        let store=store(model:model,setup:setup)
+        _=store.page(route);model.reloadAccountsInBackground();await fulfillment(of:[entered],timeout:2)
+        XCTAssertFalse(model.canStopFeature);XCTAssertEqual(store.quitBlocker()?.route,route)
+        XCTAssertThrowsError(try store.prepareStop(route.module));XCTAssertFalse(model.work.stopping)
         release.signal();await model.work.finish();XCTAssertTrue(model.canStopFeature)
-        if let finish=try DownloadModule.prepareStop(models:models){await finish()}
-        XCTAssertFalse(models.downloadLoaded);XCTAssertTrue(model.accounts.isEmpty)
+        if let drain=try store.prepareStop(route.module){await drain.finish()}
+        XCTAssertFalse(store.status(route.module).modelLoaded);XCTAssertTrue(model.accounts.isEmpty)
     }
     func testOffSetupDoesNotProbeInstallConnectOrShowLaunchCard() async {
         let calls=Calls(),setup=YunXChromeUseSetup(enabled:{false},detect:{calls.hit();return .init()},run:{_,_,_,_ in calls.hit();return 1},defaults:defaults())
@@ -68,28 +65,55 @@ import XCTest
         let setup=YunXChromeUseSetup(detect:{.init()},run:{_,_,_,_ in
             entered.fulfill();await Task.detached{_ = release.wait(timeout:.now()+5)}.value;return 1
         },defaults:defaults)
-        let models=AppModels(defaults:defaults,makeDownloadSetup:{gate in setup.work.enabled=gate;return setup})
-        _=models.downloadSetup;let install=Task{await setup.install()}
+        let store=store(model:try! model(),setup:setup)
+        _=store.page(route);let install=Task{await setup.install()}
         await fulfillment(of:[entered],timeout:2)
-        XCTAssertEqual(models.downloadExitBlocker(),.yunx);XCTAssertThrowsError(try DownloadModule.prepareStop(models:models))
+        XCTAssertEqual(store.quitBlocker()?.route,route);XCTAssertThrowsError(try store.prepareStop(route.module))
         release.signal();await install.value
-        if let finish=try? DownloadModule.prepareStop(models:models){await finish()}
-        XCTAssertFalse(models.downloadSetupLoaded);XCTAssertTrue(setup.output.isEmpty)
+        if let drain=try? store.prepareStop(route.module){await drain.finish()}
+        XCTAssertFalse(store.status(route.module).modelLoaded);XCTAssertTrue(setup.output.isEmpty)
     }
     func testDisabledClipboardPromptHasNoTimerOrPanel() {
         let prompt=YunXClipboardPrompt(enabled:{false});prompt.refresh();XCTAssertFalse(prompt.active);prompt.stop();XCTAssertFalse(prompt.active)
     }
     func testOffNavigationAndQuitDoNotInstantiateDownloadsOrSetup() async throws {
-        let defaults=defaults();var downloads=0,setups=0
-        let fixture=try model()
-        let models=AppModels(defaults:defaults,makeDownload:{gate in downloads += 1;fixture.work.enabled=gate;return fixture},makeDownloadSetup:{gate in setups += 1;return YunXChromeUseSetup(enabled:gate,detect:{.init()},run:{_,_,_,_ in 1},defaults:defaults)})
-        let center=ModuleCenter(defaults:defaults,prepareBuiltinStop:{_ in try DownloadModule.prepareStop(models:models)})
-        center.setEnabled(DownloadModule.manifest.id,false);models.shutdownDownloadIfLoaded()
-        XCTAssertFalse(center.shows(.yunx));XCTAssertEqual(downloads+setups,0)
-        defaults.set(true,forKey:ModulePreferences.key(DownloadModule.manifest.id));_ = models.download
+        let defaults=defaults();var enabled=false,downloads=0,setups=0
+        let fixture=try model(),manifest=BuiltinModuleManifests.download
+        let definition=NativeFeatureDefinition(manifest:manifest,makeSession:{availability in
+            DownloadSession(availability:availability,presentation:Presentation(),makeModel:{gate in downloads+=1;fixture.work.enabled=gate;return fixture},makeSetup:{gate in setups+=1;return YunXChromeUseSetup(enabled:gate,detect:{.init()},run:{_,_,_,_ in 1},defaults:defaults)})
+        })
+        let store=NativeFeatureStore(definitions:[definition],enabled:{_ in enabled})
+        XCTAssertNil(store.page(route));store.start(route.module);store.shutdown(route.module)
+        XCTAssertNil(store.quitBlocker());XCTAssertEqual(downloads+setups,0)
+        enabled=true;_=store.page(route)
         fixture.link="owned";fixture.passcode="owned";fixture.settings.trackers=["owned tracker"]
-        if let finish=try DownloadModule.prepareStop(models:models){await finish()}
-        XCTAssertFalse(models.downloadLoaded);XCTAssertTrue(fixture.link.isEmpty);XCTAssertTrue(fixture.passcode.isEmpty);XCTAssertTrue(fixture.settings.trackers.isEmpty)
+        if let drain=try store.prepareStop(route.module){await drain.finish()}
+        XCTAssertFalse(store.status(route.module).modelLoaded);XCTAssertTrue(fixture.link.isEmpty);XCTAssertTrue(fixture.passcode.isEmpty);XCTAssertTrue(fixture.settings.trackers.isEmpty)
         fixture.reloadAccounts();XCTAssertEqual(fixture.work.count,0)
+    }
+    func testPrewarmProbesSetupWithoutConstructingDownloadModelOrStartingClipboard() async throws {
+        let defaults=defaults(),fixture=try model(),calls=Calls()
+        let setup=YunXChromeUseSetup(detect:{calls.hit();return .init(tool:"/fixture/chrome-use",connected:true)},run:{_,_,_,_ in XCTFail("no installer");return 1},defaults:defaults)
+        var creations=0
+        let manifest=BuiltinModuleManifests.download
+        let definition=NativeFeatureDefinition(manifest:manifest,makeSession:{availability in
+            DownloadSession(availability:availability,presentation:Presentation(),makeModel:{gate in creations+=1;fixture.work.enabled=gate;return fixture},makeSetup:{gate in setup.work.enabled=gate;return setup},makePrompt:{_,_,_ in YunXClipboardPrompt(enabled:{false})})
+        })
+        let store=NativeFeatureStore(definitions:[definition],enabled:{_ in true})
+        store.start(manifest.id);store.start(manifest.id)
+        await setup.work.finish()
+        XCTAssertEqual(creations,0);XCTAssertEqual(calls.count,1)
+        XCTAssertNil(store.quitBlocker());store.shutdown(manifest.id)
+    }
+    private let route=NativeFeatureRoute(BuiltinModuleManifests.download.id,"home")
+    private final class Presentation:DownloadPresentation {
+        var mainWindowActive:Bool {false}
+        func showDownloadPage(){XCTFail("unexpected navigation")}
+    }
+    private func store(model:YunXDownloadModel,setup:YunXChromeUseSetup)->NativeFeatureStore {
+        let definition=NativeFeatureDefinition(manifest:BuiltinModuleManifests.download,makeSession:{availability in
+            DownloadSession(availability:availability,presentation:Presentation(),makeModel:{gate in model.work.enabled=gate;return model},makeSetup:{gate in setup.work.enabled=gate;return setup})
+        })
+        return NativeFeatureStore(definitions:[definition],enabled:{_ in true})
     }
 }
