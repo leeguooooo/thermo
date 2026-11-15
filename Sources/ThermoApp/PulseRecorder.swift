@@ -33,6 +33,7 @@ final class PulseRecorder: ObservableObject {
     private let queue: DispatchQueue
     private let lifetime = FeatureSamplingLifetime()
     private let readHistory: (@Sendable () -> [PulseRecord])?
+    private let readDiagnosis: (@Sendable () -> (SlowdownDiagnosis, [SlowdownProcess]))?
     private let samplingAllowed: @Sendable () -> Bool
     private let sampler = PulseSampler()
     /// Confined to `queue`; its previous pass turns CPU and disk counters into rates and busy streaks.
@@ -43,9 +44,11 @@ final class PulseRecorder: ObservableObject {
     private var memory: [PulseRecord] = []
 
     init(queue: DispatchQueue? = nil, readHistory: (@Sendable () -> [PulseRecord])? = nil,
-         samplingAllowed: @escaping @Sendable () -> Bool = { true }) {
+         samplingAllowed: @escaping @Sendable () -> Bool = { true },
+         readDiagnosis: (@Sendable () -> (SlowdownDiagnosis, [SlowdownProcess]))? = nil) {
         self.queue = queue ?? DispatchQueue(label: "dev.thermo.app.pulse-history", qos: .utility)
         self.readHistory = readHistory
+        self.readDiagnosis = readDiagnosis
         self.samplingAllowed = samplingAllowed
     }
 
@@ -124,7 +127,7 @@ final class PulseRecorder: ObservableObject {
         let fixture = ProcessInfo.processInfo.environment["THERMO_DIAGNOSIS_FIXTURE"]
             .flatMap { FileManager.default.contents(atPath: $0) }
             .flatMap { try? JSONDecoder().decode(SlowdownDiagnosis.self, from: $0) }
-        let found = fixture ?? SlowdownDiagnosis.diagnose(slowdown.sample(), system: .read())
+        let found = fixture ?? readDiagnosis?().0 ?? SlowdownDiagnosis.diagnose(slowdown.sample(), system: .read())
         DispatchQueue.main.async { if token == nil || self.lifetime.accepts(token!) { self.diagnosis = found } }
         return found
     }
@@ -136,8 +139,13 @@ final class PulseRecorder: ObservableObject {
     /// It reuses the long-lived sampler, so busy streaks and idle times are judged as on every tick.
     func diagnoseFresh(then: @escaping (SlowdownDiagnosis, [SlowdownProcess]) -> Void) {
         queue.async {
-            let processes = self.slowdown.sample()
-            let found = SlowdownDiagnosis.diagnose(processes, system: .read())
+            let processes: [SlowdownProcess]
+            let found: SlowdownDiagnosis
+            if let read = self.readDiagnosis { (found, processes) = read() }
+            else {
+                processes = self.slowdown.sample()
+                found = SlowdownDiagnosis.diagnose(processes, system: .read())
+            }
             DispatchQueue.main.async { self.diagnosis = found }
             then(found, processes)
         }

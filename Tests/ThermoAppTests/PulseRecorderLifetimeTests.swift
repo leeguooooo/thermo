@@ -1,3 +1,4 @@
+import Combine
 import NativeFeatureAPI
 @testable import CleanKit
 import Foundation
@@ -57,4 +58,30 @@ import XCTest
         XCTAssertEqual(reader.count, 0)
         XCTAssertTrue(recorder.recent.isEmpty)
     }
+    func testManualDiagnosisCannotPublishAfterItsSessionStops() async {
+        let entered = expectation(description: "manual diagnosis entered")
+        let release = DispatchSemaphore(value: 0)
+        defer { release.signal() }
+        let queue = DispatchQueue(label: "thermo-manual-diagnosis-retirement")
+        let system = SlowdownSystem(memoryBytes: 16 << 30, swapUsed: 0, swapTotal: 0,
+                                    pressure: .normal, load1: 1, cores: 8)
+        let found = SlowdownDiagnosis(sampled: Date(), system: system, memoryStrain: .none,
+                                      cpuStrain: .none, headline: "Fixture", culprits: [], also: [])
+        let recorder = PulseRecorder(queue: queue, readHistory: { [] }, readDiagnosis: {
+            entered.fulfill(); _ = release.wait(timeout: .now() + 10)
+            return (found, [])
+        })
+        var published: [String] = []
+        let observation = recorder.$diagnosis.compactMap { $0 }.sink { published.append($0.headline) }
+        recorder.start(); await drain(queue)
+        recorder.diagnoseNow()
+        await fulfillment(of: [entered], timeout: 2)
+        recorder.beginStopping()
+        release.signal()
+        await recorder.stop(); await drain(queue)
+        XCTAssertTrue(published.isEmpty, "An explicit refresh must obey the same publication lifetime as periodic diagnosis")
+        XCTAssertNil(recorder.diagnosis)
+        withExtendedLifetime(observation) {}
+    }
+
 }
