@@ -46,7 +46,7 @@ final class TelemetryWorker:@unchecked Sendable {
             let every=configuration.demand.visible ? configuration.interval:max(configuration.interval,2)
             let timer=DispatchSource.makeTimerSource(queue:self.queue)
             timer.schedule(deadline:.now(),repeating:every,leeway:.milliseconds(Int(every*100)))
-            timer.setEventHandler{[weak self] in self?.sample(token)}
+            timer.setEventHandler{[weak self = self] in self?.sample(token)}
             timer.resume();self.timer=timer
         }
     }
