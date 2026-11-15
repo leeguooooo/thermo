@@ -163,6 +163,26 @@ import SwiftUI
                 }
                 session.showLibrary()
             } catch { session.issue=error.localizedDescription;session.showLibrary() }
+        } else if Bundle.main.object(forInfoDictionaryKey:"ThermoFilePinsReview") as? Bool == true,
+                  let path=Bundle.main.object(forInfoDictionaryKey:"ThermoCaptureFixtureRoot") as? String {
+            let root=URL(fileURLWithPath:path),session=CapturePinSession(store:.init(root:root.appendingPathComponent("pins")));pinSession=session
+            do {
+                if session.library.pins.isEmpty {
+                    var files:[CapturePinFile]=[]
+                    for name in ["Alpha","Beta"] {
+                        let file=root.appendingPathComponent(name+"-owned-preview.pdf")
+                        var bounds=CGRect(x:0,y:0,width:500,height:320)
+                        guard let pdf=CGContext(file as CFURL,mediaBox:&bounds,nil) else{throw CaptureFailure.exportFailed}
+                        pdf.beginPDFPage(nil);pdf.setFillColor(NSColor.white.cgColor);pdf.fill(bounds)
+                        NSGraphicsContext.saveGraphicsState();NSGraphicsContext.current=NSGraphicsContext(cgContext:pdf,flipped:false)
+                        (name+" owned PDF preview" as NSString).draw(at:CGPoint(x:40,y:180),withAttributes:[.font:NSFont.systemFont(ofSize:28),.foregroundColor:NSColor.black])
+                        NSGraphicsContext.restoreGraphicsState();pdf.endPDFPage();pdf.closePDF()
+                        files.append(try CapturePinFile(url:file))
+                    }
+                    let id=try session.open(.files(files));session.windows[id]?.model.pinTitle="QA owned PDF files";try session.flush()
+                } else{session.restoreWindows()}
+                session.showLibrary()
+            } catch{session.issue=captureFailureMessage(error);session.showLibrary()}
         } else if Bundle.main.object(forInfoDictionaryKey:"ThermoTypedPinsReview") as? Bool == true,
            let path=Bundle.main.object(forInfoDictionaryKey:"ThermoCaptureFixtureRoot") as? String {
             let root=URL(fileURLWithPath:path),session=CapturePinSession(store:.init(root:root.appendingPathComponent("pins")));pinSession=session
