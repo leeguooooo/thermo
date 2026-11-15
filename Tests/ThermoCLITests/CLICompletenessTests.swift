@@ -29,14 +29,20 @@ final class CLICompletenessTests: XCTestCase {
         XCTAssertThrowsError(try command.closeTab(["https://example.test","extra"], browser: "Fixture", tabs: { _ in XCTFail("must validate first"); return [] }))
     }
     func testScopedHelpAndCapabilityInventory() {
-        let help = CommandHelp.text(for: ["clean","run"])
+        let help = CommandHelp.text(for: ["clean","run"], capabilities: CommandHelp.capabilities)
         XCTAssertTrue(help.contains("thermo clean run"))
         XCTAssertFalse(help.contains("temperatures, fans and power"))
-        XCTAssertTrue(CommandHelp.text(for: ["agents","compare"]).contains("compare FILE"))
+        XCTAssertTrue(CommandHelp.text(for: ["agents","compare"], capabilities: CommandHelp.capabilities).contains("compare FILE"))
         XCTAssertEqual(Set(CommandHelp.capabilities.map(\.command)).count, CommandHelp.capabilities.count)
         for family in ["privacy","claude-reset","screen","app-control","permissions","integration"] {
             XCTAssertTrue(CommandHelp.capabilities.contains { $0.command == family || $0.command.hasPrefix(family + " ") })
         }
+    }
+    func testScopedHelpOmitsFeaturesMissingFromTheAvailableInventory() {
+        let help = CommandHelp.text(for: ["clean", "run"], capabilities: CommandHelp.coreCapabilities)
+        XCTAssertFalse(help.contains("thermo clean run"))
+        XCTAssertTrue(help.contains("Unknown command"))
+        XCTAssertTrue(CommandHelp.text(for: ["clean", "run"], capabilities: CommandHelp.capabilities).contains("thermo clean run"))
     }
     func testUnsupportedPreviewAndConflictingFormatsAreRejected() throws {
         XCTAssertThrowsError(try CommandContract.validate(Args(["agents","inspect","fixture","--dry-run"])))
