@@ -60,12 +60,12 @@ import NativeFeatureAPI
         await setup.refresh();await setup.install();await setup.connect();await setup.offerOnLaunch()
         XCTAssertEqual(calls.count,0);XCTAssertFalse(setup.working)
     }
-    func testConfirmedSetupInstallRefusesOffUntilFakeRunnerReturns() async {
+    func testConfirmedSetupInstallRefusesOffUntilFakeRunnerReturns() async throws {
         let defaults=defaults(),entered=expectation(description:"fake installer"),release=DispatchSemaphore(value:0);defer{release.signal()}
         let setup=YunXChromeUseSetup(detect:{.init()},run:{_,_,_,_ in
             entered.fulfill();await Task.detached{_ = release.wait(timeout:.now()+5)}.value;return 1
         },defaults:defaults)
-        let store=store(model:try! model(),setup:setup)
+        let store=store(model:try model(),setup:setup)
         _=store.page(route);let install=Task{await setup.install()}
         await fulfillment(of:[entered],timeout:2)
         XCTAssertEqual(store.quitBlocker()?.route,route);XCTAssertThrowsError(try store.prepareStop(route.module))
