@@ -11,12 +11,12 @@ from pathlib import Path
 import plistlib
 import shutil
 import subprocess
-import tempfile
 import uuid
 
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument('--component-review',action='store_true',help='Use simulated native/key/discovery backends and owned preferences for manual UI review')
     parser.add_argument('--jobs',type=int,default=1)
     parser.add_argument('--output', type=Path, required=True, help='New directory for app, logs and manifest')
     parser.add_argument('--fixture-delay', type=float, default=0, help='Delay MBH creation 0 to 5 seconds for startup identity comparison; other fixtures stay immediate')
@@ -54,7 +54,7 @@ def main():
             files[str(source.relative_to(root))]=hashlib.sha256(source.read_bytes()).hexdigest()
         for source in (root/'Sources/MenuBarFeature').glob('*.swift'):
             files[str(source.relative_to(root))]=hashlib.sha256(source.read_bytes()).hexdigest()
-        (output/'input.json').write_text(json.dumps({'files':files,'source':subprocess.check_output(['git','rev-parse','HEAD'],cwd=root,text=True).strip(),'fixtureDelaySeconds':args.fixture_delay,'realHiddenBundle':args.real_hidden_bundle,'realAlwaysHiddenBundle':args.real_always_bundle,'buildOnly':True},indent=2))
+        (output/'input.json').write_text(json.dumps({'files':files,'source':subprocess.check_output(['git','rev-parse','HEAD'],cwd=root,text=True).strip(),'fixtureDelaySeconds':args.fixture_delay,'realHiddenBundle':args.real_hidden_bundle,'realAlwaysHiddenBundle':args.real_always_bundle,'buildOnly':True,'componentReview':args.component_review},indent=2))
         package_file.write_bytes(modified);written=True
         with (output/'build.log').open('w') as log:
             subprocess.run(['swift','build','--jobs',str(args.jobs),'--product',target],cwd=root,stdout=log,stderr=subprocess.STDOUT,check=True)
@@ -74,6 +74,7 @@ def main():
             raise RuntimeError('Concurrent Package.swift change preserved; fixture sources and original backup retained')
     identifier='dev.thermo.menubarqa.'+uuid.uuid4().hex
     (app/'Contents/Info.plist').write_bytes(plistlib.dumps({
+        'ThermoMenuBarQARole':'component-review' if args.component_review else '',
         'CFBundleIdentifier':identifier,'CFBundleExecutable':binary.name,'CFBundleName':'Thermo Menu Bar Preview','CFBundlePackageType':'APPL','CFBundleVersion':'1','LSMinimumSystemVersion':'13.0','NSHighResolutionCapable':True,
         'UTExportedTypeDeclarations':[{'UTTypeIdentifier':'dev.thermo.menubar-app','UTTypeDescription':'Thermo menu bar app','UTTypeConformsTo':['public.data']}],
     }))

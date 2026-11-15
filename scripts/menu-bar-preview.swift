@@ -10,6 +10,7 @@ import MenuBarCore
 import ThermoL10n
 
 @MainActor final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
+    private var componentSuite:String?
     private var manager:MenuBarManager?
     private var managementPanel:MenuBarManagerPanel?
     private var item: NSStatusItem?
@@ -30,6 +31,21 @@ import ThermoL10n
             if delay > 0 {
                 DispatchQueue.main.asyncAfter(deadline: .now() + min(delay, 5)) { [self] in createFixture() }
             } else { createFixture() }
+        }
+        else if Bundle.main.object(forInfoDictionaryKey:"ThermoMenuBarQARole") as? String == "component-review" {
+            let suite="MenuBarComponentQA."+UUID().uuidString
+            componentSuite=suite
+            let defaults=UserDefaults(suiteName:suite)!
+            let apps=[ManagedMenuBarApp(id:"org.example.component.alpha",name:"Alpha fixture"),ManagedMenuBarApp(id:"org.example.component.beta",name:"Beta fixture")]
+            defaults.set(true,forKey:MenuBarManager.enabledKey)
+            let model=MenuBarManager(defaults:defaults,initialApps:apps,accessibilityTrusted:{true},shortcutBackend:MenuBarComponentKeys(),controller:MenuBarSessionController{_ in MenuBarComponentSession()},capabilityAvailable:{true},discover:{apps})
+            manager=model;model.start()
+            managementPanel=MenuBarManagerPanel(model:model)
+            managementPanel?.window?.title="Menu bar component QA — simulated native backend"
+            managementPanel?.show()
+            let menu=NSMenu(),top=NSMenuItem(),items=NSMenu()
+            items.addItem(withTitle:"Quit QA",action:#selector(NSApplication.terminate(_:)),keyEquivalent:"q")
+            top.submenu=items;menu.addItem(top);NSApp.mainMenu=menu
         }
         else if ["visual-check", "real-check"].contains(Bundle.main.object(forInfoDictionaryKey: "ThermoMenuBarQARole") as? String ?? "") {
             visualCheck = MenuBarVisualCheck(realApps: Bundle.main.object(forInfoDictionaryKey: "ThermoMenuBarQARole") as? String == "real-check"); visualCheck?.show()
@@ -155,6 +171,7 @@ import ThermoL10n
             manager?.shutdown()
         }
         try? session?.invalidate()
+        if let componentSuite{UserDefaults.standard.removePersistentDomain(forName:componentSuite)}
     }
     func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool {
         !CommandLine.arguments.contains("--self-test") && !menuBarFixtureMode
@@ -493,4 +510,13 @@ withExtendedLifetime(delegate) { application.run() }
         required init(coder:NSCoder){fatalError("not used")}
         @objc private func fire(){command.perform()}
     }
+}
+
+@MainActor private final class MenuBarComponentSession:MenuBarVisibilitySession {
+    func activate(completion:@escaping @MainActor (String?)->Void){completion(nil)}
+    func invalidate()->String?{nil}
+}
+@MainActor private final class MenuBarComponentKeys:CleanScreenHotkeyBackend {
+    private final class Lease:CleanScreenHotkeyLease {func release()throws{}}
+    func register(_ binding:CleanScreenKeyBinding,event:@escaping (Bool)->Void)throws->CleanScreenHotkeyLease{Lease()}
 }
