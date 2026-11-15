@@ -35,12 +35,27 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate, UNU
     private var menuFreshnessTimer: Timer?
     private var menuPreferences = MenuBarPreferences()
     private var menuValidAfter = Date.distantPast
+    private var featureSelection: FeatureSelectionWindow?
 
     func applicationShouldTerminate(_ sender: NSApplication) -> NSApplication.TerminateReply {
-        CaptureWorkspace.shared.terminationReply(AppExitGuard.reply())
+        if featureSelection != nil { return .terminateNow }
+        return CaptureWorkspace.shared.terminationReply(AppExitGuard.reply())
     }
 
     func applicationDidFinishLaunching(_ notification: Notification) {
+        if featureLaunchState?.needsSelection == true {
+            let selection = FeatureSelectionWindow()
+            featureSelection = selection
+            selection.show { [weak self] in
+                self?.featureSelection = nil
+                self?.startFeaturesAndInterface()
+            }
+        } else {
+            startFeaturesAndInterface()
+        }
+    }
+
+    private func startFeaturesAndInterface() {
         Settings.register()
         AppInstallationMonitor.shared.start()
         AppControlHost.shared.start()
@@ -568,6 +583,15 @@ private final class PageMenuTarget: NSObject, NSMenuItemValidation {
     NSApp.windowsMenu = windowMenu
 }
 
+// Capture upgrade evidence before SingleInstance creates Application Support/Thermo/app.lock.
+// QA, snapshots, main-only windows and CLI-like invocations do not consume onboarding.
+let featureLaunchState: FeatureLaunchPolicy.State? = {
+    guard FeatureLaunchPolicy.allowsInteractiveSelection(arguments: CommandLine.arguments,
+                                                        environment: ProcessInfo.processInfo.environment),
+          NSClassFromString("XCTestCase") == nil else { return nil }
+    return FeatureLaunchPolicy.assess(defaults: .standard, domain: ModulePreferences.appDomain,
+                                     home: URL(fileURLWithPath: NSHomeDirectory()))
+}()
 L10n.apply(preference: UserDefaults.standard.string(forKey: L10n.defaultsKey))
 // Freeze launch metadata before an updater can replace the bundle on disk.
 _ = AppInfo.buildMetadata
@@ -635,6 +659,10 @@ if !CommandLine.arguments.contains("--offscreen"), !CommandLine.arguments.contai
         fputs("Thermo cannot acquire its instance lock: \(error)\n", stderr)
         exit(1)
     }
+}
+// The lock winner alone writes migration state, before AppDelegate/model initializers run.
+if let featureLaunchState {
+    FeatureLaunchPolicy.install(featureLaunchState, in: .standard, persist: true)
 }
 if CommandLine.arguments.contains("--verify-lifecycle") {
     do {
