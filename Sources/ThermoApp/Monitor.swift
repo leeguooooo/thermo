@@ -1,3 +1,5 @@
+import NativeFeatureAPI
+import ThermoKernel
 import CleanKit
 import SystemServicesAPI
 import Foundation

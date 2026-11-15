@@ -1,3 +1,4 @@
+import ThermoKernel
 import SystemServicesAPI
 import XCTest
 import ThermoKit

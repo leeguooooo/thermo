@@ -1,22 +1,23 @@
 import SystemServicesAPI
+import SystemServicesAPI
 import ThermoKit
 
-enum SamplingSurface: Equatable, Sendable {
+package enum SamplingSurface: Equatable, Sendable {
     case overview, sensors, compact
 }
 
 /// Accuracy follows the selected feature; the default menu-bar CPU reading stays inexpensive.
-struct SamplingPlan {
-    var scope: SamplerScope
-    var parts: SamplerParts
-    var groups: Set<SensorGroup>?
+package struct SamplingPlan {
+    package var scope: SamplerScope
+    package var parts: SamplerParts
+    package var groups: Set<SensorGroup>?
 
-    static func make(visible: Bool, includeUnnamed: Bool, metric: TitleMetric, alerts: Bool) -> SamplingPlan {
+    package static func make(visible: Bool, includeUnnamed: Bool, metric: TitleMetric, alerts: Bool) -> SamplingPlan {
         make(visible: visible, includeUnnamed: includeUnnamed,
              metrics: MenuBarPreferences.legacy(metric.rawValue).metrics, alerts: alerts)
     }
 
-    static func make(visible: Bool, includeUnnamed: Bool, metrics: Set<MenuMetric>, alerts: Bool,
+    package static func make(visible: Bool, includeUnnamed: Bool, metrics: Set<MenuMetric>, alerts: Bool,
                      surface: SamplingSurface = .sensors) -> SamplingPlan {
         if visible {
             switch surface {

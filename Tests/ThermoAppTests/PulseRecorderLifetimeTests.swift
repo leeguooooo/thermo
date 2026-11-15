@@ -1,3 +1,4 @@
+import NativeFeatureAPI
 @testable import CleanKit
 import Foundation
 import XCTest
