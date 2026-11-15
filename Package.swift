@@ -79,6 +79,7 @@ let package = Package(
         .target(name: "ModuleKit"),
         .target(name: "NativeFeatureAPI", dependencies: ["ModuleKit"]),
         .target(name:"SystemServicesAPI",dependencies:["ThermoKit","ThermoL10n"]),
+        .target(name:"PerformanceFeature",dependencies:["NativeFeatureAPI","SystemServicesAPI","ThermoUI","ThermoL10n","ModuleKit","ThermoKit","CleanKit","AgentCore","AgentDoctor","LocalAIUI"]),
         .target(name:"ThermoKernel",dependencies:["SystemServicesAPI","NativeFeatureAPI","ThermoKit","CleanKit","AgentCore","ThermoL10n"]),
         .target(name: "ModuleKernelCore", dependencies: ["ModuleHost", "ModuleKit", "AgentCore", "CleanKit", "ThermoUI", "ThermoL10n"]),
         .executableTarget(name: "PermissionUIHarness", dependencies: ["ModuleKernelCore", "ModuleKit", "AgentCore", "CleanKit", "ThermoL10n"]),
@@ -117,7 +118,7 @@ let package = Package(
         .executableTarget(name: "ThermoHelper", dependencies: ["ThermoKit"]),
         .executableTarget(
             name: "ThermoApp",
-            dependencies: ["ThermoKernel", "SystemServicesAPI", "MenuBarFeature", "CaptureControlAdapter", "CaptureFeature", "SearchFeature", "DocumentPreviewHost", "DocumentPreviewAPI", "HotkeyCore", "DiskFeature", "AgentDiagnosticsFeature", "SpaceFeature", "AppsFeature", "BrowserFeature", "DownloadFeature", "HistoryFeature", "ModuleKernelCore", "ClaudeFeature", "CheckupFeature", "LocalAIUI", "PluginsFeature", "ConnectionsFeature", "NativeFeatureAPI", "ThermoUI", "ThermoKit", "AgentDoctor", "CleanKit", "ThermoL10n", "CaptureCore", "CaptureScriptCore", "MenuBarCore", "CMenuBar", "CloudDriveKit", "DownloadKit", "MediaToolsKit", "VideoKit", "ModuleKit", "ModuleHost", .product(name: "Markdown", package: "swift-markdown"), .product(name: "Sparkle", package: "Sparkle")],
+            dependencies: ["PerformanceFeature", "ThermoKernel", "SystemServicesAPI", "MenuBarFeature", "CaptureControlAdapter", "CaptureFeature", "SearchFeature", "DocumentPreviewHost", "DocumentPreviewAPI", "HotkeyCore", "DiskFeature", "AgentDiagnosticsFeature", "SpaceFeature", "AppsFeature", "BrowserFeature", "DownloadFeature", "HistoryFeature", "ModuleKernelCore", "ClaudeFeature", "CheckupFeature", "LocalAIUI", "PluginsFeature", "ConnectionsFeature", "NativeFeatureAPI", "ThermoUI", "ThermoKit", "AgentDoctor", "CleanKit", "ThermoL10n", "CaptureCore", "CaptureScriptCore", "MenuBarCore", "CMenuBar", "CloudDriveKit", "DownloadKit", "MediaToolsKit", "VideoKit", "ModuleKit", "ModuleHost", .product(name: "Markdown", package: "swift-markdown"), .product(name: "Sparkle", package: "Sparkle")],
             linkerSettings: [.linkedFramework("AppKit"), .linkedFramework("SwiftUI"), .linkedFramework("Charts"), .linkedFramework("AVKit"), .linkedFramework("WebKit"), .linkedFramework("Quartz"),
                              .linkedFramework("CoreAudio"),
                              .linkedFramework("AudioToolbox")]
@@ -139,6 +140,7 @@ let package = Package(
         .testTarget(name: "ConnectionsFeatureTests", dependencies: ["ConnectionsFeature", "NativeFeatureAPI", "ModuleKit"]),
         .testTarget(name: "ThermoCLITests", dependencies: ["thermo", "ModuleKit", .product(name: "MCP", package: "swift-sdk")]),
         .testTarget(name: "ThermoAppTests", dependencies: ["ThermoKernel", "SystemServicesAPI", "MenuBarFeature", "CaptureControlAdapter", "CaptureFeature", "SearchFeature", "DocumentPreviewHost", "DocumentPreviewAPI", "HotkeyCore", "DiskFeature", "AgentDiagnosticsFeature", "SpaceFeature", "AppsFeature", "HistoryFeature", "ModuleKernelCore", "LocalAIUI", "NativeFeatureAPI", "ThermoUI", "PreviewCore", "PreviewUI", "ThermoApp", "ModuleKit", "ModuleHost", "ThermoKit", "CleanKit", "AgentCore", "AgentDoctor", "SearchCore", "MenuBarCore", "CloudDriveKit", "DownloadKit", "MediaToolsKit", "VideoKit"]),
+        .testTarget(name:"PerformanceFeatureTests",dependencies:["PerformanceFeature","SystemServicesAPI","NativeFeatureAPI","ThermoKit","ModuleKit","CleanKit","AgentCore","AgentDoctor"]),
         .testTarget(name:"ThermoKernelTests",dependencies:["ThermoKernel","SystemServicesAPI","NativeFeatureAPI","ThermoKit"]),
         .testTarget(name: "ThermoKitTests", dependencies: ["ThermoKit", "CSMC", "CleanKit"]),
         .testTarget(name: "ThermoHelperTests", dependencies: ["ThermoHelper", "ThermoKit"]),

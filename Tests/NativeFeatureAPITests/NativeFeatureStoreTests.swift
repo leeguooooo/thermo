@@ -11,9 +11,10 @@ import XCTest
         var presentations: [NativeHostPresentation] = []
         func hostPresentationChanged(_ value: NativeHostPresentation) { presentations.append(value) }
         var blocker:NativeFeatureBlocker?
+        var navigation:NativeNavigation?
         var drain:() async->Void = {}
         init(_ availability:FeatureAvailability){self.availability=availability}
-        func page(_ route:NativeFeatureRoute,navigation:NativeNavigation)->AnyView? {guard availability.acceptsWork else{return nil};pages += 1;return AnyView(EmptyView())}
+        func page(_ route:NativeFeatureRoute,navigation:NativeNavigation)->AnyView? {guard availability.acceptsWork else{return nil};self.navigation=navigation;pages += 1;return AnyView(EmptyView())}
         var status:NativeFeatureStatus {.init(modelLoaded:true)}
         func start(){starts+=1}
         func shutdown(){shutdowns+=1}
@@ -129,6 +130,23 @@ import XCTest
         store.setWindowPresentation(visible: true, selection: .init(manifest.id, "undeclared"))
         XCTAssertNil(store.hostPresentation.selection)
         XCTAssertEqual(creations, 0)
+    }
+
+    func testNavigationAdmissionQueryNeverConstructsDestinationAndExpiresWithOrigin() async throws {
+        var origin:Session?,madeDestination=0,targetEnabled=true
+        var target=manifest;target.id="com.example.destination"
+        let a=NativeFeatureDefinition(manifest:manifest,makeSession:{availability in let made=Session(availability);origin=made;return made})
+        let b=NativeFeatureDefinition(manifest:target,makeSession:{availability in madeDestination+=1;return Session(availability)})
+        let targetID=target.id
+        let store=NativeFeatureStore(definitions:[a,b],enabled:{id in id != targetID || targetEnabled})
+        _=store.page(.init(manifest.id,"home"))
+        let navigation=try XCTUnwrap(origin?.navigation),route=NativeFeatureRoute(target.id,"home")
+        XCTAssertTrue(navigation.canAdmit(route));XCTAssertEqual(madeDestination,0)
+        targetEnabled=false;XCTAssertFalse(navigation.canAdmit(route))
+        targetEnabled=true
+        let drain=try XCTUnwrap(store.prepareStop(manifest.id))
+        XCTAssertFalse(navigation.canAdmit(route));XCTAssertEqual(madeDestination,0)
+        await drain.finish()
     }
 
 }

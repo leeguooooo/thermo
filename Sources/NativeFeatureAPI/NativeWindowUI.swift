@@ -20,8 +20,9 @@ package struct NativeUIContributions:Sendable {
     package let hasOverlay:Bool
     package let hasBackdrop:Bool
     package let hasMenuContent:Bool
-    package init(sidebarLocations:Set<NativeSidebarLocation> = [],hasOverlay:Bool = false,hasBackdrop:Bool = false,hasMenuContent:Bool = false) {
-        self.sidebarLocations=sidebarLocations;self.hasOverlay=hasOverlay;self.hasBackdrop=hasBackdrop;self.hasMenuContent=hasMenuContent
+    package let compactPanelEntry:String?
+    package init(sidebarLocations:Set<NativeSidebarLocation> = [],hasOverlay:Bool = false,hasBackdrop:Bool = false,hasMenuContent:Bool = false,compactPanelEntry:String? = nil) {
+        self.sidebarLocations=sidebarLocations;self.hasOverlay=hasOverlay;self.hasBackdrop=hasBackdrop;self.hasMenuContent=hasMenuContent;self.compactPanelEntry=compactPanelEntry
     }
     package static let none=NativeUIContributions()
 }
@@ -64,6 +65,7 @@ package struct NativeUIContributions:Sendable {
 }
 package enum NativeUISurface {
     case sidebar(location:NativeSidebarLocation,selection:NativeFeatureRoute?,rows:NativeSidebarRenderer)
+    case compactPanel(NativeFeatureRoute)
     case windowOverlay
     case inlineSettings(NativeUIEntryRef)
     case renderPreview(NativeUIEntryRef)

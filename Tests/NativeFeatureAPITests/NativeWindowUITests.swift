@@ -18,6 +18,7 @@ import XCTest
             case .renderPreview:surfaces.append("render")
             case .windowOverlay:surfaces.append("overlay")
             case .backdrop:surfaces.append("backdrop")
+            case let .compactPanel(route):surfaces.append("compact:"+route.entry)
             }
             return AnyView(EmptyView())
         }
@@ -152,4 +153,35 @@ import XCTest
         XCTAssertFalse(store.canAdmitUIEntryOwner(ref));XCTAssertFalse(store.admitUIEntryOwner(ref));XCTAssertFalse(store.activate(ref));XCTAssertNil(store.renderPreview(ref));XCTAssertEqual(made,1)
         await drain.finish();XCTAssertTrue(store.canAdmitUIEntryOwner(ref));XCTAssertEqual(made,1);XCTAssertTrue(store.admitUIEntryOwner(ref));XCTAssertEqual(made,2);XCTAssertEqual(sessions[1].starts,0)
     }
+
+}
+
+
+extension NativeWindowUITests {
+    func testCompactPanelValidatesExactOwnerBeforeAdmissionAndStaysColdWhenOff() async throws {
+        var made=0,enabled=false
+        let session=Session()
+        let definition=NativeFeatureDefinition(manifest:manifest,ui:.init(compactPanelEntry:"home"),makeSession:{_ in made+=1;return session})
+        let store=NativeFeatureStore(definitions:[definition],enabled:{_ in enabled})
+        XCTAssertNil(store.compactPanel(.init(id,"home")));XCTAssertEqual(made,0)
+        enabled=true
+        XCTAssertNil(store.compactPanel(.init(id,"action")))
+        XCTAssertNil(store.compactPanel(.init(id,"home",context:["unexpected":.text("value")])))
+        XCTAssertEqual(made,0)
+        XCTAssertNotNil(store.compactPanel(.init(id,"home")))
+        XCTAssertEqual(made,1);XCTAssertEqual(session.surfaces,["compact:home"])
+        let drain=try XCTUnwrap(store.prepareStop(id))
+        XCTAssertNil(store.compactPanel(.init(id,"home")));XCTAssertEqual(made,1)
+        await drain.finish()
+    }
+    func testCompactPanelRequiresOneDeclaredContextFreePage() {
+        XCTAssertThrowsError(try NativeFeatureCatalog(definitions:[.init(manifest:manifest,ui:.init(compactPanelEntry:"action"),makeSession:{_ in Session()})]))
+        let required=NativePageContract(entry:"home",fields:[.init("query",kind:.text)])
+        XCTAssertThrowsError(try NativeFeatureCatalog(definitions:[.init(manifest:manifest,pageContracts:[required],ui:.init(compactPanelEntry:"home"),makeSession:{_ in Session()})]))
+        var other=manifest;other.id="com.example.second"
+        XCTAssertThrowsError(try NativeFeatureCatalog(definitions:[manifest,other].map { schema in
+            .init(manifest:schema,ui:.init(compactPanelEntry:"home"),makeSession:{_ in Session()})
+        }))
+    }
+
 }

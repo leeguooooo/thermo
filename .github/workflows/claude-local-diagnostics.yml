@@ -6,6 +6,10 @@ on:
       - 'Tests/**'
       - 'Package.*'
       - 'scripts/verify-native-boundaries.py'
+      - 'scripts/verify-performance-boundaries.py'
+      - 'scripts/verify-performance-ui.py'
+      - 'scripts/verify-performance-ui.swift'
+      - 'scripts/bench-pulse*'
       - 'scripts/tests/test_native_boundaries.py'
       - '.github/workflows/claude-local-diagnostics.yml'
   workflow_dispatch:
@@ -37,4 +41,12 @@ jobs:
       - name: Build isolated performance UI fixture and verify source restoration
         run: |
           python3 scripts/verify-performance-ui.py --jobs 3 --output-dir "$RUNNER_TEMP/thermo-performance-review-ci.noindex"
+          test -z "$(git status --porcelain)"
+      - name: Compile private performance API boundaries
+        run: |
+          python3 scripts/verify-performance-boundaries.py --jobs 3 --output-dir "$RUNNER_TEMP/thermo-performance-boundaries-ci.noindex"
+          test -z "$(git status --porcelain)"
+      - name: Compile private pulse benchmark fixtures without measuring the runner
+        run: |
+          python3 scripts/bench-pulse.py --jobs 3 --build-only
           test -z "$(git status --porcelain)"

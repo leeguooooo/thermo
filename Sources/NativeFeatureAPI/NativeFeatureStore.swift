@@ -21,6 +21,10 @@ import SwiftUI
         }
     }
     private enum State {case live(Live),draining(Draining)}
+    private struct PageIdentity:Hashable {
+        let generation:UUID
+        let route:NativeFeatureRoute
+    }
     package let catalog:NativeFeatureCatalog
     private let enabled:(String)->Bool
     private let navigation:NativeNavigation
@@ -113,6 +117,14 @@ import SwiftUI
         }
         return .init(sidebar:groups,overlay:AnyView(NativeOverlays(parts:overlays)),backdrop:backdrop)
     }
+    /// Compact content is attached only to the exact declared page owner, with normal admission.
+    package func compactPanel(_ request:NativeFeatureRoute)->AnyView? {
+        guard let route=try? catalog.normalize(request),
+              catalog.definitions[route.module]?.ui.compactPanelEntry==route.entry,
+              let session=admittedSession(route.module),case let .live(live)=states[route.module],
+              let view=session.ui(.compactPanel(route),navigation:scopedNavigation(route.module)) else{return nil}
+        return AnyView(view.id(live.generation))
+    }
     /// Hierarchical menu content is declared separately so leaf menu metadata stays model-cold.
     package func menuContent(_ ref:NativeUIEntryRef)->NativeMenuContent? {
         guard let definition=catalog.definitions[ref.module],definition.ui.hasMenuContent,
@@ -174,10 +186,12 @@ import SwiftUI
     private func scopedNavigation(_ id:String)->NativeNavigation {
         guard case let .live(live)=states[id] else{return .unavailable}
         let availability=live.availability,navigation=navigation
-        return NativeNavigation {request in
+        return NativeNavigation(canAdmit:{[weak self] route in
+            availability.acceptsWork && self?.canPresent(route) == true
+        },show:{request in
             guard availability.acceptsWork else{return false}
             return navigation.show(request)
-        }
+        })
     }
     @discardableResult package func preparePresentation(_ request:NativePresentationRequest)->Bool {
         guard let canonical=try? catalog.normalizePresentation(request),canPresent(canonical.route) else{return false}
@@ -187,8 +201,10 @@ import SwiftUI
         return true
     }
     package func page(_ request:NativeFeatureRoute)->AnyView? {
-        guard let route=try? catalog.normalize(request) else{return nil}
-        return admittedSession(route.module)?.page(route,navigation:scopedNavigation(route.module))
+        guard let route=try? catalog.normalize(request),
+              let session=admittedSession(route.module),case let .live(live)=states[route.module],
+              let view=session.page(route,navigation:scopedNavigation(route.module)) else{return nil}
+        return AnyView(view.id(PageIdentity(generation:live.generation,route:route)))
     }
     package func prepareReview(_ request:NativeFeatureRoute,arguments:[String]) {
         guard let route=try? catalog.normalize(request) else{return}
@@ -217,6 +233,13 @@ import SwiftUI
         for id in catalog.order {
             if case let .live(live)=states[id] {live.session.invalidateAfterRestore(paths)}
             else {catalog.definitions[id]?.invalidateColdState(paths)}
+        }
+    }
+    /// Host wake only reaches existing, admitted owners; metadata never starts work.
+    package func didWake() {
+        for id in catalog.order {
+            guard case let .live(live)=states[id],live.availability.acceptsWork else{continue}
+            live.session.didWake()
         }
     }
     package func retireVisibility() {

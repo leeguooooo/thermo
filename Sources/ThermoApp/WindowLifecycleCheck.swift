@@ -1,3 +1,5 @@
+import NativeFeatureAPI
+import ModuleKit
 import AgentCore
 import AppKit
 import CleanKit
@@ -102,15 +104,17 @@ enum WindowLifecycleCheck {
         let activity = options.foregroundActivity ? ProcessInfo.processInfo.beginActivity(
             options: .userInitiatedAllowingIdleSystemSleep, reason: "Thermo foreground lifecycle verification") : nil
         defer { if let activity { ProcessInfo.processInfo.endActivity(activity) } }
-        AppModels.shared.monitor = Monitor(helperInteraction: false)
+        AppModels.shared.system = SystemPresentation(services:AppModels.shared.services)
         let started = Date(), clock = DispatchTime.now().uptimeNanoseconds
         let pages: [(String, MainPage)] = [("overview", .overview), ("memory", .memory), ("cpu", .compute(false))]
         var retired: [WeakController] = []
         var samples: [Sample] = []
         var openChecksPassed = true
         var transitionChecks: [String: Bool] = [:]
+        func readers()->[String:NativeReaderStatus]{AppModels.shared.nativeFeatures.status(BuiltinModuleManifests.performance.id).readers}
+        func readersBusy()->Bool{["memory","cpu","gpu"].contains{readers()[$0]?.workInFlight == true}}
         func reading(cycle: Int, page: String, phase: String, frame: NSRect?) -> Sample {
-            let compute = page == "cpu" ? ComputeModel.cpu : ComputeModel.shared
+            let state=readers(),compute=state[page == "cpu" ? "cpu":"gpu"]
             let memory = ProcessTable.memory(getpid())
             var usage = rusage(), task = proc_taskinfo()
             let gotCPU = getrusage(RUSAGE_SELF, &usage) == 0
@@ -121,13 +125,13 @@ enum WindowLifecycleCheck {
                 residentKB: memory.residentKB, footprintKB: memory.footprintKB, cpuSeconds: cpu,
                 threads: gotTask ? Int(task.pti_threadnum) : nil, controllersAlive: retired.filter { $0.value != nil }.count,
                 contentDetached: MainWindow.window?.contentViewController == nil,
-                monitorWindowOpen: AppModels.shared.monitor.windowOpen,
-                memoryTimer: MemoryModel.shared.samplingActive, memoryInFlight: MemoryModel.shared.sampleInFlight,
-                computeTimer: ComputeModel.shared.samplingActive || ComputeModel.cpu.samplingActive,
-                computeInFlight: ComputeModel.shared.sampleInFlight || ComputeModel.cpu.sampleInFlight,
-                pulseTimer: SystemPulse.shared.samplingActive, pulseHolders: SystemPulse.shared.holderCount,
-                memoryPublished: MemoryModel.shared.sampled, computePublished: compute.current?.sampled,
-                pulsePublished: SystemPulse.shared.current?.sampled,
+                monitorWindowOpen: AppModels.shared.system.windowOpen,
+                memoryTimer: state["memory"]?.sampling == true, memoryInFlight: state["memory"]?.workInFlight == true,
+                computeTimer: (state["gpu"]?.sampling == true || state["cpu"]?.sampling == true),
+                computeInFlight: (state["gpu"]?.workInFlight == true || state["cpu"]?.workInFlight == true),
+                pulseTimer: (readers()["pulse"]?.sampling == true), pulseHolders: (readers()["pulse"]?.holders ?? 0),
+                memoryPublished: state["memory"]?.publishedAt, computePublished: compute?.publishedAt,
+                pulsePublished: readers()["pulse"]?.publishedAt,
                 framePreserved: frame.map { MainWindow.window?.frame == $0 } ?? true)
             print("lifecycle \(cycle) \(page) \(phase): RSS=\(sample.residentKB ?? -1)KB footprint=\(sample.footprintKB ?? -1)KB cpuSeconds=\(sample.cpuSeconds ?? -1) controllers=\(sample.controllersAlive)")
             fflush(stdout)
@@ -159,12 +163,12 @@ enum WindowLifecycleCheck {
                     // cannot catch a lost appearance lease during this transition.
                     MainWindow.state.page = .compute(false)
                     try await pause(options.openSeconds)
-                    transitionChecks["cycle-\(cycle)-leave-overview"] = !SystemPulse.shared.samplingActive && SystemPulse.shared.holderCount == 0
+                    transitionChecks["cycle-\(cycle)-leave-overview"] = !(readers()["pulse"]?.sampling == true) && (readers()["pulse"]?.holders ?? 0) == 0
                     let returnedAt = Date()
                     MainWindow.state.page = .overview
                     try await pause(options.openSeconds)
-                    transitionChecks["cycle-\(cycle)-return-overview"] = SystemPulse.shared.samplingActive &&
-                        (SystemPulse.shared.current?.sampled ?? .distantPast) >= returnedAt
+                    transitionChecks["cycle-\(cycle)-return-overview"] = (readers()["pulse"]?.sampling == true) &&
+                        (readers()["pulse"]?.publishedAt ?? .distantPast) >= returnedAt
                     samples.append(reading(cycle: cycle, page: name, phase: "returned", frame: frame))
 
                 }
@@ -172,7 +176,7 @@ enum WindowLifecycleCheck {
                 MainWindow.setSamplingVisibility(false)
                 try await pause(0.2)
                 let untilHidden = DispatchTime.now().uptimeNanoseconds + 5_000_000_000
-                while (MemoryModel.shared.sampleInFlight || ComputeModel.cpu.sampleInFlight || ComputeModel.shared.sampleInFlight)
+                while readersBusy()
                     && DispatchTime.now().uptimeNanoseconds < untilHidden { try await pause(0.1) }
                 let hiddenStart = reading(cycle: cycle, page: name, phase: "hidden-start", frame: frame)
                 try await pause(options.idleSeconds)
@@ -196,7 +200,7 @@ enum WindowLifecycleCheck {
                 // Let appearance callbacks and already-running reads finish before testing idle.
                 try await pause(1)
                 let until = DispatchTime.now().uptimeNanoseconds + 5_000_000_000
-                while (MemoryModel.shared.sampleInFlight || ComputeModel.cpu.sampleInFlight || ComputeModel.shared.sampleInFlight) && DispatchTime.now().uptimeNanoseconds < until {
+                while readersBusy() && DispatchTime.now().uptimeNanoseconds < until {
                     try await pause(0.1)
                 }
                 let closed = reading(cycle: cycle, page: name, phase: "closed", frame: frame)

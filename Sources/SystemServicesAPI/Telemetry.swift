@@ -54,6 +54,8 @@ package struct MenuTelemetryReading:Sendable {
     /// Passive derived values for the shell. Subscribing never acquires sampling demand.
     var menuReadings:AnyPublisher<MenuTelemetryReading,Never>{get}
     func dismissError()
+    /// Requests an existing admitted producer; this never acquires sampling authority.
+    func refreshCurrent()
     func preferencesDidChange()
     func resetMenuBaselines()
     func beginPerformanceSampling(available:@escaping @MainActor ()->Bool)throws->any TelemetrySamplingLease

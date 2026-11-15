@@ -6,7 +6,7 @@ import ThermoL10n
 
 /// The menu bar switch: keep the Mac awake with the lid closed, with the rules that end it said up front.
 struct LidAwakeSwitch: View {
-    @ObservedObject var monitor: Monitor
+    @ObservedObject var monitor: SystemPresentation
     @AppStorage(Settings.fahrenheit) private var fahrenheit = false
     @AppStorage(Settings.lidAwakeHeatGuard) private var heatGuard = true
 

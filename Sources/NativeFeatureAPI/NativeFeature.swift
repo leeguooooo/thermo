@@ -15,12 +15,22 @@ package struct NativeFeatureRoute:Hashable,Sendable {
     package var acceptsWork:Bool {!revoked && enabled()}
     func revoke(){revoked=true}
 }
+package struct NativeReaderStatus: Sendable {
+    package var sampling: Bool
+    package var workInFlight: Bool?
+    package var holders: Int?
+    package var publishedAt: Date?
+    package init(sampling: Bool, workInFlight: Bool? = nil, holders: Int? = nil, publishedAt: Date? = nil) {
+        self.sampling = sampling; self.workInFlight = workInFlight; self.holders = holders; self.publishedAt = publishedAt
+    }
+}
 package struct NativeFeatureStatus {
     package var modelLoaded:Bool
     package var sampling:Bool
     package var snapshotReady:Bool
-    package init(modelLoaded:Bool = false,sampling:Bool = false,snapshotReady:Bool = false) {
-        self.modelLoaded=modelLoaded;self.sampling=sampling;self.snapshotReady=snapshotReady
+    package var readers:[String:NativeReaderStatus]
+    package init(modelLoaded:Bool = false,sampling:Bool = false,snapshotReady:Bool = false,readers:[String:NativeReaderStatus] = [:]) {
+        self.modelLoaded=modelLoaded;self.sampling=sampling;self.snapshotReady=snapshotReady;self.readers=readers
     }
 }
 package struct NativeFeatureBlocker {
@@ -48,6 +58,7 @@ package struct NativeFeatureBusy:Error,LocalizedError,CustomStringConvertible {
     func prepareTermination()->NativeTerminationDecision
     func invalidateAfterRestore(_ paths:[String])
     func retireVisibility()
+    func didWake()
     func hostPresentationChanged(_ presentation: NativeHostPresentation)
     func quitBlocker()->NativeFeatureBlocker?
     func preparePresentation(_ route:NativeFeatureRoute,options:[String:NativeContextValue])
@@ -71,6 +82,7 @@ package struct NativeFeatureDefinition:Sendable {
 }
 
 extension NativeFeatureSession {
+    package func didWake() {}
     package func hostPresentationChanged(_ presentation: NativeHostPresentation) {}
     package func menuContent(_ ref:NativeUIEntryRef)->NativeMenuContent?{nil}
     package func ui(_ surface:NativeUISurface,navigation:NativeNavigation)->AnyView?{nil}
