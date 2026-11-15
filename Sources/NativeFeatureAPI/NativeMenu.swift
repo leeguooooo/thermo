@@ -30,22 +30,25 @@ package enum NativeMenuPlacement:Sendable {case application,status,popover,revie
 
 extension NativeMenuContent {
     func scoped(to availability:FeatureAvailability,generation:UUID)->Self {
+        checkedContent(available:{availability.acceptsWork},generation:generation)
+    }
+    func checkedContent(available:@escaping @MainActor ()->Bool,generation:UUID)->Self {
         .init(items:{placement in
-            guard availability.acceptsWork else{return []}
+            guard available() else{return []}
             var remaining=512
-            return Self.checked(snapshot(placement),availability:availability,remaining:&remaining) ?? []
+            return Self.checked(snapshot(placement),available:available,remaining:&remaining) ?? []
         },view:{placement,renderer in
-            guard availability.acceptsWork else{return AnyView(EmptyView())}
+            guard available() else{return AnyView(EmptyView())}
             let checked=NativeMenuRenderer{nodes in
-                guard availability.acceptsWork else{return AnyView(EmptyView())}
+                guard available() else{return AnyView(EmptyView())}
                 var remaining=512
-                guard let nodes=Self.checked(nodes,availability:availability,remaining:&remaining) else{return AnyView(EmptyView())}
+                guard let nodes=Self.checked(nodes,available:available,remaining:&remaining) else{return AnyView(EmptyView())}
                 return renderer(nodes)
             }
             return AnyView(mount(placement,checked).id(generation))
         })
     }
-    private static func checked(_ nodes:[NativeMenuNode],availability:FeatureAvailability,remaining:inout Int,depth:Int = 0)->[NativeMenuNode]? {
+    private static func checked(_ nodes:[NativeMenuNode],available:@escaping @MainActor ()->Bool,remaining:inout Int,depth:Int = 0)->[NativeMenuNode]? {
         guard depth<=8,nodes.count<=remaining else{return nil}
         remaining-=nodes.count
         var result:[NativeMenuNode]=[]
@@ -53,9 +56,9 @@ extension NativeMenuContent {
             switch node {
             case let .action(action):
                 guard action.title.count<=512,(action.symbol?.count ?? 0)<=128 else{return nil}
-                result.append(.action(.init(title:action.title,symbol:action.symbol,enabled:action.enabled,perform:{guard availability.acceptsWork else{return};action.perform()})))
+                result.append(.action(.init(title:action.title,symbol:action.symbol,enabled:action.enabled,perform:{guard available() else{return};action.perform()})))
             case let .submenu(title,symbol,items):
-                guard title.count<=512,(symbol?.count ?? 0)<=128,let children=checked(items,availability:availability,remaining:&remaining,depth:depth+1) else{return nil}
+                guard title.count<=512,(symbol?.count ?? 0)<=128,let children=checked(items,available:available,remaining:&remaining,depth:depth+1) else{return nil}
                 result.append(.submenu(title:title,symbol:symbol,items:children))
             case .separator:result.append(.separator)
             }
