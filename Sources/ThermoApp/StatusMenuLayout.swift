@@ -1,6 +1,6 @@
 import Foundation
 
-/// Pure status menu layout structure: 12 product first-level items + retained extras.
+/// Pure status menu layout with a feature-owned menu insertion point.
 /// Input: runtime facts. Output: ordered structure for AppKit materialization.
 /// Testable seam for menu tree assertions without AppKit.
 @MainActor
@@ -9,7 +9,7 @@ struct StatusMenuLayout {
     let retainedExtras: RetainedExtras
     
     struct RuntimeContext {
-        var captureEnabled: Bool = true
+        var nativeMenusAppear:Bool = true
         var menuBarEnabled: Bool = true
         var performanceEnabled: Bool = true
         var searchEnabled: Bool = true
@@ -23,7 +23,6 @@ struct StatusMenuLayout {
         let hasBattery: Bool
         let keepAwakeActive: Bool
         let focusTimerActive: Bool
-        let configuredCaptureEntriesAppear: Bool
         let menuBarQuickControlsAppear: Bool
         let updatesCanCheck: Bool
         let moreToolsActiveStates: MoreToolsActiveStates
@@ -59,6 +58,7 @@ struct StatusMenuLayout {
     enum ProductItem {
         case openThermo
         case searchAppsAndFiles
+        case nativeMenus
         case menuGroup(MenuGroup)
         case directStatusItem(DirectStatusItem)
         case manageMenuBar
@@ -79,20 +79,6 @@ struct StatusMenuLayout {
     }
     
     enum LeafAction {
-        case captureScreen(shortcutSuffix: String)
-        case scrollingCapture
-        case recordScreen
-        case recordingDrafts
-        case openImage
-        case configuredCaptureActions(entries: [String])
-        case captureSavingSettings
-        case captureShortcutsSettings
-        case pinClipboard(shortcutSuffix: String)
-        case pinClipboardAsText
-        case pinClipboardAsLaTeX
-        case pinGroupsAndHistory
-        case restoreLastClosedPin
-        case restorePinMouseInteraction
         case overview
         case aiCheckup
         case sensors
@@ -113,20 +99,6 @@ struct StatusMenuLayout {
         
         var identity: String {
             switch self {
-            case .captureScreen: return "captureScreen"
-            case .scrollingCapture: return "scrollingCapture"
-            case .recordScreen: return "recordScreen"
-            case .recordingDrafts: return "recordingDrafts"
-            case .openImage: return "openImage"
-            case .configuredCaptureActions: return "configuredCaptureActions"
-            case .captureSavingSettings: return "captureSavingSettings"
-            case .captureShortcutsSettings: return "captureShortcutsSettings"
-            case .pinClipboard: return "pinClipboard"
-            case .pinClipboardAsText: return "pinClipboardAsText"
-            case .pinClipboardAsLaTeX: return "pinClipboardAsLaTeX"
-            case .pinGroupsAndHistory: return "pinGroupsAndHistory"
-            case .restoreLastClosedPin: return "restoreLastClosedPin"
-            case .restorePinMouseInteraction: return "restorePinMouseInteraction"
             case .overview: return "overview"
             case .aiCheckup: return "aiCheckup"
             case .sensors: return "sensors"
@@ -148,7 +120,7 @@ struct StatusMenuLayout {
         }
     }
     
-    static func make(context: RuntimeContext, captureShortcutSuffix: String, pinShortcutSuffix: String, configuredCaptureEntries: [String]) -> StatusMenuLayout {
+    static func make(context:RuntimeContext) -> StatusMenuLayout {
         var productItems: [ProductItem] = []
         
         // 1. Open Thermo
@@ -157,40 +129,8 @@ struct StatusMenuLayout {
         // 2. Search apps and files
         if context.searchEnabled { productItems.append(.searchAppsAndFiles) }
         
-        // 3. Capture & record (Menu Group)
-        var captureLeaves: [LeafAction] = [
-            .captureScreen(shortcutSuffix: captureShortcutSuffix),
-            .scrollingCapture,
-            .recordScreen,
-            .recordingDrafts,
-            .openImage
-        ]
-        if context.configuredCaptureEntriesAppear && !configuredCaptureEntries.isEmpty {
-            captureLeaves.append(.configuredCaptureActions(entries: configuredCaptureEntries))
-        }
-        captureLeaves.append(.captureSavingSettings)
-        captureLeaves.append(.captureShortcutsSettings)
-        if context.captureEnabled { productItems.append(.menuGroup(MenuGroup(
-            title: "Capture & record",
-            leaves: captureLeaves,
-            hasActiveHint: false
-        ))) }
-        
-        // 4. Clipboard & pins (Menu Group)
-        let clipboardLeaves: [LeafAction] = [
-            .pinClipboard(shortcutSuffix: pinShortcutSuffix),
-            .pinClipboardAsText,
-            .pinClipboardAsLaTeX,
-            .pinGroupsAndHistory,
-            .restoreLastClosedPin,
-            .restorePinMouseInteraction
-        ]
-        if context.captureEnabled { productItems.append(.menuGroup(MenuGroup(
-            title: "Clipboard & pins",
-            leaves: clipboardLeaves,
-            hasActiveHint: false
-        ))) }
-        
+        if context.nativeMenusAppear{productItems.append(.nativeMenus)}
+
         // 5. System & hardware (Menu Group)
         let systemLeaves: [LeafAction] = [
             .overview,

@@ -18,22 +18,12 @@ final class StatusMenu: NSObject, NSMenuDelegate {
     static let shared = StatusMenu()
 
     func make(battery: Bool) -> NSMenu {
-        let captureEnabled = CaptureModule.enabled
-        let captureShortcutSuffix = captureEnabled ? CaptureWorkspace.shared.shortcutSuffix(for: .screenshot) : ""
-        let pinShortcutSuffix = captureEnabled ? CaptureWorkspace.shared.shortcutSuffix(for: .pinClipboard) : ""
-        
-        let configuredEntries = captureEnabled ? CaptureWorkspace.shared.shortcuts.settings.entries
-            .filter { $0.appearsInMenu }
-            .map { entry -> String in
-                let label = CaptureWorkspace.shared.shortcuts.label(for: entry)
-                return (entry.title.isEmpty ? tr(entry.action.title) : entry.title) + (label.isEmpty ? "" : "  " + label)
-            } : []
-        
+        let nativeEntries=BuiltinNativeFeatures.catalog.menuEntries.filter{$0.hasContent && ModuleCenter.shared.isOn($0.ref.module)}
         let menuBarManager = MenuBarManager.shared
         let menuBarQuickControlsAppear = menuBarManager.enabled || menuBarManager.state != .visible
         
         let context = StatusMenuLayout.RuntimeContext(
-            captureEnabled: captureEnabled,
+            nativeMenusAppear:!nativeEntries.isEmpty,
             menuBarEnabled: MenuBarModule.enabled,
             performanceEnabled: PerformanceModule.enabled,
             searchEnabled: SearchModule.enabled,
@@ -43,7 +33,6 @@ final class StatusMenu: NSObject, NSMenuDelegate {
             hasBattery: battery,
             keepAwakeActive: IdleAwakeModel.shared.state.phase == .active,
             focusTimerActive: FocusTimerModel.shared.phase.isActive,
-            configuredCaptureEntriesAppear: !configuredEntries.isEmpty,
             menuBarQuickControlsAppear: menuBarQuickControlsAppear,
             updatesCanCheck: AppModels.shared.updates.canCheck,
             moreToolsActiveStates: StatusMenuLayout.MoreToolsActiveStates(
@@ -53,17 +42,7 @@ final class StatusMenu: NSObject, NSMenuDelegate {
             )
         )
         
-        let layout = StatusMenuLayout.make(
-            context: context,
-            captureShortcutSuffix: captureShortcutSuffix,
-            pinShortcutSuffix: pinShortcutSuffix,
-            configuredCaptureEntries: configuredEntries
-        )
-        
-        return materialize(layout: layout)
-    }
-    
-    private func materialize(layout: StatusMenuLayout) -> NSMenu {
+        let layout=StatusMenuLayout.make(context:context)
         let menu = NSMenu()
         menu.autoenablesItems = false
         
@@ -75,6 +54,10 @@ final class StatusMenu: NSObject, NSMenuDelegate {
             case .searchAppsAndFiles:
                 menu.addItem(item(tr("Search apps and files"), "magnifyingglass") { SearchModule.show() })
                 
+            case .nativeMenus:
+                for entry in nativeEntries {
+                    if let content=AppModels.shared.nativeFeatures.menuContent(entry.ref){NativeMenuRendering.append(to:menu,nodes:content.items(.status),owner:entry.ref)}
+                }
             case .menuGroup(let group):
                 menu.addItem(materializeGroup(group))
                 
@@ -128,47 +111,6 @@ final class StatusMenu: NSObject, NSMenuDelegate {
         
         for leaf in group.leaves {
             switch leaf {
-            case .captureScreen(let suffix):
-                submenu.addItem(item(tr("Capture screen…") + suffix, "viewfinder") { CaptureWorkspace.shared.capture() })
-            case .scrollingCapture:
-                submenu.addItem(item(tr("Scrolling capture…"), "arrow.down.right.and.arrow.up.left") { CaptureWorkspace.shared.captureScrolling() })
-            case .recordScreen:
-                submenu.addItem(item(tr("Record screen…"), "record.circle") { CaptureWorkspace.shared.recordScreen() })
-            case .recordingDrafts:
-                submenu.addItem(item(tr("Recording drafts…"), "film.stack") { CaptureWorkspace.shared.recordScreen(draftsOnly: true) })
-            case .openImage:
-                submenu.addItem(item(tr("Open image…"), "photo") { CaptureWorkspace.shared.importImage() })
-            case .configuredCaptureActions(let entries):
-                let configured = NSMenu()
-                configured.autoenablesItems = false
-                for (index, _) in entries.enumerated() {
-                    let entry = CaptureWorkspace.shared.shortcuts.settings.entries.filter { $0.appearsInMenu }[index]
-                    let label = CaptureWorkspace.shared.shortcuts.label(for: entry)
-                    configured.addItem(item((entry.title.isEmpty ? tr(entry.action.title) : entry.title) + (label.isEmpty ? "" : "  " + label), nil) {
-                        let workspace = CaptureWorkspace.shared
-                        workspace.shortcuts.run(entry)
-                        if workspace.shortcuts.issue != nil { workspace.showActionSettings() }
-                    })
-                }
-                let configItem = NSMenuItem(title: tr("Configured capture actions"), action: nil, keyEquivalent: "")
-                configItem.submenu = configured
-                submenu.addItem(configItem)
-            case .captureSavingSettings:
-                submenu.addItem(item(tr("Capture saving and after-actions"), "square.and.arrow.down") { CaptureWorkspace.shared.showSavingSettings() })
-            case .captureShortcutsSettings:
-                submenu.addItem(item(tr("Capture shortcuts and actions"), "keyboard") { CaptureWorkspace.shared.showActionSettings() })
-            case .pinClipboard(let suffix):
-                submenu.addItem(item(tr("Pin clipboard") + suffix, "pin") { CaptureWorkspace.shared.pinClipboard() })
-            case .pinClipboardAsText:
-                submenu.addItem(item(tr("Pin clipboard as text"), "text.quote") { CaptureWorkspace.shared.pinClipboard(asText: true) })
-            case .pinClipboardAsLaTeX:
-                submenu.addItem(item(tr("Pin clipboard as LaTeX"), "function") { CaptureWorkspace.shared.pinClipboard(asLaTeX: true) })
-            case .pinGroupsAndHistory:
-                submenu.addItem(item(tr("Pin groups and history"), "square.stack") { CaptureWorkspace.shared.showPinLibrary() })
-            case .restoreLastClosedPin:
-                submenu.addItem(item(tr("Restore last closed pin"), "arrow.uturn.backward") { CaptureWorkspace.shared.restoreLastPin() })
-            case .restorePinMouseInteraction:
-                submenu.addItem(item(tr("Restore pin mouse interaction"), "cursorarrow") { CaptureWorkspace.shared.pinSession.restoreMouseInteraction() })
             case .overview:
                 submenu.addItem(page(tr("Overview"), "gauge.with.dots.needle.67percent", .overview))
             case .aiCheckup:
