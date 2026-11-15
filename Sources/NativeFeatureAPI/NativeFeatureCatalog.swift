@@ -148,7 +148,10 @@ package struct NativePresentationRequest: Sendable {
 }
 package struct NativeNavigation: Sendable {
     private let showBody:@MainActor @Sendable (NativePresentationRequest)->Bool
-    package init(show:@escaping @MainActor @Sendable (NativePresentationRequest)->Bool){showBody=show}
+    private let admissionBody:@MainActor @Sendable (NativeFeatureRoute)->Bool
+    package init(canAdmit:@escaping @MainActor @Sendable (NativeFeatureRoute)->Bool = {_ in false},show:@escaping @MainActor @Sendable (NativePresentationRequest)->Bool){admissionBody=canAdmit;showBody=show}
+    /// A policy-only query; it never constructs or presents the destination feature.
+    @MainActor package func canAdmit(_ route:NativeFeatureRoute)->Bool{admissionBody(route)}
     @MainActor package func show(_ request:NativePresentationRequest)->Bool {showBody(request)}
     @MainActor package func show(_ route:NativeFeatureRoute)->Bool {showBody(.init(route:route))}
     package static let unavailable=NativeNavigation(show:{_ in false})

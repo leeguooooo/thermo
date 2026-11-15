@@ -182,10 +182,12 @@ import SwiftUI
     private func scopedNavigation(_ id:String)->NativeNavigation {
         guard case let .live(live)=states[id] else{return .unavailable}
         let availability=live.availability,navigation=navigation
-        return NativeNavigation {request in
+        return NativeNavigation(canAdmit:{[weak self] route in
+            availability.acceptsWork && self?.canPresent(route) == true
+        },show:{request in
             guard availability.acceptsWork else{return false}
             return navigation.show(request)
-        }
+        })
     }
     @discardableResult package func preparePresentation(_ request:NativePresentationRequest)->Bool {
         guard let canonical=try? catalog.normalizePresentation(request),canPresent(canonical.route) else{return false}
