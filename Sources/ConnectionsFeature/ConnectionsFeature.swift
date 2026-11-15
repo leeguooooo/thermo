@@ -15,7 +15,8 @@ package enum ConnectionsFeature {
     init(availability:FeatureAvailability,makeModel:@escaping @MainActor (@escaping ()->Bool)->ConnectionsModel = {ConnectionsModel(enabled:$0)}) {
         self.availability=availability;self.makeModel=makeModel
     }
-    func page(entry:String)->AnyView? {
+    func page(_ route:NativeFeatureRoute,navigation:NativeNavigation)->AnyView? {
+        let entry=route.entry
         guard availability.acceptsWork,entry=="home" else{return nil}
         if storedModel==nil {let availability=availability;storedModel=makeModel {availability.acceptsWork}}
         return storedModel.map{AnyView(ConnectionsPage(model:$0))}

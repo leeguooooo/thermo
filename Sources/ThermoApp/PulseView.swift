@@ -358,8 +358,7 @@ struct PulseCard: View {
                 // A browser: which of its pages is the problem (measured only when asked).
                 if ChromeInspector.isBrowser(h.name) && !renderingPreview {
                     Button(tr("View pages")) {
-                        _ = AppModels.shared.browser(h.name, memoryKB: h.memoryKB, gpuKB: h.parts?.first { $0.role == "GPU" }?.memoryKB)
-                        MainWindow.show(.browser(h.name))
+                        BrowserModule.present(h,open: {MainWindow.show($0)})
                     }
                     .controlSize(.small).buttonStyle(.link).font(.caption)
                     .padding(.leading, indent)
@@ -511,8 +510,7 @@ struct PulseCard: View {
                 HStack(spacing: 6) {
                     if ChromeInspector.isBrowser(h.name) && !renderingPreview {
                         Button(tr("Pages")) {
-                            _ = AppModels.shared.browser(h.name, memoryKB: h.memoryKB, gpuKB: h.parts?.first { $0.role == "GPU" }?.memoryKB)
-                            MainWindow.show(.browser(h.name))
+                            BrowserModule.present(h,open: {MainWindow.show($0)})
                         }
                         .buttonStyle(PillButtonStyle()).controlSize(.small).help(tr("View pages"))
                     }

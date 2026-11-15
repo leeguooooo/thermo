@@ -23,7 +23,8 @@ package enum CheckupFeature {
         if let storedModel{return storedModel}
         let availability=availability,model=makeModel {availability.acceptsWork};storedModel=model;return model
     }
-    func page(entry:String)->AnyView? {
+    func page(_ route:NativeFeatureRoute,navigation:NativeNavigation)->AnyView? {
+        let entry=route.entry
         guard availability.acceptsWork,entry=="home" else{return nil}
         return AnyView(CheckupPage(reading:reading,open:navigate,model:model))
     }
@@ -33,7 +34,7 @@ package enum CheckupFeature {
         guard storedModel?.canStopFeature == false else{return nil}
         return .init(reason:tr("Wait for the current AI check-up request before switching this feature off."),route:.init(BuiltinModuleManifests.checkup.id,"home"))
     }
-    func prepareReview(_ arguments:[String]) {
+    func prepareReview(_ route:NativeFeatureRoute,arguments:[String]) {
         guard availability.acceptsWork,let index=arguments.firstIndex(of:"--fixture"),index+1<arguments.count else{return}
         model.loadFixture(answer:arguments[index+1])
     }

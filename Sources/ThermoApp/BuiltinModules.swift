@@ -54,7 +54,10 @@ enum BuiltinModules {
     static var disk: ModuleManifest { DiskModule.manifest }
     static func manifest(_ id: String) -> ModuleManifest? { all.first { $0.id == id } }
     static func implementation(_ id: String) -> (any BuiltinModule.Type)? { implementations.first { $0.manifest.id == id } }
-    static func owner(_ page: MainPage) -> (any BuiltinModule.Type)? { implementations.first { $0.owns(page) } }
+    static func owner(_ page: MainPage) -> (any BuiltinModule.Type)? {
+        if case let .native(route)=page{return implementation(route.module)}
+        return implementations.first { $0.owns(page) }
+    }
     static func workerOwner(_ id: String) -> (any BuiltinModule.Type)? { implementations.first { $0.privateWorkers.contains(id) } }
 
     struct Page {
@@ -66,7 +69,9 @@ enum BuiltinModules {
     static func page(_ page: MainPage) -> Page? {
         guard let owner = owner(page) else { return nil }
         let entry: ModuleManifest.Entry?
-        if case let .module(_, id) = page {
+        if case let .native(route)=page {
+            entry=owner.manifest.entries.first{$0.id==route.entry && $0.kind == .page}
+        } else if case let .module(_, id) = page {
             entry = owner.manifest.entries.first { $0.kind == .page && (id.isEmpty ? $0.parent == nil : $0.id == id) }
         } else { entry = owner.entry(for:page) }
         return entry.map { .init(implementation: owner, entry: $0) }
@@ -95,6 +100,7 @@ enum BuiltinModules {
     }
 
     @MainActor static func snapshotReady(_ page: MainPage, arguments: [String], models: AppModels, center: ModuleCenter, started: Date = .distantPast) -> Bool? {
+        if case let .native(route)=page{return models.nativeFeatures.snapshotReady(route,arguments:arguments,started:started)}
         guard owner(page) != nil else { return nil }
         guard center.shows(page), let feature = self.page(page) else { return true }
         return feature.implementation.snapshotReady(arguments, models: models, started: started)
@@ -110,6 +116,7 @@ enum BuiltinModules {
 
 extension MainPage {
     var module: String? {
+        if case let .native(route)=self{return route.module}
         if case let .module(id, _) = self { return id }
         return BuiltinModules.owner(self)?.manifest.id
     }

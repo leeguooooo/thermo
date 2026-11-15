@@ -670,8 +670,7 @@ struct MemoryPage: View {
         HStack(spacing: 6) {
             if ChromeInspector.isBrowser(h.name) {
                 Button(tr("Pages")) {
-                    _ = AppModels.shared.browser(h.name, memoryKB: h.memoryKB, gpuKB: h.parts?.first { $0.role == "GPU" }?.memoryKB)
-                    open(.browser(h.name))
+                    BrowserModule.present(h,open: open)
                 }
                 .buttonStyle(PillButtonStyle()).controlSize(.small).help(tr("Which of its pages use the memory"))
             }

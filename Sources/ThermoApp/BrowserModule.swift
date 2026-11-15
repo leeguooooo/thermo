@@ -1,3 +1,4 @@
+import NativeFeatureAPI
 import AppKit
 import CleanKit
 import ModuleKit
@@ -9,14 +10,14 @@ enum BrowserModule: BuiltinModule {
     static let legacyMenuEntries:[String:String]=[:]
     static let sidebarSections:Set<BuiltinSidebarSection>=[.resources]
     @MainActor static var enabled:Bool {ModuleCenter.shared.isOn(manifest.id)}
-    @MainActor static func start() {if enabled {TabAutomation.shared.start()}}
+    @MainActor static func start() {AppModels.shared.nativeFeatures.start(manifest.id)}
     static func owns(_ page:MainPage)->Bool {
-        if case .browser=page{return true}
+        if case let .native(route)=page{return route.module==manifest.id}
         if case let .module(id,_)=page{return id==manifest.id}
         return false
     }
     static func entry(for page:MainPage)->ModuleManifest.Entry? {
-        if case .browser=page{return manifest.entries.first}
+        if case let .native(route)=page{return manifest.entries.first{$0.id==route.entry}}
         return nil
     }
     static func canonicalArgument(_ argument:String)->String {argument}
@@ -27,36 +28,38 @@ enum BrowserModule: BuiltinModule {
     @MainActor static func sidebar(section:BuiltinSidebarSection,page:Binding<MainPage>,models:AppModels,
                                   row:@escaping @MainActor (BuiltinSidebarItem)->AnyView)->AnyView {
         guard section == .resources,let entry=manifest.entries.first else{return AnyView(EmptyView())}
-        let app:String
-        if case let .browser(selected)=page.wrappedValue {app=selected}else{app="Google Chrome"}
-        return row(.init(entry:entry,target:.browser(app),tint:.teal,selected:owns(page.wrappedValue)))
+        let target=owns(page.wrappedValue) ? page.wrappedValue:.browser("Google Chrome")
+        return row(.init(entry:entry,target:target,tint:.teal,selected:owns(page.wrappedValue)))
     }
     @MainActor static func page(_ entry:ModuleManifest.Entry,selection:Binding<MainPage>,models:AppModels)->AnyView {
-        let app:String
-        if case let .browser(selected)=selection.wrappedValue {app=selected}else{app="Google Chrome"}
-        return AnyView(ChromePagesView(model:models.browser(app),embedded:true).id(app))
+        let route:NativeFeatureRoute
+        if case let .native(value)=selection.wrappedValue {route=value}else{route = .init(manifest.id,entry.id)}
+        return models.nativeFeatures.page(route) ?? AnyView(EmptyView())
+    }
+    @MainActor static func present(_ hog:MachinePulse.Hog,open:(MainPage)->Void) {
+        var options:[String:NativeContextValue]=["appMemoryKB":.integer(Int64(hog.memoryKB))]
+        if let gpu=hog.parts?.first(where:{$0.role=="GPU"})?.memoryKB {options["gpuMemoryKB"] = .integer(Int64(gpu))}
+        let request=NativePresentationRequest(route:.init(manifest.id,"home",context:["app":.text(hog.name)]),options:options)
+        guard NSApp.modalWindow == nil,MainWindow.window?.attachedSheet == nil,
+              let canonical=try? BuiltinNativeFeatures.catalog.normalizePresentation(request),
+              AppModels.shared.nativeFeatures.preparePresentation(canonical) else{return}
+        open(.native(canonical.route))
     }
     @MainActor static func settings(_ entry:ModuleManifest.Entry,models:AppModels)->AnyView {AnyView(EmptyView())}
-    @MainActor static func prepareStop(models:AppModels)throws->BuiltinModules.FinishStop? {try models.prepareBrowserStop()}
+    @MainActor static func prepareStop(models:AppModels)throws->BuiltinModules.FinishStop? {
+        guard let drain=try models.nativeFeatures.prepareStop(manifest.id) else{return nil}
+        return {await drain.finish()}
+    }
     @MainActor static func appearance(_ page:MainPage)->(glow:Bool,tint:Color?){(false,nil)}
     @MainActor static func prepareReview(_ args:[String],page:inout MainPage,models:AppModels) {
         guard args.contains("--chrome-pages") else{return}
         let app=args.firstIndex(of:"--app").flatMap{$0+1<args.count ? args[$0+1]:nil} ?? "Google Chrome"
-        page = .browser(app)
-        guard enabled else{return}
-        let hog=MachinePulse.sample().hogs.first{$0.name==app}
-        let model=models.browser(app,memoryKB:hog?.memoryKB,gpuKB:hog?.parts?.first{$0.role=="GPU"}?.memoryKB)
-        if let index=args.firstIndex(of:"--fixture"),index+2<args.count {model.loadFixture(before:args[index+1],after:args[index+2])}
-        page = .browser(app)
+        guard let route=try? BuiltinNativeFeatures.catalog.normalize(.init(manifest.id,"home",context:["app":.text(app)])) else{return}
+        page = .native(route)
+        models.nativeFeatures.prepareReview(route,arguments:args)
     }
     @MainActor static func snapshotReady(_ args:[String],models:AppModels,started:Date)->Bool {
-        let raw=args.firstIndex(of:"--page").flatMap{$0+1<args.count ? args[$0+1]:nil}
-        let requested=raw.flatMap(MainPage.init(argument:))
-        let app:String
-        if case let .browser(name)?=requested {app=name}
-        else {app=args.firstIndex(of:"--app").flatMap{$0+1<args.count ? args[$0+1]:nil} ?? "Google Chrome"}
-        let diagnostics=args.firstIndex(of:"--tabs-task").flatMap{$0+1<args.count ? args[$0+1]:nil} == "diagnostics"
-        if diagnostics {let model=models.browser(app);return model.diagnosis != nil && !model.running}
-        return TabWorkspaceModel.loadedApps.contains(app)
+        let app=args.firstIndex(of:"--app").flatMap{$0+1<args.count ? args[$0+1]:nil} ?? "Google Chrome"
+        return models.nativeFeatures.snapshotReady(.init(manifest.id,"home",context:["app":.text(app)]),arguments:args,started:started)
     }
 }

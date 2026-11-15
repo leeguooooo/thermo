@@ -231,33 +231,13 @@ struct ChromePagesView: View {
     @State private var confirming: ClosePlan?
     @State private var search = ""
     @State private var onlyRecommended = false
-    @State private var section: BrowserSection = {
-        let args = CommandLine.arguments
-        if args.contains("--offscreen"), let i = args.firstIndex(of: "--tabs-task"), i + 1 < args.count {
-            if args[i + 1] == "diagnostics" { return .diagnostics }
-            return .task(TabWorkspaceTask(rawValue: args[i + 1]) ?? .organize)
-        }
-        return .task(.organize)
-    }()
+    @Binding var section:BrowserSection
     struct ClosePlan: Identifiable { let id = UUID(); let tabs: [ChromeInspector.Tab] }
 
-    var taskBinding: Binding<TabWorkspaceTask> {
-        Binding(get: { if case let .task(t) = section { return t } else { return .organize } }, set: { section = .task($0) })
-    }
-
     var body: some View {
-        VStack(spacing: 0) {
-            PageHeader(title: tr("Tab organizer"), subtitle: section == .diagnostics ? summary
-                       : tr("Group tabs without closing them, or save links and close tabs you are not using.")) {
-                EmptyView()
-            } below: {
-                ThermoTabs(selection: $section,
-                           options: TabWorkspaceTask.allCases.map { (BrowserSection.task($0), $0.title) } + [(.diagnostics, tr("Memory diagnostics"))],
-                           label: tr("Browser pages"))
-            }
-            .padding(.horizontal, Theme.pagePadding).padding(.top, Theme.pageTop).padding(.bottom, Theme.Space.l)
-            if section == .diagnostics { diagnosticsBody }
-            else { TabWorkspaceView(app: model.app, task: taskBinding) }
+        VStack(spacing:0) {
+            BrowserHeader(section:$section,subtitle:summary)
+            diagnosticsBody
         }
     }
 

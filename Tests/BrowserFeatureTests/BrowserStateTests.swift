@@ -1,6 +1,7 @@
 import XCTest
 @testable import CleanKit
-@testable import ThermoApp
+@testable import BrowserFeature
+import NativeFeatureAPI
 
 final class BrowserStateTests: XCTestCase {
     @MainActor func testCloseUpdatesMemoryTotalsAndDuplicates() {
@@ -44,6 +45,17 @@ final class BrowserStateTests: XCTestCase {
         model.closing = "https://example.com/"
         model.start()
         XCTAssertFalse(model.running)
+        XCTAssertNil(model.phase)
+    }
+    @MainActor func testStoppedBrowserCheckClearsBusyState() {
+        let model = ChromePagesModel(app: "Fixture browser", appMemoryKB: nil, gpuKB: nil)
+        model.start(measure: true)
+        XCTAssertTrue(model.running)
+        XCTAssertTrue(model.measuring)
+        model.stop()
+        XCTAssertFalse(model.running)
+        XCTAssertFalse(model.measuring)
+        XCTAssertTrue(model.stopped)
         XCTAssertNil(model.phase)
     }
 }

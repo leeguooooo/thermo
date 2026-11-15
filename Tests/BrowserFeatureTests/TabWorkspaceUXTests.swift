@@ -2,7 +2,8 @@ import XCTest
 import AgentCore
 import ThermoL10n
 @testable import CleanKit
-@testable import ThermoApp
+@testable import BrowserFeature
+import NativeFeatureAPI
 
 final class TabWorkspaceUXTests: XCTestCase {
     func page(_ id: Int, window: Int = 1, protected: String? = nil) -> TabWorkspace.Page {

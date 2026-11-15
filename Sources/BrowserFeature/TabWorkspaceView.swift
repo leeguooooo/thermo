@@ -5,16 +5,9 @@ import CleanKit
 import SwiftUI
 import ThermoL10n
 
-@MainActor
-enum TabQuickAction {
-    static var requested = false
-    static let notification = Notification.Name("dev.thermo.archiveBackgroundTabs")
-    static func request() {
-        guard BrowserModule.enabled else{return}
-        requested = true
-        MainWindow.show(.browser("Google Chrome"))
-        NotificationCenter.default.post(name: notification, object: nil)
-    }
+@MainActor final class BrowserArchiveState {
+    var requested=false
+    static let notification=Notification.Name("dev.thermo.archiveBackgroundTabs")
 }
 
 struct TabWorkspaceActions: Sendable {
@@ -41,14 +34,14 @@ final class TabWorkspaceModel: ObservableObject {
     @Published var notice: String?
     @Published var allWindows = false
     @Published var window: Int?
-    static var loadedApps = Set<String>()
+    private(set) var didLoad=false
     struct Preview: Codable { var inventory: TabWorkspace.Inventory; var saved: [TabWorkspace.Archive] }
     private(set) var isPreview = false
     init(enabled:@escaping ()->Bool = {true}, app: String, preview: Preview? = nil, actions:TabWorkspaceActions = .init()) {
         self.app = app;self.actions=actions;work.enabled=enabled
         guard enabled() else{return}
         if let preview {
-            inventory = preview.inventory; saved = preview.saved; isPreview = true; Self.loadedApps.insert(app); return
+            inventory = preview.inventory; saved = preview.saved; isPreview = true; didLoad=true; return
         }
         let args = CommandLine.arguments
         if args.contains("--offscreen"), let i = args.firstIndex(of: "--tabs-fixture"), i + 1 < args.count {
@@ -56,8 +49,8 @@ final class TabWorkspaceModel: ObservableObject {
                 let decoder = JSONDecoder(); decoder.dateDecodingStrategy = .iso8601
                 let data = try decoder.decode(Preview.self, from: Data(contentsOf: URL(fileURLWithPath: args[i + 1])))
                 inventory = data.inventory; saved = data.saved; isPreview = true
-                Self.loadedApps.insert(app)
-            } catch { self.error = error.localizedDescription; isPreview = true; Self.loadedApps.insert(app) }
+                didLoad=true
+            } catch { self.error = error.localizedDescription; isPreview = true; didLoad=true }
         }
     }
     var pages: [TabWorkspace.Page] {
@@ -94,14 +87,14 @@ final class TabWorkspaceModel: ObservableObject {
                 guard self.work.acceptsWork else{self.finishRefresh();return}
                 let records = try await Task.detached { try actions.archives() }.value
                 guard self.work.acceptsWork,self.generation==token else{self.finishRefresh();return}
-                Self.loadedApps.insert(app)
+                didLoad=true
                 inventory = inv; saved = records.filter { $0.app == app }
                 selected.formIntersection(Set(inv.pages.map(\.id)))
             } catch {
                 guard self.work.acceptsWork,self.generation==token else{self.finishRefresh();return}
                 // A failed reload keeps the old list on screen; say so, since it may be out of date.
                 self.error = tr(error.localizedDescription) + (inventory != nil ? "\n" + tr("This is the previous list. Refresh before taking action.") : "")
-                Self.loadedApps.insert(app)
+                didLoad=true
             }
             finishRefresh()
         }
@@ -165,7 +158,7 @@ final class TabWorkspaceModel: ObservableObject {
     func finishFeatureStop() async {
         await work.finish()
         inventory=nil;saved=[];selected=[];busy=false;error=nil;notice=nil
-        Self.loadedApps.remove(app)
+        didLoad=false
     }
 
 }
@@ -217,8 +210,10 @@ struct TabWorkspaceView: View {
         /// Remove the saved record itself instead of reopening it.
         var forget = false
     }
-    init(app: String, task: Binding<TabWorkspaceTask>) {
-        _model = StateObject(wrappedValue: AppModels.shared.workspace(app))
+    let archive:BrowserArchiveState
+    init(model: TabWorkspaceModel, archive:BrowserArchiveState, task: Binding<TabWorkspaceTask>) {
+        self.archive=archive
+        _model = StateObject(wrappedValue:model)
         _task = task
     }
     var groupNames: [String] { Array(Set(filtered.map(\.group))).sorted() }
@@ -269,10 +264,10 @@ struct TabWorkspaceView: View {
             }
         }
         .onAppear { model.refresh() }
-        .onReceive(NotificationCenter.default.publisher(for: TabQuickAction.notification)) { _ in model.refresh() }
+        .onReceive(NotificationCenter.default.publisher(for: BrowserArchiveState.notification,object:archive)) { _ in model.refresh() }
         .onChange(of: model.busy) { busy in
-            if !busy && TabQuickAction.requested && model.app == "Google Chrome" {
-                TabQuickAction.requested = false
+            if !busy && archive.requested && model.app == "Google Chrome" {
+                archive.requested = false
                 task = .archive; model.allWindows = false; model.window = nil
                 if !model.candidates.isEmpty { requestArchive(model.candidates) }
             }

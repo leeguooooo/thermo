@@ -17,7 +17,8 @@ package enum PluginsFeature {
          makeModel:@escaping @MainActor (@escaping ()->Bool)->PluginsModel = {PluginsModel(enabled:$0)}) {
         self.availability=availability;self.navigate=navigate;self.makeModel=makeModel
     }
-    func page(entry:String)->AnyView? {
+    func page(_ route:NativeFeatureRoute,navigation:NativeNavigation)->AnyView? {
+        let entry=route.entry
         guard availability.acceptsWork,entry=="home" else{return nil}
         if storedModel==nil {let availability=availability;storedModel=makeModel{availability.acceptsWork}}
         guard let model=storedModel else{return nil}

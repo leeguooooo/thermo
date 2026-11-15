@@ -11,7 +11,7 @@ import XCTest
         var blocker:NativeFeatureBlocker?
         var drain:() async->Void = {}
         init(_ availability:FeatureAvailability){self.availability=availability}
-        func page(entry:String)->AnyView? {guard availability.acceptsWork else{return nil};pages += 1;return AnyView(EmptyView())}
+        func page(_ route:NativeFeatureRoute,navigation:NativeNavigation)->AnyView? {guard availability.acceptsWork else{return nil};pages += 1;return AnyView(EmptyView())}
         var status:NativeFeatureStatus {.init(modelLoaded:true)}
         func start(){starts+=1}
         func shutdown(){shutdowns+=1}

@@ -200,15 +200,5 @@ final class PresentationTests: XCTestCase {
         XCTAssertEqual(invalid.displayText, "—")
     }
 
-    @MainActor func testStoppedBrowserCheckClearsBusyState() {
-        let model = ChromePagesModel(app: "Fixture browser", appMemoryKB: nil, gpuKB: nil)
-        model.start(measure: true)
-        XCTAssertTrue(model.running)
-        XCTAssertTrue(model.measuring)
-        model.stop()
-        XCTAssertFalse(model.running)
-        XCTAssertFalse(model.measuring)
-        XCTAssertTrue(model.stopped)
-        XCTAssertNil(model.phase)
-    }
+
 }

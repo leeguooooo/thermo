@@ -68,15 +68,15 @@ final class AppModels {
         set { storedDisk = newValue }
     }
 
-    init(defaults: UserDefaults = .standard, makeApps: @escaping @MainActor () -> AppsFeatureModels = { AppsFeatureModels() }, makeSpace: @escaping SpaceFactory = { SpaceLensModel(enabled:$0) }, invalidateSpaceCache: @escaping @MainActor () -> Void = { SpaceLens.invalidateCache() }, makeBrowser: @escaping BrowserFactory = {ChromePagesModel(enabled:$0,app:$1,appMemoryKB:$2,gpuKB:$3)}, makeWorkspace: @escaping WorkspaceFactory = {TabWorkspaceModel(enabled:$0,app:$1)}, nativeDefinitions:[NativeFeatureDefinition]? = nil, makeAgents:@escaping AgentsFactory = {AgentScanner(enabled:$0)}, makeDisk: @escaping () -> DiskModel = { DiskModel(retentionPreferences:.stored(in:.standard)) },
+    init(defaults: UserDefaults = .standard, makeApps: @escaping @MainActor () -> AppsFeatureModels = { AppsFeatureModels() }, makeSpace: @escaping SpaceFactory = { SpaceLensModel(enabled:$0) }, invalidateSpaceCache: @escaping @MainActor () -> Void = { SpaceLens.invalidateCache() }, nativeDefinitions:[NativeFeatureDefinition]? = nil, makeAgents:@escaping AgentsFactory = {AgentScanner(enabled:$0)}, makeDisk: @escaping () -> DiskModel = { DiskModel(retentionPreferences:.stored(in:.standard)) },
          makeMonitor: @escaping () -> Monitor = { Monitor(samplingAllowed: { ModulePreferences.isEnabled(BuiltinModuleManifests.performance, in: .standard) }) }) {
-        self.makeAgents=makeAgents;self.makeDisk = makeDisk;self.makeApps=makeApps;self.makeSpace=makeSpace;self.invalidateSpaceCache=invalidateSpaceCache;self.makeBrowser=makeBrowser;self.makeWorkspace=makeWorkspace;self.defaults=defaults
+        self.makeAgents=makeAgents;self.makeDisk = makeDisk;self.makeApps=makeApps;self.makeSpace=makeSpace;self.invalidateSpaceCache=invalidateSpaceCache;self.defaults=defaults
         self.makeMonitor = makeMonitor
-        let definitions=nativeDefinitions ?? BuiltinNativeFeatures.registrations
-        nativeFeatures=NativeFeatureStore(definitions:definitions,enabled:{id in
-            guard let manifest=definitions.first(where:{$0.manifest.id==id})?.manifest else{return false}
+        let catalog=nativeDefinitions.map{try! NativeFeatureCatalog(definitions:$0)} ?? BuiltinNativeFeatures.catalog
+        nativeFeatures=NativeFeatureStore(catalog:catalog,enabled:{id in
+            guard let manifest=catalog.manifest(id) else{return false}
             return ModulePreferences.isEnabled(manifest,in:defaults)
-        })
+        },navigation:.init(show:{MainWindow.showNative($0)}))
     }
 
     func prepareDiskStop() throws -> BuiltinModules.FinishStop? {
@@ -132,53 +132,5 @@ final class AppModels {
             await session.finishStopping()
             if self?.storedApps === session {self?.storedApps=nil}
         }
-    }
-    typealias BrowserFactory = @MainActor (@escaping ()->Bool,String,Int?,Int?)->ChromePagesModel
-    typealias WorkspaceFactory = @MainActor (@escaping ()->Bool,String)->TabWorkspaceModel
-    private let makeBrowser:BrowserFactory
-    private let makeWorkspace:WorkspaceFactory
-    private var browsers:[String:ChromePagesModel]=[:]
-    private var workspaces:[String:TabWorkspaceModel]=[:]
-    var browsersLoaded:Bool {!browsers.isEmpty || !workspaces.isEmpty}
-    func workspace(_ app:String)->TabWorkspaceModel {
-        if let model=workspaces[app]{return model}
-        let defaults=self.defaults
-        let model=makeWorkspace({ModulePreferences.isEnabled(BuiltinModuleManifests.browser,in:defaults)},app)
-        workspaces[app]=model;return model
-    }
-    func browserExitBlocker()->MainPage? {
-        if let model=browsers.values.first(where:{$0.closing != nil}) {return .browser(model.app)}
-        if let model=workspaces.values.first(where:{$0.mutating || $0.work.hasOperations}) {return .browser(model.app)}
-        if TabAutomation.current?.running == true {return .browser("Google Chrome")}
-        return nil
-    }
-    func prepareBrowserStop() throws -> BuiltinModules.FinishStop? {
-        guard browserExitBlocker()==nil else {
-            throw BuiltinModules.StopRefused(description:tr("Wait for browser changes or tab grouping to finish before switching this feature off."))
-        }
-        TabAutomation.stopIfStarted()
-        let checks=Array(browsers.values),spaces=Array(workspaces.values)
-        for model in checks{model.stopFeature()}
-        for model in spaces{model.stopFeature()}
-        return { [weak self] in
-            for model in checks{await model.finishFeatureStop()}
-            for model in spaces{await model.finishFeatureStop()}
-            self?.browsers=[:];self?.workspaces=[:]
-        }
-    }
-
-    func stopBrowserChecks() {
-        for model in browsers.values where model.running { model.stop() }
-        for model in workspaces.values {model.retireRead()}
-    }
-
-    /// One pages model per browser, so its last result is still there when the page is reopened.
-    func browser(_ app: String, memoryKB: Int? = nil, gpuKB: Int? = nil) -> ChromePagesModel {
-        let defaults=self.defaults
-        let m = browsers[app] ?? makeBrowser({ModulePreferences.isEnabled(BuiltinModuleManifests.browser,in:defaults)},app,memoryKB,gpuKB)
-        if let memoryKB { m.appMemoryKB = memoryKB }
-        if let gpuKB { m.gpuKB = gpuKB }
-        browsers[app] = m
-        return m
     }
 }

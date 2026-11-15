@@ -420,8 +420,10 @@ struct PopoverView: View {
                 }
                 ModulePanelLinks()
                 shortcut("stethoscope", tr("AI Agent Diagnostics"), .agents(.home))
-                Button { TabQuickAction.request() } label: { Image(systemName: "archivebox").frame(width: 22) }
-                    .buttonStyle(.plain).foregroundStyle(Theme.textSecondary).help(tr("Save and close background tabs"))
+                ForEach(BuiltinNativeFeatures.catalog.menuEntries.filter{modules.isOn($0.ref.module)}) {entry in
+                    Button {AppModels.shared.nativeFeatures.activate(entry.ref)} label: {Image(systemName:entry.symbol).frame(width:22)}
+                        .buttonStyle(.plain).foregroundStyle(Theme.textSecondary).help(tr(entry.title))
+                }
                 shortcut("clock.arrow.circlepath", tr("History"), .module(BuiltinModuleManifests.history.id,"home"))
                 // An icon like its neighbours: with a text button the English row overflowed the 372 pt panel.
                 shortcut("slider.horizontal.3", tr("Customize menu bar…"), .settings)

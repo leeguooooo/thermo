@@ -1,4 +1,5 @@
 import ThermoUI
+import NativeFeatureAPI
 import AppKit
 import os
 import UserNotifications
@@ -196,9 +197,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate, UNU
         let panelItem = appMenu.addItem(withTitle: tr("Open Menu Panel"), action: #selector(openPanelFromMenu), keyEquivalent: "p")
         panelItem.target = self
         panelItem.keyEquivalentModifierMask = [.command, .shift]
-        if BrowserModule.enabled {
-            let archive=appMenu.addItem(withTitle:tr("Save and close background tabs"),action:#selector(archiveTabsFromMenu),keyEquivalent:"s")
-            archive.target=self;archive.keyEquivalentModifierMask=[.command,.shift]
+        for entry in BuiltinNativeFeatures.catalog.menuEntries where ModuleCenter.shared.isOn(entry.ref.module) {
+            let item=appMenu.addItem(withTitle:tr(entry.title),action:#selector(activateNativeMenu(_:)),keyEquivalent:entry.shortcut)
+            item.target=self;item.representedObject=entry.ref
+            item.keyEquivalentModifierMask=[.command,.shift]
         }
         appMenu.addItem(.separator())
         appMenu.addItem(withTitle: tr("Hide Thermo"), action: #selector(NSApplication.hide(_:)), keyEquivalent: "h")
@@ -211,6 +213,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate, UNU
     @objc private func openSearchFromMenu() { LocalSearchPanel.shared.show() }
     func menuNeedsUpdate(_ menu: NSMenu) {
         for item in menu.items {
+            if let ref=item.representedObject as? NativeUIEntryRef {item.isHidden = !ModuleCenter.shared.isOn(ref.module)}
             if let id = item.representedObject as? String, BuiltinModules.manifest(id) != nil {
                 item.isHidden = !ModuleCenter.shared.isOn(id)
             }
@@ -223,7 +226,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate, UNU
     @objc private func recordScreenFromMenu() { CaptureWorkspace.shared.recordScreen() }
     @objc private func recordingDraftsFromMenu() { CaptureWorkspace.shared.recordScreen(draftsOnly:true) }
 
-    @objc fileprivate func archiveTabsFromMenu() { TabQuickAction.request() }
+    @objc private func activateNativeMenu(_ sender:NSMenuItem) {
+        guard let ref=sender.representedObject as? NativeUIEntryRef else{return}
+        AppModels.shared.nativeFeatures.activate(ref)
+    }
 
     @objc fileprivate func openFromMenu() { MainWindow.show() }
 
