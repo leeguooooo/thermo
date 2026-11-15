@@ -52,8 +52,8 @@ import NativeFeatureAPI
         let group=AppsFeatureModels()
         let definition=NativeFeatureDefinition(manifest:AppsModule.manifest,pageContracts:AppsFeature.registration.pageContracts,makeSession:{AppsFeatureSession(availability:$0,makeModels:{group})})
         let models=AppModels(defaults:defaults,nativeDefinitions:[definition])
-        var page=MainPage(argument:"apps:feeds")!
-        AppsModule.prepareReview(["--page","apps:feeds"],page:&page,models:models)
+        let page=MainPage(argument:"apps:feeds")!
+        models.nativeFeatures.prepareReview(page.nativeRoute!,arguments:["--page","apps:feeds"])
         XCTAssertEqual(group.updates.channel,"native")
     }
     private final class ReadinessSession:NativeFeatureSession {
