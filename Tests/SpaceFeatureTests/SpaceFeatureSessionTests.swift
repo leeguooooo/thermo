@@ -52,8 +52,10 @@ import ThermoL10n
         var made=0
         let schema=SpaceFeature.registration(services:{FixtureSpaceServices()})
         let definition=NativeFeatureDefinition(manifest:schema.manifest,pageContracts:schema.pageContracts,makeSession:{_ in made+=1;fatalError("invalid request")})
+        let catalog=try NativeFeatureCatalog(definitions:[definition])
+        XCTAssertNoThrow(try catalog.normalizePresentation(.init(route:SpaceFeature.route(.browse),options:["path":.text("/valid\nfolder")])))
         let store=NativeFeatureStore(definitions:[definition],enabled:{_ in true})
-        for request in [NativePresentationRequest(route:SpaceFeature.route(.browse),options:["path":.text("relative")]),.init(route:SpaceFeature.route(.browse),options:["path":.text("/bad\npath")]),.init(route:SpaceFeature.route(.large),options:["path":.text("/fixture")]),.init(route:SpaceFeature.route(.browse),options:["path":.integer(1)])] {XCTAssertFalse(store.preparePresentation(request))}
+        for request in [NativePresentationRequest(route:SpaceFeature.route(.browse),options:["path":.text("relative")]),.init(route:SpaceFeature.route(.browse),options:["path":.text("/bad\0path")]),.init(route:SpaceFeature.route(.large),options:["path":.text("/fixture")]),.init(route:SpaceFeature.route(.browse),options:["path":.integer(1)])] {XCTAssertFalse(store.preparePresentation(request))}
         XCTAssertEqual(made,0)
     }
     func testReenableCreatesFreshModelAndColdRestoreDuringDrainInvalidatesItsCache()async throws {

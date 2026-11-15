@@ -11,7 +11,7 @@ package enum SpaceFeature {
         return .init(manifest:BuiltinModuleManifests.space,pageContracts:[
             .init(entry:"browse",optionFields:[.init("path",kind:.text,required:false)],checkOptions:{values in
                 if let value=values["path"] {
-                    guard case let .text(path)=value,path.hasPrefix("/"),!path.unicodeScalars.contains(where:{CharacterSet.controlCharacters.contains($0)}) else{throw NativeRouteError("Invalid folder path.")}
+                    guard case let .text(path)=value,path.hasPrefix("/"),!path.contains("\0") else{throw NativeRouteError("Invalid folder path.")}
                 }
             })
         ],resolveLegacyPage:{argument in
