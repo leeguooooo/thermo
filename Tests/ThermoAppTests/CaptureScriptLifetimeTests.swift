@@ -32,8 +32,12 @@ import XCTest
         await fulfillment(of:[entered],timeout:3)
         await fulfillment(of:[returned],timeout:2)
         XCTAssertFalse(workspace.scriptRunning)
+        do{_ = try await workspace.executeScript("return true;");XCTFail("old native callback must fence another script")}
+        catch{if case .busy? = error as? CaptureSaveFailure {} else{XCTFail("unexpected error: \(error)")}}
+        let blocked=await CaptureCLIHost(workspace:workspace).handle(.init(action:"capture.run",arguments:["source":"return true;"]))
+        XCTAssertFalse(blocked.succeeded)
         XCTAssertThrowsError(try workspace.stopFeature(),"a prompt report is not physical completion")
-        await action.finish();await fulfillment(of:[finished],timeout:2);await logical.value
+        await action.finish();await fulfillment(of:[finished],timeout:2);await logical.value;await workspace.finishScriptActions()
         XCTAssertNoThrow(try workspace.stopFeature());XCTAssertTrue(keys.leases.isEmpty)
     }
 }

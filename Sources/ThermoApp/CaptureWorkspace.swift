@@ -1,3 +1,4 @@
+import NativeFeatureAPI
 import ThermoUI
 import AppKit
 import CaptureCore
@@ -23,6 +24,8 @@ func captureFailureMessage(_ error:Error) -> String {
     private let screenCaptureAccess:()->Bool
     private let featureEnabled:()->Bool
     private let providedShortcuts:CaptureShortcutModel?
+    let nativeScriptWork=FeatureTasks()
+    var nativeScriptBusy:Bool{nativeScriptWork.hasOperations}
     let nativeScriptAction:((String) async throws->CaptureScriptValue)?
     /// nil uses Thermo's own selector on macOS 14+, and the system `screencapture -i` before that.
     private let makeCaptureProcess:((URL)->Process)?
@@ -39,6 +42,7 @@ func captureFailureMessage(_ error:Error) -> String {
         self.nativeScriptAction=nativeScriptAction
         self.screenCaptureAccess=screenCaptureAccess;self.makeCaptureProcess=makeCaptureProcess
         self.featureEnabled=featureEnabled
+        nativeScriptWork.enabled=featureEnabled
         self.providedShortcuts=shortcuts
         self.pinSession=pinSession ?? CapturePinSession();self.pinSession.onCountChange={ [weak self] in self?.pinCount=$0 }
         self.pinSession.configureEditor={ [weak self] model in
@@ -80,7 +84,7 @@ func captureFailureMessage(_ error:Error) -> String {
         catch { issue=captureFailureMessage(error);return false }
     }
     func stopFeature() throws {
-        guard !captureBusy,!scriptRunning,!shortcuts.scriptRunning,!recordingActive,
+        guard !nativeScriptBusy,!captureBusy,!scriptRunning,!shortcuts.scriptRunning,!recordingActive,
               !pinSession.batchExport.running,!pinSession.windows.values.contains(where: { $0.model.recognizing }) else {
             throw BuiltinModules.StopRefused(description:tr("Finish the current capture, recording or export before switching this feature off."))
         }
