@@ -1,13 +1,14 @@
 import Combine
 import Foundation
 import SystemServicesAPI
-import ThermoKernel
 import ThermoKit
 import ThermoL10n
 
 /// Presentation bridge during the private Performance extraction; owns no sampler or helper IPC.
 @MainActor final class Monitor:ObservableObject {
-    let services:AppSystemServices
+    private let telemetry:any TelemetryReadService
+    let administration:any HelperAdministration
+    private let fanFactory:any FanPolicyAccessFactory
     private let samplingAllowed:@Sendable ()->Bool
     private var sampling:(any TelemetrySamplingLease)?
     private var fan:(any FanPolicyAccess)?
@@ -26,9 +27,9 @@ import ThermoL10n
         #if DEBUG
         if let reviewFrame{return reviewFrame}
         #endif
-        return services.telemetry.latest
+        return telemetry.latest
     }
-    private var helper:HelperReading{services.helper.latest}
+    private var helper:HelperReading{administration.latest}
     var snapshot:Snapshot?{frame.snapshot}
     var latest:Snapshot?{frame.latestSnapshot}
     var sampledFans:[FanReading]?{frame.sampledFans}
@@ -39,7 +40,7 @@ import ThermoL10n
     var model:String{frame.model}
     var systemMemory:SystemStats.Memory?{frame.memory}
     var systemDisk:SystemStats.Disk?{frame.disk}
-    var menuLive:MenuLiveValues{services.telemetry.latest.menu}
+    var menuLive:MenuLiveValues{telemetry.latest.menu}
     var helperState:HelperState{helper.phase}
     var policies:[Int:FanPolicy]{helper.policies}
     var policiesAvailable:Bool{helper.policiesAvailable}
@@ -57,22 +58,23 @@ import ThermoL10n
     var usesSMAppService:Bool{helper.usesSMAppService}
     var lastError:String? {
         get{reviewError ?? helper.error ?? frame.error}
-        set{reviewError=newValue;if newValue==nil{services.helper.dismissError();services.telemetry.dismissError()}}
+        set{reviewError=newValue;if newValue==nil{administration.dismissError();telemetry.dismissError()}}
     }
     var popoverOpen=false{didSet{if popoverOpen != oldValue{visibilityChanged()}}}
     var windowOpen=false{didSet{if windowOpen != oldValue{visibilityChanged()}}}
     var watched:Bool{popoverOpen || windowOpen}
     var panelVisible:Bool{watched}
-    var samplingActive:Bool{services.telemetry.latest.sampling}
+    var samplingActive:Bool{telemetry.latest.sampling}
     var canStopFeature:Bool{helper.canRetirePerformance}
     var interval:TimeInterval{Settings.intervalValue(UserDefaults.standard.double(forKey:Settings.interval))}
     var onUpdate:((Snapshot)->Void)?
     var onMenuUpdate:(()->Void)?
-    init(services:AppSystemServices,startMonitoring:Bool = true,samplingAllowed:@escaping @Sendable ()->Bool){
-        self.services=services;self.samplingAllowed=samplingAllowed
-        services.telemetry.readings.sink{[weak self] _ in self?.objectWillChange.send()}.store(in:&observations)
-        services.helper.readings.sink{[weak self] _ in self?.objectWillChange.send()}.store(in:&observations)
-        services.telemetry.menuReadings.sink{[weak self] value in
+    init(telemetry:any TelemetryReadService,administration:any HelperAdministration,fanFactory:any FanPolicyAccessFactory,
+         startMonitoring:Bool = true,samplingAllowed:@escaping @Sendable ()->Bool){
+        self.telemetry=telemetry;self.administration=administration;self.fanFactory=fanFactory;self.samplingAllowed=samplingAllowed
+        telemetry.readings.sink{[weak self] _ in self?.objectWillChange.send()}.store(in:&observations)
+        administration.readings.sink{[weak self] _ in self?.objectWillChange.send()}.store(in:&observations)
+        telemetry.menuReadings.sink{[weak self] value in
             guard let self else{return}
             if let snapshot=value.snapshot,self.lastSnapshot != snapshot.timestamp{
                 self.lastSnapshot=snapshot.timestamp;self.onUpdate?(snapshot)
@@ -82,22 +84,19 @@ import ThermoL10n
         }.store(in:&observations)
         if startMonitoring && samplingAllowed(){startFeature();refreshFanObservation()}
     }
-    convenience init(startMonitoring:Bool = true,helperInteraction:Bool = true,helper:HelperClient = .init(),arguments:[String] = CommandLine.arguments,samplingAllowed:@escaping @Sendable ()->Bool = {true}){
-        self.init(services:AppSystemServices(helper:helper,helperInteraction:helperInteraction,arguments:arguments,samplingAllowed:samplingAllowed),startMonitoring:startMonitoring,samplingAllowed:samplingAllowed)
-    }
     func startFeature(){
         guard samplingAllowed(),sampling==nil else{return}
-        do{sampling=try services.telemetry.beginPerformanceSampling(available:{[samplingAllowed] in samplingAllowed()})}
+        do{sampling=try telemetry.beginPerformanceSampling(available:{[samplingAllowed] in samplingAllowed()})}
         catch{reviewError=error.localizedDescription;return}
-        fan=services.helper.bind(available:{[samplingAllowed] in samplingAllowed()});updateDemand()
+        fan=fanFactory.bind(available:{[samplingAllowed] in samplingAllowed()});updateDemand()
     }
     private func updateDemand(){sampling?.setDemand(.init(visible:watched,surface:popoverOpen ? .overview:surface,includeUnnamed:unnamed))}
     private func visibilityChanged(){objectWillChange.send();updateDemand();if watched{sampleNow();refreshHelper()}}
     func setWindowSurface(_ surface:TelemetrySurface){guard self.surface != surface else{return};self.surface=surface;updateDemand();if watched{sampleNow()}}
     func showUnnamedSensors(_ value:Bool){unnamed=value;updateDemand();sampleNow()}
     func sampleNow(){sampling?.refresh()}
-    func reschedule(){services.telemetry.preferencesDidChange()}
-    func resetMenuBaselines(){services.telemetry.resetMenuBaselines()}
+    func reschedule(){telemetry.preferencesDidChange()}
+    func resetMenuBaselines(){telemetry.resetMenuBaselines()}
     func beginStoppingFeature(){
         sampling?.beginStopping();fan?.beginRetiring()
         #if DEBUG
@@ -106,26 +105,25 @@ import ThermoL10n
     }
     func finishStoppingFeature() async{await sampling?.finishStopping();await fan?.finishRetiring();sampling=nil;fan=nil;onMenuUpdate?()}
     private func refreshFanObservation(){lastHelperRefresh=Date();fan?.refreshObservation()}
-    func refreshHelper(){lastHelperRefresh=Date();services.helper.refresh()}
-    func beginSetup(){services.helper.install()}
-    func stopSetup(){services.helper.stopSetup()}
-    func installHelper(){services.helper.install()}
-    func installHelperWithPassword(){services.helper.installWithPassword()}
-    func uninstallHelper(finished:@escaping ()->Void = {}){services.helper.uninstall(finished:finished)}
-    func openLoginItemsSettings(){services.helper.openLoginItemsSettings()}
-    func setLidAwake(_ on:Bool){services.helper.setLidAwake(on)}
+    func refreshHelper(){lastHelperRefresh=Date();administration.refresh()}
+    func beginSetup(){administration.install()}
+    func stopSetup(){administration.stopSetup()}
+    func installHelper(){administration.install()}
+    func installHelperWithPassword(){administration.installWithPassword()}
+    func uninstallHelper(finished:@escaping ()->Void = {}){administration.uninstall(finished:finished)}
+    func openLoginItemsSettings(){administration.openLoginItemsSettings()}
+    func setLidAwake(_ on:Bool){administration.setLidAwake(on)}
     func setPolicy(_ policy:FanPolicy,fan:Int){setPolicy(policy,fans:[fan])}
     func setPolicy(_ policy:FanPolicy,fans:[Int]){
         guard samplingAllowed() else{return}
-        if fan==nil{fan=services.helper.bind(available:{[samplingAllowed] in samplingAllowed()})}
+        if fan==nil{fan=fanFactory.bind(available:{[samplingAllowed] in samplingAllowed()})}
         fan?.request(policy,fans:fans)
     }
     nonisolated static func suppressesAutomaticControl(arguments:[String])->Bool{arguments.contains{["--offscreen","--snapshot","--render-preview","--verify-lifecycle","--ui-review"].contains($0)}}
-    nonisolated static func requestNotificationPermission(){Task{@MainActor in NotificationAccess.shared.request()}}
     #if DEBUG
     // Display-only fixture input, never used to grant helper or sampling authority.
     func publishSnapshot(_ snapshot:Snapshot,parts:SamplerParts){
-        var value=reviewFrame ?? services.telemetry.latest
+        var value=reviewFrame ?? telemetry.latest
         value.fanReadingsUnavailable=parts.contains(.fans) && snapshot.fansAvailable == false
         let fans=parts.contains(.fans) && snapshot.hasFanReadings ? snapshot.fans:nil
         if let fans{reviewStreak=Self.zeroStreaks(reviewStreak,fans:fans);value.stoppedFans=Set(reviewStreak.filter{$0.value>=Self.stoppedAfterSamples}.keys)}

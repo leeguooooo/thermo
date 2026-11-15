@@ -37,6 +37,10 @@ def problems(package, complete=False, source_root=None):
         for dependency in sorted(graph.get(name, set()) - allowed):
             errors.append(f"{name} must not depend on {dependency}")
 
+    if "SystemServicesAPI" in graph:
+        for dependency in sorted(graph["SystemServicesAPI"] - {"ThermoKit", "ThermoL10n"}):
+            errors.append(f"SystemServicesAPI must not depend on {dependency}")
+
     def reachable(start):
         seen, pending = set(), list(graph.get(start, set()))
         while pending:
@@ -52,6 +56,11 @@ def problems(package, complete=False, source_root=None):
     for feature in sorted(features):
         for dependency in sorted(reachable(feature) & (hosts | {"ModuleKernelCore"} | (features - {feature}))):
             errors.append(f"{feature} reaches forbidden implementation target {dependency}")
+    # The concrete kernel is already extracted, even while the shell/composition split is staged.
+    for feature in sorted(reachable("ThermoKernel") & features):
+        errors.append(f"ThermoKernel reaches feature implementation {feature}")
+    for host in sorted(reachable("ThermoKernel") & {"ThermoApp", "ThermoShell", "ThermoComposition"}):
+        errors.append(f"ThermoKernel reaches forbidden host target {host}")
     if source_root is not None:
         root = Path(source_root).resolve()
         definitions = {target["name"]: target for target in package.get("targets", [])}
@@ -88,7 +97,7 @@ def problems(package, complete=False, source_root=None):
                 errors.append(f"incomplete #41 target split: missing {name}")
         if graph.get("ThermoApp") != {"ThermoComposition"}:
             errors.append("ThermoApp must depend only on ThermoComposition")
-        for host in ("ThermoKernel", "ThermoShell"):
+        for host in ("ThermoShell",):
             for feature in sorted(reachable(host) & features):
                 errors.append(f"{host} reaches feature implementation {feature}")
     return errors

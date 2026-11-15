@@ -96,7 +96,7 @@ import SwiftUI
                               item.trailing?.unicodeScalars.contains(where:{$0.value == 0 || $0.value == 10 || $0.value == 13}) != true,
                               let route=try? catalog.normalize(item.route),
                               let entry=definition.manifest.entries.first(where:{$0.id==route.entry && $0.kind == .page}) else{return AnyView(EmptyView())}
-                        return host.render(.init(route:route,manifest:definition.manifest,entry:entry,tint:item.tint,badge:item.badge,trailing:item.trailing,selected:selected==route,open:{_ = navigation.show(route)}))
+                        return host.render(.init(route:route,manifest:definition.manifest,entry:entry,tint:item.tint,badge:item.badge,trailing:item.trailing,trailingColor:item.trailingColor,selected:selected==route,open:{_ = navigation.show(route)}))
                     }
                     return AnyView((session.ui(.sidebar(location:location,selection:selected,rows:rows),navigation:navigation) ?? AnyView(EmptyView())).id(generation))
                 }))

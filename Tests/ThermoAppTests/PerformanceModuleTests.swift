@@ -59,7 +59,7 @@ import XCTest
         let entered=expectation(description:"isolated maintenance entered"),finished=expectation(description:"maintenance finished")
         let release=DispatchSemaphore(value:0)
         defer {release.signal();monitor.stopSetup()}
-        monitor.services.helper.performInstallation(operation:{entered.fulfill();_ = release.wait(timeout:.now()+5)},finished:{finished.fulfill()})
+        (monitor.administration as! CoreHelperAdministration).performInstallation(operation:{entered.fulfill();_ = release.wait(timeout:.now()+5)},finished:{finished.fulfill()})
         await fulfillment(of:[entered],timeout:2)
         XCTAssertFalse(monitor.canStopFeature)
         let models=AppModels(makeMonitor:{monitor})
