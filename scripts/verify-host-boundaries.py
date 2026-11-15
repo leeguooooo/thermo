@@ -66,7 +66,7 @@ def main():
             (output/'results.json').write_text(json.dumps(rows,indent=2)+'\n')
             if not passed:raise RuntimeError('Unexpected compiler result: '+label+'; see '+str(log))
     finally:
-        if 'modified' not in locals() or package.read_bytes() in [original,modified]:
+        if package.read_bytes() in [original,locals().get('modified',original)]:
             package.write_bytes(original)
             for directory in directories:
                 (directory/'Probe.swift').unlink();directory.rmdir()

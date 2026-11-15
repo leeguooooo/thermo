@@ -71,7 +71,7 @@ def main():
                 print('\n'.join(line for line in result.stdout.splitlines() if 'error:' in line)[:6000])
             if result.returncode!=0 and not args.keep_going:raise RuntimeError('Fixture build failed: '+str(path)+'; see '+str(log))
     finally:
-        if 'modified' not in locals() or package.read_bytes() in [original,modified]:
+        if package.read_bytes() in [original,locals().get('modified',original)]:
             package.write_bytes(original)
             for directory in directories:
                 (directory/'Fixture.swift').unlink();directory.rmdir()
