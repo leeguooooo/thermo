@@ -1,7 +1,7 @@
 import AppKit
 import CaptureCore
 import XCTest
-@testable import ThermoApp
+@testable import CaptureFeature
 
 final class CaptureLaTeXPinTests:XCTestCase {
     @MainActor func testClipboardRecognizesLaTeXAndSupportsExplicitTextOverride() throws {

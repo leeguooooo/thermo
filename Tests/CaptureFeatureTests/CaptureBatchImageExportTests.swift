@@ -1,7 +1,7 @@
 import AppKit
 import CaptureCore
 import XCTest
-@testable import ThermoApp
+@testable import CaptureFeature
 
 @MainActor final class CaptureBatchImageExportModelTests:XCTestCase {
     private func document() throws -> CaptureDocument {
@@ -42,7 +42,7 @@ import XCTest
         var annotated=doc;annotated.append(.init(tool:.text,points:[CGPoint(x:2,y:10)],color:NSColor(deviceRed:1,green:0,blue:0,alpha:1),text:"Batch QA"))
         let items=(0..<2).map{index in CaptureBatchImageItem(id:UUID(),groupID:session.library.currentGroupID,groupName:"Group",title:String(index),source:.document(annotated))}
         session.batchExport.start(items,destination:root,format:.png);session.batchExport.start([],destination:root,format:.png)
-        XCTAssertEqual(session.batchExport.total,2);XCTAssertFalse(workspace.captureBusy);XCTAssertEqual(workspace.terminationReply(.terminateNow),.terminateCancel)
+        XCTAssertEqual(session.batchExport.total,2);XCTAssertFalse(workspace.captureBusy);if case .cancel=workspace.prepareTermination(){}else{XCTFail("export must block exit")}
         try await wait(session.batchExport);let result=try XCTUnwrap(session.batchExport.result);XCTAssertNil(session.batchExport.issue);XCTAssertEqual(result.images.count,2);XCTAssertEqual(session.batchExport.completed,2)
         XCTAssertEqual(try FileManager.default.contentsOfDirectory(atPath:result.folder.path).count,3)
         XCTAssertEqual(try Data(contentsOf:result.folder.appendingPathComponent(result.images[0].file)),try annotated.data())

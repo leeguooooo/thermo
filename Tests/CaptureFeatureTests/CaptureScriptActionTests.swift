@@ -2,7 +2,7 @@ import AppKit
 import CaptureCore
 import CaptureScriptCore
 import XCTest
-@testable import ThermoApp
+@testable import CaptureFeature
 
 @MainActor final class CaptureScriptActionTests:XCTestCase {
     private func worker() throws -> URL {

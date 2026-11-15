@@ -2,7 +2,7 @@ import AppKit
 import CaptureCore
 import CaptureScriptCore
 import XCTest
-@testable import ThermoApp
+@testable import CaptureFeature
 
 @MainActor final class CaptureImageAdjustmentActionTests:XCTestCase {
     private func image() throws -> CGImage {

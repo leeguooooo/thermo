@@ -2,7 +2,7 @@ import AppKit
 import CaptureCore
 import CaptureScriptCore
 import XCTest
-@testable import ThermoApp
+@testable import CaptureFeature
 
 @MainActor final class CaptureScriptLifetimeTests:XCTestCase {
     private actor PhysicalAction {
@@ -34,7 +34,7 @@ import XCTest
         XCTAssertFalse(workspace.scriptRunning)
         do{_ = try await workspace.executeScript("return true;");XCTFail("old native callback must fence another script")}
         catch{if case .busy? = error as? CaptureSaveFailure {} else{XCTFail("unexpected error: \(error)")}}
-        let blocked=await CaptureCLIHost(workspace:workspace).handle(.init(action:"capture.run",arguments:["source":"return true;"]))
+        let blocked=await CaptureCLIHost().handle(.init(id:UUID(),operation:.run("return true;")),access:.init(canUse:{workspace.enabled},workspace:{workspace}))
         XCTAssertFalse(blocked.succeeded)
         XCTAssertThrowsError(try workspace.stopFeature(),"a prompt report is not physical completion")
         await action.finish();await fulfillment(of:[finished],timeout:2);await logical.value;await workspace.finishScriptActions()

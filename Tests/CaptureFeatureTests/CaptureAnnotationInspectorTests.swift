@@ -1,6 +1,6 @@
 import AppKit
 import XCTest
-@testable import ThermoApp
+@testable import CaptureFeature
 
 final class CaptureAnnotationInspectorTests:XCTestCase {
     @MainActor func testUndoAndRedoKeepInspectorInSyncWithSelectedObject() throws {

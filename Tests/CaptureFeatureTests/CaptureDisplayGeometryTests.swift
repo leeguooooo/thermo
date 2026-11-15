@@ -1,6 +1,6 @@
 import AppKit
 import XCTest
-@testable import ThermoApp
+@testable import CaptureFeature
 
 @MainActor final class CaptureDisplayGeometryTests:XCTestCase {
     func testRetinaAndExternalDisplayUseTheirOwnScaleAndEvenOutputDimensions() throws {

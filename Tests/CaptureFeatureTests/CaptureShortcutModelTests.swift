@@ -2,7 +2,7 @@ import HotkeyCore
 import AppKit
 import CaptureCore
 import XCTest
-@testable import ThermoApp
+@testable import CaptureFeature
 
 @MainActor final class CaptureShortcutModelTests:XCTestCase {
     enum Failure:Error { case fixture }

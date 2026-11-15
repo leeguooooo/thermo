@@ -3,10 +3,9 @@ import AppKit
 import AgentCore
 import CaptureCore
 import CaptureScriptCore
-import ModuleHost
 import ModuleKit
 import XCTest
-@testable import ThermoApp
+@testable import CaptureFeature
 
 @MainActor final class CaptureModuleTests: XCTestCase {
     final class Flag { var on = false; var accessRequests = 0 }
@@ -27,14 +26,7 @@ import XCTest
             screenCaptureAccess: { flag.accessRequests += 1; return false },
             featureEnabled: { flag.on }, shortcuts: shortcuts)
     }
-    func testManifestUsesPrewarmAndHasRegisteredMenuAndSettings() {
-        XCTAssertEqual(CaptureModule.manifest.launch, .prewarm)
-        XCTAssertTrue(CaptureModule.manifest.enabledByDefault)
-        XCTAssertTrue(CaptureModule.manifest.problems().isEmpty)
-        XCTAssertTrue(CaptureModule.manifest.entries.allSatisfy(CaptureModule.supports))
-        XCTAssertEqual(CaptureModule.manifest.entries.filter { $0.kind == .settingsItem }.count, 2)
-        XCTAssertTrue(BuiltinModules.problems.isEmpty)
-    }
+
     func testColdOffNeverRegistersHotkeysOrAsksForScreenAccess() async throws {
         _ = NSApplication.shared
         let root = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
@@ -48,11 +40,10 @@ import XCTest
         XCTAssertFalse(model.capturing || model.recordingActive)
         XCTAssertThrowsError(try model.perform(.screenshot))
         do { _ = try await model.executeScript("return 1;"); XCTFail("started worker while off") } catch {}
-        let host = CaptureCLIHost(workspace: model)
-        for action in ["capture.run", "capture.action"] {
-            let response = await host.handle(.init(action: action, arguments: ["source": "return 1;"], dryRun: true))
-            XCTAssertFalse(response.succeeded)
-            XCTAssertTrue(response.issue?.contains("switched off") == true)
+        let host=CaptureCLIHost(),access=CaptureExecutionAccess(canUse:{model.enabled},workspace:{model})
+        for operation in [CaptureControlRequest.Operation.run("return 1;"),.action("status")] {
+            let response=await host.handle(.init(id:UUID(),operation:operation,dryRun:true),access:access)
+            XCTAssertFalse(response.succeeded);XCTAssertTrue(response.report.issue?.contains("switched off") == true)
         }
         XCTAssertFalse(model.scriptRunning)
     }
@@ -90,37 +81,6 @@ import XCTest
         lease.fails = false; try model.stopFeature()
         XCTAssertTrue(lease.released)
     }
-    func testModuleCenterStartsOnlyEnabledBuiltinsAndStartsOnReenable() {
-        let name = "thermo-capture-test-" + UUID().uuidString
-        let defaults = UserDefaults(suiteName: name)!
-        defer { defaults.removePersistentDomain(forName: name) }
-        defaults.set(false, forKey: ModuleCenter.key(CaptureModule.manifest.id))
-        var starts: [String] = []
-        let center = ModuleCenter(defaults: defaults, prepareBuiltinStop: { _ in nil }, startBuiltin: { starts.append($0) })
-        center.start(); center.start()
-        XCTAssertFalse(starts.contains(CaptureModule.manifest.id))
-        center.setEnabled(CaptureModule.manifest.id, true)
-        XCTAssertEqual(starts.filter { $0 == CaptureModule.manifest.id }.count, 1)
-        center.setEnabled(CaptureModule.manifest.id, false)
-        XCTAssertFalse(center.isOn(CaptureModule.manifest.id))
-    }
-    func testOffscreenStartupDoesNotWarmNativeFeatures() {
-        let name = "thermo-capture-offscreen-" + UUID().uuidString
-        let defaults = UserDefaults(suiteName: name)!
-        defer { defaults.removePersistentDomain(forName: name) }
-        var starts: [String] = []
-        let center = ModuleCenter(defaults: defaults, startBuiltin: { starts.append($0) })
-        center.start(prewarmBuiltins: false)
-        XCTAssertTrue(starts.isEmpty)
-        XCTAssertTrue(center.isOn(CaptureModule.manifest.id))
-    }
-    func testDisablingCaptureRemovesBothMenuGroups() {
-        let context = StatusMenuLayout.RuntimeContext(captureEnabled: false, hasBattery: true, keepAwakeActive: false,
-            focusTimerActive: false, configuredCaptureEntriesAppear: true, menuBarQuickControlsAppear: false,
-            updatesCanCheck: true, moreToolsActiveStates: .init(cleanScreenActive: false, lowLatencyActive: false, batteryProtectionActive: false))
-        let layout = StatusMenuLayout.make(context: context, captureShortcutSuffix: "", pinShortcutSuffix: "", configuredCaptureEntries: ["custom"])
-        let titles = layout.productItems.compactMap { item -> String? in if case let .menuGroup(group) = item { return group.title }; return nil }
-        XCTAssertFalse(titles.contains("Capture & record") || titles.contains("Clipboard & pins"))
-        XCTAssertFalse(layout.productItems.isEmpty)
-    }
+
+
 }

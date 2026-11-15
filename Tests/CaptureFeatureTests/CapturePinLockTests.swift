@@ -2,7 +2,7 @@ import AppKit
 import CaptureCore
 import CaptureScriptCore
 import XCTest
-@testable import ThermoApp
+@testable import CaptureFeature
 
 @MainActor final class CapturePinLockTests:XCTestCase {
     private func image() throws -> CGImage {

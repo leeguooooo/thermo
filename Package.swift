@@ -118,6 +118,7 @@ let package = Package(
                              .linkedFramework("CoreAudio"),
                              .linkedFramework("AudioToolbox")]
         ),
+        .testTarget(name:"CaptureFeatureTests",dependencies:["CaptureFeature","NativeFeatureAPI","CaptureCore","CaptureScriptCore","HotkeyCore","ThermoUI","ThermoL10n","ModuleKit","AgentCore"]),
         .testTarget(name:"DocumentPreviewHostTests",dependencies:["DocumentPreviewHost","DocumentPreviewAPI","ModuleHost"]),
         .testTarget(name:"SearchFeatureTests",dependencies:["SearchFeature","NativeFeatureAPI","DocumentPreviewAPI","HotkeyCore","SearchCore","ModuleKit","ThermoUI","AgentCore"]),
         .testTarget(name:"DiskFeatureTests",dependencies:["DiskFeature","NativeFeatureAPI","LocalAIUI","ThermoUI","ThermoL10n","ModuleKit","AgentCore","CleanKit"]),

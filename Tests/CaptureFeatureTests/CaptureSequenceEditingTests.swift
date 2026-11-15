@@ -1,7 +1,7 @@
 import AppKit
 import CaptureCore
 import XCTest
-@testable import ThermoApp
+@testable import CaptureFeature
 
 @MainActor final class CaptureSequenceEditingTests:XCTestCase {
     private func fixture() throws -> (CaptureEditorModel,CaptureCanvas.Canvas) {

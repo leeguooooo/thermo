@@ -2,7 +2,7 @@ import AppKit
 import CaptureCore
 import ThermoL10n
 import XCTest
-@testable import ThermoApp
+@testable import CaptureFeature
 
 @MainActor final class CaptureLifecycleTests:XCTestCase {
     private func root() throws -> URL {
@@ -97,7 +97,7 @@ import XCTest
         let chain=Task {await workspace.saving.run(pixels,settings:options,pin:{_ in XCTFail("Cancelled chain")},copyImage:{_ in},copyText:{_ in XCTFail("Cancelled clipboard")},recognize:{_ in await withCheckedContinuation{continuation=$0}})}
         try await wait{continuation != nil};chain.cancel()
         do {_=try await workspace.captureAndWait();XCTFail("After-action still finishing")} catch {XCTAssertTrue(error is CaptureSaveFailure)}
-        let response=await CaptureCLIHost(workspace:workspace).handle(.init(action:"capture.action",arguments:["action":"pinClipboard"]))
+        let response=await CaptureCLIHost().handle(.init(id:UUID(),operation:.action("pinClipboard")),access:.init(canUse:{workspace.enabled},workspace:{workspace}))
         XCTAssertFalse(response.succeeded);XCTAssertFalse(workspace.scriptRunning)
         if case .object(let status)=try await workspace.performScriptAction("status") {XCTAssertEqual(status["capturing"],.bool(true))} else {XCTFail("Missing busy status")}
         XCTAssertEqual(checks,0);continuation?.resume(returning:"late")

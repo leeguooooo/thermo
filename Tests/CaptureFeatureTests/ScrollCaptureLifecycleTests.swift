@@ -1,6 +1,6 @@
 import AppKit
 import XCTest
-@testable import ThermoApp
+@testable import CaptureFeature
 
 @available(macOS 14,*)
 @MainActor final class ScrollCaptureLifecycleTests:XCTestCase {

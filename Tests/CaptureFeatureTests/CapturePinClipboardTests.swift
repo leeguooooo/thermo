@@ -2,7 +2,7 @@ import AppKit
 import CaptureCore
 import XCTest
 import WebKit
-@testable import ThermoApp
+@testable import CaptureFeature
 
 final class CapturePinClipboardTests:XCTestCase {
     @MainActor func testRichTextAndColorClipboardRoundTripWithoutUsingGlobalBoard() throws {

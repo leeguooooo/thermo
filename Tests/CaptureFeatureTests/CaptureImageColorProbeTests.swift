@@ -1,7 +1,7 @@
 import AppKit
 import CaptureCore
 import XCTest
-@testable import ThermoApp
+@testable import CaptureFeature
 
 @MainActor final class CaptureImageColorProbeTests:XCTestCase {
     private func fixture(cache:CaptureRenderCache = .shared,render:((CaptureDocument,CaptureAnnotation?,[Int:CaptureAnnotation])throws->CGImage)?=nil) throws -> (CaptureEditorModel,CaptureCanvas.Canvas,NSPasteboard) {

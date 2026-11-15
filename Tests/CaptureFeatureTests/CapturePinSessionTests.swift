@@ -1,7 +1,7 @@
 import AppKit
 import CaptureCore
 import XCTest
-@testable import ThermoApp
+@testable import CaptureFeature
 
 final class CapturePinSessionTests:XCTestCase {
     @MainActor private func image() throws -> CGImage {

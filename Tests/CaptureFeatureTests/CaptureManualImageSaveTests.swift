@@ -3,7 +3,7 @@ import CaptureCore
 import ImageIO
 import UniformTypeIdentifiers
 import XCTest
-@testable import ThermoApp
+@testable import CaptureFeature
 
 @MainActor final class CaptureManualImageSaveTests:XCTestCase {
     private func document() -> CaptureDocument {
