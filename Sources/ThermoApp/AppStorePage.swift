@@ -122,7 +122,7 @@ struct AppStorePage: View {
             VStack(alignment: .leading, spacing: 3) {
                 HStack(spacing: 6) {
                     Text(verbatim: app.title).font(.system(size: 13, weight: .medium))
-                    if let category = app.category { Text(verbatim: StoreCategory.title(category)).font(Theme.caption).foregroundStyle(Theme.textTertiary) }
+                    if let category = app.category { Text(verbatim: StoreCategory.title(category,localize:{tr($0)})).font(Theme.caption).foregroundStyle(Theme.textTertiary) }
                 }
                 if let text = description(app) {
                     Text(verbatim: text).font(Theme.caption).foregroundStyle(Theme.textSecondary).lineLimit(3)

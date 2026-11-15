@@ -264,7 +264,7 @@ struct PluginsPage: View {
                         Text(verbatim: version).font(Theme.caption).foregroundStyle(Theme.textTertiary)
                     }
                     if let category = record.plugin.category {
-                        Text(verbatim: StoreCategory.title(category)).font(Theme.caption).foregroundStyle(Theme.textSecondary)
+                        Text(verbatim: StoreCategory.title(category,localize:{tr($0)})).font(Theme.caption).foregroundStyle(Theme.textSecondary)
                     }
                 }
                 if let description = record.plugin.description {
