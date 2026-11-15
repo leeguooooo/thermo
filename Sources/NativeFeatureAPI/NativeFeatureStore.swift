@@ -56,8 +56,8 @@ import SwiftUI
             }
         }
     }
-    package func quitBlocker()->NativeFeatureBlocker? {
-        for id in order {
+    package func quitBlocker(_ feature:String? = nil)->NativeFeatureBlocker? {
+        for id in feature.map({[$0]}) ?? order {
             switch states[id] {
             case let .live(live):if let blocker=live.session.quitBlocker(){return blocker}
             case let .draining(pending):if let blocker=pending.live.session.quitBlocker(){return blocker}

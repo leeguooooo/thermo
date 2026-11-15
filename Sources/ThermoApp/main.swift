@@ -697,7 +697,6 @@ if let i = CommandLine.arguments.firstIndex(of: "--render-preview"), i + 1 < Com
         if Date().timeIntervalSince(started) > 90 { return true }
         if let ready = BuiltinModules.snapshotReady(page, arguments: args, models: models, center: .shared, started: started) { return ready }
         switch page {
-        case .plugins: return models.plugins.loaded && !models.plugins.checkingUpdates
         case let .module(id, _):
             // Worth a picture once the module's process is up, or once it is known to be off.
             guard ModuleCenter.shared.loaded else { return false }

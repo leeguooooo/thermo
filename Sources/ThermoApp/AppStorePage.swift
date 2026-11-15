@@ -107,19 +107,6 @@ struct AppStorePage: View {
     }
 
     /// The feed names categories in English; the common ones read in the app's language.
-    static func category(_ name: String) -> String {
-        switch name.lowercased() {
-        case "collaboration": return tr("Collaboration")
-        case "productivity": return tr("Productivity")
-        case "tools": return tr("Tools")
-        case "games": return tr("Games")
-        case "learning": return tr("Learning")
-        case "development": return tr("Development")
-        case "monitoring": return tr("Monitoring")
-        default: return name
-        }
-    }
-
     func row(_ app: StoreApp) -> some View {
         HStack(alignment: .top, spacing: 12) {
             Group {
@@ -135,7 +122,7 @@ struct AppStorePage: View {
             VStack(alignment: .leading, spacing: 3) {
                 HStack(spacing: 6) {
                     Text(verbatim: app.title).font(.system(size: 13, weight: .medium))
-                    if let category = app.category { Text(verbatim: Self.category(category)).font(Theme.caption).foregroundStyle(Theme.textTertiary) }
+                    if let category = app.category { Text(verbatim: StoreCategory.title(category)).font(Theme.caption).foregroundStyle(Theme.textTertiary) }
                 }
                 if let text = description(app) {
                     Text(verbatim: text).font(Theme.caption).foregroundStyle(Theme.textSecondary).lineLimit(3)

@@ -186,7 +186,7 @@ final class PluginsModel: ObservableObject {
 
 struct PluginsPage: View {
     @ObservedObject var model: PluginsModel
-    let open: (MainPage) -> Void
+    let openDiagnostics: () -> Void
     @State private var removing: PluginRecord?
     @State private var confirmUse = false
 
@@ -196,7 +196,7 @@ struct PluginsPage: View {
                 if model.checkingUpdates {
                     ProgressView().controlSize(.small).help(tr("Checking for updates…"))
                 }
-                Button(tr("Installed plugin diagnostics")) { open(.agents(.area(.plugins))) }
+                Button(tr("Installed plugin diagnostics")) { openDiagnostics() }
                     .buttonStyle(PillButtonStyle()).controlSize(.small).fixedSize()
                 Button(tr("Refresh")) { model.refresh() }
                     .buttonStyle(PillButtonStyle()).controlSize(.small).fixedSize()
@@ -264,7 +264,7 @@ struct PluginsPage: View {
                         Text(verbatim: version).font(Theme.caption).foregroundStyle(Theme.textTertiary)
                     }
                     if let category = record.plugin.category {
-                        Text(verbatim: AppStorePage.category(category)).font(Theme.caption).foregroundStyle(Theme.textSecondary)
+                        Text(verbatim: StoreCategory.title(category)).font(Theme.caption).foregroundStyle(Theme.textSecondary)
                     }
                 }
                 if let description = record.plugin.description {
