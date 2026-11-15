@@ -20,7 +20,7 @@ package enum PerformanceFeature {
     }
     static func definition(makeSession:@escaping @MainActor @Sendable (FeatureAvailability)->any NativeFeatureSession)->NativeFeatureDefinition {
         let manifest = BuiltinModuleManifests.performance
-        return .init(manifest: manifest, pageContracts: [
+        return .init(manifest: manifest,runsInBackground:true, pageContracts: [
             .init(entry: "overview", optionFields: [.init("program",kind:.text,required:false)], checkOptions: {try checkText($0)}),
             .init(entry: "memory", optionFields: [.init("inspect",kind:.text,required:false)], checkOptions: {try checkText($0)})
         ], ui: .init(sidebarLocations:[.overview,.machine,.resources],hasBackdrop:true,compactPanelEntry:"overview"),

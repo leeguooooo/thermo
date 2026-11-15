@@ -30,7 +30,7 @@ package enum SearchFeature {
                                  makeModel:@escaping SearchSession.ModelFactory = {LocalSearchModel(module:BuiltinModuleManifests.search,enabled:$0)},
                                  makeShortcut:@escaping SearchShortcutAuthority.Factory = {LocalSearchShortcut(module:BuiltinModuleManifests.search,action:$0)}) -> SearchRegistration {
         let authority=SearchShortcutAuthority(makeShortcut:makeShortcut)
-        let definition=NativeFeatureDefinition(manifest:BuiltinModuleManifests.search,privateWorkers:[previewWorkerID],makeSession:{availability in
+        let definition=NativeFeatureDefinition(manifest:BuiltinModuleManifests.search,runsInBackground:true,privateWorkers:[previewWorkerID],makeSession:{availability in
             let session=SearchSession(availability:availability,authority:authority,makeModel:makeModel,preview:preview)
             authority.current=session;return session
         })

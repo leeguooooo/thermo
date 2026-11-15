@@ -110,7 +110,7 @@ enum BuiltinModules {
     @MainActor static func prepareStop(_ id: String) throws -> FinishStop? {
         try implementation(id)?.prepareStop(models: .shared)
     }
-    @MainActor static func start(_ id: String) { implementation(id)?.start() }
+    @MainActor static func start(_ id:String) {AppModels.shared.nativeFeatures.startBackground(id)}
 }
 
 extension MainPage {

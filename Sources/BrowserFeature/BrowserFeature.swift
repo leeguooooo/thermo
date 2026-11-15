@@ -7,7 +7,7 @@ import ThermoL10n
 
 package enum BrowserFeature {
     package static var registration:NativeFeatureDefinition {
-        .init(manifest:BuiltinModuleManifests.browser,pageContracts:[
+        .init(manifest:BuiltinModuleManifests.browser,runsInBackground:true,pageContracts:[
             .init(entry:"home",fields:[.init("app",kind:.text,defaultValue:.text("Google Chrome"))],
                   optionFields:[.init("appMemoryKB",kind:.integer,required:false),.init("gpuMemoryKB",kind:.integer,required:false)],
                   checkOptions:{options in

@@ -38,6 +38,20 @@ import XCTest
         let store=NativeFeatureStore(definitions:[definition],enabled:{_ in true})
         XCTAssertNil(store.page(.init(manifest.id,"other")));XCTAssertEqual(creations,0)
     }
+    func testBackgroundStartupOnlyAdmitsEnabledDeclaredContributionsOnce() {
+        var sessions:[Session]=[],coldCreations=0
+        let cold=NativeFeatureDefinition(manifest:manifest,makeSession:{availability in coldCreations+=1;return Session(availability)})
+        func definition(_ id:String)->NativeFeatureDefinition {
+            let manifest=ModuleManifest(id:id,name:id,summary:"",symbol:"doc",version:"1",entries:[])
+            return .init(manifest:manifest,runsInBackground:true,makeSession:{availability in let session=Session(availability);sessions.append(session);return session})
+        }
+        let enabled="com.example.background",disabled="com.example.disabled"
+        let store=NativeFeatureStore(definitions:[cold,definition(enabled),definition(disabled)],enabled:{$0 != disabled})
+        XCTAssertEqual(store.catalog.backgroundFeatures,[enabled,disabled])
+        for _ in 0..<2 {for id in [manifest.id,enabled,disabled,"unknown"] {store.startBackground(id)}}
+        XCTAssertEqual(coldCreations,0);XCTAssertEqual(sessions.count,1);XCTAssertEqual(sessions.first?.starts,1)
+        XCTAssertFalse(store.status(disabled).modelLoaded)
+    }
     func testRefusalDoesNotRevokeGenerationOrRemovePage() throws {
         var session:Session?
         let definition=NativeFeatureDefinition(manifest:manifest,makeSession:{availability in let made=Session(availability);session=made;return made})

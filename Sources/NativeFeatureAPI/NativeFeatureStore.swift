@@ -163,6 +163,10 @@ import SwiftUI
         return admittedSession(ref.module) != nil
     }
     /// Explicit background contribution; metadata/status/quit queries remain cold.
+    package func startBackground(_ id:String) {
+        guard catalog.backgroundFeatures.contains(id) else{return}
+        start(id)
+    }
     package func start(_ id:String) {
         guard let session=admittedSession(id),case let .live(live)=states[id],!live.started else{return}
         live.started=true;session.start()

@@ -11,7 +11,7 @@ package enum MenuBarFeature {
     }
     static func registration(recovery:MenuBarRecoveryAuthority,closeHostMenuPanel:@escaping @MainActor @Sendable ()->Void = {},
                              makeManager:@escaping MenuBarFeatureSession.ManagerFactory = {availability,recovery in MenuBarManager(featureEnabled:{availability.acceptsWork},recovery:recovery)}) -> NativeFeatureDefinition {
-        .init(manifest:BuiltinModuleManifests.menuBar,retained:.init(menu:{recovery.retainedMenu()},shutdown:{recovery.shutdown()}),makeSession:{availability in
+        .init(manifest:BuiltinModuleManifests.menuBar,runsInBackground:true,retained:.init(menu:{recovery.retainedMenu()},shutdown:{recovery.shutdown()}),makeSession:{availability in
             MenuBarFeatureSession(availability:availability,recovery:recovery,makeManager:makeManager,closeHostMenuPanel:closeHostMenuPanel)
         })
     }

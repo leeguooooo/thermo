@@ -9,7 +9,7 @@ import ThermoL10n
 }
 package enum DownloadFeature {
     package static func registration(presentation: @escaping @MainActor @Sendable () -> any DownloadPresentation) -> NativeFeatureDefinition {
-        .init(manifest: BuiltinModuleManifests.download, makeSession: { DownloadSession(availability:$0,presentation:presentation()) })
+        .init(manifest: BuiltinModuleManifests.download,runsInBackground:true, makeSession: { DownloadSession(availability:$0,presentation:presentation()) })
     }
 }
 @MainActor final class DownloadSession: NativeFeatureSession {

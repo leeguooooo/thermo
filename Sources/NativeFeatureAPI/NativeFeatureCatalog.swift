@@ -99,6 +99,7 @@ package struct NativeFeatureCatalog: Sendable {
     }
     package func manifest(_ id:String)->ModuleManifest? {definitions[id]?.manifest}
     package var manifests:[ModuleManifest] {order.compactMap{definitions[$0]?.manifest}}
+    package var backgroundFeatures:[String] {order.filter{definitions[$0]?.runsInBackground == true}}
     package func privateWorkers(_ id:String)->Set<String> {definitions[id]?.privateWorkers ?? []}
     package func workerOwner(_ worker:String)->ModuleManifest? {
         manifests.first{definitions[$0.id]?.privateWorkers.contains(worker)==true}
