@@ -487,7 +487,7 @@ withExtendedLifetime(delegate) { application.run() }
             return Command(action)
         }
     }
-    private final class Command:NSMenuItem {
+    @MainActor private final class Command:NSMenuItem {
         private let command:NativeMenuAction
         init(_ command:NativeMenuAction){self.command=command;super.init(title:command.title,action:#selector(fire),keyEquivalent:"");target=self;isEnabled=command.enabled}
         required init(coder:NSCoder){fatalError("not used")}
