@@ -70,7 +70,8 @@ let package = Package(
         .target(name: "VideoKit", linkerSettings: [.linkedFramework("WebKit")]),
         // The contract between the kernel and feature modules: manifest, capabilities, XPC protocols. No dependencies.
         .target(name: "ModuleKit"),
-        .target(name: "NativeFeatureAPI"),
+        .target(name: "NativeFeatureAPI", dependencies: ["ModuleKit"]),
+        .target(name: "ConnectionsFeature", dependencies: ["NativeFeatureAPI", "ThermoUI", "ThermoL10n", "ModuleKit", "AgentCore"], linkerSettings: [.linkedFramework("CoreWLAN"), .linkedFramework("IOBluetooth"), .linkedFramework("CoreAudio"), .linkedFramework("AudioToolbox"), .linkedFramework("CoreLocation")]),
         .target(name: "ThermoUI", dependencies: ["ThermoL10n"]),
         // The kernel's module manager: finds the modules inside the app and runs their processes (ExtensionKit).
         .target(name: "ModuleHost", dependencies: ["ModuleKit"], linkerSettings: [.linkedFramework("ExtensionKit"), .linkedFramework("ExtensionFoundation")]),
@@ -94,11 +95,13 @@ let package = Package(
         .executableTarget(name: "ThermoHelper", dependencies: ["ThermoKit"]),
         .executableTarget(
             name: "ThermoApp",
-            dependencies: ["NativeFeatureAPI", "ThermoUI", "PreviewCore", "ThermoKit", "AgentDoctor", "CleanKit", "ThermoL10n", "SearchCore", "CaptureCore", "CaptureScriptCore", "MenuBarCore", "CMenuBar", "CloudDriveKit", "DownloadKit", "MediaToolsKit", "VideoKit", "ModuleKit", "ModuleHost", .product(name: "Markdown", package: "swift-markdown"), .product(name: "Sparkle", package: "Sparkle")],
+            dependencies: ["ConnectionsFeature", "NativeFeatureAPI", "ThermoUI", "PreviewCore", "ThermoKit", "AgentDoctor", "CleanKit", "ThermoL10n", "SearchCore", "CaptureCore", "CaptureScriptCore", "MenuBarCore", "CMenuBar", "CloudDriveKit", "DownloadKit", "MediaToolsKit", "VideoKit", "ModuleKit", "ModuleHost", .product(name: "Markdown", package: "swift-markdown"), .product(name: "Sparkle", package: "Sparkle")],
             linkerSettings: [.linkedFramework("AppKit"), .linkedFramework("SwiftUI"), .linkedFramework("Charts"), .linkedFramework("AVKit"), .linkedFramework("WebKit"), .linkedFramework("Quartz"),
                              .linkedFramework("CoreWLAN"), .linkedFramework("IOBluetooth"), .linkedFramework("CoreAudio"),
                              .linkedFramework("AudioToolbox"), .linkedFramework("CoreLocation")]
         ),
+        .testTarget(name: "NativeFeatureAPITests", dependencies: ["NativeFeatureAPI", "ModuleKit"]),
+        .testTarget(name: "ConnectionsFeatureTests", dependencies: ["ConnectionsFeature", "NativeFeatureAPI", "ModuleKit"]),
         .testTarget(name: "ThermoCLITests", dependencies: ["thermo", "ModuleKit", .product(name: "MCP", package: "swift-sdk")]),
         .testTarget(name: "ThermoAppTests", dependencies: ["NativeFeatureAPI", "ThermoUI", "PreviewCore", "PreviewUI", "ThermoApp", "ModuleKit", "ModuleHost", "ThermoKit", "CleanKit", "AgentCore", "AgentDoctor", "SearchCore", "MenuBarCore", "CloudDriveKit", "DownloadKit", "MediaToolsKit", "VideoKit"]),
         .testTarget(name: "ThermoKitTests", dependencies: ["ThermoKit", "CSMC"]),

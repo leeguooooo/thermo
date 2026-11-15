@@ -1,6 +1,6 @@
 import Foundation
 import XCTest
-@testable import ThermoApp
+@testable import ConnectionsFeature
 
 final class BonjourComputerModelTests: XCTestCase {
     func txt(_ fields: [String]) -> Data {

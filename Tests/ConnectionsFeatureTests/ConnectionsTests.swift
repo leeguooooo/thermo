@@ -1,5 +1,5 @@
 import XCTest
-@testable import ThermoApp
+@testable import ConnectionsFeature
 
 final class ConnectionsTests: XCTestCase {
     /// The shape `system_profiler SPBluetoothDataType -json` prints; names are the object keys.

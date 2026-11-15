@@ -23,7 +23,6 @@ enum MainPage: Hashable {
     case claude(ClaudeTab)
     case compute(Bool)
     case history
-    case connections
     case yunx
     case plugins
     /// A page drawn by a module: module id, entry id (empty: the module's first page).
@@ -46,7 +45,6 @@ enum MainPage: Hashable {
         case "apps": self = .apps(parts.count > 1 ? (parts[1] == "feeds" ? .updates : AppsTab(rawValue: parts[1]) ?? .installed) : .installed)
         case "memory": self = .memory
         case "history": self = .history
-        case "connections": self = .connections
         case "yunx": self = .yunx
         case "plugins": self = .plugins
         case "module":
@@ -193,7 +191,7 @@ enum MainWindow {
                     SpaceOverviewModel.shared.stop()
                     models.stopSpaceViews()
                     MemoryModel.shared.stop()
-                    models.stopConnectionViews()
+                    models.nativeFeatures.retireVisibility()
                     ComputeModel.shared.stop()
                     ComputeModel.cpu.stop()
                     ComputeModel.shared.releaseReadingsIfIdle()
@@ -334,8 +332,6 @@ struct MainView: View {
         case .apps:
             ModuleOffView().transition(.page)
         case .claude:
-            ModuleOffView().transition(.page)
-        case .connections:
             ModuleOffView().transition(.page)
         case .yunx:
             ModuleOffView().transition(.page)
