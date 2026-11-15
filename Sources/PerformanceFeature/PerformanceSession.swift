@@ -1,4 +1,5 @@
 import Combine
+import CleanKit
 import Foundation
 import ModuleKit
 import NativeFeatureAPI
@@ -46,7 +47,7 @@ import ThermoUI
     private var pulseVisible: Bool { acceptsWork && (host.menuPanelVisible || visible("overview") || visible("memory")) }
     private var model: PerformanceModel {
         if let storedModel { return storedModel }
-        let value=PerformanceModel(telemetry:telemetry,administration:administration,fanFactory:fanFactory,available:{[weak self] in self?.acceptsWork == true})
+        let value=PerformanceModel(telemetry:telemetry,administration:administration,fanFactory:fanFactory,defaults:defaults,available:{[weak self] in self?.acceptsWork == true})
         storedModel=value; value.setHostPresentation(host); return value
     }
     private func compute(_ gpu: Bool) -> ComputeModel {
@@ -86,10 +87,14 @@ import ThermoUI
         if let storedAdvice { return storedAdvice }
         let value=MemoryReliefAdvice(available:{[weak self] in self?.acceptsWork == true}); storedAdvice=value; return value
     }
+    func beginOperation() -> UUID? {
+        guard acceptsWork else{return nil};let id=UUID();operations.insert(id);return id
+    }
+    func endOperation(_ id:UUID){operations.remove(id)}
     private var operationAccess: PerformanceOperations {
         .init(begin:{[weak self] in
-            guard let self,self.acceptsWork else{return nil};let id=UUID();self.operations.insert(id);return id
-        },end:{[weak self] in self?.operations.remove($0)})
+            self?.beginOperation()
+        },end:{[weak self] in self?.endOperation($0)})
     }
     private func navigation(_ native: NativeNavigation) -> PerformanceNavigation {
         .init(native:native,available:{[weak self] in self?.acceptsWork == true},showSettings:showSettings)
@@ -104,6 +109,7 @@ import ThermoUI
     }
     private func wrap<V: View>(_ content: V, navigation: NativeNavigation) -> AnyView {
         AnyView(PerformanceMountedView(session:self,content:AnyView(content))
+            .defaultAppStorage(defaults)
             .environment(\.performanceOperations,operationAccess)
             .environment(\.performanceNavigation,self.navigation(navigation))
             .environment(\.performanceInspections,inspectionFactory))
@@ -134,7 +140,7 @@ import ThermoUI
             return wrap(ComputePage(gpu:gpu,model:compute(gpu),available:{[weak self] in self?.visible(gpu ? "gpu":"cpu") == true}),navigation:navigation)
         case "sensors":_ = ensureTelemetry();return wrap(SensorsPage(monitor:model),navigation:navigation)
         case "fans":
-            _=ensureTelemetry();return wrap(WindowPage(title:tr("Fans"),subtitle:tr("Choose how fast each fan runs. Settings stay when Thermo quits or updates.")){FansView(monitor:model)},navigation:navigation)
+            _=ensureTelemetry();return wrap(WindowPage(title:tr("Fans"),subtitle:tr("Choose how fast each fan runs. Settings stay when Thermo quits or updates.")){FansView(monitor:self.model)},navigation:navigation)
         case "overview":
             _=ensureTelemetry()
             return wrap(OverviewPage(monitor:model,open:open).environmentObject(pulse).environmentObject(recorder).environmentObject(events),navigation:navigation)
@@ -206,12 +212,13 @@ import ThermoUI
     }
     private func finishRetiring() async {
         await storedModel?.finishStopping();await storedRecorder?.stop();await storedPulse?.finishStoppingFeature()
+        await storedPanel?.finishStopping()
         for model in Array(inspections.values){await model.finishStopping()}
         while storedCPU?.sampleInFlight == true || storedGPU?.sampleInFlight == true || storedMemory?.sampleInFlight == true || storedPanel?.sampleInFlight == true {
             await withCheckedContinuation{done in DispatchQueue.main.asyncAfter(deadline:.now()+0.02){done.resume()}}
         }
         storedCPU?.releaseReadingsIfIdle();storedGPU?.releaseReadingsIfIdle();storedMemory?.releaseReadingsIfIdle()
-        storedPanel?.resetBaselines();storedAdvice?.cancel()
+        storedRecorder?.highlighted=nil;storedEvents?.retire();storedAdvice?.retire()
     }
     func shutdown(){beginRetiring()}
 }

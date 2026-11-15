@@ -50,4 +50,16 @@ import XCTest
         session.start();XCTAssertEqual(telemetry.leases.count,1)
         XCTAssertEqual(helper.installs,0)
     }
+    func testConfirmedOperationRefusesRetirementWithoutConstructingAReader() async throws {
+        let name="thermo-private-operation-"+UUID().uuidString,defaults=UserDefaults(suiteName:name)!
+        defer{defaults.removePersistentDomain(forName:name)}
+        let telemetry=PerformanceModelTests.Telemetry(),helper=PerformanceModelTests.Helper()
+        let session=PerformanceSession(availability:.init(enabled:{true}),telemetry:telemetry,administration:helper,fanFactory:helper,defaults:defaults,showSettings:{})
+        let operation=try XCTUnwrap(session.beginOperation())
+        XCTAssertThrowsError(try session.prepareStop());XCTAssertTrue(session.acceptsWork)
+        XCTAssertFalse(session.status.modelLoaded);XCTAssertTrue(telemetry.leases.isEmpty)
+        session.endOperation(operation);let drain=try session.prepareStop();await drain.finish()
+        XCTAssertNil(session.beginOperation());XCTAssertFalse(session.status.modelLoaded)
+    }
+
 }

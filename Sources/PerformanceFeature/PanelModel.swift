@@ -18,6 +18,7 @@ private final class PanelReadingWorker: @unchecked Sendable {
     }
 
     func reset() { queue.async { self.liveSampler.reset() } }
+    func finish() async { await withCheckedContinuation { done in queue.async { done.resume() } } }
 
     func sample(cancellation: ScanCancellation, receive: @escaping @Sendable (PanelModel.Reading?) -> Void) {
         queue.async {
@@ -142,6 +143,12 @@ final class PanelModel: ObservableObject {
         if let d = currentDownload { push(&download, d) }
     }
 
+    func finishStopping() async {
+        setActive(false)
+        await worker.finish()
+        while sampleInFlight { await withCheckedContinuation { done in DispatchQueue.main.asyncAfter(deadline:.now()+0.02){done.resume()} } }
+        resetBaselines();cpu=[];gpu=[];memory=[];download=[]
+    }
     func resetBaselines() {
         worker.reset()
         currentCPU = nil; currentGPU = nil; currentDownload = nil; upload = nil

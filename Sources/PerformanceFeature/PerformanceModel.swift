@@ -11,6 +11,7 @@ import ModuleKit
     private let telemetry: any TelemetryReadService
     private let administration: any HelperAdministration
     private let fanFactory: any FanPolicyAccessFactory
+    private let defaults: UserDefaults
     private let available: @MainActor () -> Bool
     private var observations = Set<AnyCancellable>()
     private var sampling: (any TelemetrySamplingLease)?
@@ -24,10 +25,10 @@ import ModuleKit
     private var helper: HelperReading { acceptsWork ? administration.latest : .init() }
 
     init(telemetry: any TelemetryReadService, administration: any HelperAdministration,
-         fanFactory: any FanPolicyAccessFactory, available: @escaping @MainActor () -> Bool) {
+         fanFactory: any FanPolicyAccessFactory, defaults: UserDefaults = .standard, available: @escaping @MainActor () -> Bool) {
         self.telemetry = telemetry; self.administration = administration
-        self.fanFactory = fanFactory; self.available = available
-        telemetry.readings.sink { [weak self] _ in self?.objectWillChange.send() }.store(in: &observations)
+        self.fanFactory = fanFactory; self.available = available; self.defaults = defaults
+        telemetry.readings.sink { [weak self] _ in self?.objectWillChange.send(); self?.refreshHelperIfNeeded() }.store(in: &observations)
         administration.readings.sink { [weak self] _ in self?.objectWillChange.send() }.store(in: &observations)
     }
     var snapshot: Snapshot? { frame.snapshot }
@@ -47,7 +48,7 @@ import ModuleKit
     var applyingPolicies: Bool { helper.applyingPolicies }
     var installingHelper: Bool { helper.installing }
     var uninstallingHelper: Bool { helper.uninstalling }
-    var interval: TimeInterval { Settings.intervalValue(UserDefaults.standard.double(forKey: Settings.interval)) }
+    var interval: TimeInterval { Settings.intervalValue(defaults.double(forKey: Settings.interval)) }
     var helperBusy: Bool { helper.busy }
     var settingUp: Bool { helper.settingUp }
     var setupStarted: Date? { helper.setupStarted }

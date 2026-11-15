@@ -48,6 +48,7 @@ import ThermoL10n
         }
     }
 
+    func retire() { guard phase != .asking else{return};phase = .idle;report=nil;snapshot=nil }
     func finding(for step: MemoryReliefPlan.Step) -> CheckupFinding? {
         report?.findings.first { $0.culprit?.id == step.id }
     }
