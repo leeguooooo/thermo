@@ -1,4 +1,5 @@
 import Foundation
+import Darwin
 import ModuleKit
 
 /// What the kernel does for modules with what it alone may touch. The broker has already checked
@@ -18,15 +19,21 @@ public enum KernelServices {
 
     /// `files.read`: `list` (one folder, one level), `measure` (size of each target, all the way down),
     /// `read` (the bytes of one file, base64).
-    public static let filesRead: CapabilityBroker.Handler = { request in
+    public static let filesRead: CapabilityBroker.Handler = readFiles(authorize:{_ in})
+
+    /// Hosts apply their protected-path rules to each node, including recursive measurements.
+    public static func readFiles(authorize:@escaping @Sendable (String)throws->Void)->CapabilityBroker.Handler {
+      { request in
+        for target in request.targets {try authorize(target)}
         switch request.operation {
         case "list":
             guard request.targets.count == 1 else { throw bad("list takes one folder") }
             let folder = URL(fileURLWithPath: request.targets[0])
             let keys: [URLResourceKey] = [.isDirectoryKey, .isSymbolicLinkKey, .totalFileAllocatedSizeKey, .fileSizeKey, .contentModificationDateKey]
-            let urls = try FileManager.default.contentsOfDirectory(at: folder, includingPropertiesForKeys: keys, options: [])
+            let urls = try FileManager.default.contentsOfDirectory(at: folder, includingPropertiesForKeys: [], options: [])
             guard urls.count <= maxListed else { throw bad("more than \(maxListed) entries") }
-            let entries: [[String: Any]] = urls.map { url in
+            let entries: [[String: Any]] = try urls.map { url in
+                try authorize(url.path)
                 let values = try? url.resourceValues(forKeys: Set(keys))
                 var entry: [String: Any] = ["name": url.lastPathComponent,
                                             "kind": values?.isSymbolicLink == true ? "link" : values?.isDirectory == true ? "folder" : "file"]
@@ -39,24 +46,32 @@ public enum KernelServices {
             var results: [[String: Any]] = []
             var budget = maxMeasured
             for target in request.targets {
-                let (bytes, count, complete) = measure(target, budget: &budget)
+                let (bytes, count, complete) = try measure(target, budget: &budget,authorize:authorize)
                 results.append(["path": target, "bytes": bytes, "items": count, "complete": complete])
             }
             return try answer(["results": results])
         case "read":
             guard request.targets.count == 1 else { throw bad("read takes one file") }
             let path = request.targets[0]
-            let size = ((try FileManager.default.attributesOfItem(atPath: path))[.size] as? Int) ?? 0
-            guard size <= maxReadBytes else { throw bad("file is larger than \(maxReadBytes) bytes") }
-            guard let data = FileManager.default.contents(atPath: path) else { throw bad("cannot read \(path)") }
+            let fd=try openRegularFile(path)
+            let file=FileHandle(fileDescriptor:fd,closeOnDealloc:true)
+            defer{try? file.close()}
+            var statValue=stat()
+            guard fstat(fd,&statValue)==0,statValue.st_mode&S_IFMT==S_IFREG else{throw bad("read takes a regular file")}
+            guard statValue.st_size>=0,statValue.st_size<=maxReadBytes else{throw bad("file is larger than \(maxReadBytes) bytes")}
+            let data=try file.read(upToCount:maxReadBytes+1) ?? Data()
+            guard data.count<=maxReadBytes else{throw bad("file grew beyond \(maxReadBytes) bytes")}
             return try answer(["base64": data.base64EncodedString()])
         default:
             throw bad("files.read has no operation \(request.operation.isEmpty ? "(none)" : request.operation)")
         }
     }
 
+    }
+
     /// Allocated bytes under `path`, links not followed. `complete` is false when the entry budget ran out.
-    static func measure(_ path: String, budget: inout Int) -> (bytes: Int64, items: Int, complete: Bool) {
+    static func measure(_ path: String, budget: inout Int,authorize:(String)throws->Void) throws -> (bytes: Int64, items: Int, complete: Bool) {
+        try authorize(path)
         let url = URL(fileURLWithPath: path)
         let keys: [URLResourceKey] = [.totalFileAllocatedSizeKey, .isRegularFileKey]
         var isDirectory: ObjCBool = false
@@ -64,16 +79,39 @@ public enum KernelServices {
         if !isDirectory.boolValue {
             return (Int64((try? url.resourceValues(forKeys: Set(keys)))?.totalFileAllocatedSize ?? 0), 1, true)
         }
-        guard let walker = FileManager.default.enumerator(at: url, includingPropertiesForKeys: keys, options: [], errorHandler: { _, _ in true }) else { return (0, 0, false) }
+        guard let walker = FileManager.default.enumerator(at: url, includingPropertiesForKeys: [], options: [], errorHandler: { _, _ in true }) else { return (0, 0, false) }
         var bytes: Int64 = 0, items = 0
         for case let item as URL in walker {
             guard budget > 0 else { return (bytes, items, false) }
             budget -= 1; items += 1
+            try authorize(item.path)
+            var info=stat()
+            if lstat(item.path,&info)==0,info.st_mode&S_IFMT==S_IFLNK {walker.skipDescendants();continue}
             if let values = try? item.resourceValues(forKeys: Set(keys)), values.isRegularFile == true {
                 bytes += Int64(values.totalFileAllocatedSize ?? 0)
             }
         }
         return (bytes, items, true)
+    }
+
+    /// Resolve each component through directory descriptors. A link swapped in after broker
+    /// validation cannot redirect a read; nonblocking open also keeps FIFOs from stalling a worker.
+    private static func openRegularFile(_ path:String)throws->Int32 {
+        let parts=path.split(separator:"/").map(String.init)
+        guard !parts.isEmpty,!parts.contains("."),!parts.contains("..") else{throw bad("read takes an absolute file path")}
+        var fd=open("/",O_RDONLY|O_DIRECTORY|O_CLOEXEC)
+        guard fd>=0 else{throw bad("cannot open filesystem root")}
+        for (index,part) in parts.enumerated() {
+            let last=index==parts.count-1
+            let next=openat(fd,part,O_RDONLY|O_CLOEXEC|O_NOFOLLOW|O_NONBLOCK|(last ? 0:O_DIRECTORY))
+            let code=errno;close(fd)
+            guard next>=0 else {
+                if code==ELOOP || code==ENOTDIR {throw BrokerError(.denied,"the path changed while reading")}
+                throw bad("cannot open the requested file")
+            }
+            fd=next
+        }
+        return fd
     }
 
     /// `files.delete`: `trash` moves each target to the Trash. Nothing is ever removed outright here.

@@ -19,7 +19,14 @@ enum ModuleKernel {
     static func broker(for manifest: ModuleManifest, log: ModuleAccessLog, home: String = NSHomeDirectory(),
                        confirm: @escaping CapabilityBroker.Confirm) -> CapabilityBroker {
         CapabilityBroker(manifest: manifest, home: home, log: log, handlers: [
-            .filesRead: KernelServices.filesRead,
+            .filesRead: { request in
+                let guardian=Guard(home:home),whitelist=try Whitelist.loadForRemoval(home:home)
+                return try await KernelServices.readFiles { path in
+                    if let why=guardian.readingRefusal(path) ?? Whitelist.refusal(path,home:home,whitelist:whitelist) {
+                        throw BrokerError(.denied,"the request includes a protected location: \(why)")
+                    }
+                }(request)
+            },
             .filesDelete: { request in try trashFiles(request, home: home) },
             .networkConnect: KernelServices.networkConnect(),
             .processesRead: processesRead,
