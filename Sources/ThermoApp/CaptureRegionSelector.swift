@@ -172,7 +172,7 @@ import ThermoL10n
             self.running = false; self.captureTask = nil
         }
     }
-    func stop() { captureTask?.cancel(); running = false }
+    func stop() { captureTask?.cancel() }
     func finishStopping() async {await captureTask?.value}
     /// Negative deltas move the content towards its end (down, or right for horizontal pages).
     private static func postScroll(points:CGFloat,horizontal:Bool) {
