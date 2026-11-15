@@ -1,3 +1,4 @@
+import ModuleKit
 import XCTest
 @testable import CleanKit
 @testable import ThermoApp
@@ -37,7 +38,7 @@ final class ClaudeCleanupPageTests: XCTestCase {
         XCTAssertEqual(MainPage(argument: "claude-cleanup"), .claude(.reset))
         XCTAssertEqual(MainPage(argument: "claude-cleanup:privacy"), .claude(.privacy))
         XCTAssertEqual(MainPage(argument: "claude"), .claude(.accounts))
-        XCTAssertEqual(MainPage(argument: "checkup"), .checkup)
+        XCTAssertEqual(MainPage(argument: "checkup"), .module(BuiltinModuleManifests.checkup.id,"home"))
         XCTAssertEqual(MainPage(argument: "claude:reset"), .claude(.reset))
     }
     @MainActor func testResetStartsUnselectedAndFolderSelectionExcludesItsChildren() {

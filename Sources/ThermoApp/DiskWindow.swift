@@ -1,3 +1,4 @@
+import LocalAIUI
 import ThermoUI
 import AppKit
 import CleanKit

@@ -14,7 +14,6 @@ enum ClaudeTab: String, Hashable, CaseIterable {
 /// Where the main window is.
 enum MainPage: Hashable {
     case overview, sensors, fans, settings
-    case checkup
     case browser(String)
     case agents(SidebarEntry)
     case apps(AppsTab)
@@ -35,7 +34,6 @@ enum MainPage: Hashable {
         guard let command = parts.first else { return nil }
         switch command {
         case "overview": self = .overview
-        case "checkup": self = .checkup
         case "sensors": self = .sensors
         case "fans": self = .fans
         case "settings": self = .settings
@@ -316,8 +314,6 @@ struct MainView: View {
     @ViewBuilder var coreContent: some View {
         switch page {
         case .overview, .sensors, .fans, .memory, .compute:
-            ModuleOffView().transition(.page)
-        case .checkup:
             ModuleOffView().transition(.page)
         case .settings:
             WindowPage(title: tr("Settings"), subtitle: "Thermo \(AppInfo.version)") {

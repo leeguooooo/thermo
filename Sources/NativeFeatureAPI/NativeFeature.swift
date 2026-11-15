@@ -40,6 +40,7 @@ package struct NativeFeatureBusy:Error,CustomStringConvertible {
     var status:NativeFeatureStatus {get}
     func retireVisibility()
     func quitBlocker()->NativeFeatureBlocker?
+    func prepareReview(_ arguments:[String])
     func prepareStop()throws->NativeFeatureDrain
 }
 package struct NativeFeatureDefinition {
@@ -48,4 +49,8 @@ package struct NativeFeatureDefinition {
     package init(manifest:ModuleManifest,makeSession:@escaping @MainActor (FeatureAvailability)->any NativeFeatureSession) {
         self.manifest=manifest;self.makeSession=makeSession
     }
+}
+
+extension NativeFeatureSession {
+    package func prepareReview(_ arguments:[String]) {}
 }

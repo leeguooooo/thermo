@@ -74,26 +74,6 @@ final class AppModels {
             if self?.storedHistory === model {self?.storedHistory=nil}
         }
     }
-    typealias CheckupFactory = @MainActor (@escaping ()->Bool)->CheckupModel
-    private let makeCheckup:CheckupFactory
-    private var storedCheckup:CheckupModel?
-    var checkupLoaded:Bool {storedCheckup != nil}
-    var checkup:CheckupModel {
-        if let storedCheckup{return storedCheckup}
-        let defaults=self.defaults
-        let model=makeCheckup {ModulePreferences.isEnabled(BuiltinModuleManifests.checkup,in:defaults)}
-        storedCheckup=model;return model
-    }
-    func checkupExitBlocker()->MainPage? {storedCheckup?.canStopFeature == false ? .checkup:nil}
-    func prepareCheckupStop() throws->BuiltinModules.FinishStop? {
-        guard let model=storedCheckup else{return nil}
-        guard model.canStopFeature else{throw BuiltinModules.StopRefused(description:tr("Wait for the current AI check-up request before switching this feature off."))}
-        model.stopFeature()
-        return { [weak self] in
-            await model.finishFeatureStop()
-            if self?.storedCheckup === model {self?.storedCheckup=nil}
-        }
-    }
     lazy var updates = Updates()
     /// Whether disk cleanup's model exists. It is created on first use and never while the feature is off.
     private var storedDisk: DiskModel?
@@ -107,9 +87,9 @@ final class AppModels {
         set { storedDisk = newValue }
     }
 
-    init(defaults: UserDefaults = .standard, makeApps: @escaping @MainActor () -> AppsFeatureModels = { AppsFeatureModels() }, makeSpace: @escaping SpaceFactory = { SpaceLensModel(enabled:$0) }, invalidateSpaceCache: @escaping @MainActor () -> Void = { SpaceLens.invalidateCache() }, makeBrowser: @escaping BrowserFactory = {ChromePagesModel(enabled:$0,app:$1,appMemoryKB:$2,gpuKB:$3)}, makeWorkspace: @escaping WorkspaceFactory = {TabWorkspaceModel(enabled:$0,app:$1)}, nativeDefinitions:[NativeFeatureDefinition]? = nil, makeHistory:@escaping HistoryFactory = {HistoryModel(enabled:$0)}, makeAgents:@escaping AgentsFactory = {AgentScanner(enabled:$0)}, makeClaudeAccounts:@escaping ClaudeAccountsFactory = {ClaudeAccountsModel(enabled:$0)}, makeClaudeCleanup:@escaping ClaudeCleanupFactory = {ClaudeCleanupModel(enabled:$0)}, makeDownload:@escaping DownloadFactory = {YunXDownloadModel(enabled:$0)}, makeDownloadSetup:@escaping DownloadSetupFactory = {YunXChromeUseSetup(enabled:$0)}, makeCheckup:@escaping CheckupFactory = {CheckupModel(enabled:$0)}, makeDisk: @escaping () -> DiskModel = { DiskModel(retentionPreferences:.stored(in:.standard)) },
+    init(defaults: UserDefaults = .standard, makeApps: @escaping @MainActor () -> AppsFeatureModels = { AppsFeatureModels() }, makeSpace: @escaping SpaceFactory = { SpaceLensModel(enabled:$0) }, invalidateSpaceCache: @escaping @MainActor () -> Void = { SpaceLens.invalidateCache() }, makeBrowser: @escaping BrowserFactory = {ChromePagesModel(enabled:$0,app:$1,appMemoryKB:$2,gpuKB:$3)}, makeWorkspace: @escaping WorkspaceFactory = {TabWorkspaceModel(enabled:$0,app:$1)}, nativeDefinitions:[NativeFeatureDefinition]? = nil, makeHistory:@escaping HistoryFactory = {HistoryModel(enabled:$0)}, makeAgents:@escaping AgentsFactory = {AgentScanner(enabled:$0)}, makeClaudeAccounts:@escaping ClaudeAccountsFactory = {ClaudeAccountsModel(enabled:$0)}, makeClaudeCleanup:@escaping ClaudeCleanupFactory = {ClaudeCleanupModel(enabled:$0)}, makeDownload:@escaping DownloadFactory = {YunXDownloadModel(enabled:$0)}, makeDownloadSetup:@escaping DownloadSetupFactory = {YunXChromeUseSetup(enabled:$0)}, makeDisk: @escaping () -> DiskModel = { DiskModel(retentionPreferences:.stored(in:.standard)) },
          makeMonitor: @escaping () -> Monitor = { Monitor(samplingAllowed: { ModulePreferences.isEnabled(BuiltinModuleManifests.performance, in: .standard) }) }) {
-        self.makeClaudeAccounts=makeClaudeAccounts;self.makeClaudeCleanup=makeClaudeCleanup;self.makeDownload=makeDownload;self.makeDownloadSetup=makeDownloadSetup;self.makeCheckup=makeCheckup;self.makeAgents=makeAgents;self.makeHistory=makeHistory;self.makeDisk = makeDisk;self.makeApps=makeApps;self.makeSpace=makeSpace;self.invalidateSpaceCache=invalidateSpaceCache;self.makeBrowser=makeBrowser;self.makeWorkspace=makeWorkspace;self.defaults=defaults
+        self.makeClaudeAccounts=makeClaudeAccounts;self.makeClaudeCleanup=makeClaudeCleanup;self.makeDownload=makeDownload;self.makeDownloadSetup=makeDownloadSetup;self.makeAgents=makeAgents;self.makeHistory=makeHistory;self.makeDisk = makeDisk;self.makeApps=makeApps;self.makeSpace=makeSpace;self.invalidateSpaceCache=invalidateSpaceCache;self.makeBrowser=makeBrowser;self.makeWorkspace=makeWorkspace;self.defaults=defaults
         self.makeMonitor = makeMonitor
         let definitions=nativeDefinitions ?? BuiltinNativeFeatures.registrations
         nativeFeatures=NativeFeatureStore(definitions:definitions,enabled:{id in

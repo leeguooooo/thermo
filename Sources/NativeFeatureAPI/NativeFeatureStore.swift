@@ -28,18 +28,28 @@ import SwiftUI
         self.definitions=Dictionary(uniqueKeysWithValues:definitions.map{($0.manifest.id,$0)})
         self.enabled=enabled;order=definitions.map{$0.manifest.id}
     }
-    package func page(_ route:NativeFeatureRoute)->AnyView? {
-        guard enabled(route.module),let definition=definitions[route.module],
-              definition.manifest.entries.contains(where:{$0.id==route.entry && $0.kind == .page}) else{return nil}
-        switch states[route.module] {
+    private func isPage(_ route:NativeFeatureRoute)->Bool {
+        definitions[route.module]?.manifest.entries.contains(where:{$0.id==route.entry && $0.kind == .page}) ?? false
+    }
+    private func admittedSession(_ id:String)->(any NativeFeatureSession)? {
+        guard enabled(id),let definition=definitions[id] else{return nil}
+        switch states[id] {
         case .draining:return nil
-        case let .live(live):return live.session.page(entry:route.entry)
+        case let .live(live):return live.session
         case nil:
-            let availability=FeatureAvailability { [weak self] in self?.enabled(route.module) ?? false }
+            let availability=FeatureAvailability { [weak self] in self?.enabled(id) ?? false }
             let session=definition.makeSession(availability)
-            states[route.module] = .live(.init(generation:UUID(),availability:availability,session:session))
-            return session.page(entry:route.entry)
+            states[id] = .live(.init(generation:UUID(),availability:availability,session:session))
+            return session
         }
+    }
+    package func page(_ route:NativeFeatureRoute)->AnyView? {
+        guard isPage(route) else{return nil}
+        return admittedSession(route.module)?.page(entry:route.entry)
+    }
+    package func prepareReview(_ route:NativeFeatureRoute,arguments:[String]) {
+        guard isPage(route) else{return}
+        admittedSession(route.module)?.prepareReview(arguments)
     }
     package func status(_ id:String)->NativeFeatureStatus {
         switch states[id] {

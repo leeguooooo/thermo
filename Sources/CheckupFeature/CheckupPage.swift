@@ -1,3 +1,5 @@
+import ModuleKit
+import LocalAIUI
 import ThermoUI
 import NativeFeatureAPI
 import AppKit
@@ -8,9 +10,8 @@ import ThermoL10n
 
 /// Holds the latest AI check-up across page switches. One run at a time.
 @MainActor final class CheckupModel: ObservableObject {
-    static var shared:CheckupModel {AppModels.shared.checkup}
     let work=FeatureTasks()
-    private let defaults:UserDefaults
+    private let consent:CheckupConsent
     private let measure:@Sendable (Snapshot?,String)->CheckupSnapshot
     private let backend:@MainActor ()->LocalAIBackend?
     private let asker:@Sendable (CheckupSnapshot,LocalAIBackend) async throws->CheckupReport
@@ -18,7 +19,7 @@ import ThermoL10n
          measure:@escaping @Sendable (Snapshot?,String)->CheckupSnapshot = CheckupModel.measure,
          backend:@escaping @MainActor ()->LocalAIBackend? = {LocalAIStore.shared.backend},
          asker:@escaping @Sendable (CheckupSnapshot,LocalAIBackend) async throws->CheckupReport = {try await LocalAI.checkup($0,using:$1)}) {
-        work.enabled=enabled;self.defaults=defaults;self.measure=measure;self.backend=backend;self.asker=asker
+        work.enabled=enabled;self.consent=CheckupConsent(defaults:defaults);self.measure=measure;self.backend=backend;self.asker=asker
     }
 
     enum Phase: Equatable { case idle, measuring, preview, asking, failed(String) }
@@ -28,8 +29,8 @@ import ThermoL10n
 
     /// Separate from the per-item "Ask AI" consent: this sends program names and project paths.
     var consented: Bool {
-        get { defaults.bool(forKey: "localAI.checkupConsented") }
-        set {guard work.acceptsWork else{return};defaults.set(newValue, forKey: "localAI.checkupConsented"); objectWillChange.send()}
+        get { consent.allowed }
+        set {guard work.acceptsWork else{return};consent.allowed=newValue; objectWillChange.send()}
     }
 
     var busy: Bool { phase == .measuring || phase == .asking }
@@ -100,8 +101,8 @@ import ThermoL10n
 /// "AI Check-up": the AI on this Mac looks at everything Thermo measured and says, finding by
 /// finding, what to do first and whether doing it interrupts the work in progress.
 struct CheckupPage: View {
-    @ObservedObject var monitor: Monitor
-    let open: (MainPage) -> Void
+    let reading:@MainActor ()->Snapshot?
+    let open: (NativeFeatureRoute) -> Void
     @ObservedObject var model:CheckupModel
     @ObservedObject private var ai = LocalAIStore.shared
 
@@ -158,7 +159,7 @@ struct CheckupPage: View {
     @ViewBuilder func controls(_ backend: LocalAIBackend) -> some View {
         HStack(spacing: Theme.Space.m) {
             Button {
-                model.start(reading:monitor.snapshot)
+                model.start(reading:reading())
             } label: {
                 Label(model.report == nil ? tr("Start check-up") : tr("Check again"), systemImage: "waveform.path.ecg")
             }
@@ -236,7 +237,7 @@ struct CheckupPage: View {
                         .fixedSize(horizontal: false, vertical: true)
                 }
                 if !f.impact.isEmpty {
-                    let (label, color) = Self.safety(f.safety)
+                    let (label, color) = AISafetyPresentation.label(f.safety)
                     HStack(alignment: .firstTextBaseline, spacing: Theme.Space.s) {
                         Text(label).font(Theme.label).foregroundStyle(color)
                             .padding(.horizontal, 6).padding(.vertical, 2).background(Capsule().fill(color.opacity(0.15)))
@@ -260,13 +261,13 @@ struct CheckupPage: View {
     }
 
     /// Where in Thermo to act on it; the AI never acts itself.
-    static func destination(_ f: CheckupFinding) -> (String, MainPage)? {
-        if f.culprit != nil { return (tr("Open in Overview"), .overview) }
+    static func destination(_ f: CheckupFinding) -> (String, NativeFeatureRoute)? {
+        if f.culprit != nil { return (tr("Open in Overview"), .init(BuiltinModuleManifests.performance.id,"overview")) }
         switch f.area {
-        case .memory: return (tr("Open Memory"), .memory)
-        case .cpu, .processes: return (tr("Open CPU usage"), .compute(false))
-        case .thermal: return (tr("Open Fans"), .fans)
-        case .disk: return (tr("Open Space Lens"), .space(.browse))
+        case .memory: return (tr("Open Memory"), .init(BuiltinModuleManifests.performance.id,"memory"))
+        case .cpu, .processes: return (tr("Open CPU usage"), .init(BuiltinModuleManifests.performance.id,"cpu"))
+        case .thermal: return (tr("Open Fans"), .init(BuiltinModuleManifests.performance.id,"fans"))
+        case .disk: return (tr("Open Space Lens"), .init(BuiltinModuleManifests.space.id,"browse"))
         case .battery, .other: return nil
         }
     }
@@ -281,14 +282,6 @@ struct CheckupPage: View {
 
     static func severity(_ s: CheckupFinding.Severity) -> Color {
         switch s { case .high: Theme.danger; case .medium: Theme.caution; case .low: Theme.accent }
-    }
-
-    static func safety(_ s: CheckupFinding.Safety) -> (String, Color) {
-        switch s {
-        case .safe: return (tr("Safe to do"), Theme.good)
-        case .interrupts: return (tr("Interrupts work"), Theme.caution)
-        case .avoid: return (tr("Don't do it"), Theme.danger)
-        }
     }
 
     static func icon(_ a: CheckupFinding.Area) -> String {
