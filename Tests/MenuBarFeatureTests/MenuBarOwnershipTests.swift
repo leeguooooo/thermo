@@ -16,6 +16,7 @@ import XCTest
     }
     private final class Gate:@unchecked Sendable {
         let began=DispatchSemaphore(value:0),release=DispatchSemaphore(value:0)
+        func awaitStart(){began.wait()}
         func read()->[ManagedMenuBarApp]{began.signal();release.wait();return [.init(id:"org.example.stale",name:"Stale")]}
     }
     func testNeverAdmittedOffMenuAndQuitAndEnabledInlineSettingsStayModelCold() {
@@ -42,7 +43,7 @@ import XCTest
         // Supply fake resource factories too; no private native API or Carbon registration.
         let store=NativeFeatureStore(definitions:[definition],enabled:{_ in enabled}),id=BuiltinModuleManifests.menuBar.id
         store.start(id);let existing=try XCTUnwrap(model)
-        existing.setPanelOpen(true);await Task.detached{gate.began.wait()}.value
+        existing.setPanelOpen(true);await Task.detached{gate.awaitStart()}.value
         existing.setPanelOpen(false);existing.setPanelOpen(true)
         let drain=try XCTUnwrap(store.prepareStop(id));enabled=false
         var drained=false;let finish=Task{await drain.finish();drained=true}

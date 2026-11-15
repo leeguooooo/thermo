@@ -3,11 +3,11 @@ import MenuBarCore
 @testable import MenuBarFeature
 
 @MainActor final class MenuBarManagerShortcutTests: XCTestCase {
-    private func model(accessibilityTrusted: @escaping @MainActor () -> Bool = { true }) throws -> (String, UserDefaults, MenuBarShortcutTests.Backend, MenuBarManager) {
+    private func model(accessibilityTrusted: @escaping @MainActor () -> Bool = { true }, controller:MenuBarSessionController? = nil) throws -> (String, UserDefaults, MenuBarShortcutTests.Backend, MenuBarManager) {
         let suite = "MenuBarManagerShortcutTest." + UUID().uuidString
         let defaults = UserDefaults(suiteName: suite)!
         let backend = MenuBarShortcutTests.Backend()
-        let model = MenuBarManager(defaults: defaults, accessibilityTrusted: accessibilityTrusted, shortcutBackend: backend)
+        let model = MenuBarManager(defaults: defaults, accessibilityTrusted: accessibilityTrusted, shortcutBackend: backend,controller:controller,capabilityAvailable:{true})
         guard model.available else {
             defaults.removePersistentDomain(forName: suite)
             throw XCTSkip("Native menu management requires macOS 27")
@@ -62,10 +62,11 @@ import MenuBarCore
     }
 
     func testFailedVisibilityKeepsRecoveryKeyUntilRestored() throws {
-        let (suite, defaults, backend, model) = try model()
+        let controller=MenuBarSessionController{_ in throw NSError(domain:"Injected menu-bar recovery",code:1)}
+        let (suite, defaults, backend, model) = try model(controller:controller)
         defer { model.shutdown(); defaults.removePersistentDomain(forName: suite) }
         model.start()
-        model.handleVisibilityState(.failed("injected recovery failure"))
+        controller.apply(.init(allowedBundles:["org.example.fixture"]))
         XCTAssertFalse(model.enabled)
         XCTAssertTrue(model.shortcuts.active)
         backend.callbacks[0](true)
