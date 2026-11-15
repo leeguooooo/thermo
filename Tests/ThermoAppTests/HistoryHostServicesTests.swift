@@ -47,6 +47,23 @@ import XCTest
         do{_=try await operation.perform();XCTFail("expected failure")}catch{}
         XCTAssertEqual(AppExitGuard.reply(show:{_ in XCTFail("failure must release")}),.terminateNow)
     }
+    func testAdmissionIsOneShotAndAbandonedAdmissionReleasesProtection() async throws {
+        let services=HistoryHostServices(restore:{id,_ in .init(id:id,dryRun:false,items:[])},invalidate:{_ in XCTFail("nothing restored")})
+        var abandoned:(any HistoryRestoration)?=try services.beginRestore(batch:"fixture",review:review())
+        XCTAssertNotNil(abandoned)
+        XCTAssertEqual(AppExitGuard.reply(show:{_ in}),.terminateCancel)
+        abandoned=nil
+        for _ in 0..<20 {
+            if AppExitGuard.reply(show:{_ in}) == .terminateNow {break}
+            await Task.yield()
+        }
+        XCTAssertEqual(AppExitGuard.reply(show:{_ in}),.terminateNow)
+        let operation=try services.beginRestore(batch:"fixture",review:review())
+        _=try await operation.perform()
+        do{_=try await operation.perform();XCTFail("restore may run only once")}catch{}
+        XCTAssertEqual(AppExitGuard.reply(show:{_ in}),.terminateNow)
+    }
+
     func testInvalidReviewCannotAcquireProtectionOrStartWork() {
         let services=HistoryHostServices(restore:{_,_ in XCTFail("invalid review");throw CancellationError()},invalidate:{_ in XCTFail("nothing restored")})
         var unproved=review();unproved.reviewIdentity=nil

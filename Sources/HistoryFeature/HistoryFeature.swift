@@ -11,10 +11,10 @@ package enum HistoryFeature {
 @MainActor final class HistorySession: NativeFeatureSession {
     private let availability: FeatureAvailability
     private let services: any HistoryServices
-    private let makeModel: (@escaping () -> Bool, any HistoryServices) -> HistoryModel
+    private let makeModel: @MainActor (@escaping () -> Bool, any HistoryServices) -> HistoryModel
     private var storedModel: HistoryModel?
     init(availability: FeatureAvailability, services: any HistoryServices,
-         makeModel: @escaping (@escaping () -> Bool, any HistoryServices) -> HistoryModel = { HistoryModel(enabled: $0, services: $1) }) {
+         makeModel: @escaping @MainActor (@escaping () -> Bool, any HistoryServices) -> HistoryModel = { HistoryModel(enabled: $0, services: $1) }) {
         self.availability = availability; self.services = services; self.makeModel = makeModel
     }
     func page(entry: String) -> AnyView? {
