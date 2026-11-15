@@ -341,7 +341,7 @@ struct MainView: View {
         case .yunx:
             YunXDownloadPage(model: YunXDownloadModel.shared).transition(.page)
         case .plugins:
-            PluginsPage(model: models.plugins, open: { page = $0 }).transition(.page)
+            ModuleOffView().transition(.page)
         case .history:
             ModuleOffView().transition(.page)
         case let .module(id, entry):
@@ -456,7 +456,6 @@ struct MainSidebar: View {
 
                     moduleRows(.software)
                     row(.yunx, tr("YunX Download"), "arrow.down.circle", .blue, trailing: nil)
-                    row(.plugins, tr("Plugin marketplace"), "puzzlepiece.extension", .orange, trailing: nil)
                     // Pages of the modules that are on; a module that is off has no row.
                     ForEach(modules.pageGroups) { group in
                         header(group.module.name)
