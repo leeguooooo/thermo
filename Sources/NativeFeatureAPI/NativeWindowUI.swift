@@ -32,7 +32,8 @@ package struct NativeUIContributions:Sendable {
     package let badge:Int
     package let trailing:String?
     package let trailingColor:Color?
-    package init(route:NativeFeatureRoute,tint:Color,badge:Int = 0,trailing:String? = nil,trailingColor:Color? = nil){self.route=route;self.tint=tint;self.badge=badge;self.trailing=trailing;self.trailingColor=trailingColor}
+    package let displayEntry:String?
+    package init(route:NativeFeatureRoute,tint:Color,badge:Int = 0,trailing:String? = nil,trailingColor:Color? = nil,displayEntry:String? = nil){self.route=route;self.tint=tint;self.badge=badge;self.trailing=trailing;self.trailingColor=trailingColor;self.displayEntry=displayEntry}
 }
 @MainActor package struct NativeSidebarRow {
     package let route:NativeFeatureRoute

@@ -17,7 +17,7 @@ package enum BrowserFeature {
                   },check:{context in
                       guard case let .text(app)?=context["app"],!app.isEmpty,!app.unicodeScalars.contains(where:{CharacterSet.controlCharacters.contains($0)}) else{throw NativeRouteError("Invalid browser name.")}
                   })
-        ],menuShortcuts:["archive":"s"],resolveLegacyPage:{argument in
+        ],ui:.init(sidebarLocations:[.resources]),menuShortcuts:["archive":"s"],resolveLegacyPage:{argument in
             guard argument == "pages" || argument.hasPrefix("pages:") else{return nil}
             let app=argument.hasPrefix("pages:") ? String(argument.dropFirst(6)):""
             return route(app.isEmpty ? "Google Chrome":app)
@@ -76,6 +76,11 @@ package enum BrowserFeature {
         _=diagnostics(app(route),memory:memory,gpu:gpu)
     }
     var status:NativeFeatureStatus {.init(modelLoaded:!checks.isEmpty || !spaces.isEmpty,sampling:checks.values.contains{$0.running})}
+    func ui(_ surface:NativeUISurface,navigation:NativeNavigation)->AnyView? {
+        guard availability.acceptsWork,case let .sidebar(location,selection,rows)=surface,location == .resources else{return nil}
+        let target=selection.flatMap{$0.module==BuiltinModuleManifests.browser.id ? $0:nil} ?? BrowserFeature.route("Google Chrome")
+        return AnyView(rows(.init(route:target,tint:.teal)))
+    }
     func start() {
         guard availability.acceptsWork,automation==nil else{return}
         let availability=availability

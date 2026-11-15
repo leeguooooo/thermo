@@ -9,7 +9,7 @@ package enum AppsFeature {
             .init(entry:"updates",optionFields:[.init("channel",kind:.text,required:false),.init("showRecovery",kind:.boolean,required:false)],checkOptions:{options in
                 if case let .text(channel)?=options["channel"],!Set(["homebrew","native"]).contains(channel) {throw NativeRouteError("Unknown software update channel.")}
             })
-        ],resolveLegacyPage:{argument in
+        ],ui:.init(sidebarLocations:[.software]),resolveLegacyPage:{argument in
             guard argument=="apps" || argument.hasPrefix("apps:") else{return nil}
             let suffix=argument.hasPrefix("apps:") ? String(argument.dropFirst(5)):""
             let tab=suffix=="feeds" ? AppsTab.updates:AppsTab(rawValue:suffix) ?? .installed
@@ -36,6 +36,11 @@ package enum AppsFeature {
         let models=models
         return AnyView(AppsPage(model:models.apps,startup:models.startup,updates:models.updates,native:models.native,store:models.store,
             tab:Binding(get:{tab},set:{_ = navigation.show(AppsFeature.route($0))})))
+    }
+    func ui(_ surface:NativeUISurface,navigation:NativeNavigation)->AnyView? {
+        guard availability.acceptsWork,case let .sidebar(location,selection,rows)=surface,location == .software else{return nil}
+        let target=selection.flatMap{$0.module==BuiltinModuleManifests.apps.id ? $0:nil} ?? AppsFeature.route(.installed)
+        return AnyView(rows(.init(route:target,tint:.indigo,displayEntry:"installed")))
     }
     func preparePresentation(_ route:NativeFeatureRoute,options:[String:NativeContextValue]) {
         guard availability.acceptsWork,route.entry=="updates",!options.isEmpty else{return}

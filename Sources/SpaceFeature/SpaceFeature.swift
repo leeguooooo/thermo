@@ -14,7 +14,7 @@ package enum SpaceFeature {
                     guard case let .text(path)=value,path.hasPrefix("/"),!path.contains("\0") else{throw NativeRouteError("Invalid folder path.")}
                 }
             })
-        ],resolveLegacyPage:{argument in
+        ],ui:.init(sidebarLocations:[.storage]),resolveLegacyPage:{argument in
             guard argument=="space" || argument.hasPrefix("space:") else{return nil}
             let suffix=argument.hasPrefix("space:") ? String(argument.dropFirst(6)):""
             return route(SpaceTab(rawValue:suffix) ?? .browse)
@@ -52,6 +52,11 @@ final class SpaceColdInvalidation:@unchecked Sendable {
         let availability=availability,made=makeModel({availability.acceptsWork},services,cacheURL())
         if cold.take(){made.invalidateAfterRestore([made.root])}
         storedModel=made;return made
+    }
+    func ui(_ surface:NativeUISurface,navigation:NativeNavigation)->AnyView? {
+        guard availability.acceptsWork,case let .sidebar(location,selection,rows)=surface,location == .storage else{return nil}
+        let target=selection.flatMap{$0.module==BuiltinModuleManifests.space.id ? $0:nil} ?? SpaceFeature.route(.browse)
+        return AnyView(rows(.init(route:target,tint:.cyan,displayEntry:"browse")))
     }
     func page(_ route:NativeFeatureRoute,navigation:NativeNavigation)->AnyView? {
         guard availability.acceptsWork,let tab=SpaceTab(rawValue:route.entry) else{return nil}
