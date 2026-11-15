@@ -5,7 +5,7 @@ import ThermoL10n
 
 package enum HistoryFeature {
     package static func registration(services: @escaping @MainActor () -> any HistoryServices) -> NativeFeatureDefinition {
-        .init(manifest: BuiltinModuleManifests.history, makeSession: { HistorySession(availability: $0, services: services()) })
+        .init(manifest: BuiltinModuleManifests.history,ui:.init(sidebarLocations:[.footer]), makeSession: { HistorySession(availability: $0, services: services()) })
     }
 }
 @MainActor final class HistorySession: NativeFeatureSession {
@@ -16,6 +16,10 @@ package enum HistoryFeature {
     init(availability: FeatureAvailability, services: any HistoryServices,
          makeModel: @escaping @MainActor (@escaping () -> Bool, any HistoryServices) -> HistoryModel = { HistoryModel(enabled: $0, services: $1) }) {
         self.availability = availability; self.services = services; self.makeModel = makeModel
+    }
+    func ui(_ surface:NativeUISurface,navigation:NativeNavigation)->AnyView? {
+        guard availability.acceptsWork,case let .sidebar(location,_,rows)=surface,location == .footer else{return nil}
+        return AnyView(rows(.init(route:.init(BuiltinModuleManifests.history.id,"home"),tint:.brown)))
     }
     func page(_ route:NativeFeatureRoute,navigation:NativeNavigation) -> AnyView? {
         let entry=route.entry

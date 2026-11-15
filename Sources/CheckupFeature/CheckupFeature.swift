@@ -6,7 +6,7 @@ import ThermoL10n
 
 package enum CheckupFeature {
     package static func registration(reading:@escaping @MainActor ()->Snapshot?,navigate:@escaping @MainActor (NativeFeatureRoute)->Void)->NativeFeatureDefinition {
-        .init(manifest:BuiltinModuleManifests.checkup,makeSession:{CheckupSession(availability:$0,reading:reading,navigate:navigate)})
+        .init(manifest:BuiltinModuleManifests.checkup,ui:.init(sidebarLocations:[.overview]),makeSession:{CheckupSession(availability:$0,reading:reading,navigate:navigate)})
     }
 }
 @MainActor final class CheckupSession:NativeFeatureSession {
@@ -22,6 +22,10 @@ package enum CheckupFeature {
     private var model:CheckupModel {
         if let storedModel{return storedModel}
         let availability=availability,model=makeModel {availability.acceptsWork};storedModel=model;return model
+    }
+    func ui(_ surface:NativeUISurface,navigation:NativeNavigation)->AnyView? {
+        guard availability.acceptsWork,case let .sidebar(location,_,rows)=surface,location == .overview else{return nil}
+        return AnyView(rows(.init(route:.init(BuiltinModuleManifests.checkup.id,"home"),tint:.mint)))
     }
     func page(_ route:NativeFeatureRoute,navigation:NativeNavigation)->AnyView? {
         let entry=route.entry
