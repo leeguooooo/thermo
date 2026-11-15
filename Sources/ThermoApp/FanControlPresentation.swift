@@ -1,3 +1,4 @@
+import SystemServicesAPI
 import Foundation
 import ThermoKit
 import ThermoL10n
@@ -15,13 +16,6 @@ enum FanControlPresentation {
     static func missingFanIDs(readings: [FanReading]?, policies: [Int: FanPolicy], pending: [Int: FanPolicy], state: FanControlState?) -> [Int] {
         Set(policies.keys).union(pending.keys).union(state?.referencedFanIDs ?? [])
             .subtracting((readings ?? []).map(\.id)).sorted()
-    }
-    static func policy(_ policy: FanPolicy) -> String {
-        switch policy {
-        case .auto: return tr("Auto")
-        case .fixed(let r): return r == .infinity ? tr("Max") : tr("%1$@ rpm", String(format: "%.0f", r))
-        case .curve(let curve): return tr("Curve") + " · " + curve.pointsText + " (" + curve.sensor.rawValue.uppercased() + ")"
-        }
     }
     static func rpm(_ value: Double?) -> String { value.map { String(format: "%.0f", $0) } ?? tr("unknown") }
     /// `speedSummary` and the cards use the reported speed, not the raw one: see `FanReading.reportedRPM`.
@@ -60,14 +54,6 @@ enum FanControlPresentation {
     }
 }
 
-extension FanReading {
-    /// The SMC reports "Fan" / "Fan 2" in English when the hardware has no name of its own.
-    var displayName: String {
-        if name == "Fan" { return tr("Fan") }
-        if name.hasPrefix("Fan "), let n = Int(name.dropFirst(4)) { return tr("Fan %1$@", String(n)) }
-        return name
-    }
-}
 
 extension FanReading {
     /// The speed worth showing. The SMC reports 0 rpm until its first real poll after launch, and a

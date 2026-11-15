@@ -4,17 +4,6 @@ import SwiftUI
 import ThermoKit
 import ThermoL10n
 
-enum LidAwakeText {
-    static func autoOff(_ off: LidAwakeState.AutoOff) -> String {
-        switch off.reason {
-        case "thermal": return tr("Turned off because the Mac got too hot (%1$@).", off.detail)
-        case "battery": return tr("Turned off because the battery is low (%1$@).", off.detail)
-        case "noReading": return tr("Turned off because the temperature could not be read.")
-        default: return off.detail
-        }
-    }
-}
-
 /// The menu bar switch: keep the Mac awake with the lid closed, with the rules that end it said up front.
 struct LidAwakeSwitch: View {
     @ObservedObject var monitor: Monitor

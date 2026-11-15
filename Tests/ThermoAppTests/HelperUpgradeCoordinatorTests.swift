@@ -1,3 +1,4 @@
+import ThermoKernel
 import XCTest
 @testable import ThermoApp
 
