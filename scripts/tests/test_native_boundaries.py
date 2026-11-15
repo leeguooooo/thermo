@@ -86,6 +86,20 @@ class NativeBoundariesTests(unittest.TestCase):
             (source / "Application.swift").write_text("@_exported import ConnectionsFeature\n")
             self.assertIn("ThermoComposition must not re-export ConnectionsFeature", check.problems(self.package, complete=True, source_root=temporary))
 
+    def test_executable_cannot_bypass_composition_and_import_the_shell(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            source = Path(temporary) / "Sources/ThermoApp"
+            source.mkdir(parents=True)
+            (source / "Main.swift").write_text("import ThermoShell\n")
+            self.assertIn("ThermoApp must import only ThermoComposition, not ThermoShell", check.problems(self.package, complete=True, source_root=temporary))
+
+    def test_composition_does_not_reexport_the_shell_contract_either(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            source = Path(temporary) / "Sources/ThermoComposition"
+            source.mkdir(parents=True)
+            (source / "Application.swift").write_text("@_exported import ThermoShell\n")
+            self.assertIn("ThermoComposition must not re-export ThermoShell", check.problems(self.package, complete=True, source_root=temporary))
+
     def test_embedded_swift_templates_do_not_create_import_dependencies(self):
         text = '\n'.join(['// import FakeFeature', 'let code = #"""', 'import FakeFeature', '"""#', '/* import FakeFeature */', '@_implementationOnly import struct ModuleKit.ModuleManifest'])
         self.assertEqual(check.source_imports(text), {"ModuleKit"})

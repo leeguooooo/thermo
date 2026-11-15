@@ -404,7 +404,11 @@ Sources/ThermoKit/   传感器发现/命名/分组、Sampler、电池、风扇�
 Sources/CleanKit/    磁盘清理：规则、AI 会话/模型/工具识别、项目产物、扫描与删除（不进 helper）
 Sources/thermo/      CLI
 Sources/ThermoHelper/ root helper（LaunchDaemon + XPC）
-Sources/ThermoApp/   菜单栏 App（AppKit + SwiftUI + Swift Charts）
+Sources/ThermoApp/   应用入口，只调用 ThermoComposition
+Sources/ThermoComposition/ 功能注册和宿主能力组装
+Sources/ThermoShell/ 通用窗口、菜单、设置、权限和退出保护
+Sources/ThermoKernel/ 公共遥测、helper 管理与可撤销的服务租约
+Sources/*Feature/   各功能自己的页面、模型和会话
 ```
 
 调试：`Thermo.app/Contents/MacOS/Thermo --render-preview DIR` 把面板各页渲染为 PNG（AppKit 原生控件会显示为占位块）。helper 日志：`/var/log/dev.thermo.helper.log`。
