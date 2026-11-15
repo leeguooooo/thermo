@@ -66,6 +66,7 @@ import MenuBarCore
         let (suite, defaults, backend, model) = try model(controller:controller)
         defer { model.shutdown(); defaults.removePersistentDomain(forName: suite) }
         model.start()
+        model.restoreAll() // Adopt the injected controller before delivering its real failure callback.
         controller.apply(.init(allowedBundles:["org.example.fixture"]))
         XCTAssertFalse(model.enabled)
         XCTAssertTrue(model.shortcuts.active)
