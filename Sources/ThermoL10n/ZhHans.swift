@@ -4556,4 +4556,28 @@ let zhHans: [String: String] = [
     "Choose your Thermo features": "选择要启用的 Thermo 功能",
     "Start with capture, menu bar, performance and search. Add anything else you need. You can change every choice in Settings → Features.": "默认启用截图、菜单栏管理、性能监测和搜索，也可以勾选其他需要的功能。以后随时可在「设置 → 功能」中修改。",
 
+    // Feature Center
+    "Feature Center": "功能中心",
+    "Open Feature Center": "打开功能中心",
+    "Choose what runs in Thermo and review its declared access.": "选择启用哪些功能，并查看它们声明的访问范围。",
+    "%1$@ of %2$@ features are on.": "已启用 %1$@ 项，共 %2$@ 项功能。",
+    "All operation history": "全部操作记录",
+    "Access records cover requests handled by module permissions. Other recorded changes appear in operation history.": "访问记录显示经过模块权限检查的请求；其它已记录的改动可在操作记录中查看。",
+    "Built-in features share Thermo's system permissions.": "内置功能与 Thermo 共用系统授权。",
+    "This isolated module is limited to its declared access.": "此隔离模块只能访问它声明的范围。",
+    "No separate module access is declared.": "未声明单独的模块访问能力。",
+    "Confirmation required": "需确认",
+    "Read sensors": "读取传感器",
+    "Read the process list": "读取进程列表",
+    "End processes": "结束进程",
+    "Capture the screen": "截取屏幕",
+    "Read accessibility information": "读取辅助功能信息",
+    "Read files": "读取文件",
+    "Remove files": "移除文件",
+    "Connect to network hosts": "连接网络主机",
+    "Post notifications": "发送通知",
+    "Control fans": "控制风扇",
+    "Access records": "访问记录",
+    "Declared access": "声明的访问范围",
+
 ]

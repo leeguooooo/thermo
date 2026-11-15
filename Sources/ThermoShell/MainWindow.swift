@@ -11,7 +11,7 @@ import ThermoL10n
 
 /// Where the main window is.
 enum MainPage: Hashable {
-    case settings
+    case settings,features
     case native(NativeFeatureRoute)
     /// Only isolated external modules use this representation.
     case module(String,String)
@@ -24,6 +24,7 @@ enum MainPage: Hashable {
 
     init?(argument:String) {
         if argument=="settings" {self = .settings;return}
+        if argument=="features" {self = .features;return}
         if let route=try? ShellNativeCatalog.catalog.resolveLegacyPage(argument) {self = .native(route);return}
         guard argument.hasPrefix("module:") else{return nil}
         let parts=argument.dropFirst(7).split(separator:":",maxSplits:1,omittingEmptySubsequences:false).map(String.init)
@@ -40,11 +41,11 @@ enum MainPage: Hashable {
         case let .module(id,entry):
             guard let manifest=catalog.manifest(id),let selected=manifest.entries.first(where:{$0.kind == .page && (entry.isEmpty ? $0.parent==nil:$0.id==entry)}) else{return nil}
             return try? catalog.normalize(.init(id,selected.id))
-        case .settings:return nil
+        case .settings,.features:return nil
         }
     }
     var module:String? {
-        switch self {case let .native(route):return route.module;case let .module(id,_):return id;case .settings:return nil}
+        switch self {case let .native(route):return route.module;case let .module(id,_):return id;case .settings,.features:return nil}
     }
 }
 
@@ -290,6 +291,8 @@ struct MainView: View {
 
     @ViewBuilder var coreContent: some View {
         switch page {
+        case .features:
+            FeatureCenterPage(center:modules).transition(.page)
         case .settings:
             WindowPage(title: tr("Settings"), subtitle: "Thermo \(AppInfo.version)") {
                 SettingsView(monitor: monitor, updates: models.updates).onAppear{monitor.refreshHelper()}
@@ -410,6 +413,7 @@ struct MainSidebar: View {
             Rectangle().fill(Theme.hairline).frame(height: 1).padding(.horizontal, 14)
             VStack(spacing: 1) {
                 moduleRows(.footer)
+                row(.features,tr("Feature Center"),"puzzlepiece.extension",.gray,trailing:nil)
                 row(.settings, tr("Settings"), "gearshape", .gray, trailing: nil)
             }.padding(.vertical, 8)
         }

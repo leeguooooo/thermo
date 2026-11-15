@@ -12,6 +12,7 @@ public enum HostPageSpecification {
         }
     }
     public static let pages: [Page] = [
+        .init("features", "Feature Center"),
         .init("settings", "Settings", ",")
     ]
 }

@@ -270,13 +270,15 @@ struct ModuleSceneView: NSViewControllerRepresentable {
     }
 }
 
-/// Settings: one switch per module inside the app. Not shown when there are none.
+/// One switch and declared-access disclosure per module; never opens its feature model.
 struct ModuleSwitches: View {
     @ObservedObject var center: ModuleCenter
     @State private var activity: ModuleManifest?
+    @State private var expanded=Set<String>()
     var body: some View {
         ForEach(Array(center.switches.enumerated()), id: \.element.manifest.id) { index, status in
             if index > 0 { InspectorDivider(inset: 46) }
+            VStack(alignment:.leading,spacing:0){
             HStack(spacing: Theme.Space.m) {
                 Image(systemName: status.manifest.symbol).frame(width: 22).foregroundStyle(Theme.textSecondary)
                 VStack(alignment: .leading, spacing: 2) {
@@ -293,13 +295,18 @@ struct ModuleSwitches: View {
                     }
                 }
                 Spacer()
-                if !status.builtin || !ShellNativeCatalog.catalog.privateWorkers(status.manifest.id).isEmpty {
-                    Button(tr("Activity")) { activity = status.manifest.localized(L10n.current.rawValue) }.buttonStyle(PillButtonStyle()).controlSize(.small).fixedSize()
-                }
+                Button(tr("Access records")){activity=status.manifest.localized(L10n.current.rawValue)}
+                    .buttonStyle(PillButtonStyle()).controlSize(.small).fixedSize()
                 Toggle("", isOn: Binding(get: { status.enabled }, set: { center.setEnabled(status.manifest.id, $0) }))
                     .labelsHidden().toggleStyle(.switch).accessibilityLabel(status.manifest.name)
                     .disabled(center.changing.contains(status.manifest.id))
             }.padding(.horizontal, Theme.Space.m).padding(.vertical, 8)
+                DisclosureGroup(tr("Declared access"),isExpanded:Binding(get:{expanded.contains(status.manifest.id)},set:{if $0{expanded.insert(status.manifest.id)}else{expanded.remove(status.manifest.id)}})) {
+                    ModuleCapabilityDetails(manifest:status.manifest,builtin:status.builtin).padding(.top,8)
+                }.font(Theme.secondary).foregroundStyle(Theme.textSecondary)
+                    .padding(.leading,46).padding(.trailing,Theme.Space.m).padding(.bottom,12)
+            }
+
         }
         .sheet(item: Binding(get: { activity.map(ActivityTarget.init) }, set: { activity = $0?.manifest })) { target in
             ModuleActivityView(manifest: target.manifest) { activity = nil }
