@@ -127,7 +127,11 @@ public enum BuiltinModuleManifests {
         id:"dev.thermo.checkup",name:"AI Check-up",summary:"Review a local health snapshot before sending it to the selected AI.",
         symbol:"waveform.path.ecg",version:"1.0.0",launch:.onDemand,enabledByDefault:true,
         entries:[.init(id:"home",kind:.page,title:"AI Check-up",symbol:"waveform.path.ecg",scene:"checkup")])
-    public static let all = [disk, search, capture, menuBar, performance, apps, space, browser, connections, history, agents, checkup]
+    public static let plugins=ModuleManifest(
+        id:"dev.thermo.plugins",name:"Plugin marketplace",summary:"Browse, install and update Claude Code plugins with reviewed commands.",
+        symbol:"puzzlepiece.extension",version:"1.0.0",launch:.onDemand,enabledByDefault:true,
+        entries:[.init(id:"home",kind:.page,title:"Plugin marketplace",symbol:"puzzlepiece.extension",scene:"plugins")])
+    public static let all = [disk, search, capture, menuBar, performance, apps, space, browser, connections, history, agents, checkup, plugins]
 }
 
 public enum ModulePreferences {

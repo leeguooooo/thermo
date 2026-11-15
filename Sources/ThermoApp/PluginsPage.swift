@@ -18,21 +18,37 @@ final class PluginsModel: ObservableObject {
     private var marketplace: Marketplace?
     private var use = UseManagerState()
     private var lastLoad: Date?
-    private let cache = StoreCache()
+    let work=FeatureTasks()
+    private let fetch:@Sendable () async->Data?
+    private let readState:@Sendable (UseManagerState) async->(UseManagerState,Bool,Bool,[InstalledPlugin])
+    private let check:@Sendable () async->String?
+    private let perform:@Sendable ([StoreCommand]) async->String?
+    private let marketplaceKnown:()->Bool
+    private let cache:StoreCache
+    init(enabled:@escaping ()->Bool = {true},cache:StoreCache = StoreCache(),
+         marketplaceKnown:@escaping ()->Bool = {ClaudePlugins.marketplaceKnown()},
+         fetch:@escaping @Sendable () async->Data? = {await StoreFetch.data(Marketplace.url)},
+         readState:@escaping @Sendable (UseManagerState) async->(UseManagerState,Bool,Bool,[InstalledPlugin]) = PluginsModel.localState,
+         check:@escaping @Sendable () async->String? = PluginsModel.updates,
+         perform:@escaping @Sendable ([StoreCommand]) async->String? = PluginsModel.commands) {
+        work.enabled=enabled;self.cache=cache;self.fetch=fetch;self.readState=readState;self.check=check;self.perform=perform;self.marketplaceKnown=marketplaceKnown
+    }
     private static let cacheName = "marketplace.json"
 
     func open() {
+        guard work.acceptsWork else{return}
         if let lastLoad, Date().timeIntervalSince(lastLoad) < 600 { return }
         refresh()
     }
 
     func refresh() {
-        guard !loading, working == nil else { return }
+        guard work.acceptsWork,!loading, working == nil else { return }
         loading = true
         lastLoad = Date()
         let cache = cache
-        Task {
-            let fetched = await StoreFetch.data(Marketplace.url)
+        work.runOnMain { [self] in
+            let fetched = await fetch()
+            guard work.acceptsWork else{return}
             if let fetched, let market = Marketplace.decode(fetched) {
                 cache.write(fetched, as: Self.cacheName)
                 marketplace = market
@@ -42,6 +58,7 @@ final class PluginsModel: ObservableObject {
                 usingCachedCopy = marketplace != nil
             }
             await readLocalState()
+            guard work.acceptsWork else{return}
             loading = false
             loaded = true
             checkForUpdates()
@@ -50,15 +67,8 @@ final class PluginsModel: ObservableObject {
 
     /// Plugin versions and `use` state, off the main thread: `use status` starts Python.
     private func readLocalState() async {
-        let previous = use
-        let (state, useFound, claudeFound, installed) = await Task.detached(priority: .userInitiated) { () -> (UseManagerState, Bool, Bool, [InstalledPlugin]) in
-            var state = previous
-            let bin = AgentAccess.find("use")
-            if let bin, let result = Self.execute(bin, ["status", "--json"], directory: nil, timeout: 30, captureError: false), result.status == 0 {
-                state.read(status: Data(result.output.utf8))
-            }
-            return (state, bin != nil, AgentAccess.find("claude") != nil, ClaudePlugins.installed())
-        }.value
+        let (state,useFound,claudeFound,installed)=await readState(use)
+        guard work.acceptsWork else{return}
         use = state
         useMissing = !useFound
         claudeMissing = !claudeFound
@@ -66,23 +76,38 @@ final class PluginsModel: ObservableObject {
     }
 
     private func checkForUpdates() {
-        guard let bin = AgentAccess.find("use"), !checkingUpdates else { return }
-        checkingUpdates = true
-        Task {
-            let output = await Task.detached(priority: .utility) {
-                Self.execute(bin, ["update", "--check", "--json"], directory: nil, timeout: 120, captureError: false)?.output
-            }.value
-            checkingUpdates = false
-            guard let output, working == nil else { return }
-            use.read(check: Data(output.utf8))
-            if let marketplace { records = PluginRecords.build(marketplace, installed: ClaudePlugins.installed(), use: use) }
+        guard work.acceptsWork,!checkingUpdates else{return}
+        checkingUpdates=true
+        work.runOnMain { [self] in
+            let output=await check()
+            guard work.acceptsWork else{return}
+            checkingUpdates=false
+            guard let output,working == nil else{return}
+            use.read(check:Data(output.utf8))
+            await readLocalState()
         }
+    }
+
+    private nonisolated static func localState(_ previous:UseManagerState) async->(UseManagerState,Bool,Bool,[InstalledPlugin]) {
+        await Task.detached(priority:.userInitiated) {
+            var state=previous
+            let bin=AgentAccess.find("use")
+            if let bin,let result=execute(bin,["status","--json"],directory:nil,timeout:30,captureError:false),result.status==0 {state.read(status:Data(result.output.utf8))}
+            return (state,bin != nil,AgentAccess.find("claude") != nil,ClaudePlugins.installed())
+        }.value
+    }
+    private nonisolated static func updates() async->String? {
+        await Task.detached(priority:.utility) {
+            guard let bin=AgentAccess.find("use") else{return nil as String?}
+            return execute(bin,["update","--check","--json"],directory:nil,timeout:120,captureError:false)?.output
+        }.value
     }
 
     func canUpdate(_ record: PluginRecord) -> Bool { PluginCommands.update(record, use: useMissing ? nil : use) != nil }
 
     func install(_ record: PluginRecord) {
-        run(record.plugin.name, PluginCommands.install(record.plugin, marketplaceKnown: ClaudePlugins.marketplaceKnown()))
+        guard work.acceptsWork else{return}
+        run(record.plugin.name, PluginCommands.install(record.plugin, marketplaceKnown: marketplaceKnown()))
     }
 
     func update(_ record: PluginRecord) {
@@ -97,7 +122,7 @@ final class PluginsModel: ObservableObject {
 
     /// Runs only from the confirm button, after the page has shown the command.
     func installUse() {
-        guard working == nil else { return }
+        guard work.acceptsWork,working == nil else { return }
         let folder = FileManager.default.temporaryDirectory.appendingPathComponent("thermo-use-install-\(UUID().uuidString)", isDirectory: true)
         guard (try? FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)) != nil else { return }
         let script = folder.appendingPathComponent("install-use.sh").path
@@ -107,12 +132,27 @@ final class PluginsModel: ObservableObject {
     }
 
     private func run(_ name: String, _ steps: [StoreCommand], finally cleanup: @escaping @Sendable () -> Void = {}) {
-        guard working == nil else { return }
+        guard work.acceptsWork,working == nil else { return }
         working = name
         message = nil
-        Task {
-            let failure = await Task.detached(priority: .userInitiated) { () -> String? in
-                defer { cleanup() }
+        work.runOnMain { [self] in
+            let failure=await perform(steps)
+            cleanup()
+            working = nil
+            message = failure.map { tr("%1$@: %2$@", name, $0) } ?? tr("%1$@ finished. Restart Claude Code to apply plugin changes.", name)
+            lastLoad = nil
+            refresh()
+        }
+    }
+
+    var canStopFeature:Bool {working == nil}
+    func stopFeature(){work.stop()}
+    func finishFeatureStop() async {
+        await work.finish();records=[];marketplace=nil;use=UseManagerState();lastLoad=nil
+        loading=false;checkingUpdates=false;loaded=false;usingCachedCopy=false;message=nil
+    }
+    private nonisolated static func commands(_ steps:[StoreCommand]) async->String? {
+        await Task.detached(priority:.userInitiated) {
                 for step in steps {
                     let binary: String?
                     switch step.tool {
@@ -131,12 +171,7 @@ final class PluginsModel: ObservableObject {
                     }
                 }
                 return nil
-            }.value
-            working = nil
-            message = failure.map { tr("%1$@: %2$@", name, $0) } ?? tr("%1$@ finished. Restart Claude Code to apply plugin changes.", name)
-            lastLoad = nil
-            refresh()
-        }
+        }.value
     }
 
     private nonisolated static func execute(_ binary: String, _ arguments: [String], directory: String?, timeout: TimeInterval, captureError: Bool) -> CommandRunner.Result? {

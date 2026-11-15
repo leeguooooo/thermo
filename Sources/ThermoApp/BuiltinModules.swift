@@ -49,7 +49,7 @@ extension BuiltinModule {
 }
 
 enum BuiltinModules {
-    static let implementations: [any BuiltinModule.Type] = [DiskModule.self, SearchModule.self, CaptureModule.self, MenuBarModule.self, PerformanceModule.self, AppsModule.self, SpaceModule.self, BrowserModule.self, ConnectionsModule.self, HistoryModule.self, AgentDiagnosticsModule.self, CheckupModule.self]
+    static let implementations: [any BuiltinModule.Type] = [DiskModule.self, SearchModule.self, CaptureModule.self, MenuBarModule.self, PerformanceModule.self, AppsModule.self, SpaceModule.self, BrowserModule.self, ConnectionsModule.self, HistoryModule.self, AgentDiagnosticsModule.self, CheckupModule.self, PluginsModule.self]
     static var all: [ModuleManifest] { implementations.map { $0.manifest } }
     static var disk: ModuleManifest { DiskModule.manifest }
     static func manifest(_ id: String) -> ModuleManifest? { all.first { $0.id == id } }

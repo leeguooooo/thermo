@@ -127,9 +127,9 @@ final class AppModels {
         set { storedDisk = newValue }
     }
 
-    init(defaults: UserDefaults = .standard, makeApps: @escaping @MainActor () -> AppsFeatureModels = { AppsFeatureModels() }, makeSpace: @escaping SpaceFactory = { SpaceLensModel(enabled:$0) }, invalidateSpaceCache: @escaping @MainActor () -> Void = { SpaceLens.invalidateCache() }, makeBrowser: @escaping BrowserFactory = {ChromePagesModel(enabled:$0,app:$1,appMemoryKB:$2,gpuKB:$3)}, makeWorkspace: @escaping WorkspaceFactory = {TabWorkspaceModel(enabled:$0,app:$1)}, makeConnections:@escaping ConnectionsFactory = {ConnectionsModel(enabled:$0)}, makeHistory:@escaping HistoryFactory = {HistoryModel(enabled:$0)}, makeAgents:@escaping AgentsFactory = {AgentScanner(enabled:$0)}, makeCheckup:@escaping CheckupFactory = {CheckupModel(enabled:$0)}, makeDisk: @escaping () -> DiskModel = { DiskModel(retentionPreferences:.stored(in:.standard)) },
+    init(defaults: UserDefaults = .standard, makeApps: @escaping @MainActor () -> AppsFeatureModels = { AppsFeatureModels() }, makeSpace: @escaping SpaceFactory = { SpaceLensModel(enabled:$0) }, invalidateSpaceCache: @escaping @MainActor () -> Void = { SpaceLens.invalidateCache() }, makeBrowser: @escaping BrowserFactory = {ChromePagesModel(enabled:$0,app:$1,appMemoryKB:$2,gpuKB:$3)}, makeWorkspace: @escaping WorkspaceFactory = {TabWorkspaceModel(enabled:$0,app:$1)}, makeConnections:@escaping ConnectionsFactory = {ConnectionsModel(enabled:$0)}, makeHistory:@escaping HistoryFactory = {HistoryModel(enabled:$0)}, makeAgents:@escaping AgentsFactory = {AgentScanner(enabled:$0)}, makePlugins:@escaping PluginsFactory = {PluginsModel(enabled:$0)}, makeCheckup:@escaping CheckupFactory = {CheckupModel(enabled:$0)}, makeDisk: @escaping () -> DiskModel = { DiskModel(retentionPreferences:.stored(in:.standard)) },
          makeMonitor: @escaping () -> Monitor = { Monitor(samplingAllowed: { ModulePreferences.isEnabled(BuiltinModuleManifests.performance, in: .standard) }) }) {
-        self.makeCheckup=makeCheckup;self.makeAgents=makeAgents;self.makeHistory=makeHistory;self.makeConnections=makeConnections;self.makeDisk = makeDisk;self.makeApps=makeApps;self.makeSpace=makeSpace;self.invalidateSpaceCache=invalidateSpaceCache;self.makeBrowser=makeBrowser;self.makeWorkspace=makeWorkspace;self.defaults=defaults
+        self.makePlugins=makePlugins;self.makeCheckup=makeCheckup;self.makeAgents=makeAgents;self.makeHistory=makeHistory;self.makeConnections=makeConnections;self.makeDisk = makeDisk;self.makeApps=makeApps;self.makeSpace=makeSpace;self.invalidateSpaceCache=invalidateSpaceCache;self.makeBrowser=makeBrowser;self.makeWorkspace=makeWorkspace;self.defaults=defaults
         self.makeMonitor = makeMonitor
     }
 
@@ -170,7 +170,26 @@ final class AppModels {
     var softwareUpdates: AppUpdatesModel { software.updates }
     var nativeUpdates: NativeUpdatesModel { software.native }
     lazy var claudeCleanup = ClaudeCleanupModel()
-    lazy var plugins = PluginsModel()
+    typealias PluginsFactory = @MainActor (@escaping ()->Bool)->PluginsModel
+    private let makePlugins:PluginsFactory
+    private var storedPlugins:PluginsModel?
+    var pluginsLoaded:Bool {storedPlugins != nil}
+    var plugins:PluginsModel {
+        if let storedPlugins{return storedPlugins}
+        let defaults=self.defaults
+        let model=makePlugins {ModulePreferences.isEnabled(BuiltinModuleManifests.plugins,in:defaults)}
+        storedPlugins=model;return model
+    }
+    func pluginsExitBlocker()->MainPage? {storedPlugins?.canStopFeature == false ? .plugins:nil}
+    func preparePluginsStop()throws->BuiltinModules.FinishStop? {
+        guard let model=storedPlugins else{return nil}
+        guard model.canStopFeature else{throw BuiltinModules.StopRefused(description:tr("Wait for plugin installation or updates before switching this feature off."))}
+        model.stopFeature()
+        return { [weak self] in
+            await model.finishFeatureStop()
+            if self?.storedPlugins === model {self?.storedPlugins=nil}
+        }
+    }
     var appStore: AppStoreModel { software.store }
     func softwareExitBlocker() -> MainPage? { storedApps?.exitBlocker() }
     func retireSoftwareViews() { storedApps?.retireViews() }
