@@ -1,3 +1,4 @@
+import ModuleKit
 import ThermoUI
 import AgentCore
 import AppKit
@@ -200,7 +201,7 @@ import ThermoKit
                            "cpuPageSampling":String(ComputeModel.cpu.samplingActive),
                            "gpuPageSampling":String(ComputeModel.shared.samplingActive),
                            "memoryPageSampling":String(MemoryModel.shared.samplingActive),
-                           "connectionsSampling":String(AppModels.shared.connectionsSampling),
+                           "connectionsSampling":String(AppModels.shared.nativeFeatures.status(BuiltinModuleManifests.connections.id).sampling),
                            "menuPanelOpen":String(AppModels.shared.monitor.popoverOpen),
                            "menuPanelSampling":String(PanelModel.shared.samplingActive),
                            "pulseSampling":String(SystemPulse.shared.samplingActive),

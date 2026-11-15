@@ -43,7 +43,7 @@ import XCTest
         XCTAssertFalse(center.shows(.overview) || center.shows(.sensors) || center.shows(.fans) || center.shows(.memory))
         XCTAssertNil(center.navigationKey(.overview))
         XCTAssertEqual(MainWindow.state.page,.settings)
-        XCTAssertTrue(center.shows(.settings) && center.shows(.connections))
+        XCTAssertTrue(center.shows(.settings) && center.shows(.module(BuiltinModuleManifests.connections.id,"home")))
     }
     func testSensorStopCanDrainWithoutStartingOrContactingTheHelper() async {
         let monitor=Monitor(startMonitoring:false,helperInteraction:false,samplingAllowed:{false})

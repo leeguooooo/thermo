@@ -1,3 +1,4 @@
+import ModuleKit
 import ThermoUI
 import AppKit
 import ThermoKit
@@ -177,7 +178,7 @@ final class StatusMenu: NSObject, NSMenuDelegate {
             case .fans:
                 submenu.addItem(page(tr("Fans"), "fan", .fans))
             case .connections:
-                submenu.addItem(page(tr("Connections"), "wifi", .connections))
+                submenu.addItem(page(tr("Connections"), "wifi", .module(BuiltinModuleManifests.connections.id,"home")))
             case .cpuUsage:
                 submenu.addItem(page(tr("CPU usage"), "cpu", .compute(false)))
             case .gpuUsage:

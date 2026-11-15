@@ -443,7 +443,6 @@ enum AudioOutputs {
 /// open, the Bluetooth report every fifteen; nothing here asks for a permission until a click does.
 @MainActor
 final class ConnectionsModel: NSObject, ObservableObject, CLLocationManagerDelegate {
-    static var shared:ConnectionsModel {AppModels.shared.connections}
     let work=FeatureTasks()
 
     enum NameAccess: Equatable { case unknown, allowed, denied, asked }
