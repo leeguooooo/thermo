@@ -69,15 +69,16 @@ final class CaptureControlHub:@unchecked Sendable {
     let availability:FeatureAvailability
     private let hub:CaptureControlHub
     private let makeWorkspace:WorkspaceFactory
+    private let makeTermination:(CaptureWorkspace)->NativeTerminationDecision
     private(set) var storedWorkspace:CaptureWorkspace?
     private var termination:NativeTerminationTicket?
-    init(availability:FeatureAvailability,hub:CaptureControlHub,makeWorkspace:@escaping WorkspaceFactory){self.availability=availability;self.hub=hub;self.makeWorkspace=makeWorkspace}
+    init(availability:FeatureAvailability,hub:CaptureControlHub,makeWorkspace:@escaping WorkspaceFactory,makeTermination:@escaping (CaptureWorkspace)->NativeTerminationDecision = {$0.prepareTermination()}){self.availability=availability;self.hub=hub;self.makeWorkspace=makeWorkspace;self.makeTermination=makeTermination}
     var workspace:CaptureWorkspace {
         if let storedWorkspace{return storedWorkspace};let made=makeWorkspace(availability);storedWorkspace=made;return made
     }
     func start(){guard availability.acceptsWork else{return};workspace.activate()}
     func page(_ route:NativeFeatureRoute,navigation:NativeNavigation)->AnyView?{nil}
-    var status:NativeFeatureStatus{.init(modelLoaded:storedWorkspace != nil,sampling:storedWorkspace.map{$0.captureBusy || $0.scriptRunning || $0.nativeScriptBusy || $0.recordingActive} == true)}
+    var status:NativeFeatureStatus{.init(modelLoaded:storedWorkspace != nil,sampling:storedWorkspace.map{$0.captureBusy || $0.scriptRunning || $0.nativeScriptBusy || $0.editorWork.count>0 || $0.editorWork.hasOperations || $0.recordingActive} == true)}
     func menuContent(_ ref:NativeUIEntryRef)->NativeMenuContent? {
         guard ref == .init(BuiltinModuleManifests.capture.id,"tools"),availability.acceptsWork else{return nil}
         return CaptureMenuPresentation.content(workspace:workspace,available:{[availability] in availability.acceptsWork})
@@ -112,7 +113,7 @@ final class CaptureControlHub:@unchecked Sendable {
     func prepareTermination()->NativeTerminationDecision {
         if let termination,!termination.resolved{return .deferred(termination)}
         guard let workspace=storedWorkspace else{return .allow}
-        let decision=workspace.prepareTermination()
+        let decision=makeTermination(workspace)
         if case let .deferred(ticket)=decision{termination=ticket}else{termination=nil}
         return decision
     }
