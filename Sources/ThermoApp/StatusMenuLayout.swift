@@ -19,6 +19,7 @@ struct StatusMenuLayout {
         var connectionsEnabled:Bool = true
         var historyEnabled:Bool = true
         var agentsEnabled:Bool = true
+        var checkupEnabled:Bool = true
         let hasBattery: Bool
         let keepAwakeActive: Bool
         let focusTimerActive: Bool
@@ -206,6 +207,7 @@ struct StatusMenuLayout {
             case .overview, .sensors, .fans, .cpuUsage, .gpuUsage, .memoryUsage: return context.performanceEnabled
             case .tabOrganizer:return context.browserEnabled
             case .connections:return context.connectionsEnabled
+            case .aiCheckup:return context.checkupEnabled
             default: return true
             }
         }

@@ -123,7 +123,11 @@ public enum BuiltinModuleManifests {
                  .init(id:"launchd",kind:.page,title:"Launch agents",symbol:"gearshape.2",scene:"agents:launchd",parent:"home"),
                  .init(id:"processes",kind:.page,title:"Agent processes",symbol:"cpu",scene:"agents:processes",parent:"home"),
                  .init(id:"worktrees",kind:.page,title:"Worktrees",symbol:"arrow.triangle.pull",scene:"agents:worktrees",parent:"home")])
-    public static let all = [disk, search, capture, menuBar, performance, apps, space, browser, connections, history, agents]
+    public static let checkup=ModuleManifest(
+        id:"dev.thermo.checkup",name:"AI Check-up",summary:"Review a local health snapshot before sending it to the selected AI.",
+        symbol:"waveform.path.ecg",version:"1.0.0",launch:.onDemand,enabledByDefault:true,
+        entries:[.init(id:"home",kind:.page,title:"AI Check-up",symbol:"waveform.path.ecg",scene:"checkup")])
+    public static let all = [disk, search, capture, menuBar, performance, apps, space, browser, connections, history, agents, checkup]
 }
 
 public enum ModulePreferences {

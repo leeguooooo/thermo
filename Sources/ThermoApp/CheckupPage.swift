@@ -6,7 +6,18 @@ import ThermoL10n
 
 /// Holds the latest AI check-up across page switches. One run at a time.
 @MainActor final class CheckupModel: ObservableObject {
-    static let shared = CheckupModel()
+    static var shared:CheckupModel {AppModels.shared.checkup}
+    let work=FeatureTasks()
+    private let defaults:UserDefaults
+    private let measure:@Sendable (Snapshot?,String)->CheckupSnapshot
+    private let backend:@MainActor ()->LocalAIBackend?
+    private let asker:@Sendable (CheckupSnapshot,LocalAIBackend) async throws->CheckupReport
+    init(enabled:@escaping ()->Bool = {true},defaults:UserDefaults = .standard,
+         measure:@escaping @Sendable (Snapshot?,String)->CheckupSnapshot = CheckupModel.measure,
+         backend:@escaping @MainActor ()->LocalAIBackend? = {LocalAIStore.shared.backend},
+         asker:@escaping @Sendable (CheckupSnapshot,LocalAIBackend) async throws->CheckupReport = {try await LocalAI.checkup($0,using:$1)}) {
+        work.enabled=enabled;self.defaults=defaults;self.measure=measure;self.backend=backend;self.asker=asker
+    }
 
     enum Phase: Equatable { case idle, measuring, preview, asking, failed(String) }
     @Published private(set) var phase: Phase = .idle
@@ -15,18 +26,27 @@ import ThermoL10n
 
     /// Separate from the per-item "Ask AI" consent: this sends program names and project paths.
     var consented: Bool {
-        get { UserDefaults.standard.bool(forKey: "localAI.checkupConsented") }
-        set { UserDefaults.standard.set(newValue, forKey: "localAI.checkupConsented"); objectWillChange.send() }
+        get { defaults.bool(forKey: "localAI.checkupConsented") }
+        set {guard work.acceptsWork else{return};defaults.set(newValue, forKey: "localAI.checkupConsented"); objectWillChange.send()}
     }
 
     var busy: Bool { phase == .measuring || phase == .asking }
 
     /// Measures now (a 2 s process sample plus the live readings), then asks — after the preview the first time.
-    func start(monitor: Monitor) {
-        guard !busy else { return }
+    func start(reading: Snapshot?) {
+        guard work.acceptsWork,!busy else { return }
         phase = .measuring
-        let live = monitor.snapshot, home = NSHomeDirectory()
-        Task.detached(priority: .userInitiated) {
+        let home=NSHomeDirectory(),measure=self.measure
+        work.run(priority: .userInitiated,onSkipped:{ [weak self] in self?.phase = .idle }) {
+            let snapshot=measure(reading,home)
+            await MainActor.run {
+                guard self.work.acceptsWork else{return}
+                self.snapshot=snapshot
+                if self.consented {self.ask()} else{self.phase = .preview}
+            }
+        }
+    }
+    private nonisolated static func measure(_ live:Snapshot?,_ home:String)->CheckupSnapshot {
             let diagnosis = SlowdownDiagnosis.diagnose(SlowdownSampler().sample(window: 2), system: .read())
             let volume = try? URL(fileURLWithPath: "/").resourceValues(forKeys: [.volumeAvailableCapacityForImportantUsageKey, .volumeTotalCapacityKey])
             let thermal: String = {
@@ -38,39 +58,41 @@ import ThermoL10n
                 @unknown default: return "unknown"
                 }
             }()
-            let snapshot = CheckupSnapshot(
+            return CheckupSnapshot(
                 model: Sampler.machineModel, uptime: ProcessInfo.processInfo.systemUptime,
                 cpuTemperature: live?.cpu, gpuTemperature: live?.gpu, thermalState: thermal,
                 fans: (live?.fans ?? []).map { .init(name: $0.name, rpm: $0.rpm, max: $0.max, manual: $0.manual) },
                 battery: live?.battery.map { .init(percent: $0.percent, health: $0.health, cycles: $0.cycleCount, charging: $0.charging, externalPower: $0.externalPower) },
                 diskFree: volume?.volumeAvailableCapacityForImportantUsage, diskTotal: volume?.volumeTotalCapacity.map(Int64.init),
                 diagnosis: diagnosis, home: home)
-            await MainActor.run {
-                self.snapshot = snapshot
-                if self.consented { self.ask() } else { self.phase = .preview }
-            }
-        }
     }
 
     /// Offscreen snapshots only: show a saved AI answer without asking anyone.
     func loadFixture(answer path: String) {
+        guard work.acceptsWork else{return}
         guard let raw = try? String(contentsOfFile: path, encoding: .utf8) else { return }
         report = LocalAI.parseCheckup(raw, snapshot: CheckupSnapshot(), source: "fixture")
     }
 
-    func send() { consented = true; ask() }
+    func send() {guard work.acceptsWork,phase == .preview,snapshot != nil else{return};consented = true;ask()}
     func cancel() { if phase == .preview { phase = .idle } }
 
     private func ask() {
-        guard let snapshot, let backend = LocalAIStore.shared.backend else {
+        guard work.acceptsWork else{return}
+        guard let snapshot, let backend = backend() else {
             phase = .failed(tr("No AI found on this Mac.")); return
         }
         phase = .asking
-        Task {
-            do { report = try await LocalAI.checkup(snapshot, using: backend); phase = .idle }
-            catch { phase = .failed(error.localizedDescription) }
+        let asker=self.asker
+        work.runOnMain { [self] in
+            do {report=try await asker(snapshot,backend);phase = .idle}
+            catch {phase = .failed(error.localizedDescription)}
         }
     }
+    var canStopFeature:Bool {phase != .asking}
+    func stopFeature() {work.stop()}
+    func finishFeatureStop() async {await work.finish();phase = .idle;report=nil;snapshot=nil}
+
 }
 
 /// "AI Check-up": the AI on this Mac looks at everything Thermo measured and says, finding by
@@ -78,7 +100,7 @@ import ThermoL10n
 struct CheckupPage: View {
     @ObservedObject var monitor: Monitor
     let open: (MainPage) -> Void
-    @ObservedObject private var model = CheckupModel.shared
+    @ObservedObject var model:CheckupModel
     @ObservedObject private var ai = LocalAIStore.shared
 
     var body: some View {
@@ -134,7 +156,7 @@ struct CheckupPage: View {
     @ViewBuilder func controls(_ backend: LocalAIBackend) -> some View {
         HStack(spacing: Theme.Space.m) {
             Button {
-                model.start(monitor: monitor)
+                model.start(reading:monitor.snapshot)
             } label: {
                 Label(model.report == nil ? tr("Start check-up") : tr("Check again"), systemImage: "waveform.path.ecg")
             }
