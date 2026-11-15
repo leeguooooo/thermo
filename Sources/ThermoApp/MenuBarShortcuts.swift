@@ -1,3 +1,4 @@
+import HotkeyCore
 import Carbon
 import Combine
 import Foundation

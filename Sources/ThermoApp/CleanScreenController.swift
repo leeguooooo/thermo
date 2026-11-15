@@ -1,3 +1,4 @@
+import HotkeyCore
 import AppKit
 import ApplicationServices
 import SwiftUI

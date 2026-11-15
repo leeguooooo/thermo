@@ -1,3 +1,4 @@
+import HotkeyCore
 import XCTest
 import Carbon
 @testable import ThermoApp

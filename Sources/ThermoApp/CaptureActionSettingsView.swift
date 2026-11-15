@@ -1,3 +1,4 @@
+import HotkeyCore
 import ThermoUI
 import AppKit
 import CaptureCore

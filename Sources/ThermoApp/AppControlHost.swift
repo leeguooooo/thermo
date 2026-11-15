@@ -1,3 +1,4 @@
+import HotkeyCore
 import ModuleKit
 import ThermoUI
 import AgentCore
