@@ -181,33 +181,33 @@ final class SystemPulse: ObservableObject {
         guard hog.quittable, !quitting.contains(hog.id) else { return }
         let before = current
         let baseline = current?.hogs.first { $0.id == hog.id }
-        if let path = hog.app {
-            guard let app = NSWorkspace.shared.runningApplications.first(where: { $0.bundleURL?.standardizedFileURL.path == path }),
-                  let expected = hog.applicationIdentity,
-                  Self.canSignal(expected, current: ProcessTable.identity(app.processIdentifier)) else {
-                quitProblem = tr("%1$@ changed or exited since the reading. Check again before stopping it.", hog.name)
-                return
+        var requested=false
+        if let path=hog.app {
+            guard let app=NSWorkspace.shared.runningApplications.first(where:{$0.bundleURL?.standardizedFileURL.path==path}),
+                  let expected=hog.applicationIdentity,expected.pid==app.processIdentifier else {
+                quitProblem=tr("%1$@ changed or exited since the reading. Check again before stopping it.",hog.name);return
             }
-            if !app.terminate() { quitProblem = tr("%1$@ did not accept the quit request. Check its dialogs.", hog.name) }
+            let outcome=ProcessActionGate.attempt(expected,allowApplication:true){_ in app.terminate()}
+            requested=outcome == .requested
+            if !requested {quitProblem=outcome == .declined ? tr("%1$@ did not accept the quit request. Check its dialogs.",hog.name):tr("System processes, AI agent sessions and Thermo itself cannot be stopped here.")}
         } else {
-            let identities = hog.processIdentities ?? []
-            var skipped = identities.count != hog.pids.count
-            for expected in identities {
-                guard hog.pids.contains(expected.pid), Self.canSignal(expected, current: ProcessTable.identity(expected.pid)) else {
-                    skipped = true
-                    continue
-                }
-                if kill(expected.pid, SIGTERM) != 0 { skipped = true }
+            let identities=hog.processIdentities ?? []
+            var skipped=identities.count != hog.pids.count
+            for expected in identities where hog.pids.contains(expected.pid) {
+                let outcome=ProcessActionGate.attempt(expected,allowApplication:false){value in kill(value.pid,SIGTERM)==0}
+                requested=requested || outcome == .requested
+                if outcome != .requested {skipped=true}
             }
-            if skipped { quitProblem = tr("%1$@ changed or exited since the reading. Check again before stopping it.", hog.name) }
+            if skipped {quitProblem=tr("%1$@ changed or exited since the reading. Check again before stopping it.",hog.name)}
         }
+        guard requested else{return}
         if let before, let baseline { review(baseline, before: before, action: .quit) }
         else { actionFeedback = tr("The follow-up readings cannot be compared. Check again.") }
         quitting.insert(hog.id)
         queue.asyncAfter(deadline: .now() + 1) { [weak self] in self?.sample() }
         let identities = hog.app == nil ? hog.processIdentities ?? [] : hog.applicationIdentity.map { [$0] } ?? []
         queue.asyncAfter(deadline: .now() + 5) { [weak self] in
-            let stillRunning = identities.contains { Self.canSignal($0, current: ProcessTable.identity($0.pid)) }
+            let stillRunning = identities.contains { ProcessTable.identity($0.pid)==$0 }
             DispatchQueue.main.async {
                 self?.quitting.remove(hog.id)
                 if stillRunning {
@@ -235,8 +235,8 @@ final class SystemPulse: ObservableObject {
         guard let path = hog.app,
               let app = NSWorkspace.shared.runningApplications.first(where: { $0.bundleURL?.standardizedFileURL.path == path })
         else { return }
-        guard let expected = hog.applicationIdentity,
-              Self.canSignal(expected, current: ProcessTable.identity(app.processIdentifier)) else {
+        guard let expected=hog.applicationIdentity,expected.pid==app.processIdentifier,
+              ProcessActionGate.validate(expected,allowApplication:true) == .allowed(expected) else {
             restartProblem = tr("%1$@ changed or exited since the reading. Check again before stopping it.", hog.name)
             return
         }
@@ -246,7 +246,12 @@ final class SystemPulse: ObservableObject {
         restartProblem = nil
         actionFeedback = nil
         reviewID = UUID()
-        let pids = hog.pids, name = hog.name
+        var identities=hog.processIdentities ?? []
+        guard Set(hog.pids).isSubset(of:Set(identities.map(\.pid))) else {
+            restarting=nil;restartProblem=tr("%1$@ changed or exited since the reading. Check again before stopping it.",hog.name);return
+        }
+        if !identities.contains(expected){identities.append(expected)}
+        let checkedIdentities=identities,name=hog.name
         let windows = BrowserSession.windows(for: name)
         DispatchQueue.global(qos: .userInitiated).async { [weak self] in
             // A browser that would lose its tabs: save them first, or don't restart at all.
@@ -261,10 +266,15 @@ final class SystemPulse: ObservableObject {
                     return
                 }
             }
-            DispatchQueue.main.sync { _ = app.terminate() }
-            let deadline = Date().addingTimeInterval(60)
-            while Date() < deadline, pids.contains(where: { kill($0, 0) == 0 }) { usleep(250_000) }
-            let gone = !pids.contains(where: { kill($0, 0) == 0 })
+            let outcome=DispatchQueue.main.sync {ProcessActionGate.attempt(expected,allowApplication:true){_ in app.terminate()}}
+            guard outcome == .requested else {
+                DispatchQueue.main.async {self?.restarting=nil;self?.restartProblem=tr("%1$@ changed or exited since the reading. Check again before stopping it.",name)}
+                return
+            }
+            let deadline=Date().addingTimeInterval(60)
+            func alive()->Bool{checkedIdentities.contains{ProcessTable.identity($0.pid)==$0}}
+            while Date()<deadline,alive(){usleep(250_000)}
+            let gone = !alive()
             if gone {
                 let opened = DispatchSemaphore(value: 0)
                 let outcome = LaunchOutcome()

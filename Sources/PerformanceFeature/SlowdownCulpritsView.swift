@@ -149,8 +149,11 @@ struct SlowdownCulpritsCard: View {
         DispatchQueue.global(qos: .userInitiated).async {
             var text: String
             if c.action == .quitApp {
-                let asked = c.pids.compactMap { NSRunningApplication(processIdentifier: $0) }.first?.terminate() ?? false
-                text = asked ? tr("Asked %1$@ to quit.", c.name) : tr("%1$@ did not accept the request to quit.", c.name)
+                let outcome=DispatchQueue.main.sync { ()->ProcessActionGate.Outcome in
+                    guard let path=c.app,let app=NSWorkspace.shared.runningApplications.first(where:{$0.bundleURL?.standardizedFileURL.path==path && c.pids.contains($0.processIdentifier)}) else{return .changed}
+                    return ProcessActionGate.attempt(c.identities?.first{$0.pid==app.processIdentifier},allowApplication:true){_ in app.terminate()}
+                }
+                text=outcome == .requested ? tr("Asked %1$@ to quit.",c.name):tr("%1$@ changed or exited since the reading. Check again before stopping it.",c.name)
             } else {
                 let live = Dictionary(SlowdownSampler().sample(window: 0.5).map { ($0.pid, $0) }, uniquingKeysWith: { a, _ in a })
                 // Every checked process the culprit names (idle MCP copies can be several), each rechecked.

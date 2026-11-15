@@ -809,8 +809,7 @@ public enum SlowdownFix {
     /// Whether `pid` may be ended from Thermo: the user's own command-line process, not system,
     /// not an agent session (closing those loses the conversation), not an app (apps quit), not Thermo.
     public static func endable(_ p: SlowdownProcess, me: Int32 = getpid()) -> Bool {
-        p.pid != me && p.pid > 1 && !SlowdownDiagnosis.isSystem(p) && !SlowdownDiagnosis.isAgentSession(p)
-            && !(p.executable?.contains(".app/Contents/MacOS/") == true && !SlowdownDiagnosis.isAppServer(p))
+        ProcessActionGate.mayControl(p,allowApplication:false,me:me)
     }
 
     /// What refusing `p` says, without acting.
@@ -827,11 +826,19 @@ public enum SlowdownFix {
         guard endable(p) else { return result }
         guard let identity, ProcessTable.identity(p.pid) == identity else { result.outcome = .changed; return finish(result, record) }
         func alive() -> Bool { ProcessTable.identity(p.pid) == identity }
-        kill(p.pid, SIGTERM)
+        let term=ProcessActionGate.attempt(identity,allowApplication:false){value in kill(value.pid,SIGTERM)==0}
+        guard term == .requested else {
+            result.outcome = term == .protected ? .refused:.changed
+            return finish(result,record)
+        }
         let deadline = Date().addingTimeInterval(grace)
         while Date() < deadline, alive() { usleep(200_000) }
         if alive() {
-            kill(p.pid, SIGKILL)
+            let hardRequest=ProcessActionGate.attempt(identity,allowApplication:false){value in kill(value.pid,SIGKILL)==0}
+            guard hardRequest == .requested else {
+                result.outcome = hardRequest == .protected ? .refused:.changed
+                return finish(result,record)
+            }
             let hard = Date().addingTimeInterval(3)
             while Date() < hard, alive() { usleep(100_000) }
             result.outcome = alive() ? .stillRunning : .killed
