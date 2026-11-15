@@ -73,14 +73,15 @@ package struct NativeFeatureDefinition:Sendable {
     package let pageContracts:[NativePageContract]
     package let ui:NativeUIContributions
     package let menuShortcuts:[String:String]
+    package let legacyMenuEntries:[String:String]
     package let privateWorkers:Set<String>
     let retained:NativeRetainedContributions
     let resolveLegacyPage:@Sendable (String)->NativeFeatureRoute?
     let resolveLegacyLaunch:@Sendable ([String])->NativePresentationRequest?
     let invalidateColdState:@MainActor @Sendable ([String])->Void
     let makeSession:@MainActor @Sendable (FeatureAvailability)->any NativeFeatureSession
-    package init(manifest:ModuleManifest,runsInBackground:Bool = false,pageContracts:[NativePageContract] = [],ui:NativeUIContributions = .none,menuShortcuts:[String:String] = [:],privateWorkers:Set<String> = [],retained:NativeRetainedContributions = .none,resolveLegacyPage:@escaping @Sendable (String)->NativeFeatureRoute? = {_ in nil},resolveLegacyLaunch:@escaping @Sendable ([String])->NativePresentationRequest? = {_ in nil},invalidateColdState:@escaping @MainActor @Sendable ([String])->Void = {_ in},makeSession:@escaping @MainActor @Sendable (FeatureAvailability)->any NativeFeatureSession) {
-        self.manifest=manifest;self.runsInBackground=runsInBackground;self.pageContracts=pageContracts;self.ui=ui;self.menuShortcuts=menuShortcuts;self.privateWorkers=privateWorkers;self.retained=retained;self.resolveLegacyPage=resolveLegacyPage;self.resolveLegacyLaunch=resolveLegacyLaunch;self.invalidateColdState=invalidateColdState;self.makeSession=makeSession
+    package init(manifest:ModuleManifest,runsInBackground:Bool = false,pageContracts:[NativePageContract] = [],ui:NativeUIContributions = .none,menuShortcuts:[String:String] = [:],legacyMenuEntries:[String:String] = [:],privateWorkers:Set<String> = [],retained:NativeRetainedContributions = .none,resolveLegacyPage:@escaping @Sendable (String)->NativeFeatureRoute? = {_ in nil},resolveLegacyLaunch:@escaping @Sendable ([String])->NativePresentationRequest? = {_ in nil},invalidateColdState:@escaping @MainActor @Sendable ([String])->Void = {_ in},makeSession:@escaping @MainActor @Sendable (FeatureAvailability)->any NativeFeatureSession) {
+        self.manifest=manifest;self.runsInBackground=runsInBackground;self.pageContracts=pageContracts;self.ui=ui;self.menuShortcuts=menuShortcuts;self.legacyMenuEntries=legacyMenuEntries;self.privateWorkers=privateWorkers;self.retained=retained;self.resolveLegacyPage=resolveLegacyPage;self.resolveLegacyLaunch=resolveLegacyLaunch;self.invalidateColdState=invalidateColdState;self.makeSession=makeSession
     }
 }
 

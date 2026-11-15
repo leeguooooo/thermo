@@ -9,7 +9,7 @@ import ThermoUI
 package enum DiskFeature {
     package static func registration(services:@escaping @MainActor @Sendable ()->any DiskServices)->NativeFeatureDefinition {
         let cache=DiskCacheEpoch()
-        return .init(manifest:BuiltinModuleManifests.disk,ui:.init(sidebarLocations:[.storage],hasBackdrop:true),resolveLegacyPage:legacyPage,resolveLegacyLaunch:{arguments in
+        return .init(manifest:BuiltinModuleManifests.disk,ui:.init(sidebarLocations:[.storage],hasBackdrop:true),legacyMenuEntries:["smartScan":"scan"],resolveLegacyPage:legacyPage,resolveLegacyLaunch:{arguments in
             guard arguments.contains("--disk") else{return nil}
             let raw=arguments.firstIndex(of:"--page").flatMap{$0+1<arguments.count ? arguments[$0+1]:nil}
             return .init(route:raw.flatMap{legacyPage("disk:"+$0)} ?? route(.home))

@@ -55,11 +55,17 @@ package struct NativeFeatureCatalog: Sendable {
             throw NativeRouteError("Duplicate native feature.")
         }
         let nativeIDs=Set(definitions.map{$0.manifest.id})
-        var workers=Set<String>()
+        var workers=Set<String>(),legacyMenus=Set<String>()
         for definition in definitions {
             for worker in definition.privateWorkers {
                 guard !worker.isEmpty,!nativeIDs.contains(worker),workers.insert(worker).inserted else {
                     throw NativeRouteError("A private worker must have exactly one native feature owner.")
+                }
+            }
+            for (key,entry) in definition.legacyMenuEntries {
+                guard !key.isEmpty,legacyMenus.insert(key).inserted,
+                      definition.manifest.entries.contains(where:{$0.id==entry && $0.kind == .page}) else {
+                    throw NativeRouteError("A legacy menu entry must have exactly one declared native page.")
                 }
             }
         }
@@ -95,6 +101,7 @@ package struct NativeFeatureCatalog: Sendable {
             if let entry=definition.ui.compactPanelEntry {
                 _ = try normalize(.init(definition.manifest.id,entry))
             }
+            for entry in definition.legacyMenuEntries.values {_ = try normalize(.init(definition.manifest.id,entry))}
         }
     }
     package func manifest(_ id:String)->ModuleManifest? {definitions[id]?.manifest}
@@ -103,6 +110,12 @@ package struct NativeFeatureCatalog: Sendable {
     package func privateWorkers(_ id:String)->Set<String> {definitions[id]?.privateWorkers ?? []}
     package func workerOwner(_ worker:String)->ModuleManifest? {
         manifests.first{definitions[$0.id]?.privateWorkers.contains(worker)==true}
+    }
+    package func resolveLegacyMenu(_ key:String)throws->NativeFeatureRoute? {
+        for id in order {
+            if let entry=definitions[id]?.legacyMenuEntries[key] {return try normalize(.init(id,entry))}
+        }
+        return nil
     }
     package func normalize(_ input:NativeFeatureRoute)throws->NativeFeatureRoute {
         guard let definition=definitions[input.module],definition.manifest.entries.contains(where:{$0.id==input.entry && $0.kind == .page}) else {
