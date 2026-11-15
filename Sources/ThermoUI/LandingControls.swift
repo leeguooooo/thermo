@@ -1,162 +1,23 @@
-import ThermoUI
-import AgentDoctor
 import SwiftUI
 import ThermoL10n
 
-// Components shared by the Agents and Disk views.
+package struct ActionButtonStyle: ViewModifier {
+    package init(prominent:Bool){self.prominent=prominent}
 
-// MARK: - Look
-
-enum AgentStyle {
-    static func icon(_ area: Area) -> String {
-        switch area {
-        case .hooks: return "arrow.triangle.branch"
-        case .mcp: return "server.rack"
-        case .plugins: return "puzzlepiece.extension"
-        case .skills: return "book.closed"
-        case .statusline: return "menubar.rectangle"
-        case .launchd: return "gearshape.2"
-        case .processes: return "cpu"
-        case .worktrees: return "arrow.triangle.pull"
-        }
-    }
-
-    static func title(_ area: Area) -> String {
-        switch area {
-        case .hooks: return tr("Hooks")
-        case .mcp: return tr("MCP servers")
-        case .plugins: return tr("Plugins")
-        case .skills: return tr("Skills")
-        case .statusline: return tr("Status line")
-        case .launchd: return tr("Launch agents")
-        case .processes: return tr("Agent processes")
-        case .worktrees: return tr("Worktrees")
-        }
-    }
-
-    static func color(_ s: Severity?) -> Color {
-        switch s {
-        case .error?: return .red
-        case .warning?: return .orange
-        default: return .secondary
-        }
-    }
-
-    static func symbol(_ s: Severity?) -> String {
-        switch s {
-        case .error?: return "xmark.octagon.fill"
-        case .warning?: return "exclamationmark.triangle.fill"
-        case .info?: return "info.circle"
-        case nil: return "checkmark.circle.fill"
-        }
-    }
-
-    static func label(_ s: Severity?) -> String {
-        switch s {
-        case .error?: return tr("Error")
-        case .warning?: return tr("Warning")
-        case .info?: return tr("Note")
-        case nil: return tr("OK")
-        }
-    }
-}
-
-/// Status glyph for an item: healthy, note, warning, error or switched off.
-struct StatusIcon: View {
-    let item: AgentItem
-    var body: some View {
-        Group {
-            if !item.enabled {
-                Image(systemName: "minus.circle").foregroundStyle(.tertiary)
-            } else if item.severity == nil {
-                Image(systemName: "checkmark.circle.fill").foregroundStyle(.green)
-            } else {
-                Image(systemName: AgentStyle.symbol(item.severity)).foregroundStyle(AgentStyle.color(item.severity))
-            }
-        }
-        .imageScale(.medium)
-    }
-}
-
-/// Small capsule naming the agent a config belongs to.
-struct AgentTag: View {
-    let agent: String
-    var body: some View {
-        Text(agent).font(.caption2.weight(.medium)).foregroundStyle(.secondary)
-            .padding(.horizontal, 6).padding(.vertical, 1)
-            .background(Capsule().fill(.quaternary))
-    }
-}
-
-// MARK: - Actions
-
-struct ActionButtonStyle: ViewModifier {
     let prominent: Bool
-    func body(content: Content) -> some View {
+    package func body(content: Content) -> some View {
         if prominent { content.buttonStyle(.borderedProminent) } else { content.buttonStyle(.bordered) }
     }
 }
 
-/// Shows every step an action will take before running it.
-struct ConfirmAction: View {
-    let action: Action
-    let item: AgentItem
-    let confirm: () -> Void
-    let cancel: () -> Void
+package struct WindowBackdrop: View {
+    package init(glow:Bool = true,tint:Color = Theme.accent){self.glow=glow;self.tint=tint}
 
-    var body: some View {
-        ConfirmSheet(title: tr("%1$@ — %2$@", action.title, item.name), summary: action.summary, destructive: action.destructive,
-                     heading: tr("What will run"), lines: action.steps.map(\.display),
-                     footnote: tr("Config files are copied to ~/Library/Application Support/Thermo/Backups before they change. Each step is logged to ~/Library/Logs/Thermo/fix.log."),
-                     confirmTitle: action.title, confirm: confirm, cancel: cancel)
-    }
-}
-
-// MARK: - CleanMyMac-style surfaces (shared by the Agents and Disk windows)
-
-extension AgentStyle {
-    /// One color per area, used for its icon tile and accents.
-    static func tint(_ area: Area) -> Color {
-        switch area {
-        case .hooks: return .purple
-        case .mcp: return .blue
-        case .plugins: return .orange
-        case .skills: return .teal
-        case .statusline: return .indigo
-        case .launchd: return .pink
-        case .processes: return .green
-        case .worktrees: return .brown
-        }
-    }
-
-    /// What the area is, in a sentence a non-developer can follow.
-    static func explanation(_ area: Area) -> String {
-        switch area {
-        case .hooks: return tr("Commands your AI agents run automatically before or after each step.")
-        case .mcp: return tr("Tools your AI agents connect to, such as browsers, databases and design apps.")
-        case .plugins: return tr("Add-ons installed into Claude Code that bring skills, hooks and tools.")
-        case .skills: return tr("Instructions your agents can load when a task needs them.")
-        case .statusline: return tr("The line at the bottom of Claude Code that shows usage and status.")
-        case .launchd: return tr("Programs macOS starts in the background for your tools.")
-        case .processes: return tr("Helper programs your agents start; leftovers keep using memory.")
-        case .worktrees: return tr("Extra checkouts agents make for each task; leftovers take disk space.")
-        }
-    }
-}
-
-/// The whole window's backdrop.
-struct GradientSidebarBackground: View {
-    var body: some View { WindowBackdrop(glow: false) }
-}
-
-/// Graphite, with a faint light at the top in the color of what the page is about (on the
-/// overview, how hot the Mac is); the light eases to a new color instead of jumping.
-struct WindowBackdrop: View {
     var glow = true
     var tint: Color = Theme.accent
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
-    var body: some View {
+    package var body: some View {
         ZStack {
             LinearGradient(colors: [Theme.canvas, Theme.canvasDeep], startPoint: .top, endPoint: .bottom)
             RadialGradient(colors: [tint.opacity(glow ? 0.16 : 0.07), .clear],
@@ -167,13 +28,14 @@ struct WindowBackdrop: View {
     }
 }
 
-/// A rounded tile holding a symbol in its color: the mark of a category.
-struct IconTile: View {
+package struct IconTile: View {
+    package init(symbol:String,color:Color,size:CGFloat = 44){self.symbol=symbol;self.color=color;self.size=size}
+
     let symbol: String
     let color: Color
     var size: CGFloat = 44
 
-    var body: some View {
+    package var body: some View {
         ZStack {
             RoundedRectangle(cornerRadius: size * 0.26, style: .continuous).fill(color.opacity(0.16))
             RoundedRectangle(cornerRadius: size * 0.26, style: .continuous).strokeBorder(color.opacity(0.22), lineWidth: 1)
@@ -184,18 +46,20 @@ struct IconTile: View {
     }
 }
 
-/// Presses in slightly and springs back.
-struct PressableStyle: ButtonStyle {
+package struct PressableStyle: ButtonStyle {
+    package init(){}
+
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
-    func makeBody(configuration: Configuration) -> some View {
+    package func makeBody(configuration: Configuration) -> some View {
         configuration.label
             .scaleEffect(configuration.isPressed && !reduceMotion ? 0.97 : 1)
             .animation(reduceMotion ? nil : .spring(response: 0.22, dampingFraction: 0.7), value: configuration.isPressed)
     }
 }
 
-/// The main call to action on a landing page ("Fix 9", "Check again").
-struct BigRoundButton: View {
+package struct BigRoundButton: View {
+    package init(title:String,color:Color = Theme.accent,busy:Bool = false,action:@escaping ()->Void){self.title=title;self.color=color;self.busy=busy;self.action=action}
+
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     let title: String
     var color: Color = Theme.accent
@@ -203,7 +67,7 @@ struct BigRoundButton: View {
     let action: () -> Void
     @State private var hover = false
 
-    var body: some View {
+    package var body: some View {
         Button(action: action) {
             ZStack {
                 if busy {
@@ -224,8 +88,9 @@ struct BigRoundButton: View {
     }
 }
 
-/// The landing hero: a status mark in a ring; the ring turns into progress while working.
-struct HeroStatus: View {
+package struct HeroStatus: View {
+    package init(symbol:String,color:Color,title:String,subtitle:String,progress:Double? = nil,spinning:Bool = false){self.symbol=symbol;self.color=color;self.title=title;self.subtitle=subtitle;self.progress=progress;self.spinning=spinning}
+
     let symbol: String
     let color: Color
     let title: String
@@ -236,7 +101,7 @@ struct HeroStatus: View {
     @State private var turning = false
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
-    var body: some View {
+    package var body: some View {
         VStack(spacing: 14) {
             ZStack {
                 Circle().fill(RadialGradient(colors: [color.opacity(0.22), .clear], center: .center, startRadius: 20, endRadius: 90))
@@ -272,8 +137,9 @@ struct HeroStatus: View {
     }
 }
 
-/// A card for one category on a landing page.
-struct CategoryCard: View {
+package struct CategoryCard: View {
+    package init(symbol:String,color:Color,title:String,status:String,statusColor:Color,count:Int? = nil,action:@escaping ()->Void){self.symbol=symbol;self.color=color;self.title=title;self.status=status;self.statusColor=statusColor;self.count=count;self.action=action}
+
     let symbol: String
     let color: Color
     let title: String
@@ -284,7 +150,7 @@ struct CategoryCard: View {
     let action: () -> Void
     @State private var hover = false
 
-    var body: some View {
+    package var body: some View {
         Button(action: action) {
             VStack(alignment: .leading, spacing: 10) {
                 HStack(alignment: .center) {
@@ -319,8 +185,9 @@ struct CategoryCard: View {
     }
 }
 
-/// A glowing ring gauge, as on a car dashboard: the arc fills with the value and runs from green to red.
-struct RingGauge: View {
+package struct RingGauge: View {
+    package init(value:Double?,text:String,caption:String? = nil,size:CGFloat = 112,colors:[Color] = [.green,.yellow,.orange,.red]){self.value=value;self.text=text;self.caption=caption;self.size=size;self.colors=colors}
+
     /// 0…1.
     let value: Double?
     let text: String
@@ -328,19 +195,19 @@ struct RingGauge: View {
     var size: CGFloat = 112
     var colors: [Color] = [.green, .yellow, .orange, .red]
 
-    var normalizedValue: Double? {
+    package var normalizedValue: Double? {
         guard let value, value.isFinite else { return nil }
         return min(1, max(0, value))
     }
-    var displayText: String { normalizedValue == nil ? "—" : text }
+    package var displayText: String { normalizedValue == nil ? "—" : text }
 
-    var color: Color {
+    package var color: Color {
         guard !colors.isEmpty, let normalized = normalizedValue else { return .secondary }
         let i = min(colors.count - 1, Int(normalized * Double(colors.count)))
         return colors[i]
     }
 
-    var body: some View {
+    package var body: some View {
         ZStack {
             Circle().stroke(Color.white.opacity(0.08), style: StrokeStyle(lineWidth: size * 0.085, lineCap: .round))
                 .rotationEffect(.degrees(135)).mask(Circle().trim(from: 0, to: 0.75).stroke(lineWidth: size * 0.1).rotationEffect(.degrees(135)))

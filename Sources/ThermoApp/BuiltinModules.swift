@@ -1,3 +1,4 @@
+import NativeFeatureAPI
 import ModuleKit
 import SwiftUI
 import ThermoL10n
@@ -13,7 +14,7 @@ struct BuiltinSidebarItem: Identifiable {
     var id: String { entry.id }
 }
 
-enum BuiltinSidebarSection: Hashable { case overview, machine, resources, storage, software, footer, agents }
+typealias BuiltinSidebarSection=NativeSidebarLocation
 
 /// Metadata and argument resolution never instantiate a feature. UI and lifetime callbacks run on main.
 protocol BuiltinModule: Sendable {

@@ -1,7 +1,8 @@
 import XCTest
 import ThermoL10n
 @testable import AgentDoctor
-@testable import ThermoApp
+@testable import AgentDiagnosticsFeature
+import NativeFeatureAPI
 
 final class AgentCancellationTests: XCTestCase {
     @MainActor func testStopCheckingDoesNotInterruptConfirmedRepairBatch() async throws {

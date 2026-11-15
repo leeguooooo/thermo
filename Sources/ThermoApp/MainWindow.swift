@@ -13,7 +13,6 @@ enum MainPage: Hashable {
     case overview, sensors, fans, settings
     case native(NativeFeatureRoute)
     static func browser(_ app:String)->MainPage {.native(.init(BuiltinModuleManifests.browser.id,"home",context:["app":.text(app)]))}
-    case agents(SidebarEntry)
     case memory
     case compute(Bool)
     /// A page drawn by a module: module id, entry id (empty: the module's first page).
@@ -31,7 +30,6 @@ enum MainPage: Hashable {
         case "sensors": self = .sensors
         case "fans": self = .fans
         case "settings": self = .settings
-        case "agents": self = .agents(parts.count > 1 ? (Area(rawValue: parts[1]).map { .area($0) } ?? .home) : .home)
         case "memory": self = .memory
         case "module":
             // module:<module id>[:<entry id>]
@@ -44,6 +42,12 @@ enum MainPage: Hashable {
         }
     }
 
+    var nativeRoute:NativeFeatureRoute? {
+        if case let .native(route)=self{return try? BuiltinNativeFeatures.catalog.normalize(route)}
+        guard let feature=BuiltinModules.page(self),BuiltinNativeFeatures.catalog.manifest(feature.module.id) != nil else{return nil}
+        return try? BuiltinNativeFeatures.catalog.normalize(.init(feature.module.id,feature.entry.id))
+    }
+
     var samplingSurface: SamplingSurface {
         switch self {
         case .overview: return .overview
@@ -51,7 +55,6 @@ enum MainPage: Hashable {
         default: return .compact
         }
     }
-    var isAgents: Bool { if case .agents = self { return true } else { return false } }
 }
 
 /// The main window: everything Thermo does, in the Disk Cleanup look — a sidebar of places and a
@@ -128,10 +131,8 @@ enum MainWindow {
         show(.native(canonical.route));return true
     }
     static func show(_ page: MainPage? = nil) {
-        if case let .native(route)?=page {
-            guard let normalized=try? BuiltinNativeFeatures.catalog.normalize(route) else{return}
-            showCanonical(.native(normalized));return
-        }
+        if case .native?=page,page?.nativeRoute == nil{return}
+        if let normalized=page?.nativeRoute {showCanonical(.native(normalized));return}
         showCanonical(page)
     }
     private static func showCanonical(_ page:MainPage?) {
@@ -263,10 +264,12 @@ struct MainView: View {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
+        let nativeUI=models.nativeFeatures.windowUI(selection:page.nativeRoute,locations:Set(NativeSidebarLocation.allCases))
         ZStack {
-            MainBackdrop(glow: glow, overrideTint: tint, monitor: monitor)
+            if let backdrop=nativeUI.backdrop {backdrop}
+            else {MainBackdrop(glow: glow, overrideTint: tint, monitor: monitor)}
             HStack(spacing: 0) {
-                MainSidebar(page: $page, monitor: monitor)
+                MainSidebar(page: $page, monitor: monitor,nativeGroups:nativeUI.sidebar)
                     .frame(width: 228).background(Theme.sidebar.opacity(0.92))
                 Rectangle().fill(Theme.hairline).frame(width: 1)
                 VStack(spacing: 0) {
@@ -276,6 +279,7 @@ struct MainView: View {
                         .animation(Theme.standard.unlessReduced(reduceMotion), value: page)
                 }
             }
+            nativeUI.overlay
         }
         .ignoresSafeArea()
         .preferredColorScheme(.dark)
@@ -318,8 +322,6 @@ struct MainView: View {
             }.transition(.page)
         case .native:
             ModuleOffView().transition(.page)
-        case .agents:
-            ModuleOffView().transition(.page)
         case let .module(id, entry):
             ModulePageView(center: .shared, module: id, entry: entry).id(id + ":" + entry).transition(.page)
         }
@@ -359,6 +361,7 @@ private struct MonitorErrorBanner: View {
 struct MainSidebar: View {
     @Binding var page: MainPage
     @ObservedObject var monitor: Monitor
+    var nativeGroups:[NativeSidebarGroup]=[]
     @AppStorage(Settings.fahrenheit) private var fahrenheit = false
     @ObservedObject private var modules = ModuleCenter.shared
 
@@ -366,6 +369,13 @@ struct MainSidebar: View {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     @ViewBuilder func moduleRows(_ section: BuiltinSidebarSection, titled: Bool = false) -> some View {
+        ForEach(nativeGroups.filter{$0.location==section}) {group in
+            if titled {header(tr(group.manifest.name))}
+            group.content {item in
+                AnyView(row(.native(item.route),tr(item.entry.title),item.entry.symbol ?? item.manifest.symbol,item.tint,trailing:nil,badge:item.badge,indent:item.entry.parent != nil,selected:item.selected,activate:item.open)
+                    .padding(.leading,CGFloat(max(0,item.manifest.depth(of:item.entry.id)-1))*14))
+            }
+        }
         ForEach(BuiltinModules.implementations.indices, id: \.self) { index in
             let feature = BuiltinModules.implementations[index]
             if modules.isOn(feature.manifest.id), feature.sidebarSections.contains(section), feature.manifest.entries.contains(where: { $0.kind == .page }) {
@@ -413,8 +423,10 @@ struct MainSidebar: View {
                         }
                     }
 
-                    header(tr("AI Agent Diagnostics"))
-                    moduleRows(.agents)
+                    if nativeGroups.contains(where:{$0.location == .agents}) || BuiltinModules.implementations.contains(where:{modules.isOn($0.manifest.id) && $0.sidebarSections.contains(.agents)}) {
+                        header(tr("AI Agent Diagnostics"))
+                        moduleRows(.agents)
+                    }
                 }
                 .padding(.bottom, 8)
             }
@@ -450,9 +462,9 @@ struct MainSidebar: View {
     /// One place in the sidebar. Icons stay grey so the list reads as one column; the selected
     /// row's icon takes its color, and the selection slides from row to row.
     func row(_ target: MainPage, _ title: String, _ symbol: String, _ color: Color, trailing: String?,
-             trailingColor: Color? = nil, badge: Int = 0, indent: Bool = false, selected: Bool? = nil) -> some View {
+             trailingColor: Color? = nil, badge: Int = 0, indent: Bool = false, selected: Bool? = nil,activate:(@MainActor ()->Void)? = nil) -> some View {
         let on = selected ?? (page == target)
-        return Button { page = target } label: {
+        return Button { if let activate {activate()}else{page = target} } label: {
             HStack(spacing: 9) {
                 Image(systemName: symbol)
                     .font(.system(size: indent ? 12 : 13, weight: .medium))
@@ -490,14 +502,14 @@ struct MainSidebar: View {
         .accessibilityLabel(title)
         .accessibilityValue(on ? tr("Selected") : "")
         .help(title)
-        .background(shortcut(target))
+        .background(shortcut(target,activate:activate))
         .padding(.horizontal, 8)
         // Scrolled to with room above and below, so the row clears the footer's fade.
         .background(Color.clear.frame(height: (indent ? 26 : 30) + 40).id(target))
     }
-    @ViewBuilder func shortcut(_ target: MainPage) -> some View {
+    @ViewBuilder func shortcut(_ target: MainPage,activate:(@MainActor ()->Void)? = nil) -> some View {
         if modules.shows(target), let value = modules.navigationKey(target), let character = value.first {
-            key(KeyEquivalent(character), target)
+            key(KeyEquivalent(character), target,activate:activate)
         } else { coreShortcut(target) }
     }
     @ViewBuilder func coreShortcut(_ target: MainPage) -> some View {
@@ -507,8 +519,8 @@ struct MainSidebar: View {
         }
     }
 
-    func key(_ key: KeyEquivalent, _ target: MainPage) -> some View {
-        Button("") { page = target }.keyboardShortcut(key, modifiers: .command)
+    func key(_ key: KeyEquivalent, _ target: MainPage,activate:(@MainActor ()->Void)? = nil) -> some View {
+        Button("") { if let activate {activate()}else{page = target} }.keyboardShortcut(key, modifiers: .command)
             .frame(width: 0, height: 0).opacity(0).accessibilityHidden(true)
     }
 

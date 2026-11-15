@@ -199,7 +199,7 @@ final class StatusMenu: NSObject, NSMenuDelegate {
             case .claudeTools:
                 submenu.addItem(page(tr("Claude tools"), "person.2", .module(BuiltinModuleManifests.claude.id,"accounts")))
             case .smartCheck:
-                submenu.addItem(page(tr("Smart Check"), "stethoscope", .agents(.home)))
+                submenu.addItem(page(tr("Smart Check"), "stethoscope", .native(.init(BuiltinModuleManifests.agents.id,"home"))))
             case .cleanScreen:
                 submenu.addItem(item(tr("Clean Screen"), "sparkles.tv") { MainWindow.show(tool: .cleanScreen) })
             case .networkLowLatency:

@@ -39,6 +39,7 @@ package struct NativeFeatureBusy:Error,LocalizedError,CustomStringConvertible {
 }
 /// Native feature implementations own models; callers see only UI and lifecycle contributions.
 @MainActor package protocol NativeFeatureSession:AnyObject {
+    func ui(_ surface:NativeUISurface,navigation:NativeNavigation)->AnyView?
     func page(_ route:NativeFeatureRoute,navigation:NativeNavigation)->AnyView?
     var status:NativeFeatureStatus {get}
     func start()
@@ -55,16 +56,18 @@ package struct NativeFeatureBusy:Error,LocalizedError,CustomStringConvertible {
 package struct NativeFeatureDefinition:Sendable {
     package let manifest:ModuleManifest
     package let pageContracts:[NativePageContract]
+    package let ui:NativeUIContributions
     package let menuShortcuts:[String:String]
     let resolveLegacyPage:@Sendable (String)->NativeFeatureRoute?
     let invalidateColdState:@MainActor @Sendable ([String])->Void
     let makeSession:@MainActor @Sendable (FeatureAvailability)->any NativeFeatureSession
-    package init(manifest:ModuleManifest,pageContracts:[NativePageContract] = [],menuShortcuts:[String:String] = [:],resolveLegacyPage:@escaping @Sendable (String)->NativeFeatureRoute? = {_ in nil},invalidateColdState:@escaping @MainActor @Sendable ([String])->Void = {_ in},makeSession:@escaping @MainActor @Sendable (FeatureAvailability)->any NativeFeatureSession) {
-        self.manifest=manifest;self.pageContracts=pageContracts;self.menuShortcuts=menuShortcuts;self.resolveLegacyPage=resolveLegacyPage;self.invalidateColdState=invalidateColdState;self.makeSession=makeSession
+    package init(manifest:ModuleManifest,pageContracts:[NativePageContract] = [],ui:NativeUIContributions = .none,menuShortcuts:[String:String] = [:],resolveLegacyPage:@escaping @Sendable (String)->NativeFeatureRoute? = {_ in nil},invalidateColdState:@escaping @MainActor @Sendable ([String])->Void = {_ in},makeSession:@escaping @MainActor @Sendable (FeatureAvailability)->any NativeFeatureSession) {
+        self.manifest=manifest;self.pageContracts=pageContracts;self.ui=ui;self.menuShortcuts=menuShortcuts;self.resolveLegacyPage=resolveLegacyPage;self.invalidateColdState=invalidateColdState;self.makeSession=makeSession
     }
 }
 
 extension NativeFeatureSession {
+    package func ui(_ surface:NativeUISurface,navigation:NativeNavigation)->AnyView?{nil}
     package func invalidateAfterRestore(_ paths:[String]) {}
     package func start() {}
     package func shutdown() {}

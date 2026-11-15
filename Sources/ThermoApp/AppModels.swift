@@ -26,9 +26,9 @@ final class AppModels {
         set { storedDisk = newValue }
     }
 
-    init(defaults: UserDefaults = .standard, nativeDefinitions:[NativeFeatureDefinition]? = nil, makeAgents:@escaping AgentsFactory = {AgentScanner(enabled:$0)}, makeDisk: @escaping () -> DiskModel = { DiskModel(retentionPreferences:.stored(in:.standard)) },
+    init(defaults: UserDefaults = .standard, nativeDefinitions:[NativeFeatureDefinition]? = nil, makeDisk: @escaping () -> DiskModel = { DiskModel(retentionPreferences:.stored(in:.standard)) },
          makeMonitor: @escaping () -> Monitor = { Monitor(samplingAllowed: { ModulePreferences.isEnabled(BuiltinModuleManifests.performance, in: .standard) }) }) {
-        self.makeAgents=makeAgents;self.makeDisk = makeDisk;self.defaults=defaults
+        self.makeDisk = makeDisk;self.defaults=defaults
         self.makeMonitor = makeMonitor
         let catalog=nativeDefinitions.map{try! NativeFeatureCatalog(definitions:$0)} ?? BuiltinNativeFeatures.catalog
         nativeFeatures=NativeFeatureStore(catalog:catalog,enabled:{id in
@@ -45,28 +45,6 @@ final class AppModels {
         return { [weak self] in
             await model.finishDisabling()
             if self?.storedDisk === model { self?.storedDisk = nil }
-        }
-    }
-    typealias AgentsFactory = @MainActor (@escaping ()->Bool)->AgentScanner
-    private let makeAgents:AgentsFactory
-    private var storedAgents:AgentScanner?
-    var agentsLoaded:Bool {storedAgents != nil}
-    var existingAgents:AgentScanner? {storedAgents}
-    var agentReport:DoctorReport? {storedAgents?.report}
-    var agents:AgentScanner {
-        if let storedAgents{return storedAgents}
-        let defaults=self.defaults
-        let scanner=makeAgents {ModulePreferences.isEnabled(BuiltinModuleManifests.agents,in:defaults)}
-        storedAgents=scanner;return scanner
-    }
-    func agentsExitBlocker()->MainPage? {storedAgents?.canStopFeature == false ? .agents(.home):nil}
-    func prepareAgentsStop() throws->BuiltinModules.FinishStop? {
-        guard let scanner=storedAgents else{return nil}
-        guard scanner.canStopFeature else{throw BuiltinModules.StopRefused(description:tr("Wait for the confirmed agent configuration changes before switching diagnostics off."))}
-        scanner.stopFeature()
-        return { [weak self] in
-            await scanner.finishFeatureStop()
-            if self?.storedAgents === scanner {self?.storedAgents=nil}
         }
     }
 }

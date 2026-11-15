@@ -1,5 +1,6 @@
 import XCTest
-@testable import ThermoApp
+@testable import AgentDiagnosticsFeature
+import NativeFeatureAPI
 @testable import AgentDoctor
 
 final class SkillProjectSelectionTests: XCTestCase {

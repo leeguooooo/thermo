@@ -1,3 +1,4 @@
+import ThermoUI
 import ModuleKit
 import XCTest
 import SwiftUI
@@ -89,15 +90,7 @@ final class PresentationTests: XCTestCase {
         XCTAssertEqual(holders, 1)
     }
 
-    @MainActor func testDiagnosticsCannotScanDuringBatchFix() {
-        let scanner = AgentScanner()
-        scanner.batch = AgentScanner.Batch(total: 2)
-        XCTAssertTrue(scanner.busy)
-        scanner.scan()
-        XCTAssertFalse(scanner.scanning)
-        scanner.batch?.finished = true
-        XCTAssertFalse(scanner.busy)
-    }
+
 
     @MainActor func testDiskRefreshRetainsPreviousLocationsAndReplacesUpdatedOnes() {
         let old = [SpaceOverview.Entry(id: "a", title: "A", bytes: 100, children: []),

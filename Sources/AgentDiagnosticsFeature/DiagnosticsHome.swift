@@ -5,12 +5,6 @@ import AppKit
 import SwiftUI
 import ThermoL10n
 
-/// Where the diagnostics window is: the overview, or one area.
-enum SidebarEntry: Hashable {
-    case home
-    case area(Area)
-}
-
 // MARK: - Landing page
 
 struct DiagnosticsHome: View {

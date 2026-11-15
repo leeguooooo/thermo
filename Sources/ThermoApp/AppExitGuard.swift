@@ -36,7 +36,7 @@ enum AppExitGuard {
         if let blocker=nativeBlocker(BuiltinModuleManifests.plugins.id){show(.native(blocker.route));return .terminateCancel}
         if let blocker=nativeBlocker(BuiltinModuleManifests.claude.id){show(.native(blocker.route));return .terminateCancel}
         if let blocker=nativeBlocker(BuiltinModuleManifests.checkup.id){show(.native(blocker.route));return .terminateCancel}
-        if let page=AppModels.shared.agentsExitBlocker(){show(page);return .terminateCancel}
+        if let blocker=nativeBlocker(BuiltinModuleManifests.agents.id){show(.native(blocker.route));return .terminateCancel}
         if let blocker=nativeBlocker(BuiltinModuleManifests.connections.id){show(.native(blocker.route));return .terminateCancel}
         if let blocker=nativeBlocker(BuiltinModuleManifests.browser.id){show(.native(blocker.route));return .terminateCancel}
         if let blocker=nativeBlocker(BuiltinModuleManifests.apps.id){show(.native(blocker.route));return .terminateCancel}
