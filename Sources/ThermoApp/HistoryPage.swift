@@ -115,7 +115,10 @@ final class HistoryModel: ObservableObject {
         busy = true
         let exitGuard = AppExitGuard.beginRestore()
         let restoreBatch = self.restoreBatch
-        work.run(priority: .userInitiated) {
+        work.run(priority: .userInitiated, onSkipped: { [self] in
+            busy = false
+            AppExitGuard.endRestore(exitGuard)
+        }) {
             let text: String
             var paths: [String] = []
             do {
