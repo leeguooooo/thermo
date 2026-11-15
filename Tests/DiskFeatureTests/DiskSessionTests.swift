@@ -2,6 +2,7 @@
 import ModuleKit
 import NativeFeatureAPI
 import XCTest
+import SwiftUI
 @testable import DiskFeature
 
 @MainActor final class DiskSessionTests:XCTestCase {
@@ -39,7 +40,10 @@ import XCTest
         XCTAssertTrue(store.windowUI(selection:nil,locations:[.storage]).sidebar.isEmpty)
         XCTAssertEqual(sessions,0);XCTAssertEqual(models,0);XCTAssertEqual(overviews,0)
         enabled=true
-        _=store.windowUI(selection:nil,locations:[.storage]);XCTAssertEqual(models,1)
+        let ui=store.windowUI(selection:nil,locations:[.storage])
+        XCTAssertEqual(models,0,"Contribution registration is still deferred until actual sidebar rendering")
+        _=try XCTUnwrap(ui.sidebar.first).content{_ in AnyView(EmptyView())}
+        XCTAssertEqual(models,1)
         store.retireVisibility();XCTAssertNil(store.quitBlocker());XCTAssertEqual(overviews,0)
         _=store.page(.init(schema.manifest.id,"overview"));XCTAssertEqual(overviews,1)
         let drain=try XCTUnwrap(store.prepareStop(schema.manifest.id));await drain.finish()

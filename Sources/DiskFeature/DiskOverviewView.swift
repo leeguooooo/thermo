@@ -469,7 +469,7 @@ extension DiskOverviewView {
                                 .buttonStyle(PillButtonStyle()).controlSize(.small)
                                 .help(tr("Open in Space Lens to pick what to move to the Trash"))
                                 .accessibilityLabel(tr("Review %1$@ in Space Lens", FSPath.tilde(path)))
-                            Button { NSWorkspace.shared.activateFileViewerSelecting([URL(fileURLWithPath: path)]) } label: { Image(systemName: "magnifyingglass") }
+                            Button {guard availability() else{return};NSWorkspace.shared.activateFileViewerSelecting([URL(fileURLWithPath:path)])} label: { Image(systemName: "magnifyingglass") }
                                 .buttonStyle(.plain).foregroundStyle(Theme.textSecondary).help(tr("Show in Finder"))
                                 .accessibilityLabel(tr("Show %1$@ in Finder", FSPath.tilde(path)))
                         }
@@ -514,7 +514,7 @@ struct SpaceDetailSheet: View {
                             Text(a).font(command ? Theme.mono : Theme.secondary).foregroundStyle(Theme.textPrimary).textSelection(.enabled)
                             Spacer()
                             if command {
-                                Button { NSPasteboard.general.clearContents(); NSPasteboard.general.setString(a, forType: .string) } label: {
+                                Button {guard explanationWork.acceptsWork else{return};NSPasteboard.general.clearContents(); NSPasteboard.general.setString(a, forType: .string) } label: {
                                     Image(systemName: "doc.on.doc")
                                 }.buttonStyle(.borderless).help(tr("Copy"))
                             }
@@ -573,7 +573,7 @@ struct SpaceDetailSheet: View {
                     .buttonStyle(PillButtonStyle()).controlSize(.small)
                     .help(tr("Open in Space Lens to pick what to move to the Trash"))
                     .accessibilityLabel(tr("Review %1$@ in Space Lens", FSPath.tilde(p)))
-                Button { NSWorkspace.shared.activateFileViewerSelecting([URL(fileURLWithPath: p)]) } label: {
+                Button {guard explanationWork.acceptsWork else{return};NSWorkspace.shared.activateFileViewerSelecting([URL(fileURLWithPath:p)])} label: {
                     Image(systemName: "magnifyingglass")
                 }
                 .buttonStyle(.borderless).foregroundStyle(Theme.textTertiary).help(tr("Reveal in Finder"))

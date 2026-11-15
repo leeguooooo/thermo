@@ -54,4 +54,15 @@ final class CleanupProtectionsManagerTests: XCTestCase {
         XCTAssertNil(model.notice); XCTAssertNil(model.issue)
     }
 
+    @MainActor func testRetiredProtectionSheetCannotChangeRulesOrStartAnotherRead()throws {
+        try Whitelist.add([home+"/one"],home:home)
+        var enabled=true
+        let model=CleanupProtectionsModel(home:home,enabled:{enabled})
+        model.reload();XCTAssertTrue(model.canChange)
+        enabled=false
+        XCTAssertFalse(model.canChange);XCTAssertFalse(model.allow(home+"/one"))
+        XCTAssertEqual(try Whitelist.loadForRemoval(home:home).entries,[home+"/one"])
+        model.reload();XCTAssertEqual(model.entries,[home+"/one"],"Retired callbacks do not reload or replace the review")
+    }
+
 }
