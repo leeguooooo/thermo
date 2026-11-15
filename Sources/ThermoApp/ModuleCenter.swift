@@ -37,7 +37,7 @@ import ThermoL10n
     private var started = false
 
     init(manager: ModuleManager? = nil, defaults: UserDefaults = .standard,
-         prepareBuiltinStop: @escaping @MainActor (String) throws -> NativeModules.FinishStop? = NativeModules.prepareStop,
+         prepareBuiltinStop: @escaping @MainActor (String) throws -> NativeModules.FinishStop? = {try NativeModules.prepareStop($0)},
          startBuiltin: @escaping @MainActor (String) -> Void = { _ in },
          updatesAppMenu: Bool = false, commandHome:String? = nil) {
         self.manager = manager ?? ModuleManager(); self.defaults = defaults

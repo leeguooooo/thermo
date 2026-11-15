@@ -1,3 +1,4 @@
+import Foundation
 import ModuleKit
 import NativeFeatureAPI
 
