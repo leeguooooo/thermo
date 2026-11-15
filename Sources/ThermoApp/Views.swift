@@ -667,7 +667,7 @@ struct FansView: View {
                 .font(Theme.caption).foregroundStyle(Theme.textTertiary)
                 .fixedSize(horizontal: false, vertical: true).padding(.horizontal, 2)
         }
-        .onAppear { monitor.refreshHelper() }
+        .onAppear { monitor.refreshFanObservation() }
     }
 
     func missingFan(_ id: Int) -> some View {

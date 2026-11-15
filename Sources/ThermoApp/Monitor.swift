@@ -91,7 +91,7 @@ import ThermoL10n
         fan=fanFactory.bind(available:{[samplingAllowed] in samplingAllowed()});updateDemand()
     }
     private func updateDemand(){sampling?.setDemand(.init(visible:watched,surface:popoverOpen ? .overview:surface,includeUnnamed:unnamed))}
-    private func visibilityChanged(){objectWillChange.send();updateDemand();if watched{sampleNow();refreshHelper()}}
+    private func visibilityChanged(){objectWillChange.send();updateDemand();if watched{sampleNow();refreshFanObservation()}}
     func setWindowSurface(_ surface:TelemetrySurface){guard self.surface != surface else{return};self.surface=surface;updateDemand();if watched{sampleNow()}}
     func showUnnamedSensors(_ value:Bool){unnamed=value;updateDemand();sampleNow()}
     func sampleNow(){sampling?.refresh()}
@@ -104,7 +104,7 @@ import ThermoL10n
         #endif
     }
     func finishStoppingFeature() async{await sampling?.finishStopping();await fan?.finishRetiring();sampling=nil;fan=nil;onMenuUpdate?()}
-    private func refreshFanObservation(){lastHelperRefresh=Date();fan?.refreshObservation()}
+    func refreshFanObservation(){lastHelperRefresh=Date();fan?.refreshObservation()}
     func refreshHelper(){lastHelperRefresh=Date();administration.refresh()}
     func beginSetup(){administration.install()}
     func stopSetup(){administration.stopSetup()}
