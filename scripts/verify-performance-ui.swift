@@ -165,7 +165,7 @@ private struct PerformanceReviewPanel:View {
         let root=URL(fileURLWithPath:path)
         guard root.lastPathComponent.hasPrefix("thermo-performance-review-"),FileManager.default.fileExists(atPath:root.appendingPathComponent(".thermo-performance-fixture").path) else{exit(3)}
         _=freopen(root.appendingPathComponent("trace.log").path,"a",stdout)
-        let defaults=UserDefaults(suiteName:Bundle.main.bundleIdentifier!)!
+        let defaults=UserDefaults.standard
         L10n.apply(preference:defaults.string(forKey:L10n.defaultsKey) ?? "system")
         let app=NSApplication.shared;app.setActivationPolicy(.regular)
         let delegate=PerformanceReview(root:root,defaults:defaults);app.delegate=delegate
