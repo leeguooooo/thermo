@@ -1,3 +1,4 @@
+import ModuleKernelCore
 import AppKit
 import Darwin
 import ModuleHost

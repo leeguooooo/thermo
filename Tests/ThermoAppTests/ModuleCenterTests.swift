@@ -1,3 +1,4 @@
+@testable import ModuleKernelCore
 import AgentCore
 import CleanKit
 import ModuleHost

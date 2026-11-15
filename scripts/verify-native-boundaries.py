@@ -50,7 +50,7 @@ def problems(package, complete=False, source_root=None):
     features = {name for name in graph if name.endswith("Feature")}
     hosts = {"ThermoApp", "ThermoShell", "ThermoKernel", "ThermoComposition"}
     for feature in sorted(features):
-        for dependency in sorted(reachable(feature) & (hosts | (features - {feature}))):
+        for dependency in sorted(reachable(feature) & (hosts | {"ModuleKernelCore"} | (features - {feature}))):
             errors.append(f"{feature} reaches forbidden implementation target {dependency}")
     if source_root is not None:
         root = Path(source_root).resolve()
