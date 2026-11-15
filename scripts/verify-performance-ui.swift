@@ -1,5 +1,7 @@
-// Link against the optimized testable app module. This entry point never starts AppDelegate.
+// Built as an actual temporary SwiftPM target. This entry point never starts AppDelegate.
 @testable import ThermoApp
+import SystemServicesAPI
+import ModuleKit
 import AgentCore
 import AppKit
 import Darwin
@@ -70,7 +72,7 @@ import SwiftUI
             "windowVisible": monitor.windowOpen, "windowIsVisible": MainWindow.window?.isVisible ?? false,
             "windowMinimized": MainWindow.window?.isMiniaturized ?? false, "panelOpen": monitor.popoverOpen,
             "cpuSampling": ComputeModel.cpu.samplingActive, "gpuSampling": ComputeModel.shared.samplingActive,
-            "memorySampling": MemoryModel.shared.samplingActive, "connectionsSampling": ConnectionsModel.shared.samplingActive,
+            "memorySampling": MemoryModel.shared.samplingActive, "connectionsSampling": AppModels.shared.nativeFeatures.status(BuiltinModuleManifests.connections.id).sampling,
             "panelSampling": PanelModel.shared.samplingActive,
             "pulseSampling": SystemPulse.shared.samplingActive, "pulseHolders": SystemPulse.shared.holderCount,
             "controllerAlive": MainWindow.window?.contentViewController != nil,
@@ -85,10 +87,10 @@ import SwiftUI
 
 @main struct ThermoPerformanceUI {
     @MainActor static func main() {
-        guard Bundle.main.bundleIdentifier == "dev.thermo.perfreview.01a1612a",
+        guard Bundle.main.bundleIdentifier?.hasPrefix("dev.thermo.performance-review.") == true,
               let path = Bundle.main.object(forInfoDictionaryKey: "ThermoPerformanceFixture") as? String else { exit(2) }
         let root = URL(fileURLWithPath: path)
-        guard root.lastPathComponent == "thermo-perf-review-01a1612a",
+        guard root.lastPathComponent.hasPrefix("thermo-performance-review-"),
               FileManager.default.fileExists(atPath: root.appendingPathComponent(".thermo-performance-fixture").path) else { exit(3) }
         _ = freopen(root.appendingPathComponent("trace.log").path, "a", stdout)
         Settings.register()

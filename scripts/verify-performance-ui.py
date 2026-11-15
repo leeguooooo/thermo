@@ -1,34 +1,76 @@
 #!/usr/bin/env python3
-"""Build a private Release UI acceptance app; never launches it or changes installed Thermo."""
+"""Build a separate performance UI review app; never launches or replaces installed Thermo."""
+import argparse
+import hashlib
+import json
 from pathlib import Path
-import hashlib,json,plistlib,subprocess
-root=Path(__file__).resolve().parent.parent
-base=root/'.build/out/Products/Release'
-output=Path('/private/tmp/thermo-perf-review-01a1612a')
-executable=output/'ThermoPerformanceQA.app/Contents/MacOS/ThermoPerformanceQA'
-running=subprocess.check_output(['ps','-axo','comm='],text=True).splitlines()
-if any(line.strip()==str(executable) for line in running):
- raise SystemExit('Performance QA is still running; quit that owned app before refreshing it.')
-marker=output/'.thermo-performance-fixture'
-if output.is_symlink() or (output.exists() and any(output.iterdir()) and not marker.is_file()):
- raise SystemExit('Refusing to replace an unmarked performance fixture.')
-output.mkdir(mode=0o700,exist_ok=True)
-marker.touch()
-app=output/'ThermoPerformanceQA.app';mac=app/'Contents/MacOS';mac.mkdir(parents=True,exist_ok=True)
-frameworks=app/'Contents/Frameworks';frameworks.mkdir(exist_ok=True)
-subprocess.run(['ditto',str(base/'Sparkle.framework'),str(frameworks/'Sparkle.framework')],check=True)
-flags=[]
-for name in ['CSMC','CTokenData']:
- flags+=['-Xcc','-fmodule-map-file='+str(root/'.build/out/Intermediates.noindex/GeneratedModuleMaps'/f'{name}.modulemap')]
-for path in ['Sources/CSQLite','.build/checkouts/swift-cmark/src/include','.build/checkouts/swift-cmark/extensions/include','.build/checkouts/Yams/Sources/CYaml/include']:flags+=['-I',str(root/path)]
-module=list((base/'ExecutableModules').glob('ThermoApp-*-testable.o'));assert len(module)==1
-objects=[str(x) for x in base.glob('*.o')]+[str(module[0])]
-command=['xcrun','swiftc','-O','-parse-as-library','-target','arm64-apple-macosx13.0','-I',str(base),'-F',str(base),*flags,
- '-framework','Sparkle','-framework','IOKit','-framework','CoreFoundation','-lsqlite3','-lz','-Xlinker','-rpath','-Xlinker','@executable_path/../Frameworks',
- str(root/'scripts/verify-performance-ui.swift'),*objects,'-o',str(mac/'ThermoPerformanceQA')]
-subprocess.run(command,check=True)
-info={'CFBundleIdentifier':'dev.thermo.perfreview.01a1612a','CFBundleName':'ThermoPerformanceQA','CFBundleExecutable':'ThermoPerformanceQA','CFBundlePackageType':'APPL','CFBundleVersion':'1','LSMinimumSystemVersion':'13.0','ThermoPerformanceFixture':str(output)}
-(app/'Contents/Info.plist').write_bytes(plistlib.dumps(info))
-subprocess.run(['codesign','--force','--deep','--sign','-',str(app)],check=True)
-(output/'source.json').write_text(json.dumps({'gitHead':subprocess.check_output(['git','-C',str(root),'rev-parse','HEAD'],text=True).strip(),'testableObjectSHA256':hashlib.sha256(module[0].read_bytes()).hexdigest(),'executableSHA256':hashlib.sha256((mac/'ThermoPerformanceQA').read_bytes()).hexdigest(),'workingTreeDiffSHA256':hashlib.sha256(subprocess.check_output(['git','-C',str(root),'diff','HEAD'])).hexdigest(),'configuration':'Release -O','helperInteraction':False},indent=2))
-print(app)
+import plistlib
+import subprocess
+import tempfile
+import uuid
+
+
+def main():
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument('--output-dir', type=Path)
+    parser.add_argument('--jobs', type=int, default=1)
+    args = parser.parse_args()
+    if args.jobs < 1:
+        parser.error('jobs must be positive')
+    root = Path(__file__).resolve().parent.parent
+    output = args.output_dir.expanduser().resolve() if args.output_dir else Path(tempfile.mkdtemp(prefix='thermo-performance-review-'))
+    app = output / 'ThermoPerformanceQA.app'
+    if app.exists():
+        parser.error('Output app already exists; choose a fresh output directory.')
+    if not output.name.startswith('thermo-performance-review-'):
+        parser.error('Output directory must start with thermo-performance-review-.')
+    output.mkdir(parents=True, exist_ok=True)
+    (output / '.thermo-performance-fixture').touch()
+    # A real package target gets the actual package identity and linker inputs.
+    # No guessed package-name or scan of unrelated Release object files.
+    target = 'PerformanceReviewFixture' + uuid.uuid4().hex[:10]
+    source_dir = root / 'Sources' / target
+    package_file = root / 'Package.swift'
+    original = package_file.read_bytes()
+    needle = b'    targets: ['
+    if original.count(needle) != 1:
+        raise RuntimeError('Expected one package target list')
+    declaration = ('\n        .executableTarget(name:"' + target + '",dependencies:["ThermoApp","SystemServicesAPI","AgentCore","ModuleKit","ThermoKit"]),').encode()
+    modified = original.replace(needle, needle + declaration)
+    source_dir.mkdir()
+    source = source_dir / 'Review.swift'
+    source.write_bytes((root / 'scripts/verify-performance-ui.swift').read_bytes())
+    binary = app / 'Contents/MacOS/ThermoPerformanceQA'
+    binary.parent.mkdir(parents=True)
+    try:
+        package_file.write_bytes(modified)
+        subprocess.run(['swift', 'build', '--jobs', str(args.jobs), '--product', target], cwd=root, check=True)
+        base = Path(subprocess.check_output(['swift', 'build', '--show-bin-path'], cwd=root, text=True).strip()).resolve()
+        subprocess.run(['ditto', str(base / target), str(binary)], check=True)
+        subprocess.run(['ditto', str(base / 'Sparkle.framework'), str(app / 'Contents/Frameworks/Sparkle.framework')], check=True)
+    finally:
+        current = package_file.read_bytes()
+        if current == modified or current == original:
+            package_file.write_bytes(original)
+            source.unlink()
+            source_dir.rmdir()
+        else:
+            backup = output / 'Package.before-fixture.swift'
+            backup.write_bytes(original)
+            raise RuntimeError('Package.swift changed during review build; preserved current source and saved original to ' + str(backup))
+    info = {'CFBundleIdentifier': 'dev.thermo.performance-review.' + hashlib.sha256(str(output).encode()).hexdigest()[:12],
+            'CFBundleName': 'ThermoPerformanceQA', 'CFBundleExecutable': binary.name,
+            'CFBundlePackageType': 'APPL', 'CFBundleVersion': '1', 'LSMinimumSystemVersion': '13.0',
+            'ThermoPerformanceFixture': str(output)}
+    (app / 'Contents/Info.plist').write_bytes(plistlib.dumps(info))
+    subprocess.run(['codesign', '--force', '--deep', '--sign', '-', str(app)], check=True)
+    (output / 'source.json').write_text(json.dumps({
+        'gitHead': subprocess.check_output(['git', 'rev-parse', 'HEAD'], cwd=root, text=True).strip(),
+        'executableSHA256': hashlib.sha256(binary.read_bytes()).hexdigest(),
+        'packageSHA256': hashlib.sha256(original).hexdigest(), 'configuration': 'debug SwiftPM',
+        'helperInteraction': False, 'launched': False}, indent=2) + '\n')
+    print(app)
+
+
+if __name__ == '__main__':
+    main()
