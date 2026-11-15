@@ -9,7 +9,6 @@ import ThermoL10n
 
 @MainActor
 final class HistoryModel: ObservableObject {
-    static var shared:HistoryModel {AppModels.shared.history}
     let work=FeatureTasks()
     @Published private(set) var records: [OperationRecord] = []
     @Published private(set) var loaded = false
@@ -23,32 +22,20 @@ final class HistoryModel: ObservableObject {
     private var restoreReviewGeneration = UUID(), restoreReviewInFlight = false
     private var restoreReviewTarget: String?
     private var pendingRestoreReview: OperationRecord?
-    private let reviewBatch: @Sendable (String) throws -> TrashRestore
-
-    private let reader: @Sendable () -> OperationJournal.ReadReport
+    private let services: any HistoryServices
     private var readAgain = false
-    private let restoreBatch: @Sendable (String, TrashRestore) throws -> TrashRestore
-    private let didRestore: @MainActor ([String]) -> Void
-    init(enabled:@escaping ()->Bool = {true}, reader: @escaping @Sendable () -> OperationJournal.ReadReport = { OperationJournal.readReport(limit: 300) },
-         reviewBatch: @escaping @Sendable (String) throws -> TrashRestore = { try TrashBatches.restore(id: $0, dryRun: true) },
-         restoreBatch: @escaping @Sendable (String, TrashRestore) throws -> TrashRestore = { id, review in
-             try TrashBatches.restore(id: id, reviewIdentity: review.reviewIdentity,
-                 reviewedDestinations: Set(review.items.filter { $0.status == "restored" }.map(\.destination)))
-         },
-         didRestore: @escaping @MainActor ([String]) -> Void = {
-             AppModels.shared.invalidateAppsAfterRestore()
-             AppModels.shared.invalidateSpaceAfterRestore($0)
-         }) {
-        work.enabled=enabled;self.reader = reader; self.reviewBatch = reviewBatch; self.restoreBatch = restoreBatch; self.didRestore = didRestore
+    init(enabled: @escaping () -> Bool = { true }, services: any HistoryServices) {
+        work.enabled = enabled
+        self.services = services
     }
 
     func load() {
         guard work.acceptsWork else{return}
         guard !reading else { readAgain = true; return }
         reading = true
-        let reader = reader
+        let services = services
         work.run(priority: .userInitiated) {
-            let report = reader()
+            let report = services.read()
             await MainActor.run {
                 self.reading = false
                 guard self.work.acceptsWork else{return}
@@ -75,10 +62,10 @@ final class HistoryModel: ObservableObject {
 
     private func readRestoreReview(_ record: OperationRecord) {
         guard work.acceptsWork,let id = record.undo?.ref else { return }
-        let generation = restoreReviewGeneration, reviewBatch = reviewBatch
+        let generation = restoreReviewGeneration, services = services
         restoreReviewInFlight = true
         work.run(priority: .userInitiated) {
-            let result = Result { try reviewBatch(id) }
+            let result = Result { try services.reviewRestore(batch: id) }
             await MainActor.run {
                 self.restoreReviewInFlight = false
                 guard self.work.acceptsWork else{return}
@@ -113,17 +100,16 @@ final class HistoryModel: ObservableObject {
             notice = tr("Restore review is unavailable; review the batch again."); return
         }
         busy = true
-        let exitGuard = AppExitGuard.beginRestore()
-        let restoreBatch = self.restoreBatch
+        let operation: any HistoryRestoration
+        do { operation = try services.beginRestore(batch: id, review: review) }
+        catch { busy = false; notice = error.localizedDescription; return }
         work.run(priority: .userInitiated, onSkipped: { [self] in
+            operation.cancelBeforeStart()
             busy = false
-            AppExitGuard.endRestore(exitGuard)
         }) {
             let text: String
-            var paths: [String] = []
             do {
-                let result = try restoreBatch(id, review)
-                paths = result.items.filter { $0.status == "restored" }.map(\.original)
+                let result = try await operation.perform()
                 let restored = result.items.filter { $0.status == "restored" }.count
                 let already = result.items.filter { $0.status == "alreadyRestored" }.count
                 let others = result.items.filter { $0.status != "restored" && $0.status != "alreadyRestored" }
@@ -131,11 +117,8 @@ final class HistoryModel: ObservableObject {
                         + (already > 0 ? [tr("%1$@ items were already at their original locations.", String(already))] : [])
                         + others.map { FS.tilde($0.original) + ": " + ($0.reason ?? $0.status) } + (result.issues ?? [])).joined(separator: "\n")
             } catch { text = error.localizedDescription }
-            let restoredPaths = paths
             await MainActor.run {
-                if !restoredPaths.isEmpty { self.didRestore(restoredPaths) }
                 self.notice = text; self.busy = false
-                AppExitGuard.endRestore(exitGuard)
                 self.load()
             }
         }
@@ -154,7 +137,7 @@ final class HistoryModel: ObservableObject {
 /// Trash in a recorded batch are put back from here; the others open the place that restores them.
 struct HistoryPage: View {
     @ObservedObject var model: HistoryModel
-    let open: (MainPage) -> Void
+    let services: any HistoryServices
     @State private var expanded: Set<String> = []
     @State private var restoring: OperationRecord?
     /// Empty: every kind. Automatic tab grouping writes an entry every few minutes, so one kind can bury the rest.
@@ -173,7 +156,7 @@ struct HistoryPage: View {
         WindowPage(title: tr("History"), subtitle: tr("Every change Thermo made, and where to undo it.")) {
             HStack(spacing: Theme.Space.s) {
                 Image(systemName: "doc.text").font(.system(size: 11)).foregroundStyle(Theme.textTertiary).accessibilityHidden(true)
-                Text(FS.tilde(OperationJournal.url().path)).font(Theme.mono).foregroundStyle(Theme.textTertiary)
+                Text(FS.tilde(services.journalURL.path)).font(Theme.mono).foregroundStyle(Theme.textTertiary)
                     .lineLimit(1).truncationMode(.middle).textSelection(.enabled)
                 Spacer(minLength: Theme.Space.s)
                 if model.busy || model.reading { ProgressView().controlSize(.small) }
@@ -353,39 +336,20 @@ struct HistoryPage: View {
         .hoverHighlight()
     }
 
-    /// The one button an entry gets: put back here, or go to where it is restored.
-    @ViewBuilder func action(_ r: OperationRecord) -> some View {
-        switch r.undo?.kind {
-        case "nativeUpdate", "nativePreparation":
-            Button(tr("Open")) {
-                AppModels.shared.prepareNativeRecovery()
-                open(.apps(.updates))
-            }.buttonStyle(PillButtonStyle()).controlSize(.small).fixedSize()
-        case nil where r.feature == "apps" && r.action == "update":
-            Button(tr("Open")) { open(.apps(.updates)) }.buttonStyle(PillButtonStyle()).controlSize(.small).fixedSize()
-        case "startup":
-            Button(tr("Open")) { open(.apps(.startup)) }.buttonStyle(PillButtonStyle()).controlSize(.small).fixedSize()
-        case "trashBatch":
-            Button(tr("Restore…")) { restoring = r }.buttonStyle(PillButtonStyle()).controlSize(.small).disabled(model.busy).fixedSize()
-        case "claudeReset":
-            Button(tr("Open")) { open(.module(BuiltinModuleManifests.claude.id,"reset")) }.buttonStyle(PillButtonStyle()).controlSize(.small).fixedSize()
-        case "browserBackup", "timezoneBackup":
-            Button(tr("Open")) { open(.module(BuiltinModuleManifests.claude.id,"privacy")) }.buttonStyle(PillButtonStyle()).controlSize(.small).fixedSize()
-        case "spotlightShortcut":
-            Button(tr("Open")) { LocalSearchPanel.shared.show(settings: true) }.buttonStyle(PillButtonStyle()).controlSize(.small).fixedSize()
-        case "tabArchive", "tabBatch":
-            Button(tr("Open")) { open(.browser("Google Chrome")) }.buttonStyle(PillButtonStyle()).controlSize(.small).fixedSize()
-        case "trash":
-            Button(tr("Open Trash")) {
-                NSWorkspace.shared.open(URL(fileURLWithPath: NSHomeDirectory()).appendingPathComponent(".Trash"))
-            }.buttonStyle(PillButtonStyle()).controlSize(.small).fixedSize()
-        case "agentBackup", "worktreeBackup":
-            if let ref = r.undo?.ref {
-                Button { NSWorkspace.shared.activateFileViewerSelecting([URL(fileURLWithPath: ref)]) } label: { Image(systemName: "folder") }
+    /// The host resolves complete follow-up transactions; the feature owns its restore sheet.
+    @ViewBuilder func action(_ record: OperationRecord) -> some View {
+        if record.undo?.kind == "trashBatch" {
+            Button(tr("Restore…")) { restoring = record }
+                .buttonStyle(PillButtonStyle()).controlSize(.small).disabled(model.busy).fixedSize()
+        } else if let action = services.followUp(for: record) {
+            if let symbol = action.symbol {
+                Button(action: action.perform) { Image(systemName: symbol) }
                     .buttonStyle(.plain).foregroundStyle(Theme.textSecondary)
-                    .accessibilityLabel(tr("Reveal in Finder")).help(tr("Reveal in Finder"))
+                    .accessibilityLabel(action.title).help(action.title)
+            } else {
+                Button(action.title, action: action.perform)
+                    .buttonStyle(PillButtonStyle()).controlSize(.small).fixedSize()
             }
-        default: EmptyView()
         }
     }
 

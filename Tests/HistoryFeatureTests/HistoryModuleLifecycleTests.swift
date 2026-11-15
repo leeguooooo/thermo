@@ -2,7 +2,8 @@ import AgentCore
 import ModuleKit
 import XCTest
 @testable import CleanKit
-@testable import ThermoApp
+import NativeFeatureAPI
+@testable import HistoryFeature
 
 @MainActor final class HistoryModuleLifecycleTests:XCTestCase {
     private func defaults()->UserDefaults {
@@ -16,12 +17,6 @@ import XCTest
     }
     private func review(_ record:OperationRecord)->TrashRestore {
         .init(id:record.undo!.ref,dryRun:true,items:[.init(original:"/fixture",destination:"/fixture-trash",bytes:1,status:"restored")],reviewIdentity:"fixture")
-    }
-    func testRegistryOwnsLegacyAndGenericHistoryPage() {
-        XCTAssertTrue(BuiltinModules.problems.isEmpty,BuiltinModules.problems.joined(separator:"\n"))
-        XCTAssertEqual(MainPage.history.module,HistoryModule.manifest.id)
-        XCTAssertEqual(BuiltinModules.page(.history)?.target,.history)
-        XCTAssertEqual(BuiltinModules.page(.module(HistoryModule.manifest.id,"home"))?.target,.history)
     }
     func testColdOffCannotReadReviewOrRestore() async {
         let model=HistoryModel(enabled:{false},reader:{XCTFail("off history read");return .init(records:[])},reviewBatch:{_ in XCTFail("off restore review");throw NSError(domain:"fixture",code:1)},restoreBatch:{_,_ in XCTFail("off restore");throw NSError(domain:"fixture",code:1)})
@@ -63,42 +58,61 @@ import XCTest
             entered.fulfill();_ = release.wait(timeout:.now()+5)
             return .init(id:id,dryRun:false,items:[])
         },didRestore:{_ in})
-        let models=AppModels(defaults:defaults(),makeHistory:{gate in model.work.enabled=gate;return model})
-        _=models.history
+        let manifest=BuiltinModuleManifests.history
+        let definition=NativeFeatureDefinition(manifest:manifest,makeSession:{availability in
+            HistorySession(availability:availability,services:TestHistoryServices(),makeModel:{gate,_ in model.work.enabled=gate;return model})
+        })
+        let store=NativeFeatureStore(definitions:[definition],enabled:{_ in true})
+        _=store.page(.init(manifest.id,"home"))
         let record=record();model.restore(record,review:review(record))
         await fulfillment(of:[entered],timeout:2)
-        XCTAssertThrowsError(try HistoryModule.prepareStop(models:models));XCTAssertFalse(model.work.stopping)
+        XCTAssertNotNil(store.quitBlocker())
+        XCTAssertThrowsError(try store.prepareStop(manifest.id));XCTAssertFalse(model.work.stopping)
         release.signal();await model.work.finish()
-        if let finish=try HistoryModule.prepareStop(models:models){await finish()}
-        XCTAssertFalse(models.historyLoaded)
+        if let drain=try store.prepareStop(manifest.id){await drain.finish()}
+        XCTAssertFalse(store.status(manifest.id).modelLoaded)
     }
+
     func testOffPresentationDoesNotDeleteKernelJournalAndReenableReadsNewRecords() async throws {
         let root=FileManager.default.temporaryDirectory.appendingPathComponent("thermo-history-lifetime-"+UUID().uuidString).resolvingSymlinksInPath()
         try FileManager.default.createDirectory(at:root,withIntermediateDirectories:true)
         defer{try? FileManager.default.removeItem(at:root)}
         let first=record();OperationJournal.record(first,home:root.path)
-        let defaults=defaults();var creations=0
-        let models=AppModels(defaults:defaults,makeHistory:{gate in creations += 1;return HistoryModel(enabled:gate,reader:{OperationJournal.readReport(home:root.path)})})
-        let old=models.history;old.load();await old.work.finish()
+        var enabled=true,models:[HistoryModel]=[]
+        let manifest=BuiltinModuleManifests.history
+        let definition=NativeFeatureDefinition(manifest:manifest,makeSession:{availability in
+            HistorySession(availability:availability,services:TestHistoryServices(),makeModel:{gate,_ in
+                let model=HistoryModel(enabled:gate,reader:{OperationJournal.readReport(home:root.path)})
+                models.append(model);return model
+            })
+        })
+        let store=NativeFeatureStore(definitions:[definition],enabled:{_ in enabled}),route=NativeFeatureRoute(manifest.id,"home")
+        _=store.page(route)
+        let old=try XCTUnwrap(models.first);old.load();await old.work.finish()
         XCTAssertEqual(old.records.map(\.id),[first.id])
-        defaults.set(false,forKey:ModulePreferences.key(HistoryModule.manifest.id))
-        if let finish=try HistoryModule.prepareStop(models:models){await finish()}
-        XCTAssertFalse(models.historyLoaded);XCTAssertTrue(old.records.isEmpty)
+        enabled=false
+        if let drain=try store.prepareStop(manifest.id){await drain.finish()}
+        XCTAssertFalse(store.status(manifest.id).modelLoaded);XCTAssertTrue(old.records.isEmpty)
         let second=record();OperationJournal.record(second,home:root.path)
         old.load();XCTAssertEqual(old.work.count,0)
         XCTAssertEqual(Set(OperationJournal.read(home:root.path).map(\.id)),Set([first.id,second.id]))
-        defaults.set(true,forKey:ModulePreferences.key(HistoryModule.manifest.id))
-        let fresh=models.history;XCTAssertFalse(old === fresh);XCTAssertEqual(creations,2)
+        enabled=true;_=store.page(route)
+        let fresh=try XCTUnwrap(models.last);XCTAssertFalse(old === fresh);XCTAssertEqual(models.count,2)
         fresh.load();await fresh.work.finish()
         XCTAssertEqual(Set(fresh.records.map(\.id)),Set([first.id,second.id]))
-        if let finish=try HistoryModule.prepareStop(models:models){await finish()}
-    }
-    func testOffNavigationDoesNotCreateHistoryModel() {
-        let defaults=defaults();var creations=0
-        let models=AppModels(defaults:defaults,makeHistory:{gate in creations += 1;return HistoryModel(enabled:gate,reader:{.init(records:[])})})
-        let center=ModuleCenter(defaults:defaults,prepareBuiltinStop:{_ in try HistoryModule.prepareStop(models:models)})
-        center.setEnabled(HistoryModule.manifest.id,false)
-        XCTAssertFalse(center.shows(.history));XCTAssertFalse(models.historyLoaded);XCTAssertEqual(creations,0)
+        if let drain=try store.prepareStop(manifest.id){await drain.finish()}
     }
 
+    func testOffNavigationDoesNotCreateHistoryModel() {
+        var creations=0
+        let manifest=BuiltinModuleManifests.history
+        let definition=NativeFeatureDefinition(manifest:manifest,makeSession:{availability in
+            creations+=1
+            return HistorySession(availability:availability,services:TestHistoryServices())
+        })
+        let store=NativeFeatureStore(definitions:[definition],enabled:{_ in false})
+        XCTAssertNil(store.page(.init(manifest.id,"home")))
+        store.retireVisibility();XCTAssertNil(store.quitBlocker());XCTAssertFalse(store.status(manifest.id).modelLoaded)
+        XCTAssertEqual(creations,0)
+    }
 }

@@ -1,3 +1,4 @@
+import ModuleKit
 import ThermoUI
 import CleanKit
 import Charts
@@ -421,7 +422,7 @@ struct PopoverView: View {
                 shortcut("stethoscope", tr("AI Agent Diagnostics"), .agents(.home))
                 Button { TabQuickAction.request() } label: { Image(systemName: "archivebox").frame(width: 22) }
                     .buttonStyle(.plain).foregroundStyle(Theme.textSecondary).help(tr("Save and close background tabs"))
-                shortcut("clock.arrow.circlepath", tr("History"), .history)
+                shortcut("clock.arrow.circlepath", tr("History"), .module(BuiltinModuleManifests.history.id,"home"))
                 // An icon like its neighbours: with a text button the English row overflowed the 372 pt panel.
                 shortcut("slider.horizontal.3", tr("Customize menu bar…"), .settings)
                 Button { NSApp.terminate(nil) } label: { Image(systemName: "power").frame(width: 22) }

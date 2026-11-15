@@ -2,7 +2,7 @@ import XCTest
 import Foundation
 import AgentCore
 @testable import CleanKit
-@testable import ThermoApp
+@testable import HistoryFeature
 
 final class HistoryReadTests: XCTestCase {
     final class Reader: @unchecked Sendable {
