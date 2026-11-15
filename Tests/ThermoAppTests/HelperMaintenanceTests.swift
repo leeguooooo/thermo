@@ -59,10 +59,11 @@ final class HelperMaintenanceTests: XCTestCase {
         XCTAssertEqual(AppExitGuard.reply(show: { destinations.append($0) }), .terminateCancel)
         XCTAssertEqual(destinations, [.settings])
         (monitor.administration as! CoreHelperAdministration).performUninstallation(operation: { duplicate.fulfill() })
-        monitor.setPolicy(.auto, fan: 0)
-        monitor.beginSetup()
+        let fan=(monitor.administration as! CoreHelperAdministration).bind(available:{true})
+        fan.request(.auto,fans:[0])
+        monitor.installHelper()
         XCTAssertFalse(monitor.settingUp)
-        XCTAssertTrue(monitor.pendingPolicies.isEmpty)
+        XCTAssertTrue(monitor.administration.latest.pendingPolicies.isEmpty)
         release.signal()
         await fulfillment(of: [finished, duplicate], timeout: 0.3)
         XCTAssertFalse(monitor.uninstallingHelper)
@@ -81,7 +82,7 @@ final class HelperMaintenanceTests: XCTestCase {
         XCTAssertFalse(monitor.helperBusy)
         XCTAssertFalse(monitor.uninstallingHelper)
         XCTAssertTrue(monitor.lastError?.contains("fixture removal failure") == true)
-        XCTAssertFalse(monitor.policiesAvailable)
+        XCTAssertFalse(monitor.administration.latest.policiesAvailable)
         XCTAssertEqual(AppExitGuard.reply(show: { _ in XCTFail("failed removal must release exit guard") }), .terminateNow)
     }
 }
