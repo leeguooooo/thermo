@@ -60,7 +60,7 @@ final class MainOnlyDelegate: NSObject, NSApplicationDelegate {
     }
     func applicationWillTerminate(_ notification: Notification) {
         if deferInstallationMonitor || featureLaunch.isSelecting || selectionIsPresented() { return }
-        MenuBarManager.shared.shutdown()
+        AppModels.shared.nativeFeatures.shutdown(BuiltinModuleManifests.menuBar.id)
         AppModels.shared.nativeFeatures.shutdown(BuiltinModuleManifests.search.id)
         CaptureControlBridge.cancelActive()
         AppModels.shared.nativeFeatures.shutdown(BuiltinModuleManifests.capture.id)

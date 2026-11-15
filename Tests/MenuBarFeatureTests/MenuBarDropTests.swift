@@ -1,6 +1,6 @@
 import XCTest
 import MenuBarCore
-@testable import ThermoApp
+@testable import MenuBarFeature
 
 @MainActor final class MenuBarDropTests: XCTestCase {
     private let apps = [ManagedMenuBarApp(id: "org.example.first", name: "First"), ManagedMenuBarApp(id: "org.example.second", name: "Second")]

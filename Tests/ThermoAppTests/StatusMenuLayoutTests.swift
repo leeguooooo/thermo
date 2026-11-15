@@ -3,7 +3,7 @@ import XCTest
 
 @MainActor final class StatusMenuLayoutTests:XCTestCase {
     private func context(battery:Bool = true,awake:Bool = false,focus:Bool = false,controls:Bool = false,updates:Bool = true,tools:StatusMenuLayout.MoreToolsActiveStates = .init(cleanScreenActive:false,lowLatencyActive:false,batteryProtectionActive:false))->StatusMenuLayout.RuntimeContext {
-        .init(hasBattery:battery,keepAwakeActive:awake,focusTimerActive:focus,menuBarQuickControlsAppear:controls,updatesCanCheck:updates,moreToolsActiveStates:tools)
+        .init(hasBattery:battery,keepAwakeActive:awake,focusTimerActive:focus,retainedQuickControlsAppear:controls,updatesCanCheck:updates,moreToolsActiveStates:tools)
     }
     private func leaves(_ layout:StatusMenuLayout,_ name:String)->[String] {
         layout.productItems.compactMap{if case let .menuGroup(group)=$0,group.title==name{return group.leaves.map(\.identity)};return nil}.first ?? []
@@ -95,7 +95,7 @@ import XCTest
     }
     func testRetainedExtrasPresence() {
         let shown=StatusMenuLayout.make(context:context(controls:true)),hidden=StatusMenuLayout.make(context:context(controls:false,updates:false))
-        XCTAssertEqual(shown.retainedExtras.quickControls.count,2);XCTAssertTrue(hidden.retainedExtras.quickControls.isEmpty)
+        XCTAssertEqual(shown.retainedExtras.quickControls.count,1);XCTAssertTrue(hidden.retainedExtras.quickControls.isEmpty)
         XCTAssertTrue(shown.retainedExtras.footer.checkForUpdates.enabled);XCTAssertFalse(hidden.retainedExtras.footer.checkForUpdates.enabled)
         XCTAssertEqual(shown.retainedExtras.footer.about.title,"About Thermo");XCTAssertEqual(shown.retainedExtras.footer.quit.title,"Quit Thermo")
     }

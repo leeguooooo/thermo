@@ -1,3 +1,4 @@
+import NativeFeatureAPI
 import ModuleKit
 import ThermoUI
 import AppKit
@@ -19,8 +20,7 @@ final class StatusMenu: NSObject, NSMenuDelegate {
 
     func make(battery: Bool) -> NSMenu {
         let nativeEntries=BuiltinNativeFeatures.catalog.menuEntries.filter{$0.hasContent && ModuleCenter.shared.isOn($0.ref.module)}
-        let menuBarManager = MenuBarManager.shared
-        let menuBarQuickControlsAppear = menuBarManager.enabled || menuBarManager.state != .visible
+        let retained=AppModels.shared.nativeFeatures.retainedMenuContent()
         
         let context = StatusMenuLayout.RuntimeContext(
             nativeMenusAppear:!nativeEntries.isEmpty,
@@ -33,7 +33,7 @@ final class StatusMenu: NSObject, NSMenuDelegate {
             hasBattery: battery,
             keepAwakeActive: IdleAwakeModel.shared.state.phase == .active,
             focusTimerActive: FocusTimerModel.shared.phase.isActive,
-            menuBarQuickControlsAppear: menuBarQuickControlsAppear,
+            retainedQuickControlsAppear: !retained.isEmpty,
             updatesCanCheck: AppModels.shared.updates.canCheck,
             moreToolsActiveStates: StatusMenuLayout.MoreToolsActiveStates(
                 cleanScreenActive: CleanScreenModel.shared.active,
@@ -73,8 +73,7 @@ final class StatusMenu: NSObject, NSMenuDelegate {
                 }
                 
             case .manageMenuBar:
-                for control in MenuBarQuickControls.items(model: .shared) { menu.addItem(control) }
-                menu.addItem(item(tr("Manage menu bar…"), "menubar.rectangle") { MenuBarManagerPanel.shared.show() })
+                menu.addItem(item(tr("Manage menu bar…"), "menubar.rectangle") { _=AppModels.shared.nativeFeatures.activate(.init(BuiltinModuleManifests.menuBar.id,"tools")) })
                 
             case .history:
                 menu.addItem(page(tr("History"), "clock.arrow.circlepath", .module(BuiltinModuleManifests.history.id,"home")))
@@ -86,6 +85,7 @@ final class StatusMenu: NSObject, NSMenuDelegate {
         
         menu.addItem(.separator())
         
+        Self.appendRetainedControls(to:menu,layout:layout,contributions:retained)
         let footer = layout.retainedExtras.footer
         let check = item(tr(footer.checkForUpdates.title), "arrow.triangle.2.circlepath") { AppModels.shared.updates.checkForUpdates() }
         check.isEnabled = footer.checkForUpdates.enabled
@@ -100,6 +100,14 @@ final class StatusMenu: NSObject, NSMenuDelegate {
         return menu
     }
     
+    static func appendRetainedControls(to menu:NSMenu,layout:StatusMenuLayout,contributions:[NativeRetainedMenu]) {
+        for slot in layout.retainedExtras.quickControls {
+            switch slot {case .nativeRetained:
+                for contribution in contributions{NativeMenuRendering.append(to:menu,nodes:contribution.content.items(.status),owner:contribution.owner)}
+            }
+        }
+    }
+
     private func materializeGroup(_ group: StatusMenuLayout.MenuGroup) -> NSMenuItem {
         let parent = NSMenuItem(title: tr(group.title), action: nil, keyEquivalent: "")
         if group.hasActiveHint {

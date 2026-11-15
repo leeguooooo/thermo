@@ -23,7 +23,7 @@ struct StatusMenuLayout {
         let hasBattery: Bool
         let keepAwakeActive: Bool
         let focusTimerActive: Bool
-        let menuBarQuickControlsAppear: Bool
+        let retainedQuickControlsAppear: Bool
         let updatesCanCheck: Bool
         let moreToolsActiveStates: MoreToolsActiveStates
     }
@@ -51,8 +51,7 @@ struct StatusMenuLayout {
     }
     
     enum QuickControl {
-        case showHiddenOrCollapse
-        case restoreAllIcons
+        case nativeRetained
     }
     
     enum ProductItem {
@@ -220,9 +219,8 @@ struct StatusMenuLayout {
         
         // Retained extras
         var quickControls: [QuickControl] = []
-        if context.menuBarQuickControlsAppear {
-            quickControls.append(.showHiddenOrCollapse)
-            quickControls.append(.restoreAllIcons)
+        if context.retainedQuickControlsAppear {
+            quickControls.append(.nativeRetained)
         }
         
         let retainedExtras = RetainedExtras(

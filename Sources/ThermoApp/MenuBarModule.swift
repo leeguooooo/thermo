@@ -9,7 +9,7 @@ enum MenuBarModule: BuiltinModule {
     static let manifest = BuiltinModuleManifests.menuBar
     static let legacyMenuEntries: [String: String] = [:]
     @MainActor static var enabled: Bool { ModuleCenter.shared.isOn(manifest.id) }
-    @MainActor static func start() { MenuBarManager.shared.start() }
+    @MainActor static func start() { AppModels.shared.nativeFeatures.start(manifest.id) }
     static func owns(_ page: MainPage) -> Bool { false }
     static func canonicalArgument(_ argument: String) -> String { argument }
     static func target(_ scene: String) -> MainPage? { nil }
@@ -22,20 +22,10 @@ enum MenuBarModule: BuiltinModule {
     @MainActor static func sidebar(section: BuiltinSidebarSection, page: Binding<MainPage>, models: AppModels,
                                   row: @escaping @MainActor (BuiltinSidebarItem) -> AnyView) -> AnyView { AnyView(EmptyView()) }
     @MainActor static func page(_ entry: ModuleManifest.Entry, selection: Binding<MainPage>, models: AppModels) -> AnyView { AnyView(ModuleOffView()) }
-    @MainActor static func settings(_ entry: ModuleManifest.Entry, models: AppModels) -> AnyView {
-        AnyView(HStack(spacing: Theme.Space.m) {
-            Image(systemName: entry.symbol ?? manifest.symbol).frame(width: 22).foregroundStyle(Theme.textSecondary)
-            Text(tr(entry.title)).font(Theme.body)
-            Spacer()
-            Button(tr("Open")) {
-                MenuBarManagerPanel.shared.show()
-            }.buttonStyle(PillButtonStyle()).controlSize(.small)
-        }.padding(.horizontal, Theme.Space.m).padding(.vertical, 8))
-    }
-    @MainActor static func prepareStop(models: AppModels) throws -> BuiltinModules.FinishStop? {
-        try MenuBarManager.shared.stopFeature()
-        MenuBarManagerPanel.closeIfOpen()
-        return nil
+    @MainActor static func settings(_ entry:ModuleManifest.Entry,models:AppModels)->AnyView {models.nativeFeatures.inlineSettings(.init(manifest.id,entry.id)) ?? AnyView(EmptyView())}
+    @MainActor static func prepareStop(models:AppModels)throws->BuiltinModules.FinishStop? {
+        guard let drain=try models.nativeFeatures.prepareStop(manifest.id) else{return nil}
+        return {await drain.finish()}
     }
     @MainActor static func appearance(_ page: MainPage) -> (glow: Bool, tint: Color?) { (false, nil) }
     @MainActor static func prepareReview(_ arguments: [String], page: inout MainPage, models: AppModels) {}

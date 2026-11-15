@@ -1,6 +1,6 @@
 import XCTest
 import MenuBarCore
-@testable import ThermoApp
+@testable import MenuBarFeature
 
 @MainActor final class MenuBarManagerShortcutTests: XCTestCase {
     private func model(accessibilityTrusted: @escaping @MainActor () -> Bool = { true }) throws -> (String, UserDefaults, MenuBarShortcutTests.Backend, MenuBarManager) {

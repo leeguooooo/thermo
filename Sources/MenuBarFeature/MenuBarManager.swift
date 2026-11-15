@@ -7,8 +7,9 @@ import MenuBarCore
 import SwiftUI
 import ThermoL10n
 import ModuleKit
+import NativeFeatureAPI
 
-@MainActor private final class NativeMenuBarSession: MenuBarVisibilitySession {
+@MainActor final class NativeMenuBarSession: MenuBarVisibilitySession {
     private let handle: TMMenuBarSession
     init(configuration: MenuBarConfiguration) throws {
         self.handle = try TMMenuBarSession.make(allowedBundles: configuration.allowedBundles)
@@ -62,7 +63,6 @@ enum MenuBarAppDiscovery {
 }
 
 @MainActor final class MenuBarManager: ObservableObject {
-    static let shared = MenuBarManager(featureEnabled: { ModuleCenter.shared.isOn(BuiltinModuleManifests.menuBar.id) })
     static let enabledKey = "menuBarManagementEnabled"
     static let autoCollapseKey = "menuBarAutoCollapseSeconds"
     @Published private(set) var enabled = false
@@ -79,31 +79,28 @@ enum MenuBarAppDiscovery {
     private let autoCollapse = MenuBarAutoCollapse()
     private let defaults: UserDefaults
     private let featureEnabled: @MainActor () -> Bool
-    private let providedController: MenuBarSessionController?
+    private let recovery:MenuBarRecoveryAuthority
     private let accessibilityTrusted: @MainActor () -> Bool
     private let shortcutBackend: (any CleanScreenHotkeyBackend)?
     private let store: MenuBarSectionStore
     private var observers: [(NotificationCenter, NSObjectProtocol)] = []
     private var permissionTimer: Timer?
     private var scanGeneration: UInt64 = 0
+    private var discoveryTask:Task<Void,Never>?
+    private var refreshPending=false
+    private var retiring=false
+    private let discover:@Sendable ()->[ManagedMenuBarApp]
+    private let capabilityAvailable:@MainActor ()->Bool
     private var panelOpen = false
     private(set) var sleeping = false
     private var terminating = false
-    private(set) lazy var shortcuts = MenuBarShortcuts(defaults: defaults, backend: shortcutBackend, toggle: { [weak self] in
-        guard let self, self.enabled, !self.sleeping, self.hasHiddenAssignments else { return }
-        self.setReveal(self.reveal == .collapsed ? .hidden : .collapsed)
-    }, restore: { [weak self] in self?.restoreAll() })
+    var shortcuts:MenuBarShortcuts {recovery.shortcuts}
     private var known: [String: ManagedMenuBarApp] = [:]
     private let ownBundle: String
-    private lazy var controller: MenuBarSessionController = {
-        let controller = providedController ?? MenuBarSessionController { try NativeMenuBarSession(configuration: $0) }
-        controller.didChange = { [weak self] state in
-            self?.handleVisibilityState(state)
-        }
-        return controller
-    }()
+    private var controller:MenuBarSessionController {recovery.controller}
 
-    var available: Bool { TMMenuBarSession.isAvailable() }
+    var available: Bool { capabilityAvailable() }
+    var discoveryRunning:Bool {discoveryTask != nil}
     var hasHiddenAssignments: Bool { !sections.assignments.isEmpty }
     var featureOn: Bool { featureEnabled() }
     var canEdit: Bool { featureOn && settingsReadable && available }
@@ -111,10 +108,14 @@ enum MenuBarAppDiscovery {
     init(defaults: UserDefaults = .standard, initialApps: [ManagedMenuBarApp] = [],
          accessibilityTrusted: @escaping @MainActor () -> Bool = { AXIsProcessTrusted() },
          shortcutBackend: (any CleanScreenHotkeyBackend)? = nil,
-         featureEnabled: @escaping @MainActor () -> Bool = { true }, controller: MenuBarSessionController? = nil) {
+         featureEnabled: @escaping @MainActor () -> Bool = { true }, controller: MenuBarSessionController? = nil,
+         recovery:MenuBarRecoveryAuthority? = nil,
+         capabilityAvailable:@escaping @MainActor ()->Bool = {TMMenuBarSession.isAvailable()},
+         discover:@escaping @Sendable ()->[ManagedMenuBarApp] = {MenuBarAppDiscovery.snapshot()}) {
+        self.capabilityAvailable=capabilityAvailable;self.discover=discover
         self.defaults = defaults
         self.featureEnabled = featureEnabled
-        self.providedController = controller
+        self.recovery = recovery ?? MenuBarRecoveryAuthority(makeController:{controller ?? MenuBarSessionController {try NativeMenuBarSession(configuration:$0)}},makeShortcuts:{toggle,restore in MenuBarShortcuts(defaults:defaults,backend:shortcutBackend,toggle:toggle,restore:restore)})
         self.accessibilityTrusted = accessibilityTrusted
         self.shortcutBackend = shortcutBackend
         self.store = MenuBarSectionStore(defaults: defaults)
@@ -129,13 +130,16 @@ enum MenuBarAppDiscovery {
             self.error = tr("Saved menu bar sections could not be read. Nothing has been hidden.")
         }
         rebuildApps()
+        self.recovery.bind(self)
+        state=self.recovery.state
     }
 
     /// Normal app startup only. Start fully visible after relaunch so login-time
     /// apps can register before a user explicitly collapses the sections.
     func start() {
         guard featureOn else { return }
-        terminating = false
+        terminating = false;retiring=false
+        guard state == .visible else{updateShortcutEligibility();return}
         if defaults.bool(forKey: Self.enabledKey), settingsReadable, available, accessibilityTrusted() {
             enabled = true; trusted = true; observe()
         }
@@ -147,10 +151,11 @@ enum MenuBarAppDiscovery {
         panelOpen = open
         updateAutoCollapse()
         if open { refresh() }
-        else { scanGeneration &+= 1; loading = false }
+        else { invalidateDiscovery() }
     }
 
     func setEnabled(_ value: Bool) {
+        guard featureOn else{if !value{recovery.restoreAll()};return}
         guard value else {
             autoCollapse.cancel()
             enabled = false; defaults.set(false, forKey: Self.enabledKey)
@@ -158,7 +163,7 @@ enum MenuBarAppDiscovery {
             updateShortcutEligibility()
             return
         }
-        guard canEdit else { return }
+        guard canEdit,state == .visible else { return }
         trusted = accessibilityTrusted()
         guard trusted else {
             _ = AXIsProcessTrustedWithOptions([kAXTrustedCheckOptionPrompt.takeUnretainedValue() as String: true] as CFDictionary)
@@ -207,15 +212,19 @@ enum MenuBarAppDiscovery {
     }
 
     func restoreAll() {
+        guard recovery.isCurrent(self) else{return}
         // Emergency recovery also works with disabled management or lost trust.
         error = settingsReadable ? nil : error
         reveal = .all
         autoCollapse.cancel()
         controller.restore()
-        if panelOpen { refresh() }
+        if featureOn,panelOpen { refresh() }
     }
 
+    func prepareRecovery(){autoCollapse.cancel();reveal = .all}
+
     func setAutoCollapseDelay(_ delay: MenuBarAutoCollapseDelay) {
+        guard featureOn else{return}
         autoCollapseDelay = delay
         defaults.set(delay.rawValue, forKey: Self.autoCollapseKey)
         updateAutoCollapse()
@@ -234,18 +243,20 @@ enum MenuBarAppDiscovery {
     }
 
     private func updateShortcutEligibility() {
-        // An unresolved restoration keeps the recovery shortcut available.
-        shortcuts.setEligible(!terminating && (enabled || state != .visible))
+        guard featureOn,!terminating else{recovery.reconcileKeys();return}
+        _=shortcuts
+        recovery.reconcileKeys()
     }
 
-    func handleVisibilityState(_ state: MenuBarSessionController.State) {
+    func handleVisibilityState(_ state:MenuBarSessionController.State){recovery.receive(state)}
+    func receiveVisibilityState(_ state: MenuBarSessionController.State) {
         let previous = self.state
         self.state = state
         if case let .failed(message) = state {
             autoCollapse.cancel()
             error = message
             enabled = false
-            defaults.set(false, forKey: Self.enabledKey)
+            if featureOn,!terminating{defaults.set(false, forKey: Self.enabledKey)}
             stopObserving()
         } else if previous != state {
             updateAutoCollapse()
@@ -254,7 +265,7 @@ enum MenuBarAppDiscovery {
     }
 
     func resetUnreadableSettings() {
-        guard !settingsReadable else { return }
+        guard featureOn,!settingsReadable else { return }
         if let original = defaults.object(forKey: MenuBarSectionStore.key) {
             defaults.set(original, forKey: "menuBarSections.recovery.\(UUID().uuidString)")
         }
@@ -265,50 +276,53 @@ enum MenuBarAppDiscovery {
     }
 
     func refresh() {
+        guard featureOn,!terminating,!retiring else{return}
         trusted = accessibilityTrusted()
-        guard !loading else { return }
         rebuildApps()
-        guard available, trusted, !sleeping else { return }
-        loading = true
-        scanGeneration &+= 1
-        let generation = scanGeneration
-        DispatchQueue.global(qos: .userInitiated).async { [weak self] in
-            let snapshot = MenuBarAppDiscovery.snapshot()
-            Task { @MainActor [weak self] in
-                guard let self, self.scanGeneration == generation else { return }
-                self.loading = false
-                for app in snapshot { self.known[app.id] = app }
-                self.rebuildApps()
+        guard available,trusted,!sleeping else{return}
+        if discoveryTask != nil{refreshPending=true;return}
+        loading=true;scanGeneration &+= 1
+        let generation=scanGeneration,discover=discover
+        let physical=Task.detached(priority:.userInitiated){discover()}
+        discoveryTask=Task{[weak self] in
+            let snapshot=await physical.value
+            guard let self else{return}
+            self.discoveryTask=nil
+            if self.scanGeneration==generation,self.featureOn,!self.retiring,!self.terminating,!self.sleeping {
+                for app in snapshot{self.known[app.id]=app};self.rebuildApps()
             }
+            self.loading=false
+            let again=self.refreshPending;self.refreshPending=false
+            if again,self.panelOpen,self.featureOn,!self.retiring,!self.terminating,!self.sleeping{self.refresh()}
         }
     }
+    private func invalidateDiscovery(){scanGeneration &+= 1;loading=false;refreshPending=false}
+    func finishDiscovery() async {while let task=discoveryTask{await task.value}}
 
     func isRunning(_ bundle: String) -> Bool { NSRunningApplication.runningApplications(withBundleIdentifier: bundle).contains { !$0.isTerminated } }
     func isAssignable(_ bundle: String) -> Bool { bundle != ownBundle && MenuBarSections.isAssignable(bundle) }
 
     func shutdown() {
-        terminating = true
-        shortcuts.shutdown()
-        autoCollapse.cancel()
-        enabled = false; reveal = .all
-        scanGeneration &+= 1
-        controller.restore(); stopObserving()
+        guard recovery.isCurrent(self) else{return}
+        terminating=true;retiring=true
+        autoCollapse.cancel();enabled=false;reveal = .all
+        invalidateDiscovery();stopObserving();recovery.shutdown()
     }
 
     /// Restore native visibility before retiring shortcuts or persisting the module switch.
     func stopFeature() throws {
         autoCollapse.cancel()
         reveal = .all
-        scanGeneration &+= 1; loading = false
+        invalidateDiscovery()
         controller.restore()
         guard state == .visible else {
-            throw BuiltinModules.StopRefused(description:error ?? tr("Menu bar restoration could not be confirmed. Try Restore all icons before switching this feature off."))
+            throw NativeFeatureBusy(error ?? tr("Menu bar restoration could not be confirmed. Try Restore all icons before switching this feature off."))
         }
         shortcuts.shutdown()
         guard !shortcuts.uncertain else {
-            throw BuiltinModules.StopRefused(description:shortcuts.issue ?? tr("Menu bar shortcut release could not be confirmed. Restart Thermo."))
+            throw NativeFeatureBusy(shortcuts.issue ?? tr("Menu bar shortcut release could not be confirmed. Restart Thermo."))
         }
-        enabled = false; panelOpen = false
+        enabled = false; panelOpen = false;retiring=true
         stopObserving()
     }
 
@@ -368,7 +382,7 @@ enum MenuBarAppDiscovery {
         if name == NSWorkspace.willSleepNotification {
             sleeping = true
             autoCollapse.cancel()
-            scanGeneration &+= 1; loading = false
+            invalidateDiscovery()
             controller.restore()
             return
         }

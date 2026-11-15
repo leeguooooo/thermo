@@ -1,6 +1,6 @@
 import HotkeyCore
 import XCTest
-@testable import ThermoApp
+@testable import MenuBarFeature
 
 @MainActor final class MenuBarShortcutTests: XCTestCase {
     final class Lease: CleanScreenHotkeyLease {
