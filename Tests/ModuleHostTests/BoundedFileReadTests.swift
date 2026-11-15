@@ -7,7 +7,7 @@ final class BoundedFileReadTests:XCTestCase {
     private func directory()throws->URL {
         let root=FileManager.default.temporaryDirectory.appendingPathComponent("thermo-bounded-read-"+UUID().uuidString).resolvingSymlinksInPath()
         try FileManager.default.createDirectory(at:root,withIntermediateDirectories:true)
-        addTeardownBlock{try? FileManager.default.removeItem(at:root)};return root
+        addTeardownBlock{try? FileManager.default.removeItem(at:root)};return URL(fileURLWithPath:CapabilityBroker.resolved(root.path))
     }
     private func request(_ path:String)->BrokerRequest {
         .init(manifest:.init(id:"com.example.read",name:"Fixture",summary:"",symbol:"doc",version:"1.0.0"),kind:.filesRead,operation:"read",targets:[path],payload:[:])
