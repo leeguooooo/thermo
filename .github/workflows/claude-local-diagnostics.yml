@@ -8,6 +8,9 @@ on:
       - 'scripts/verify-native-boundaries.py'
       - 'scripts/verify-performance-boundaries.py'
       - 'scripts/verify-host-boundaries.py'
+      - 'scripts/build-ui-fixtures.py'
+      - 'scripts/verify-*-ui.swift'
+      - 'scripts/verify-shell-ui.py'
       - 'scripts/verify-performance-ui.py'
       - 'scripts/verify-performance-ui.swift'
       - 'scripts/bench-pulse*'
@@ -54,5 +57,10 @@ jobs:
       - name: Compile host contracts and verify feature registrations stay hidden
         run: |
           python3 scripts/verify-host-boundaries.py --jobs 3
+          git diff --exit-code -- Package.swift
+          test -z "$(git ls-files --others --exclude-standard Sources)"
+      - name: Compile native UI fixtures against their actual private targets
+        run: |
+          python3 scripts/build-ui-fixtures.py --jobs 3 --keep-going scripts/verify-*-ui.swift scripts/verify-native-cache-tools.swift
           git diff --exit-code -- Package.swift
           test -z "$(git ls-files --others --exclude-standard Sources)"

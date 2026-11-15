@@ -44,7 +44,7 @@ def main():
                 inputs.append({'source':str(support.relative_to(root)),'SHA256':hashlib.sha256(data).hexdigest()})
             imports=set(re.findall(r'(?m)^\s*(?:@testable\s+)?import\s+(\w+)',source))
             deps=imports & modules;target=prefix+str(index)
-            if deps & {'ThermoShell','ThermoComposition'}:
+            if deps & {'ThermoShell','ThermoComposition'} and '// fixture-entry-installs-composition' not in source:
                 match=re.search(r'(?P<tag>@main)\s*(?:@MainActor\s*)?(?:struct|enum)\s+(\w+)',source)
                 if not match:raise RuntimeError('Expected one entry point: '+str(path))
                 entry=match.group(2);source=source[:match.start('tag')]+source[match.end('tag'):]
