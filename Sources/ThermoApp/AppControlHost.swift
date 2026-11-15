@@ -152,24 +152,24 @@ import ThermoKit
             }
             return result(["enabled":String(updates.enabled),"automaticallyChecks":String(updates.automaticallyChecks),"canCheck":String(updates.canCheck),"outcome":action == "updates.check" ? "interactiveCheckStarted" : "observed", "installationConfirmed":"false"])
         case "helper.install", "helper.uninstall", "helper.status":
-            let monitor = AppModels.shared.monitor
-            guard !monitor.helperBusy else { return result([:], "A helper operation is already running.") }
+            let helper = AppModels.shared.services.helper
+            guard !helper.latest.busy else { return result([:], "A helper operation is already running.") }
             var removalFinished = false
-            if action == "helper.install" { monitor.installHelper() }
-            if action == "helper.uninstall" { monitor.uninstallHelper(finished: { removalFinished = true }) }
+            if action == "helper.install" { helper.install() }
+            if action == "helper.uninstall" { helper.uninstall(finished: { removalFinished = true }) }
             if action != "helper.status" {
-                guard await wait(seconds: 270, until: { !monitor.helperBusy && !monitor.settingUp }) else { return result([:], "Helper result is unconfirmed; inspect helper status before another action.") }
+                guard await wait(seconds: 270, until: { !helper.latest.busy && !helper.latest.settingUp }) else { return result([:], "Helper result is unconfirmed; inspect helper status before another action.") }
             }
             if action == "helper.uninstall" {
                 guard removalFinished else { return result([:], "Helper removal did not execute or its completion is unknown.") }
-                return result(["outcome":monitor.lastError == nil ? "removedWithRecoveryConfirmed" : "failed"], monitor.lastError)
+                return result(["outcome":helper.latest.error == nil ? "removedWithRecoveryConfirmed" : "failed"], helper.latest.error)
             }
             let client = HelperClient(); defer { client.reset() }
             let version = try? await client.version()
             if action == "helper.install", version != HelperConstants.version {
-                return result(["version":version ?? "unknown"], monitor.lastError ?? "Installed helper did not confirm the expected version.")
+                return result(["version":version ?? "unknown"], helper.latest.error ?? "Installed helper did not confirm the expected version.")
             }
-            return result(["state":String(describing:monitor.helperState),"busy":String(monitor.helperBusy),"version":version ?? "unknown"], action == "helper.status" ? nil : monitor.lastError)
+            return result(["state":String(describing:helper.latest.phase),"busy":String(helper.latest.busy),"version":version ?? "unknown"], action == "helper.status" ? nil : helper.latest.error)
         case "permissions.accessibility": screen.openAccessibilitySettings(); return result(["outcome":"settingsOpened","permissionGranted":"unknown"])
         case "permissions.login": LoginItemAccess.shared.openSettings(); return result(["outcome":"settingsOpened","permissionGranted":"unknown"])
         case "permissions.notifications":

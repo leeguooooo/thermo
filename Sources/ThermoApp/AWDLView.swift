@@ -135,7 +135,7 @@ struct AWDLPanel: View {
     @ObservedObject var model: AWDLModel
     @Environment(\.dismiss) private var dismiss
     @State private var seconds=300
-    var configureHelper: () -> Void = { AppModels.shared.monitor.installHelper() }
+    var configureHelper: () -> Void = { AppModels.shared.services.helper.install() }
     var body: some View {
         VStack(alignment:.leading,spacing:14) {
             Label(tr("Network low latency"),systemImage:"network").font(Theme.heading)
