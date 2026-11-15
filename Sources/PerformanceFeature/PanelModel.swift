@@ -187,4 +187,3 @@ final class PanelModel: ObservableObject {
         return Date().timeIntervalSince1970 - Double(boot.tv_sec)
     }
 }
-

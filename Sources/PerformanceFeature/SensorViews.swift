@@ -682,4 +682,3 @@ struct FanLoadIndicator: View {
 }
 
 // MARK: - Settings
-

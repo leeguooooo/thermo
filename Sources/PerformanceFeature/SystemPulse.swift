@@ -317,4 +317,3 @@ private final class LaunchOutcome: @unchecked Sendable {
     func record(_ success: Bool) { lock.lock(); self.success = success; lock.unlock() }
     var succeeded: Bool { lock.lock(); defer { lock.unlock() }; return success }
 }
-
