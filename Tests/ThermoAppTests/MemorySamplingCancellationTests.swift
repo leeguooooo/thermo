@@ -105,7 +105,7 @@ final class MemorySamplingCancellationTests: XCTestCase {
         let began=XCTestExpectation(description:"independent day read held")
         let returned=XCTestExpectation(description:"independent day read returned")
         let release=DispatchSemaphore(value:0)
-        func read()->[PulseRecord]{began.fulfill();release.wait();returned.fulfill();return []}
+        func read()->[PulseRecord]{began.fulfill();release.wait();returned.fulfill();return [.init(t:Date(timeIntervalSince1970:123),load1:1,cores:1,memory:.normal,swapUsedMB:0,swapTotalMB:0,thermal:.nominal,top:[])]}
     }
     @MainActor func testIndependentDayHistoryRemainsBusyUntilItsPhysicalReadReturns() async {
         let reader=DayReader();defer{reader.release.signal()}
@@ -113,10 +113,34 @@ final class MemorySamplingCancellationTests: XCTestCase {
         model.start();await fulfillment(of:[reader.began],timeout:3)
         model.stop()
         // Yield other ready completion callbacks while the day reader is provably still blocked.
-        for _ in 0..<50{await Task.yield();XCTAssertTrue(model.sampleInFlight,"independent history IO is still physically held")}
+        var busy:[Bool]=[];for _ in 0..<50{await Task.yield();busy.append(model.sampleInFlight)}
+        XCTAssertTrue(busy.allSatisfy{$0},"independent history IO is still physically held")
         reader.release.signal();await fulfillment(of:[reader.returned],timeout:3)
         for _ in 0..<200 where model.sampleInFlight{try? await Task.sleep(nanoseconds:10_000_000)}
         XCTAssertFalse(model.sampleInFlight);XCTAssertTrue(model.day.isEmpty,"retired history must not publish")
+    }
+
+    private final class DayReopenReader:@unchecked Sendable {
+        let first=XCTestExpectation(description:"first day read held"),fresh=XCTestExpectation(description:"fresh day read started")
+        let release=DispatchSemaphore(value:0)
+        private let lock=NSLock();private var calls=0
+        var count:Int{lock.lock();defer{lock.unlock()};return calls}
+        func read()->[PulseRecord]{
+            lock.lock();calls+=1;let index=calls;lock.unlock()
+            if index==1{first.fulfill();release.wait()}else{fresh.fulfill()}
+            return [.init(t:Date(),load1:Double(index),cores:1,memory:.normal,swapUsedMB:0,swapTotalMB:0,thermal:.nominal,top:[])]
+        }
+    }
+    @MainActor func testReopenCoalescesBehindOldDayReadThenLoadsFreshHistory() async {
+        let reader=DayReopenReader();defer{reader.release.signal()}
+        let model=MemoryModel(read:{_ in .init(breakdown:nil,inventory:.init(sampled:Date(),programs:[],processCount:0,unreadableCount:0,available:true),history:[])},readHistory:{_ in []},readDay:{reader.read()})
+        defer{model.stop()}
+        model.start();await fulfillment(of:[reader.first],timeout:3)
+        model.stop();model.start();for _ in 0..<10{model.loadDay()}
+        XCTAssertEqual(reader.count,1);XCTAssertTrue(model.sampleInFlight)
+        reader.release.signal();await fulfillment(of:[reader.fresh],timeout:3)
+        for _ in 0..<200 where model.day.first?.load1 != 2{try? await Task.sleep(nanoseconds:10_000_000)}
+        XCTAssertEqual(model.day.first?.load1,2);XCTAssertEqual(reader.count,2)
     }
 
 }
