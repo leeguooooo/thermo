@@ -138,7 +138,7 @@ let package = Package(
         .testTarget(name: "ConnectionsFeatureTests", dependencies: ["ConnectionsFeature", "NativeFeatureAPI", "ModuleKit"]),
         .testTarget(name: "ThermoCLITests", dependencies: ["thermo", "ModuleKit", .product(name: "MCP", package: "swift-sdk")]),
         .testTarget(name: "ThermoAppTests", dependencies: ["SystemServicesAPI", "MenuBarFeature", "CaptureControlAdapter", "CaptureFeature", "SearchFeature", "DocumentPreviewHost", "DocumentPreviewAPI", "HotkeyCore", "DiskFeature", "AgentDiagnosticsFeature", "SpaceFeature", "AppsFeature", "HistoryFeature", "ModuleKernelCore", "LocalAIUI", "NativeFeatureAPI", "ThermoUI", "PreviewCore", "PreviewUI", "ThermoApp", "ModuleKit", "ModuleHost", "ThermoKit", "CleanKit", "AgentCore", "AgentDoctor", "SearchCore", "MenuBarCore", "CloudDriveKit", "DownloadKit", "MediaToolsKit", "VideoKit"]),
-        .testTarget(name: "ThermoKitTests", dependencies: ["ThermoKit", "CSMC"]),
+        .testTarget(name: "ThermoKitTests", dependencies: ["ThermoKit", "CSMC", "CleanKit"]),
         .testTarget(name: "ThermoHelperTests", dependencies: ["ThermoHelper", "ThermoKit"]),
         .testTarget(name: "AgentDoctorTests", dependencies: ["AgentDoctor", "ThermoL10n", "AgentCore"], exclude: ["Fixtures"]),
         .testTarget(name: "CleanKitTests", dependencies: ["CleanKit"]),
