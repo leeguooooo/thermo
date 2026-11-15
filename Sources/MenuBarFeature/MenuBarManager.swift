@@ -101,6 +101,7 @@ enum MenuBarAppDiscovery {
 
     var available: Bool { capabilityAvailable() }
     var discoveryRunning:Bool {discoveryTask != nil}
+    var retainedMenuContent:NativeMenuContent? {recovery.retainedMenu()?.content}
     var hasHiddenAssignments: Bool { !sections.assignments.isEmpty }
     var featureOn: Bool { featureEnabled() }
     var canEdit: Bool { featureOn && settingsReadable && available }

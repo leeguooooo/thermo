@@ -1,3 +1,5 @@
+@testable import MenuBarFeature
+import ThermoUI
 // Isolated, operator-driven macOS 27 visibility acceptance. Compiled by
 // verify-menu-bar.py; never linked into the shipped application.
 import AppKit

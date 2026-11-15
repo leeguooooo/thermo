@@ -1,6 +1,7 @@
 import AppKit
 import HotkeyCore
 import MenuBarCore
+import ModuleKit
 import NativeFeatureAPI
 import SwiftUI
 import ThermoL10n

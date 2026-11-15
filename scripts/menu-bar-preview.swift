@@ -1,5 +1,8 @@
 // Compiled only by verify-menu-bar.py, using the actual manager and panel sources.
 // The delegate substitutes only Thermo's unrelated application lifecycle.
+@testable import MenuBarFeature
+import NativeFeatureAPI
+import HotkeyCore
 import AppKit
 import ApplicationServices
 import CMenuBar
@@ -7,6 +10,8 @@ import MenuBarCore
 import ThermoL10n
 
 @MainActor final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
+    private var manager:MenuBarManager?
+    private var managementPanel:MenuBarManagerPanel?
     private var item: NSStatusItem?
     private var session: TMMenuBarSession?
     private var checks: [String: Any] = [:]
@@ -118,12 +123,16 @@ import ThermoL10n
                 NSApp.terminate(nil)
             }
     }
-    @objc private func openManager() { MenuBarManagerPanel.shared.show() }
+    @objc private func openManager() {
+        if manager==nil{manager=MenuBarManager()}
+        if managementPanel==nil,let manager{managementPanel=MenuBarManagerPanel(model:manager)}
+        managementPanel?.show()
+    }
     func menuNeedsUpdate(_ menu: NSMenu) {
         // Keep the first Manage entry and the Quit separator/entry. Rebuild the
         // same controls shipped in Thermo whenever this preview menu opens.
         while menu.items.count > 3 { menu.removeItem(at: 1) }
-        for control in MenuBarQuickControls.items(model: .shared).reversed() {
+        for control in (manager.map{MenuBarPreviewControls.items(model:$0)} ?? []).reversed() {
             menu.insertItem(control, at: 1)
         }
     }
@@ -143,7 +152,7 @@ import ThermoL10n
             dragModel.shutdown()
         }
         if !menuBarFixtureMode {
-            MenuBarManager.shared.shutdown()
+            manager?.shutdown()
         }
         try? session?.invalidate()
     }
@@ -432,7 +441,7 @@ if CommandLine.arguments.contains("--check-quick-controls") {
         defer { defaults.removePersistentDomain(forName: suite) }
         let model = MenuBarManager(defaults: defaults)
         defer { model.shutdown() }
-        guard MenuBarQuickControls.items(model: model).isEmpty else { return false }
+        guard MenuBarPreviewControls.items(model: model).isEmpty else { return false }
         let absent = "org.example.menubar-absent." + UUID().uuidString
         model.assign(absent, to: .hidden)
         let original = defaults.data(forKey: MenuBarSectionStore.key)
@@ -441,7 +450,7 @@ if CommandLine.arguments.contains("--check-quick-controls") {
         guard model.enabled else { return false }
         @MainActor func invoke(_ index: Int) -> Bool {
             let menu = NSMenu(); menu.autoenablesItems = false
-            for entry in MenuBarQuickControls.items(model: model) { menu.addItem(entry) }
+            for entry in MenuBarPreviewControls.items(model: model) { menu.addItem(entry) }
             guard menu.items.indices.contains(index) else { return false }
             menu.performActionForItem(at: index)
             return true
@@ -452,7 +461,7 @@ if CommandLine.arguments.contains("--check-quick-controls") {
               model.enabled, model.state == .visible,
               defaults.data(forKey: MenuBarSectionStore.key) == original else { return false }
         model.setEnabled(false)
-        return MenuBarQuickControls.items(model: model).isEmpty
+        return MenuBarPreviewControls.items(model: model).isEmpty
     }
     print("{\"quickControlsPassed\":\(passed),\"nativeVisibilityAsserted\":false}")
     exit(passed ? 0 : 1)
@@ -469,3 +478,19 @@ application.setActivationPolicy(CommandLine.arguments.contains("--self-test") ||
 let delegate = MainActor.assumeIsolated { AppDelegate() }
 application.delegate = delegate
 withExtendedLifetime(delegate) { application.run() }
+
+// QA-only AppKit adapter; all labels/admission/actions come from the private production projection.
+@MainActor private enum MenuBarPreviewControls {
+    static func items(model:MenuBarManager)->[NSMenuItem] {
+        (model.retainedMenuContent?.items(.status) ?? []).compactMap{node in
+            guard case let .action(action)=node else{return nil}
+            return Command(action)
+        }
+    }
+    private final class Command:NSMenuItem {
+        private let command:NativeMenuAction
+        init(_ command:NativeMenuAction){self.command=command;super.init(title:command.title,action:#selector(fire),keyEquivalent:"");target=self;isEnabled=command.enabled}
+        required init(coder:NSCoder){fatalError("not used")}
+        @objc private func fire(){command.perform()}
+    }
+}
