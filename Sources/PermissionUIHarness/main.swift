@@ -34,7 +34,7 @@ import ThermoL10n
                     guard let record=OperationJournal.readReport(limit:50).records.first(where:{$0.subject==id && $0.items.contains(where:{$0.target==file.path})}),
                           let batch=record.undo?.ref else{throw NSError(domain:"permission-qa",code:1,userInfo:[NSLocalizedDescriptionKey:"No owned undo batch recorded"])}
                     let review=try TrashBatches.restore(id:batch,dryRun:true)
-                    guard review.items.allSatisfy({$0.original==file.path}),let identity=review.reviewIdentity else{throw NSError(domain:"permission-qa",code:2,userInfo:[NSLocalizedDescriptionKey:"Unexpected undo scope"])}
+                    guard review.items.count==1,review.items.allSatisfy({$0.original==file.path}),let identity=review.reviewIdentity else{throw NSError(domain:"permission-qa",code:2,userInfo:[NSLocalizedDescriptionKey:"Unexpected undo scope"])}
                     let restored=try TrashBatches.restore(id:batch,reviewIdentity:identity,reviewedDestinations:Set(review.items.filter{$0.status=="restored"}.map(\.destination)))
                     checks[scenario] = ["outcome":"allowed","deletedLog":summary.deleted.contains(file.path),"journalBatch":batch,"restored":restored.items.allSatisfy{$0.status=="restored"},"originalBytesMatch":(try? Data(contentsOf:file))==content]
                 }
@@ -49,8 +49,10 @@ import ThermoL10n
         NSApp.terminate(nil)
     }
 }
-let app=NSApplication.shared
-let delegate=PermissionQA()
-app.delegate=delegate
-app.setActivationPolicy(.regular)
-app.run()
+MainActor.assumeIsolated {
+    let app=NSApplication.shared
+    let delegate=PermissionQA()
+    app.delegate=delegate
+    app.setActivationPolicy(.regular)
+    withExtendedLifetime(delegate){app.run()}
+}
