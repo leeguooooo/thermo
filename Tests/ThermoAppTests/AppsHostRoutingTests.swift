@@ -40,7 +40,7 @@ import NativeFeatureAPI
         XCTAssertNotEqual(MainWindow.state.page.module,BuiltinModuleManifests.apps.id)
         models.nativeFeatures.retireVisibility();models.nativeFeatures.invalidateAfterRestore(["/fixture"])
         var pages:[MainPage]=[]
-        HistoryHostServices.perform(.nativeRecovery,models:models,open:{pages.append($0)})
+        HistoryHostServices.perform(.nativeRecovery,environment:.referencing(models.nativeFeatures),open:{pages.append(.native($0))})
         XCTAssertEqual(pages,[.native(.init(BuiltinModuleManifests.apps.id,"updates"))])
         XCTAssertNil(models.nativeFeatures.quitBlocker());XCTAssertFalse(models.nativeFeatures.status(BuiltinModuleManifests.apps.id).modelLoaded)
         XCTAssertEqual(creations,0)

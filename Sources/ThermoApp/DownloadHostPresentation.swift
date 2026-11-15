@@ -2,6 +2,8 @@ import DownloadFeature
 import ModuleKit
 
 @MainActor final class DownloadHostPresentation: DownloadPresentation {
-    var mainWindowActive:Bool {MainWindow.window?.isKeyWindow == true}
-    func showDownloadPage() {MainWindow.show(.native(.init(BuiltinModuleManifests.download.id,"home")))}
+    private let environment:ShellFeatureEnvironment
+    init(environment:ShellFeatureEnvironment = .current){self.environment=environment}
+    var mainWindowActive:Bool {environment.mainWindowActive}
+    func showDownloadPage() {_=environment.open(.init(route:.init(BuiltinModuleManifests.download.id,"home")))}
 }

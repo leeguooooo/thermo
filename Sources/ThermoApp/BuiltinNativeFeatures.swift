@@ -21,15 +21,16 @@ import AppKit
 enum BuiltinNativeFeatures {
     static let menuBar=MenuBarFeature.registration(closeHostMenuPanel:{(NSApp.delegate as? AppDelegate)?.closeMenuPanel()})
     static let capture=CaptureFeature.registration()
-    static let search=SearchFeature.registration(preview:{SearchPreviewServices.service})
-    static var registrations:[NativeFeatureDefinition] {
-        registrations(performance:PerformanceFeature.registration(telemetry:{AppModels.shared.services.telemetry},
-            administration:{AppModels.shared.services.helper},fanFactory:{AppModels.shared.services.helper},
-            defaults:{AppModels.shared.preferences},actionsAllowed:{!AppLaunchMode.suppressesAutomaticControl(arguments:CommandLine.arguments)},showSettings:{MainWindow.show(.settings)}),
-            reading:{AppModels.shared.services.telemetry.latest.snapshot})
-    }
-    static func registrations(performance:NativeFeatureDefinition,reading:@escaping @MainActor @Sendable ()->Snapshot?)->[NativeFeatureDefinition] {
-        [DiskFeature.registration(services:{DiskHostServices()}),search.definition,capture.definition,menuBar,performance,AgentDiagnosticsFeature.registration,SpaceFeature.registration(services:{SpaceHostServices()}),AppsFeature.registration,BrowserFeature.registration,DownloadFeature.registration(presentation:{DownloadHostPresentation()}),HistoryFeature.registration(services:{HistoryHostServices()}),ConnectionsFeature.registration(),ClaudeFeature.registration(),CheckupFeature.registration(reading:reading,navigate:{route in MainWindow.show(.module(route.module,route.entry))}),PluginsFeature.registration(navigate:{route in MainWindow.show(.module(route.module,route.entry))})]
+    static let search=SearchFeature.registration(preview:{SearchPreviewServices.service(worker:SearchFeature.previewWorkerID)})
+    static var registrations:[NativeFeatureDefinition] {registrations(environment:{.current})}
+    static func registrations(environment:@escaping @MainActor @Sendable ()->ShellFeatureEnvironment)->[NativeFeatureDefinition] {
+        let performance=PerformanceFeature.registration(telemetry:{environment().telemetry},administration:{environment().administration},
+            fanFactory:{environment().fanFactory},defaults:{environment().defaults},actionsAllowed:{environment().actionsAllowed},showSettings:{environment().showSettings()})
+        return [DiskFeature.registration(services:{DiskHostServices(environment:environment())}),search.definition,capture.definition,menuBar,performance,
+            AgentDiagnosticsFeature.registration,SpaceFeature.registration(services:{SpaceHostServices(environment:environment())}),AppsFeature.registration,BrowserFeature.registration,
+            DownloadFeature.registration(presentation:{DownloadHostPresentation(environment:environment())}),HistoryFeature.registration(services:{HistoryHostServices(environment:environment())}),
+            ConnectionsFeature.registration(),ClaudeFeature.registration(),CheckupFeature.registration(reading:{environment().telemetry.latest.snapshot},navigate:{route in _=environment().open(.init(route:route))}),
+            PluginsFeature.registration(navigate:{route in _=environment().open(.init(route:route))})]
     }
     static let catalog=try! NativeFeatureCatalog(definitions:registrations)
 }

@@ -1,4 +1,3 @@
-import AppKit
 import CleanKit
 import HistoryFeature
 import NativeFeatureAPI
@@ -7,21 +6,21 @@ import ThermoL10n
 
 /// Assembly adapter: history presentation never owns global quit protection or other features.
 @MainActor final class HistoryHostServices: HistoryServices {
+    private let environment:ShellFeatureEnvironment
     nonisolated private let reader: @Sendable () -> OperationJournal.ReadReport
     nonisolated private let reviewer: @Sendable (String) throws -> TrashRestore
     nonisolated private let restore: @Sendable (String, TrashRestore) throws -> TrashRestore
     private let invalidate: @MainActor ([String]) -> Void
     var journalURL: URL { OperationJournal.url() }
 
-    init(reader: @escaping @Sendable () -> OperationJournal.ReadReport = { OperationJournal.readReport(limit: 300) },
+    init(environment:ShellFeatureEnvironment = .current,reader: @escaping @Sendable () -> OperationJournal.ReadReport = { OperationJournal.readReport(limit: 300) },
          reviewer: @escaping @Sendable (String) throws -> TrashRestore = { try TrashBatches.restore(id: $0, dryRun: true) },
          restore: @escaping @Sendable (String, TrashRestore) throws -> TrashRestore = { id, review in
              try TrashBatches.restore(id: id, reviewIdentity: review.reviewIdentity,
                  reviewedDestinations: Set(review.items.filter { $0.status == "restored" }.map(\.destination)))
-         }, invalidate: @escaping @MainActor ([String]) -> Void = {
-             AppModels.shared.nativeFeatures.invalidateAfterRestore($0)
-         }) {
-        self.reader = reader; self.reviewer = reviewer; self.restore = restore; self.invalidate = invalidate
+         }, invalidate: (@MainActor ([String]) -> Void)? = nil) {
+        self.environment=environment;self.reader=reader;self.reviewer=reviewer;self.restore=restore
+        self.invalidate=invalidate ?? {environment.nativeFeatures?.invalidateAfterRestore($0)}
     }
     nonisolated func read() -> OperationJournal.ReadReport { reader() }
     nonisolated func reviewRestore(batch: String) throws -> TrashRestore { try reviewer(batch) }
@@ -32,7 +31,7 @@ import ThermoL10n
                           userInfo: [NSLocalizedDescriptionKey: tr("Restore review is unavailable; review the batch again.")])
         }
         let restore = restore
-        return HostHistoryRestoration(restore: { try restore(batch, review) }, invalidate: invalidate)
+        return HostHistoryRestoration(protection:environment.protectRestore(),restore:{try restore(batch,review)},invalidate:invalidate)
     }
 
     enum Destination: Equatable {
@@ -60,39 +59,37 @@ import ThermoL10n
         case .reveal: title = tr("Reveal in Finder"); symbol = "folder"
         default: title = tr("Open"); symbol = nil
         }
-        return .init(title: title, symbol: symbol, perform: { Self.perform(destination) })
+        return .init(title:title,symbol:symbol,perform:{[environment] in Self.perform(destination,environment:environment)})
     }
-    static func perform(_ destination: Destination, models: AppModels = .shared,
-                        open: @MainActor (MainPage) -> Void = { MainWindow.show($0) }) {
+    static func perform(_ destination:Destination,environment:ShellFeatureEnvironment = .current,
+                        open:((NativeFeatureRoute)->Void)? = nil) {
+        let request:NativePresentationRequest
         switch destination {
-        case .nativeRecovery:
-            let request=NativePresentationRequest(route:.init(BuiltinModuleManifests.apps.id,"updates"),options:["channel":.text("native"),"showRecovery":.boolean(true)])
-            if models.nativeFeatures.canPresent(request.route),!models.nativeFeatures.preparePresentation(request){return}
-            open(.native(request.route))
-        case .appUpdates: open(.native(.init(BuiltinModuleManifests.apps.id,"updates")))
-        case .startup: open(.native(.init(BuiltinModuleManifests.apps.id,"startup")))
-        case .claudeReset: open(.native(.init(BuiltinModuleManifests.claude.id,"reset")))
-        case .privacy: open(.native(.init(BuiltinModuleManifests.claude.id,"privacy")))
-        case .searchSettings: SearchHost.show(settings: true)
-        case .tabs: open(.browser("Google Chrome"))
-        case .trash: NSWorkspace.shared.open(FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent(".Trash"))
-        case .reveal(let path): NSWorkspace.shared.activateFileViewerSelecting([URL(fileURLWithPath: path)])
+        case .nativeRecovery:request = .init(route:.init(BuiltinModuleManifests.apps.id,"updates"),options:["channel":.text("native"),"showRecovery":.boolean(true)])
+        case .appUpdates:request = .init(route:.init(BuiltinModuleManifests.apps.id,"updates"))
+        case .startup:request = .init(route:.init(BuiltinModuleManifests.apps.id,"startup"))
+        case .claudeReset:request = .init(route:.init(BuiltinModuleManifests.claude.id,"reset"))
+        case .privacy:request = .init(route:.init(BuiltinModuleManifests.claude.id,"privacy"))
+        case .tabs:request = .init(route:.init(BuiltinModuleManifests.browser.id,"home",context:["app":.text("Google Chrome")]))
+        case .searchSettings:environment.showSearchSettings();return
+        case .trash:environment.openTrash();return
+        case let .reveal(path):environment.reveal(path);return
         }
+        guard let store=environment.nativeFeatures,let checked=try? store.catalog.normalizePresentation(request) else{return}
+        if store.canPresent(checked.route),!store.preparePresentation(checked){return}
+        if let open{open(checked.route)}else{_=environment.select(checked.route)}
     }
 }
 
 @MainActor private final class HostHistoryRestoration: HistoryRestoration {
     private enum Phase { case pending, running, finished }
     private var phase = Phase.pending
-    private var token: UUID?
+    private var protection:(any ShellQuitProtection)?
     private let restore: @Sendable () throws -> TrashRestore
     private let invalidate: @MainActor ([String]) -> Void
-    init(restore: @escaping @Sendable () throws -> TrashRestore, invalidate: @escaping @MainActor ([String]) -> Void) {
+    init(protection:any ShellQuitProtection,restore:@escaping @Sendable () throws->TrashRestore,invalidate:@escaping @MainActor ([String])->Void) {
         self.restore = restore; self.invalidate = invalidate
-        token = AppExitGuard.beginRestore()
-    }
-    deinit {
-        if let token { Task { @MainActor in AppExitGuard.endRestore(token) } }
+        self.protection=protection
     }
     func cancelBeforeStart() {
         guard phase == .pending else { return }
@@ -110,6 +107,6 @@ import ThermoL10n
     }
     private func finish() {
         phase = .finished
-        if let token { AppExitGuard.endRestore(token); self.token = nil }
+        protection?.finish();protection=nil
     }
 }

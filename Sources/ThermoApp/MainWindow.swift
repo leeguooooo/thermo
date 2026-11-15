@@ -123,6 +123,14 @@ enum MainWindow {
               AppModels.shared.nativeFeatures.preparePresentation(canonical) else{return false}
         show(.native(canonical.route));return true
     }
+    /// A trusted follow-up may select an off page, but cannot instantiate or prepare its feature.
+    @discardableResult static func showRegistered(_ request:NativePresentationRequest)->Bool {
+        guard let canonical=try? BuiltinNativeFeatures.catalog.normalizePresentation(request),
+              NSApp.modalWindow==nil,window?.attachedSheet==nil else{return false}
+        let store=AppModels.shared.nativeFeatures
+        if store.canPresent(canonical.route),!store.preparePresentation(canonical){return false}
+        show(.native(canonical.route));return true
+    }
     static func show(_ page: MainPage? = nil) {
         if case .native?=page,page?.nativeRoute == nil{return}
         if let normalized=page?.nativeRoute {showCanonical(.native(normalized));return}

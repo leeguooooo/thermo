@@ -5,16 +5,19 @@ import Foundation
 
 /// Application policy and cross-feature presentation stay in the assembly adapter.
 @MainActor final class DiskHostServices:DiskServices {
-    func requestScanNotifications(){SystemPresentation.requestNotificationPermission()}
-    func revealInSpace(_ path:String)->Bool {Self.reveal(path)}
-    static func reveal(_ path:String,models:AppModels = .shared,open:@MainActor (MainPage)->Void = {MainWindow.show($0)})->Bool {
-        guard let page=spaceDestination(path,models:models) else{return false}
-        open(page);return true
+    private let environment:ShellFeatureEnvironment
+    init(environment:ShellFeatureEnvironment = .current){self.environment=environment}
+    func requestScanNotifications(){environment.requestScanNotifications()}
+    func revealInSpace(_ path:String)->Bool {Self.reveal(path,environment:environment)}
+    static func reveal(_ path:String,environment:ShellFeatureEnvironment = .current,open:((NativeFeatureRoute)->Void)? = nil)->Bool {
+        guard let route=spaceDestination(path,environment:environment) else{return false}
+        if let open{open(route);return true}
+        return environment.select(route)
     }
-    static func spaceDestination(_ path:String,models:AppModels = .shared)->MainPage? {
-        guard let request=try? models.nativeFeatures.catalog.normalizePresentation(.init(route:.init(BuiltinModuleManifests.space.id,"browse"),options:["path":.text(path)])) else{return nil}
-        if models.nativeFeatures.canPresent(request.route),!models.nativeFeatures.preparePresentation(request){return nil}
-        return .native(request.route)
+    static func spaceDestination(_ path:String,environment:ShellFeatureEnvironment = .current)->NativeFeatureRoute? {
+        guard let store=environment.nativeFeatures,
+              let request=try? store.catalog.normalizePresentation(.init(route:.init(BuiltinModuleManifests.space.id,"browse"),options:["path":.text(path)])) else{return nil}
+        if store.canPresent(request.route),!store.preparePresentation(request){return nil}
+        return request.route
     }
-
 }

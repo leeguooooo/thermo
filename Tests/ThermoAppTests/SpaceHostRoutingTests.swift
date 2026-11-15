@@ -40,7 +40,7 @@ import SpaceFeature
         MainWindow.state.page = .native(.init(BuiltinModuleManifests.space.id,"large"));center.setEnabled(BuiltinModuleManifests.space.id,false)
         for entry in BuiltinModuleManifests.space.entries {XCTAssertFalse(center.shows(.native(.init(BuiltinModuleManifests.space.id,entry.id))))}
         XCTAssertTrue(center.shows(MainPage(argument:"disk:overview")!))
-        XCTAssertEqual(DiskHostServices.spaceDestination("/fixture",models:models),.native(.init(BuiltinModuleManifests.space.id,"browse")))
+        XCTAssertEqual(DiskHostServices.spaceDestination("/fixture",environment:.referencing(models.nativeFeatures)),.init(BuiltinModuleManifests.space.id,"browse"))
         models.nativeFeatures.retireVisibility();models.nativeFeatures.invalidateAfterRestore(["/fixture"])
         XCTAssertFalse(models.nativeFeatures.status(BuiltinModuleManifests.space.id).modelLoaded);XCTAssertEqual(made,0);XCTAssertEqual(invalidated,1)
     }
@@ -51,8 +51,8 @@ import SpaceFeature
         let session=Session(),schema=SpaceFeature.registration(services:{SpaceHostServices()})
         let definition=NativeFeatureDefinition(manifest:schema.manifest,pageContracts:schema.pageContracts,makeSession:{_ in session})
         let models=AppModels(defaults:defaults,nativeDefinitions:[definition])
-        let target=DiskHostServices.spaceDestination("/fixture/folder",models:models)
-        XCTAssertEqual(target,.native(.init(BuiltinModuleManifests.space.id,"browse")))
+        let target=DiskHostServices.spaceDestination("/fixture/folder",environment:.referencing(models.nativeFeatures))
+        XCTAssertEqual(target,.init(BuiltinModuleManifests.space.id,"browse"))
         XCTAssertEqual(session.requests.first?.options,["path":.text("/fixture/folder")])
         XCTAssertTrue(models.nativeFeatures.snapshotReady(.init(BuiltinModuleManifests.space.id,"browse"),arguments:["--page","module:"+BuiltinModuleManifests.space.id+":browse"],started:Date()))
     }
@@ -71,9 +71,9 @@ import SpaceFeature
         let definition=NativeFeatureDefinition(manifest:schema.manifest,pageContracts:schema.pageContracts,makeSession:{_ in session})
         let models=AppModels(defaults:defaults,nativeDefinitions:[definition]),path="/fixture/folder\nwith-newline"
         var shown:[MainPage]=[]
-        XCTAssertTrue(DiskHostServices.reveal(path,models:models,open:{page in
+        XCTAssertTrue(DiskHostServices.reveal(path,environment:.referencing(models.nativeFeatures),open:{page in
             XCTAssertEqual(session.requests.last?.options,["path":.text(path)],"Path preparation must finish before navigation")
-            shown.append(page)
+            shown.append(.native(page))
         }))
         XCTAssertEqual(shown,[.native(.init(BuiltinModuleManifests.space.id,"browse"))])
     }
@@ -85,10 +85,10 @@ import SpaceFeature
         let schema=SpaceFeature.registration(services:{SpaceHostServices()})
         let definition=NativeFeatureDefinition(manifest:schema.manifest,pageContracts:schema.pageContracts,makeSession:{_ in made+=1;return Session()})
         let models=AppModels(defaults:defaults,nativeDefinitions:[definition])
-        XCTAssertTrue(DiskHostServices.reveal("/fixture",models:models,open:{shown.append($0)}))
+        XCTAssertTrue(DiskHostServices.reveal("/fixture",environment:.referencing(models.nativeFeatures),open:{shown.append(.native($0))}))
         XCTAssertEqual(shown,[.native(.init(BuiltinModuleManifests.space.id,"browse"))]);XCTAssertEqual(made,0)
-        XCTAssertFalse(DiskHostServices.reveal("relative/path",models:models,open:{_ in XCTFail("Invalid path navigated")}))
-        XCTAssertFalse(DiskHostServices.reveal("/fixture/\0bad",models:models,open:{_ in XCTFail("Invalid path navigated")}))
+        XCTAssertFalse(DiskHostServices.reveal("relative/path",environment:.referencing(models.nativeFeatures),open:{_ in XCTFail("Invalid path navigated")}))
+        XCTAssertFalse(DiskHostServices.reveal("/fixture/\0bad",environment:.referencing(models.nativeFeatures),open:{_ in XCTFail("Invalid path navigated")}))
         XCTAssertEqual(made,0)
     }
 

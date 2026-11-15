@@ -94,10 +94,10 @@ import XCTest
         let definition=NativeFeatureDefinition(manifest:BuiltinModuleManifests.apps,pageContracts:AppsFeature.registration.pageContracts,makeSession:{AppsFeatureSession(availability:$0,makeModels:{group})})
         let models=AppModels(defaults:defaults,nativeDefinitions:[definition])
         var pages:[MainPage]=[]
-        HistoryHostServices.perform(.nativeRecovery,models:models,open:{
+        HistoryHostServices.perform(.nativeRecovery,environment:.referencing(models.nativeFeatures),open:{
             XCTAssertTrue(group.native.showRecovery)
             XCTAssertEqual(group.updates.channel,"native")
-            pages.append($0)
+            pages.append(.native($0))
         })
         XCTAssertEqual(pages,[.native(.init(BuiltinModuleManifests.apps.id,"updates"))])
     }

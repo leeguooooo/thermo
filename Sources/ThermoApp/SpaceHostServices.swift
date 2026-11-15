@@ -2,13 +2,14 @@ import Foundation
 import SpaceFeature
 
 @MainActor final class SpaceHostServices:SpaceServices {
+    private let environment:ShellFeatureEnvironment
+    init(environment:ShellFeatureEnvironment = .current){self.environment=environment}
     func protectRemoval(onQuit:@escaping @MainActor ()->Void)->any SpaceRemovalLease {
-        HostSpaceRemovalLease(onQuit:onQuit)
+        HostSpaceRemovalLease(environment.protectRemoval(onQuit:onQuit))
     }
 }
 @MainActor private final class HostSpaceRemovalLease:SpaceRemovalLease {
-    private var token:UUID?
-    init(onQuit:@escaping @MainActor ()->Void){token=AppExitGuard.beginManualRemoval(onQuit:onQuit)}
-    func finish(){if let token {self.token=nil;AppExitGuard.endManualRemoval(token)}}
-    deinit {if let token {Task{@MainActor in AppExitGuard.endManualRemoval(token)}}}
+    private let protection:any ShellQuitProtection
+    init(_ protection:any ShellQuitProtection){self.protection=protection}
+    func finish(){protection.finish()}
 }
