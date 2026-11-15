@@ -593,8 +593,6 @@ struct TemperatureChart: View {
 
 // MARK: - Sensors
 
-/// Set by `--render-preview`: ImageRenderer cannot draw AppKit-backed scroll views.
-var renderingPreview = false
 
 struct SensorsView: View {
     @ObservedObject var monitor: Monitor
