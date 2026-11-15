@@ -55,7 +55,7 @@ final class ProcessExplanationModelTests: XCTestCase {
         let done=expectation(description:"skipped worker read reaches terminal state")
         let model=ProcessExplanationModel(reader:{_ in XCTFail("worker admission denied");throw NSError(domain:"fixture",code:1)},workerAllowed:{false})
         model.load(.init(pid:10,uid:501,started:Date(),executable:"/fixture/A"))
-        let observation=model.$loading.dropFirst().filter{!$0}.sink{_ in done.fulfill()}
+        let observation=model.$loading.dropFirst().first(where:{!$0}).sink{_ in done.fulfill()}
         await fulfillment(of:[done],timeout:2)
         XCTAssertFalse(model.loading || model.sampleInFlight);XCTAssertNil(model.report)
         await model.finishStopping();withExtendedLifetime(observation){}
