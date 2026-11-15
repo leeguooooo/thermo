@@ -10,7 +10,9 @@ import XCTest
         XCTAssertTrue(BuiltinModules.problems.isEmpty, BuiltinModules.problems.joined(separator: "\n"))
         XCTAssertTrue(ModuleNavigation.conflicts(BuiltinModules.all).isEmpty)
         for (name, page) in [("overview",MainPage.overview),("sensors",.sensors),("fans",.fans),("memory",.memory),("cpu",.compute(false)),("gpu",.compute(true))] {
-            XCTAssertEqual(MainPage(argument:name),page)
+            let canonical=MainPage.native(.init(BuiltinModuleManifests.performance.id,name))
+            XCTAssertEqual(MainPage(argument:name),canonical)
+            XCTAssertEqual(MainPage(argument:name)?.nativeRoute,page.nativeRoute)
             XCTAssertEqual(page.module,PerformanceModule.manifest.id)
             XCTAssertEqual(BuiltinModules.page(page)?.target,page)
             let generic=MainPage(argument:"module:"+PerformanceModule.manifest.id+":"+name)

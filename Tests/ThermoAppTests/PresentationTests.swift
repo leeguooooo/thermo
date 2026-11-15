@@ -106,7 +106,7 @@ final class PresentationTests: XCTestCase {
     func testEmptyPageArgumentDoesNotCrash() {
         XCTAssertNil(MainPage(argument: ""))
         XCTAssertNil(MainPage(argument: ":"))
-        XCTAssertEqual(MainPage(argument: "sensors"), .sensors)
+        XCTAssertEqual(MainPage(argument: "sensors"), .native(.init(BuiltinModuleManifests.performance.id,"sensors")))
         XCTAssertEqual(MainPage(argument: "disk:overview"), .native(.init(BuiltinModules.disk.id, "overview")))
     }
 
