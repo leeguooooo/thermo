@@ -2,6 +2,7 @@ import copy
 import importlib.util
 from pathlib import Path
 import unittest
+import tempfile
 
 spec = importlib.util.spec_from_file_location("native_boundaries", Path(__file__).resolve().parents[1] / "verify-native-boundaries.py")
 check = importlib.util.module_from_spec(spec)
@@ -43,6 +44,19 @@ class NativeBoundariesTests(unittest.TestCase):
     def test_kernel_cannot_import_features_in_the_final_graph(self):
         self.package["targets"][5]["dependencies"].append({"byName": ["ConnectionsFeature", None]})
         self.assertIn("ThermoKernel reaches feature implementation ConnectionsFeature", check.problems(self.package, complete=True))
+
+    def test_undeclared_import_is_rejected_even_when_compiler_search_path_contains_it(self):
+        self.package["targets"].append(target("HiddenFeature"))
+        with tempfile.TemporaryDirectory() as temporary:
+            source = Path(temporary) / "Sources/ConnectionsFeature"
+            source.mkdir(parents=True)
+            (source / "Feature.swift").write_text("@preconcurrency import HiddenFeature\n")
+            errors = check.problems(self.package, source_root=temporary)
+            self.assertTrue(any("ConnectionsFeature imports undeclared target HiddenFeature" in error for error in errors))
+
+    def test_embedded_swift_templates_do_not_create_import_dependencies(self):
+        text = '\n'.join(['// import FakeFeature', 'let code = #"""', 'import FakeFeature', '"""#', '/* import FakeFeature */', '@_implementationOnly import struct ModuleKit.ModuleManifest'])
+        self.assertEqual(check.source_imports(text), {"ModuleKit"})
 
 
 if __name__ == "__main__":
