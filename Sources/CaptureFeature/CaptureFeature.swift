@@ -69,10 +69,10 @@ final class CaptureControlHub:@unchecked Sendable {
     let availability:FeatureAvailability
     private let hub:CaptureControlHub
     private let makeWorkspace:WorkspaceFactory
-    private let makeTermination:(CaptureWorkspace)->NativeTerminationDecision
+    private let makeTermination:@MainActor (CaptureWorkspace)->NativeTerminationDecision
     private(set) var storedWorkspace:CaptureWorkspace?
     private var termination:NativeTerminationTicket?
-    init(availability:FeatureAvailability,hub:CaptureControlHub,makeWorkspace:@escaping WorkspaceFactory,makeTermination:@escaping (CaptureWorkspace)->NativeTerminationDecision = {$0.prepareTermination()}){self.availability=availability;self.hub=hub;self.makeWorkspace=makeWorkspace;self.makeTermination=makeTermination}
+    init(availability:FeatureAvailability,hub:CaptureControlHub,makeWorkspace:@escaping WorkspaceFactory,makeTermination:@escaping @MainActor (CaptureWorkspace)->NativeTerminationDecision = {$0.prepareTermination()}){self.availability=availability;self.hub=hub;self.makeWorkspace=makeWorkspace;self.makeTermination=makeTermination}
     var workspace:CaptureWorkspace {
         if let storedWorkspace{return storedWorkspace};let made=makeWorkspace(availability);storedWorkspace=made;return made
     }
