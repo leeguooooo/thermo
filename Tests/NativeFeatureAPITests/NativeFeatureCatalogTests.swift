@@ -88,6 +88,24 @@ import ModuleKit
         let wrong=NativeFeatureDefinition(manifest:manifest,pageContracts:[.init(entry:"action")],makeSession:{_ in Session()})
         XCTAssertThrowsError(try NativeFeatureCatalog(definitions:[wrong]))
     }
+    func testPrivateWorkerOwnershipIsColdAndUnambiguous()throws {
+        var made=0
+        let worker="com.example.preview"
+        let first=NativeFeatureDefinition(manifest:manifest,privateWorkers:[worker],makeSession:{_ in made+=1;return Session()})
+        let other=ModuleManifest(id:"com.example.other",name:"Other",summary:"",symbol:"doc",version:"1",entries:[])
+        let second=NativeFeatureDefinition(manifest:other,makeSession:{_ in made+=1;return Session()})
+        let catalog=try NativeFeatureCatalog(definitions:[first,second])
+        XCTAssertEqual(catalog.manifests.map(\.id),[id,other.id])
+        XCTAssertEqual(catalog.privateWorkers(id),[worker])
+        XCTAssertTrue(catalog.privateWorkers(other.id).isEmpty)
+        XCTAssertEqual(catalog.workerOwner(worker)?.id,id)
+        XCTAssertNil(catalog.workerOwner("unknown"))
+        let duplicate=NativeFeatureDefinition(manifest:other,privateWorkers:[worker],makeSession:{_ in Session()})
+        XCTAssertThrowsError(try NativeFeatureCatalog(definitions:[first,duplicate]))
+        let collision=NativeFeatureDefinition(manifest:other,privateWorkers:[id],makeSession:{_ in Session()})
+        XCTAssertThrowsError(try NativeFeatureCatalog(definitions:[first,collision]))
+        XCTAssertEqual(made,0)
+    }
     func testRestoreInvalidationIsExistingOnlyAndDoesNotTouchDrainingGeneration()async throws {
         let session=Session();var made=0
         let store=NativeFeatureStore(definitions:[definition{_ in made+=1;return session}],enabled:{_ in true})

@@ -5,7 +5,6 @@ import SwiftUI
 enum SearchModule:BuiltinModule {
     static let manifest=BuiltinModuleManifests.search
     static let previewWorker=SearchFeature.previewWorkerID
-    static let privateWorkers:Set<String>=[previewWorker]
     static let legacyMenuEntries:[String:String]=[:]
     @MainActor static var enabled:Bool{ModuleCenter.shared.isOn(manifest.id)}
     @MainActor static var access:any SearchApplicationAccess{BuiltinNativeFeatures.search.makeAccess(AppModels.shared.nativeFeatures)}

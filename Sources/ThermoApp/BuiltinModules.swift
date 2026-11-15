@@ -23,7 +23,6 @@ protocol BuiltinModule: Sendable {
     @MainActor static func overlay(models:AppModels)->AnyView
     static var legacyMenuEntries: [String: String] { get }
     static var sidebarSections: Set<BuiltinSidebarSection> { get }
-    static var privateWorkers: Set<String> { get }
     static func owns(_ page: MainPage) -> Bool
     static func entry(for page:MainPage)->ModuleManifest.Entry?
     static func canonicalArgument(_ argument: String) -> String
@@ -43,7 +42,6 @@ extension BuiltinModule {
     static func entry(for page:MainPage)->ModuleManifest.Entry? {
         manifest.entries.first{$0.kind == .page && $0.scene.flatMap(target)==page}
     }
-    static var privateWorkers: Set<String> { [] }
     static var sidebarSections: Set<BuiltinSidebarSection> { [.storage] }
     @MainActor static func start() {}
     @MainActor static func overlay(models:AppModels)->AnyView {AnyView(EmptyView())}
@@ -59,7 +57,7 @@ enum BuiltinModules {
         if case let .native(route)=page{return implementation(route.module)}
         return implementations.first { $0.owns(page) }
     }
-    static func workerOwner(_ id: String) -> (any BuiltinModule.Type)? { implementations.first { $0.privateWorkers.contains(id) } }
+    static func workerOwner(_ id:String)->ModuleManifest? {BuiltinNativeFeatures.catalog.workerOwner(id)}
 
     struct Page {
         let implementation: any BuiltinModule.Type

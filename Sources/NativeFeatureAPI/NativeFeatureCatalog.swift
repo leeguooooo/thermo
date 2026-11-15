@@ -54,6 +54,15 @@ package struct NativeFeatureCatalog: Sendable {
         guard Set(definitions.map{$0.manifest.id}).count == definitions.count else {
             throw NativeRouteError("Duplicate native feature.")
         }
+        let nativeIDs=Set(definitions.map{$0.manifest.id})
+        var workers=Set<String>()
+        for definition in definitions {
+            for worker in definition.privateWorkers {
+                guard !worker.isEmpty,!nativeIDs.contains(worker),workers.insert(worker).inserted else {
+                    throw NativeRouteError("A private worker must have exactly one native feature owner.")
+                }
+            }
+        }
         guard definitions.filter({$0.ui.compactPanelEntry != nil}).count <= 1 else {
             throw NativeRouteError("Only one native feature may own the compact panel.")
         }
@@ -89,6 +98,11 @@ package struct NativeFeatureCatalog: Sendable {
         }
     }
     package func manifest(_ id:String)->ModuleManifest? {definitions[id]?.manifest}
+    package var manifests:[ModuleManifest] {order.compactMap{definitions[$0]?.manifest}}
+    package func privateWorkers(_ id:String)->Set<String> {definitions[id]?.privateWorkers ?? []}
+    package func workerOwner(_ worker:String)->ModuleManifest? {
+        manifests.first{definitions[$0.id]?.privateWorkers.contains(worker)==true}
+    }
     package func normalize(_ input:NativeFeatureRoute)throws->NativeFeatureRoute {
         guard let definition=definitions[input.module],definition.manifest.entries.contains(where:{$0.id==input.entry && $0.kind == .page}) else {
             throw NativeRouteError("Unknown feature page.")

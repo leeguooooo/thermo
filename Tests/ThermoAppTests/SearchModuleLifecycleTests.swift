@@ -6,7 +6,7 @@ import ModuleKit
 @MainActor final class SearchHostIntegrationTests:XCTestCase {
     func testSearchManifestAndWorkerOwnershipStayInTheRegistry() {
         XCTAssertTrue(BuiltinModules.problems.isEmpty, BuiltinModules.problems.joined(separator:"\n"))
-        XCTAssertEqual(BuiltinModules.workerOwner(SearchModule.previewWorker)?.manifest.id,SearchModule.manifest.id)
+        XCTAssertEqual(BuiltinModules.workerOwner(SearchModule.previewWorker)?.id,SearchModule.manifest.id)
         XCTAssertTrue(SearchModule.manifest.entries.allSatisfy(SearchModule.supports))
         XCTAssertEqual(SearchModule.manifest.launch,.prewarm)
     }

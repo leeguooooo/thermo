@@ -293,7 +293,7 @@ struct ModuleSwitches: View {
                     }
                 }
                 Spacer()
-                if !status.builtin || !(BuiltinModules.implementation(status.manifest.id)?.privateWorkers.isEmpty ?? true) {
+                if !status.builtin || !BuiltinNativeFeatures.catalog.privateWorkers(status.manifest.id).isEmpty {
                     Button(tr("Activity")) { activity = status.manifest.localized(L10n.current.rawValue) }.buttonStyle(PillButtonStyle()).controlSize(.small).fixedSize()
                 }
                 Toggle("", isOn: Binding(get: { status.enabled }, set: { center.setEnabled(status.manifest.id, $0) }))
