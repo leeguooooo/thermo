@@ -36,7 +36,7 @@ enum AppsModule: BuiltinModule {
     }
     @MainActor static func snapshotReady(_ arguments:[String],models:AppModels,started:Date)->Bool {
         let raw=arguments.firstIndex(of:"--page").flatMap{$0+1<arguments.count ? arguments[$0+1]:nil} ?? "apps"
-        guard case let .native(route)?=MainPage(argument:raw) else{return false}
-        return models.nativeFeatures.snapshotReady(route,arguments:arguments,started:started)
+        guard let page=MainPage(argument:raw),let entry=BuiltinModules.page(page)?.entry,owns(page) else{return false}
+        return models.nativeFeatures.snapshotReady(.init(manifest.id,entry.id),arguments:arguments,started:started)
     }
 }

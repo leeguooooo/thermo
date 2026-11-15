@@ -1,3 +1,4 @@
+import SwiftUI
 import XCTest
 import ModuleKit
 import NativeFeatureAPI
@@ -54,5 +55,26 @@ import NativeFeatureAPI
         var page=MainPage(argument:"apps:feeds")!
         AppsModule.prepareReview(["--page","apps:feeds"],page:&page,models:models)
         XCTAssertEqual(group.updates.channel,"native")
+    }
+    private final class ReadinessSession:NativeFeatureSession {
+        var requested:NativeFeatureRoute?
+        func page(_ route:NativeFeatureRoute,navigation:NativeNavigation)->AnyView?{AnyView(EmptyView())}
+        var status:NativeFeatureStatus{.init(snapshotReady:true)}
+        func snapshotReady(_ route:NativeFeatureRoute,arguments:[String],started:Date)->Bool{requested=route;return true}
+        func retireVisibility(){}
+        func quitBlocker()->NativeFeatureBlocker?{nil}
+        func prepareStop()throws->NativeFeatureDrain{.init{}}
+    }
+    func testGenericModuleSnapshotUsesTheRequestedSoftwareEntry() {
+        let name="thermo-apps-snapshot-"+UUID().uuidString,defaults=UserDefaults(suiteName:name)!
+        defer{defaults.removePersistentDomain(forName:name)}
+        defaults.set(true,forKey:ModulePreferences.key(AppsModule.manifest.id))
+        let session=ReadinessSession()
+        let definition=NativeFeatureDefinition(manifest:AppsModule.manifest,makeSession:{_ in session})
+        let models=AppModels(defaults:defaults,nativeDefinitions:[definition])
+        let route=NativeFeatureRoute(AppsModule.manifest.id,"updates")
+        _=models.nativeFeatures.page(route)
+        XCTAssertTrue(AppsModule.snapshotReady(["--page","module:"+AppsModule.manifest.id+":updates"],models:models,started:Date()))
+        XCTAssertEqual(session.requested,route)
     }
 }
