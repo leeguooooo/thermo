@@ -32,4 +32,14 @@ final class ProcessActionTests: XCTestCase {
         XCTAssertEqual(first.uid, getuid())
         XCTAssertFalse(first.executable.isEmpty)
     }
+    func testUnchangedIdentityStillCannotAuthorizeAnAgentSystemOrThermoProcess() {
+        for path in ["/opt/homebrew/bin/codex","/Users/fixture/.local/share/claude/versions/2.0.0",
+                     "/System/Library/CoreServices/Finder.app/Contents/MacOS/Finder",
+                     "/usr/libexec/fixture-service","/Library/PrivilegedHelperTools/thermo-helper",
+                     "/Applications/Thermo.app/Contents/Extensions/Fixture.appex/Contents/MacOS/Fixture"] {
+            let identity=ProcessIdentity(pid:42,uid:501,started:Date(timeIntervalSince1970:100),executable:path)
+            XCTAssertFalse(SystemPulse.canSignal(identity,current:identity,uid:501,me:99),path)
+        }
+    }
+
 }
