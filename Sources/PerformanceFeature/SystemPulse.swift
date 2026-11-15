@@ -219,7 +219,7 @@ final class SystemPulse: ObservableObject {
     }
 
     static func canSignal(_ expected: ProcessIdentity, current: ProcessIdentity?, uid: UInt32 = getuid(), me: Int32 = getpid()) -> Bool {
-        expected.pid > 1 && expected.pid != me && expected.uid == uid && expected == current
+        ProcessActionGate.identityAllows(expected,current:current,uid:uid,me:me)
     }
 
     /// The app being restarted, while it quits and comes back.

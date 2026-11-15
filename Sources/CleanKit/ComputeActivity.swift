@@ -26,6 +26,8 @@ public struct ComputeProcess: Codable, Identifiable, Sendable {
     /// Owned by this user, not a system binary, an AI agent session or Thermo; same rule as the memory page.
     public var quittable: Bool? = nil
     public var started: Date? = nil
+    /// The sampled executable, owner and start time; missing metadata cannot authorize a stop.
+    public var identity: ProcessIdentity? = nil
     /// The working directory (`~/…`) of a command-line process: which project or session it belongs to.
     public var folder: String? = nil
     public var label: String { displayName ?? name }
@@ -140,6 +142,9 @@ public final class ComputeSampler {
                 if base.count > u.name.count, base.hasPrefix(u.name) { reading.displayName = base }
             }
             reading.started = u.started
+            if let started=u.started,let executable=details.executable {
+                reading.identity = .init(pid:u.pid,uid:u.uid,started:started,executable:executable)
+            }
             if let cwd = details.cwd, cwd != "/", details.executable.map({ !$0.contains(".app/") }) ?? true {
                 reading.folder = MachinePulse.tilde(cwd)
             }
@@ -154,7 +159,7 @@ public final class ComputeSampler {
             let processes = group.contexts.flatMap { context in
                 context.pids.compactMap { pid -> ComputeProcess? in
                     guard var reading = readings[pid] else { return nil }
-                    reading.quittable = context.quittable
+                    reading.quittable = context.quittable && reading.identity != nil
                     return reading
                 }
             }

@@ -449,19 +449,23 @@ struct ComputePage: View {
             guard let app = NSWorkspace.shared.runningApplications.first(where: {
                 $0.bundleURL?.standardizedFileURL.path == path && target.pids.contains($0.processIdentifier)
             }) else { stopProblem = tr("%1$@ changed or exited since the reading. Check again before stopping it.", target.name); return }
-            let accepted = app.terminate()
+            let outcome=ProcessActionGate.attempt(target.identities.first{$0.pid==app.processIdentifier},allowApplication:true){_ in app.terminate()}
+            guard outcome == .requested || outcome == .declined else {
+                stopProblem=tr("System processes, AI agent sessions and Thermo itself cannot be stopped here.");return
+            }
+            let accepted=outcome == .requested
             if !accepted { stopProblem = tr("%1$@ did not accept the quit request. Check its dialogs.", target.name) }
             Self.record(action: "quit", target: target, items: [(target.name, accepted)])
             return
         }
         var skipped = false
         var items: [(String, Bool)] = []
-        for (pid, started) in target.processes {
-            guard pid > 1, pid != getpid(), let now = ProcessTable.identity(pid), now.uid == getuid(),
-                  started == nil || now.started == started else { skipped = true; continue }
-            let sent = kill(pid, SIGTERM) == 0
-            if !sent { skipped = true }
-            items.append(("\(target.name) · PID \(pid)", sent))
+        for (pid, _) in target.processes {
+            let outcome=ProcessActionGate.attempt(target.identities.first{$0.pid==pid},allowApplication:false){value in kill(value.pid,SIGTERM)==0}
+            guard outcome == .requested || outcome == .declined else {skipped=true;continue}
+            let sent=outcome == .requested
+            if !sent {skipped=true}
+            items.append(("\(target.name) · PID \(pid)",sent))
         }
         if skipped { stopProblem = tr("%1$@ changed or exited since the reading. Check again before stopping it.", target.name) }
         if !items.isEmpty { Self.record(action: "end", target: target, items: items) }
@@ -493,14 +497,17 @@ struct ComputeStopTarget: Identifiable {
     let name: String
     let app: String?
     let processes: [(pid: pid_t, started: Date?)]
+    let identities:[ProcessIdentity]
     var pids: [pid_t] { processes.map(\.pid) }
     init(_ program: ComputeProgram) {
         id = program.id; name = program.name; app = program.app
         processes = program.processes.map { ($0.pid, $0.started) }
+        identities = program.processes.compactMap(\.identity)
     }
     init(_ process: ComputeProcess, in program: ComputeProgram) {
         id = program.id + "#" + String(process.pid); name = process.label; app = nil
         processes = [(process.pid, process.started)]
+        identities = process.identity.map{[$0]} ?? []
     }
     var title: String { app != nil ? tr("Quit %1$@?", name) : tr("End %1$@?", name) }
     var summary: String {
