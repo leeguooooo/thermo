@@ -1,18 +1,18 @@
 import XCTest
 import CleanKit
 import ThermoL10n
-@testable import ThermoApp
+@testable import DiskFeature
 
 final class DiskScanSummaryTests: XCTestCase {
     override func tearDown() { L10n.override = nil }
-    func report(_ items: [CleanItem] = [], cancelled: Bool = false) -> ScanReport {
+    @MainActor func report(_ items: [CleanItem] = [], cancelled: Bool = false) -> ScanReport {
         .init(items: items, denied: [], started: Date(), duration: 1, cancelled: cancelled)
     }
-    func item(_ bytes: Int64 = 100) -> CleanItem {
+    @MainActor func item(_ bytes: Int64 = 100) -> CleanItem {
         .init(id: "fixture", category: .devCaches, title: "Fixture", safety: .safe,
               bytes: bytes, paths: ["/fixture/cache"])
     }
-    func testStoppedScansNeverShowCompleteEmptyOrReclaimableSuccess() {
+    @MainActor func testStoppedScansNeverShowCompleteEmptyOrReclaimableSuccess() {
         L10n.override = .english
         for items in [[], [item()]] {
             let summary = DiskScanSummary(report(items, cancelled: true), safeBytes: 0)
@@ -22,7 +22,7 @@ final class DiskScanSummaryTests: XCTestCase {
             XCTAssertTrue(summary.subtitle.contains("remaining locations"))
         }
     }
-    func testUnreadableLocationsRulesAndSizesCannotCertifyEmptyScan() {
+    @MainActor func testUnreadableLocationsRulesAndSizesCannotCertifyEmptyScan() {
         L10n.override = .english
         var denied = report(); denied.denied = ["/fixture/unreadable"]
         var rules = report(); rules.whitelistError = "fixture read failure"
@@ -35,14 +35,14 @@ final class DiskScanSummaryTests: XCTestCase {
             XCTAssertNotEqual(summary.symbol, "checkmark")
         }
     }
-    func testBlockedFindingsAreKeptRatherThanReportedAsNothing() {
+    @MainActor func testBlockedFindingsAreKeptRatherThanReportedAsNothing() {
         L10n.override = .english
         var blocked = item(); blocked.blocked = "fixture process still running"
         let summary = DiskScanSummary(report([blocked]), safeBytes: 0)
         XCTAssertEqual(summary.status, .kept)
         XCTAssertEqual(summary.title, "Items were kept")
     }
-    func testOnlyConfirmedEmptyReportUsesTheAllClear() {
+    @MainActor func testOnlyConfirmedEmptyReportUsesTheAllClear() {
         L10n.override = .english
         let empty = DiskScanSummary(report(), safeBytes: 0)
         XCTAssertEqual(empty.status, .empty); XCTAssertEqual(empty.symbol, "checkmark")

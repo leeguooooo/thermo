@@ -1,5 +1,6 @@
+import ThermoL10n
 import XCTest
-@testable import ThermoApp
+@testable import DiskFeature
 
 final class CleanupProtectionsLayoutTests: XCTestCase {
     @MainActor func testSheetFitsShortListsAndCapsLongOnes() {

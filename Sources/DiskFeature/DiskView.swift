@@ -1,3 +1,4 @@
+import NativeFeatureAPI
 import ThermoUI
 import AgentCore
 import AppKit
@@ -8,6 +9,7 @@ import UserNotifications
 
 /// Scans only when the user starts it (low priority, stoppable at any time), notifies
 /// when a scan finishes in the background, and removes what the user ticks.
+@MainActor
 final class DiskModel: ObservableObject {
     enum Scope: String, CaseIterable, Identifiable, Sendable {
         case ai = "AI", all = "Everything"
@@ -46,7 +48,12 @@ final class DiskModel: ObservableObject {
     private var scanCancellation: ScanCancellation?
     @Published private(set) var loadingSaved = false
     private let scanIO: DiskScanIO
-    private let requestNotifications: () -> Void
+    private let requestNotifications: @MainActor () -> Void
+    private let enabled: @MainActor () -> Bool
+    private let cache: DiskCacheEpoch
+    let explanationWork: FeatureTasks
+    var cleanupDidChange: @MainActor () -> Void = {}
+    var acceptsWork: Bool { !retiring && enabled() }
     private let retentionPreferences: ConversationRetentionPreferences
     var remembersSessionRetention: Bool { retentionPreferences.persistent }
     private var savedLoadGeneration = UUID()
@@ -73,9 +80,11 @@ final class DiskModel: ObservableObject {
     @Published private(set) var cleaningDone = 0
     @Published private(set) var cleaningTotal = 0
 
-    init(report: ScanReport? = nil, scanIO: DiskScanIO = .live, requestNotifications: @escaping () -> Void = Monitor.requestNotificationPermission,
-         retentionPreferences: ConversationRetentionPreferences = .transient) {
+    init(report: ScanReport? = nil, scanIO: DiskScanIO = .live, requestNotifications: @escaping @MainActor () -> Void = {},
+         retentionPreferences: ConversationRetentionPreferences = .transient, enabled: @escaping @MainActor () -> Bool = {true},
+         cache: DiskCacheEpoch = .init(), explanationWork: FeatureTasks? = nil) {
         self.report = report
+        self.enabled = enabled; self.cache = cache; self.explanationWork = explanationWork ?? FeatureTasks()
         self.scanIO = scanIO
         self.requestNotifications = requestNotifications
         self.retentionPreferences = retentionPreferences
@@ -111,7 +120,7 @@ final class DiskModel: ObservableObject {
     var selectedBytes: Int64 { selectedItems.reduce(0) { $0 + $1.bytes } }
 
     func setSessionRetentionDays(_ days: Int?) {
-        guard !scanning, !cleaning, days.map({ ConversationRetentionPreferences.choices.contains($0) }) ?? true else { return }
+        guard acceptsWork, !scanning, !cleaning, days.map({ ConversationRetentionPreferences.choices.contains($0) }) ?? true else { return }
         retentionPreferences.write(days)
         guard days != sessionRetentionDays else { return }
         invalidateSavedLoad()
@@ -129,13 +138,13 @@ final class DiskModel: ObservableObject {
         return stale
     }
 
-    static let order = Dictionary(uniqueKeysWithValues: CleanCategory.allCases.enumerated().map { ($1, $0) })
+    nonisolated static let order = Dictionary(uniqueKeysWithValues: CleanCategory.allCases.enumerated().map { ($1, $0) })
 
-    static func sorted(_ items: [CleanItem]) -> [CleanItem] {
+    nonisolated static func sorted(_ items: [CleanItem]) -> [CleanItem] {
         items.sorted { (order[$0.category]!, -$0.bytes, $0.id) < (order[$1.category]!, -$1.bytes, $1.id) }
     }
 
-    static func progressTitle(_ step: String) -> String {
+    nonisolated static func progressTitle(_ step: String) -> String {
         switch step {
         case "reading processes": return tr("Reading processes…")
         case "space context": return tr("Reading disk context…")
@@ -146,7 +155,7 @@ final class DiskModel: ObservableObject {
     /// Repeated page appearances share one physical reader. A later request replaces
     /// the pending scope; superseded results never become a cleanup plan.
     func loadSaved(category: CleanCategory? = nil, scanIfMissing: Bool = false) {
-        guard !retiring, report == nil, !scanning, !cleaning else { return }
+        guard acceptsWork, report == nil, !scanning, !cleaning else { return }
         let request = SavedRequest(scope: scope, category: category, retention: sessionRetentionDays,
                                    language: L10n.current.rawValue, scanIfMissing: scanIfMissing)
         if let current = savedRequest, current.matches(request) {
@@ -167,15 +176,15 @@ final class DiskModel: ObservableObject {
 
     private func readSaved() {
         guard let request = savedRequest else { return }
-        let generation = savedLoadGeneration, io = scanIO
+        let generation = savedLoadGeneration, io = scanIO, cache = cache, epoch = cache.current
         savedReadRunning = true
         queue.async { [weak self] in
             let options = io.options(request.scope, request.category, request.retention)
-            let cached = io.cached(options, request.language)
+            let cached = cache.permitsCache ? io.cached(options, request.language) : nil
             DispatchQueue.main.async {
                 guard let self else { return }
                 self.savedReadRunning = false
-                guard generation == self.savedLoadGeneration else {
+                guard generation == self.savedLoadGeneration, epoch == cache.current else {
                     if self.savedRequest != nil { self.readSaved() }
                     return
                 }
@@ -193,7 +202,7 @@ final class DiskModel: ObservableObject {
         }
     }
 
-    static func scanOptions(scope: Scope, category: CleanCategory? = nil, sessionRetentionDays: Int? = nil) -> ScanOptions {
+    nonisolated static func scanOptions(scope: Scope, category: CleanCategory? = nil, sessionRetentionDays: Int? = nil) -> ScanOptions {
         var options = ScanOptions()
         options.sessionRetentionDays = category == .aiSessions || (category == nil && scope == .ai) ? sessionRetentionDays : nil
         options.lowPriority = true
@@ -203,7 +212,7 @@ final class DiskModel: ObservableObject {
     }
 
     func scan(category: CleanCategory? = nil) {
-        guard !retiring, !scanning, !cleaning else { return }
+        guard acceptsWork, !scanning, !cleaning else { return }
         clearAIPick()
         requestNotifications()
         scanning = true
@@ -222,7 +231,7 @@ final class DiskModel: ObservableObject {
         let cancellation = ScanCancellation()
         scanCancellation = cancellation
         let requestedScope = scope, retention = sessionRetentionDays, io = scanIO
-        let started = Date(), language = L10n.current.rawValue
+        let started = Date(), language = L10n.current.rawValue, cache = cache, epoch = cache.current
         let stoppedReport: @Sendable () -> ScanReport = {
             var report = ScanReport(items: [], denied: [], started: started, duration: Date().timeIntervalSince(started), cancelled: true)
             report.language = language
@@ -241,12 +250,12 @@ final class DiskModel: ObservableObject {
                 else {
                     result = io.scan(options, cancellation, { step in
                         DispatchQueue.main.async { [weak self] in
-                            guard let self, self.scanning, !self.stopping, self.scanCancellation === cancellation else { return }
+                            guard let self, self.acceptsWork, self.scanning, !self.stopping, self.scanCancellation === cancellation, cache.current == epoch else { return }
                             self.progress = Self.progressTitle(step)
                         }
                     }, { found in
                         DispatchQueue.main.async { [weak self] in
-                            guard let self, self.scanning, self.scanCancellation === cancellation else { return }
+                            guard let self, self.acceptsWork, self.scanning, self.scanCancellation === cancellation, cache.current == epoch else { return }
                             let items = Self.sorted((self.report?.items ?? []) + found)
                             self.report = ScanReport(items: items, denied: [], started: started, duration: Date().timeIntervalSince(started))
                             self.report?.language = language
@@ -259,9 +268,10 @@ final class DiskModel: ObservableObject {
             }
             DispatchQueue.main.async {
                 guard let self, self.scanCancellation === cancellation else { return }
-                self.acceptScan(result)
+                let obsolete = cache.current != epoch
+                if !obsolete && self.acceptsWork { self.acceptScan(result) }
                 // The scanner saved its report after any cleanup had cleared the old one.
-                if self.cleaning || !self.cleanedDuringScan.isEmpty {
+                if obsolete || self.cleaning || !self.cleanedDuringScan.isEmpty {
                     let home = self.cleanGuard.home
                     self.cleanQueue.async { ScanReportCache.invalidate(home: home) }
                 }
@@ -269,7 +279,7 @@ final class DiskModel: ObservableObject {
                 self.scanning = false
                 self.stopping = false
                 self.scanCancellation = nil
-                if !result.cancelled { self.notifyFinished(result) }
+                if !obsolete && self.acceptsWork && !result.cancelled { self.notifyFinished(result) }
             }
         }
     }
@@ -329,7 +339,7 @@ final class DiskModel: ObservableObject {
     }
 
     func clean(review: DiskCleanupReview? = nil) {
-        guard !retiring, !cleaning else { return }
+        guard acceptsWork, !cleaning else { return }
         if let review, !isCurrentCleanupReview(review) {
             error = tr("Cleanup plan changed. Review the current items before cleaning.")
             lastResult = nil
@@ -391,7 +401,7 @@ final class DiskModel: ObservableObject {
             let hadFailures = failures > 0
             DispatchQueue.main.async {
                 guard let self else { return }
-                if invalidateOverview { SpaceOverviewModel.shared.invalidateAfterCleanup() }
+                if invalidateOverview { self.cleanupDidChange() }
                 self.cleaning = false
                 self.cleaningDone = self.cleaningTotal
                 self.resultsNeedRefresh = hadFailures
@@ -435,7 +445,7 @@ final class DiskModel: ObservableObject {
     /// "Always keep": the item's paths (or just some: one session, one path) go into the whitelist
     /// and stay out of every cleanup.
     func alwaysKeep(_ item: CleanItem, paths: [String]? = nil, home: String = NSHomeDirectory()) {
-        guard !retiring, !cleaning, !scanning else { return }
+        guard acceptsWork, !cleaning, !scanning else { return }
         do {
             let change = try Whitelist.addWithUndo(paths ?? (item.paths + (item.commandScope ?? [])), home: home)
             invalidateSavedLoad()
@@ -456,7 +466,7 @@ final class DiskModel: ObservableObject {
     }
 
     func undoProtection() {
-        guard !retiring, !cleaning, !scanning, let undo = protectionUndo else { return }
+        guard acceptsWork, !cleaning, !scanning, let undo = protectionUndo else { return }
         do {
             try Whitelist.undoAddition(undo)
             protectionUndo = nil
@@ -474,18 +484,25 @@ final class DiskModel: ObservableObject {
         report = nil; selected = []; excluded = [:]; error = nil
     }
 
-    func openFullDiskAccess() { Self.openFullDiskAccess() }
+    func invalidateAfterRestore() {
+        invalidateSavedLoad();stop()
+        report=nil;selected=[];excluded=[:];clearAIPick()
+        stale=true;resultsNeedRefresh=true
+    }
+
+    func openFullDiskAccess() {if acceptsWork {Self.openFullDiskAccess()}}
     /// Usable without a model: other pages point at the same system setting.
     static func openFullDiskAccess() {
         NSWorkspace.shared.open(URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_AllFiles")!)
     }
 
     func reveal(_ item: CleanItem) {
+        guard acceptsWork else{return}
         let urls = item.paths.prefix(20).map { URL(fileURLWithPath: $0) }
         if !urls.isEmpty { NSWorkspace.shared.activateFileViewerSelecting(Array(urls)) }
     }
 
-    func openLog() { NSWorkspace.shared.open(Cleaner.logURL) }
+    func openLog() {if acceptsWork {NSWorkspace.shared.open(Cleaner.logURL)}}
 }
 
 struct SafetyTag: View {
@@ -508,7 +525,7 @@ extension DiskModel {
     /// Asks the local AI about every item on the page and ticks the ones it calls safe to delete.
     /// Never cleans: the user still reviews and presses Clean.
     @MainActor func aiPick(_ category: CleanCategory, using backend: LocalAIBackend) {
-        guard !retiring, aiPicking == nil, !scanning, !cleaning else { return }
+        guard acceptsWork, aiPicking == nil, !scanning, !cleaning else { return }
         let question = aiQuestion(category)
         guard !question.items.isEmpty else { return }
         let asked = report?.started

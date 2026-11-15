@@ -4,7 +4,7 @@ import ThermoL10n
 
 extension DiskModel {
     /// Called on the cleaning queue: remeasure what is left, including sessions the user kept.
-    static func remainder(_ original: CleanItem, attempted: CleanItem, result: CleanResult,
+    nonisolated static func remainder(_ original: CleanItem, attempted: CleanItem, result: CleanResult,
                           size: (String) -> Int64? = { FS.exists($0) ? FS.size($0).bytes : nil }) -> CleanItem? {
         let retryReason = tr("Cleanup did not finish. Scan again to review the remaining items before retrying.")
         func requiringReview(_ item: CleanItem) -> CleanItem { var value = item; value.blocked = retryReason; return value }

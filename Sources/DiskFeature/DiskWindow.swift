@@ -657,7 +657,7 @@ struct DiskItemDetail: View {
             }
             .font(Theme.caption).foregroundStyle(Theme.textTertiary)
             if item.safety != .safe, !item.paths.isEmpty {
-                AskAIPanel { Self.question(item) }
+                AskAIPanel(scope:model.explanationWork) { Self.question(item) }
             }
             if let parts = item.parts, parts.count > 1 {
                 let ticked = parts.filter { model.isTicked($0, of: item) }.count

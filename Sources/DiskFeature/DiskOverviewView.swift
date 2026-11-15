@@ -1,3 +1,4 @@
+import NativeFeatureAPI
 import LocalAIUI
 import ThermoUI
 import AppKit
@@ -9,7 +10,6 @@ import ThermoL10n
 /// the last result so the window opens with numbers instead of a long wait.
 @MainActor
 final class SpaceOverviewModel: ObservableObject {
-    static let shared = SpaceOverviewModel()
 
     @Published private(set) var diskSpace: DiskSpaceSnapshot?
     @Published private(set) var overview: SpaceOverview?
@@ -24,6 +24,10 @@ final class SpaceOverviewModel: ObservableObject {
     private var restartAfterCurrent = false
     private var generation = UUID()
     private var inFlight = false
+    private var retiring = false
+    private var measurementTask:Task<Void,Never>?
+    private let enabled:@MainActor ()->Bool
+    private let cache:DiskCacheEpoch
     private var invalidatedDuringMeasurement = false
     private let read: @Sendable (ScanCancellation, ((SpaceOverview.Entry) -> Void)?) -> SpaceOverview
     private let save: @Sendable (SpaceOverview) -> Void
@@ -32,7 +36,9 @@ final class SpaceOverviewModel: ObservableObject {
     init(cached: (SpaceOverview, Date)? = SpaceOverview.cached(localize: true), diskSpace: DiskSpaceSnapshot? = .measure(),
          read: @escaping @Sendable (ScanCancellation, ((SpaceOverview.Entry) -> Void)?) -> SpaceOverview = { var o = SpaceOverview.measure(onEntry: $1, cancellation: $0, lowPriority: true); o.noteGrowth(); return o },
          save: @escaping @Sendable (SpaceOverview) -> Void = { $0.save() },
-         readDiskSpace: @escaping @Sendable () -> DiskSpaceSnapshot? = { .measure() }) {
+         readDiskSpace: @escaping @Sendable () -> DiskSpaceSnapshot? = { .measure() },
+         enabled:@escaping @MainActor ()->Bool = {true},cache:DiskCacheEpoch = .init()) {
+        self.enabled=enabled;self.cache=cache
         self.read = read; self.save = save; self.readDiskSpace = readDiskSpace
         self.diskSpace = diskSpace
         if let (o, at) = cached { overview = o; measuredAt = at }
@@ -59,6 +65,7 @@ final class SpaceOverviewModel: ObservableObject {
     }
 
     func measure() {
+        guard !retiring, enabled() else{return}
         guard !inFlight else {
             if invalidatedDuringMeasurement { restartAfterCurrent = true }
             return
@@ -76,23 +83,24 @@ final class SpaceOverviewModel: ObservableObject {
         partial = []
         let cancellation = ScanCancellation()
         self.cancellation = cancellation
-        let read = self.read, save = self.save
-        Task.detached(priority: .utility) {
+        let read = self.read, save = self.save, epoch=cache.current, cache=cache
+        measurementTask=Task.detached(priority: .utility) {
             let o = read(cancellation, { e in
                 Task { @MainActor in
-                    guard self.generation == generation, self.cancellation === cancellation, !cancellation.isCancelled else { return }
+                    guard self.generation == generation, self.cancellation === cancellation, !cancellation.isCancelled, cache.current == epoch else { return }
                     self.acceptEntry(e)
                 }
             })
             await MainActor.run {
                 guard self.cancellation === cancellation else { return }
                 self.inFlight = false
+                self.measurementTask=nil
                 self.measuring = false
                 self.stopping = false
                 self.cancellation = nil
                 let restart = self.restartAfterCurrent
                 self.restartAfterCurrent = false
-                guard self.generation == generation else {
+                guard self.generation == generation,cache.current == epoch,!self.retiring,self.enabled() else {
                     if restart { self.measure() }
                     return
                 }
@@ -115,7 +123,7 @@ final class SpaceOverviewModel: ObservableObject {
 
     /// A cleanup invalidates cached breakdowns. Late callbacks from an old measurement
     /// must neither restore stale folders nor write their old overview back to disk.
-    func invalidateAfterCleanup() {
+    func invalidateAfterCleanup(refreshCapacity:Bool = true) {
         generation = UUID()
         cancellation?.cancel()
         if !inFlight { cancellation = nil }
@@ -128,7 +136,7 @@ final class SpaceOverviewModel: ObservableObject {
         overview = nil
         measuredAt = nil
         partial = []
-        diskSpace = readDiskSpace()
+        if refreshCapacity {diskSpace = readDiskSpace()}
     }
 
     func stop() {
@@ -137,6 +145,13 @@ final class SpaceOverviewModel: ObservableObject {
         stopping = true
         cancellation?.cancel()
     }
+
+    func retire() {
+        retiring=true;generation=UUID();restartAfterCurrent=false
+        cancellation?.cancel();stopping=inFlight
+    }
+    func finishRetiring() async {if let measurementTask {await measurementTask.value}}
+    func invalidateAfterRestore(){invalidateAfterCleanup(refreshCapacity:false)}
 
     /// Measures on first open, or when the saved numbers are over an hour old.
     func discardIncompatibleResults() {
@@ -153,6 +168,7 @@ final class SpaceOverviewModel: ObservableObject {
     }
 
     func measureIfStale() {
+        guard !retiring,enabled() else{return}
         diskSpace = readDiskSpace()
         if overview != nil, !SpaceOverview.isCurrent(measuredAt: measuredAt) { invalidateAfterCleanup() }
         discardIncompatibleResults()
@@ -171,12 +187,15 @@ final class SpaceOverviewModel: ObservableObject {
 
 /// The volume's used space, by place, with each place's biggest folders.
 struct DiskOverviewView: View {
-    @ObservedObject var model = SpaceOverviewModel.shared
+    @ObservedObject var model:SpaceOverviewModel
+    let explanationWork:FeatureTasks
+    let availability:@MainActor ()->Bool
     var openCleanup: (CleanCategory?) -> Void = { _ in }
     var cleanupDisabled = false
     /// Opens a folder in Space Lens, where it can be picked and moved to the Trash.
     var openInSpaceLens: (String) -> Void = { _ in }
     @State private var detail: SpaceOverview.Entry?
+    @State private var pendingDestination:DetailDestination?
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
@@ -194,7 +213,7 @@ struct DiskOverviewView: View {
                             Label(tr("%1$@ locations could not be read. Results may be incomplete.", String(unreadable.count)), systemImage: "lock.shield")
                                 .font(Theme.body).foregroundStyle(Theme.caution)
                             Spacer(minLength: Theme.Space.s)
-                            Button(tr("Open Full Disk Access")) { AppModels.shared.disk.openFullDiskAccess() }
+                            Button(tr("Open Full Disk Access")) {if availability() {DiskModel.openFullDiskAccess()}}
                                 .buttonStyle(PillButtonStyle()).controlSize(.small)
                         }
                         .padding(Theme.Space.m + 2).glass()
@@ -251,11 +270,22 @@ struct DiskOverviewView: View {
             .frame(maxWidth: .infinity)
         }
         .onAppear { model.measureIfStale() }
-        .onDisappear { model.stop() }
-        .sheet(item: $detail) { e in
-            SpaceDetailSheet(entry: e, route: Self.cleanupRoute(for: e.id), cleanupDisabled: cleanupDisabled,
-                             openCleanup: openCleanup, openInSpaceLens: openInSpaceLens) { detail = nil }
+        .onDisappear { model.stop();pendingDestination=nil }
+        .sheet(item:$detail,onDismiss:completeDetailDestination) { e in
+            SpaceDetailSheet(entry:e,explanationWork:explanationWork,route:Self.cleanupRoute(for:e.id),cleanupDisabled:cleanupDisabled,
+                openCleanup:{requestDetailDestination(.cleanup($0))},openInSpaceLens:{requestDetailDestination(.space($0))}) {detail=nil}
         }
+    }
+
+    private enum DetailDestination {case cleanup(CleanCategory?),space(String)}
+    private func requestDetailDestination(_ destination:DetailDestination) {
+        guard availability(),pendingDestination == nil else{return}
+        pendingDestination=destination;detail=nil
+    }
+    private func completeDetailDestination() {
+        let destination=pendingDestination;pendingDestination=nil
+        guard availability(),let destination else{return}
+        switch destination {case let .cleanup(category):openCleanup(category);case let .space(path):openInSpaceLens(path)}
     }
 
     var header: some View {
@@ -453,6 +483,7 @@ extension DiskOverviewView {
 
 struct SpaceDetailSheet: View {
     let entry: SpaceOverview.Entry
+    let explanationWork:FeatureTasks
     var route: (label: String, category: CleanCategory?)?
     var cleanupDisabled = false
     var openCleanup: (CleanCategory?) -> Void = { _ in }
@@ -490,14 +521,14 @@ struct SpaceDetailSheet: View {
                         }
                     }
                     if let route {
-                        Button(route.label) { close(); openCleanup(route.category) }
+                        Button(route.label) { openCleanup(route.category) }
                             .buttonStyle(PillButtonStyle(prominent: true)).disabled(cleanupDisabled)
                     }
                 }
                 .padding(Theme.Space.m).frame(maxWidth: .infinity, alignment: .leading)
                 .background(RoundedRectangle(cornerRadius: Theme.radiusSmall, style: .continuous).fill(Theme.surface))
             }
-            AskAIPanel {
+            AskAIPanel(scope:explanationWork) {
                 LocalAIQuestion(title: SpaceStyle.of(entry.id).title ?? entry.title, path: entry.path, bytes: entry.bytes,
                                 note: [entry.note, entry.action].compactMap { $0 }.joined(separator: " "),
                                 children: entry.children.map { "\($0.title) (\($0.sizeText))" })
@@ -538,7 +569,7 @@ struct SpaceDetailSheet: View {
             Spacer(minLength: Theme.Space.s)
             Text(c.sizeText).font(Theme.secondary.monospacedDigit()).foregroundStyle(Theme.textSecondary)
             if let p = c.path {
-                Button(tr("Review…")) { close(); openInSpaceLens(p) }
+                Button(tr("Review…")) { openInSpaceLens(p) }
                     .buttonStyle(PillButtonStyle()).controlSize(.small)
                     .help(tr("Open in Space Lens to pick what to move to the Trash"))
                     .accessibilityLabel(tr("Review %1$@ in Space Lens", FSPath.tilde(p)))

@@ -2,10 +2,10 @@ import CleanKit
 import Foundation
 import ThermoL10n
 import XCTest
-@testable import ThermoApp
+@testable import DiskFeature
 
 final class ConversationRetentionTests: XCTestCase {
-    func preferences() -> (UserDefaults,ConversationRetentionPreferences) {
+    @MainActor func preferences() -> (UserDefaults,ConversationRetentionPreferences) {
         let name="dev.thermo.tests.retention."+UUID().uuidString
         let isolated=UserDefaults(suiteName:name)!
         addTeardownBlock { isolated.removePersistentDomain(forName:name) }

@@ -181,7 +181,6 @@ enum MainWindow {
                 MainActor.assumeIsolated {
                     setSamplingVisibility(false)
                     models.nativeFeatures.retireVisibility()
-                    SpaceOverviewModel.shared.stop()
                     MemoryModel.shared.stop()
                     ComputeModel.shared.stop()
                     ComputeModel.cpu.stop()
