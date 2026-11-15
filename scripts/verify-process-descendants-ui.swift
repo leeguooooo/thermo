@@ -1,6 +1,7 @@
+import ThermoUI
 // Owns two direct children and a grandchild. Python fixture handles TERM by
 // stopping its own sleep child; all three also have a 600-second exit limit.
-@testable import ThermoApp
+@testable import PerformanceFeature
 import AgentCore
 import AppKit
 import SwiftUI
@@ -50,7 +51,7 @@ import ThermoL10n
         let window=NSWindow(contentRect:NSRect(x:0,y:0,width:640,height:610),styleMask:[.titled,.closable,.resizable],backing:.buffered,defer:false)
         window.title="Thermo Descendants QA";window.isReleasedWhenClosed=false
         window.contentView=NSHostingView(rootView:VStack {
-            ProcessExplanationView(target:.init(identity:own))
+            ProcessExplanationView(target:.init(identity:own),makeModel:{ProcessExplanationModel()})
             Button("结束第一个测试子树") { delegate.stopBranch() }.padding(.bottom,12)
         }.preferredColorScheme(.dark))
         window.center();window.makeKeyAndOrderFront(nil);app.activate(ignoringOtherApps:true)

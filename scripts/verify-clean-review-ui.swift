@@ -1,7 +1,8 @@
-// Opt-in visible acceptance: link Debug testable ThermoApp and dependency objects.
+import ThermoUI
+// Opt-in visible acceptance built against the private DiskFeature target.
 // Launch with CFFIXED_USER_HOME set to an owned temporary Home containing
 // .thermo-clean-ui-fixture. Tool commands are system true/false or touching an owned canary; no removal.
-@testable import ThermoApp
+@testable import DiskFeature
 import CleanKit
 import ThermoL10n
 import SwiftUI

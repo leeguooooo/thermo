@@ -1,12 +1,14 @@
+import ThermoUI
 // Production SpacePage and removal model, restricted to a marked, self-owned test home.
 // Launch the generated bundle through computer-use; it takes no launch arguments.
-@testable import ThermoApp
+@testable import SpaceFeature
+@testable import ThermoComposition
+@testable import ThermoShell
 import AppKit
 @testable import CleanKit
 import SwiftUI
 import ThermoL10n
 
-@_silgen_name("$s9ThermoApp20installStandardMenusyyF")
 @MainActor func spaceFixtureMenus() {
     let menu=NSMenu(),item=NSMenuItem(),submenu=NSMenu()
     submenu.addItem(withTitle:"Quit QA",action:#selector(NSApplication.terminate(_:)),keyEquivalent:"q")
@@ -36,7 +38,7 @@ import ThermoL10n
         guard FileManager.default.fileExists(atPath:home.appendingPathComponent("Downloads/01-keeper.bin").path),
               FileManager.default.fileExists(atPath:home.appendingPathComponent("Downloads/02-extra.bin").path) else { exit(3) }
         L10n.apply(preference:"zh-Hans")
-        let model=SpaceLensModel(root:home.path,cache:home.appendingPathComponent(".qa-space-cache.json"),remove:{ paths,sizes,stateHome,incomplete,identities,required in
+        let model=SpaceLensModel(services:SpaceHostServices(),root:home.path,cache:home.appendingPathComponent(".qa-space-cache.json"),remove:{ paths,sizes,stateHome,incomplete,identities,required in
             guard FileManager.default.fileExists(atPath:root.appendingPathComponent("inject-record-failure").path) else {
                 return ManualRemoval.trash(paths,sizes:sizes,home:stateHome,incompletePaths:incomplete,reviewIdentities:identities,requiredIdentities:required)
             }

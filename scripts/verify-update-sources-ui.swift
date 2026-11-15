@@ -1,7 +1,8 @@
-// Opt-in native source-discovery presentation acceptance. Link Debug testable App objects.
+import ThermoUI
+// Opt-in native source-discovery presentation acceptance using private AppsFeature.
 // Requires an owned temporary CFFIXED_USER_HOME and .thermo-source-ui-fixture marker.
 // Reports and feed checks are injected; no real feeds, application launch or install.
-@testable import ThermoApp
+@testable import AppsFeature
 @testable import CleanKit
 import AppKit
 import SwiftUI

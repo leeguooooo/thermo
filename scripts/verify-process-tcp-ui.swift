@@ -1,11 +1,11 @@
+import ThermoUI
 // Production process explanation with two owned, loopback-only child processes.
-@testable import ThermoApp
+@testable import PerformanceFeature
 import AgentCore
 import AppKit
 import SwiftUI
 import ThermoL10n
 
-@_silgen_name("$s9ThermoApp20installStandardMenusyyF")
 @MainActor func tcpFixtureMenus() {
     let menu=NSMenu(),item=NSMenuItem(),submenu=NSMenu()
     submenu.addItem(withTitle:"Quit QA",action:#selector(NSApplication.terminate(_:)),keyEquivalent:"q")
@@ -30,7 +30,7 @@ import ThermoL10n
             Button("打开进程详情") { showing=target }
         }
         .frame(width:640,height:560)
-        .sheet(item:$showing) { ProcessExplanationView(target:$0) }
+        .sheet(item:$showing) { ProcessExplanationView(target:$0,makeModel:{ProcessExplanationModel()}) }
         .onAppear { showing=target }
     }
 }
@@ -74,7 +74,7 @@ import ThermoL10n
         if FileManager.default.fileExists(atPath:root.appendingPathComponent("sheet-mode").path) {
             window.contentView=NSHostingView(rootView:TCPFixtureSheetHost(target:inspection).preferredColorScheme(.dark))
         } else {
-            window.contentView=NSHostingView(rootView:ProcessExplanationView(target:inspection).preferredColorScheme(.dark))
+            window.contentView=NSHostingView(rootView:ProcessExplanationView(target:inspection,makeModel:{ProcessExplanationModel()}).preferredColorScheme(.dark))
         }
         window.center();window.makeKeyAndOrderFront(nil);app.activate(ignoringOtherApps:true)
         DispatchQueue.main.asyncAfter(deadline:.now()+600) { app.terminate(nil) }

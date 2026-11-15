@@ -1,13 +1,12 @@
+import ThermoUI
 // Three launches of one unchanged bundle verify UserDefaults-backed choice
 // restoration. The scan is synthetic and the cleanup action is disconnected.
-@testable import ThermoApp
+@testable import DiskFeature
 import AppKit
 import CleanKit
 import SwiftUI
 import ThermoL10n
 
-@_silgen_name("$s9ThermoApp20installStandardMenusyyF")
-@MainActor func fixtureStandardMenus() {}
 
 @MainActor struct RetentionFixture: View {
     @StateObject var model: DiskModel
