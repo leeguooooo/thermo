@@ -119,7 +119,7 @@ private struct PerformanceReviewPanel:View {
         store.setMenuPanelVisible(true)
         if let host=popover.contentViewController as? NSHostingController<PerformanceReviewPanel>{
             let size=host.sizeThatFits(in:.init(width:372,height:.greatestFiniteMagnitude))
-            popover.contentSize = .init(width:size.width,height:min(size.height,(button.window?.screen ?? NSScreen.main)?.visibleFrame.height ?? size.height)-24)
+            popover.contentSize = .init(width:size.width,height:min(size.height,((button.window?.screen ?? NSScreen.main)?.visibleFrame.height ?? (size.height+24))-24))
         }
         popover.show(relativeTo:button.bounds,of:button,preferredEdge:.minY)
     }
