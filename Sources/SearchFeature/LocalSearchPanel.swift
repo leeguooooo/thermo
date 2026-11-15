@@ -126,7 +126,7 @@ struct LocalSearchView: View {
                     if let holder = shortcut.commandSpaceHolder {
                         Text(LocalSearchShortcut.heldMessage(holder)).font(Theme.secondary)
                         Spacer(minLength: 8)
-                        Button(tr("Open %@", holder.name)) { NSWorkspace.shared.open(holder.app) }
+                        Button(tr("Open %@", holder.name)) { if model.enabled {NSWorkspace.shared.open(holder.app)} }
                     } else {
                         Text(tr("Open Thermo search with ⌘Space instead of Spotlight?")).font(Theme.secondary)
                         Spacer(minLength: 8)
@@ -364,7 +364,7 @@ private struct LocalSearchSettings: View {
                 next.excludedPatterns = patterns.components(separatedBy: .newlines).filter { !$0.isEmpty }; model.configure(next)
             } }
             Divider()
-            Toggle(isOn: $asciiInput) {
+            Toggle(isOn: Binding(get:{asciiInput},set:{if model.enabled{asciiInput=$0}})) {
                 VStack(alignment: .leading, spacing: 2) {
                     Text(tr("Switch to English input while searching"))
                     Text(tr("Letters such as xtsz go straight to search instead of the input method. The previous input method comes back when search closes.")).font(Theme.caption).foregroundStyle(Theme.textSecondary)
@@ -376,7 +376,7 @@ private struct LocalSearchSettings: View {
                 if let holder = shortcut.commandSpaceHolder, !shortcut.spotlightReleased {
                     Text(LocalSearchShortcut.heldMessage(holder)).font(Theme.caption).foregroundStyle(Theme.textSecondary)
                     Spacer()
-                    Button(tr("Open %@", holder.name)) { NSWorkspace.shared.open(holder.app) }
+                    Button(tr("Open %@", holder.name)) { if model.enabled {NSWorkspace.shared.open(holder.app)} }
                 } else {
                     Text(shortcut.spotlightReleased ? tr("Spotlight's ⌘Space is turned off so Thermo search can use it.") : tr("⌘Space is Spotlight's shortcut. Thermo can turn it off and use it for search."))
                         .font(Theme.caption).foregroundStyle(Theme.textSecondary)
@@ -394,7 +394,7 @@ private struct LocalSearchSettings: View {
                 Text(tr("Thermo turns off Spotlight's ⌘Space in Keyboard Shortcuts. Spotlight still opens from the menu bar. Give it back in Search settings, or by choosing another search shortcut."))
             }
             // Re-checked on return from another app, where the user may have just changed its shortcut.
-            .onReceive(NSWorkspace.shared.notificationCenter.publisher(for: NSWorkspace.didActivateApplicationNotification)) { _ in shortcut.refreshCommandSpaceHolder() }
-            .onAppear { shortcut.refreshCommandSpaceHolder(); hidden = model.preferences.includeHiddenFiles; ignores = model.preferences.respectIgnoreFiles; patterns = model.preferences.excludedPatterns.joined(separator: "\n") }
+            .onReceive(NSWorkspace.shared.notificationCenter.publisher(for: NSWorkspace.didActivateApplicationNotification)) { _ in if model.enabled {shortcut.refreshCommandSpaceHolder()} }
+            .onAppear { if model.enabled {shortcut.refreshCommandSpaceHolder()}; hidden = model.preferences.includeHiddenFiles; ignores = model.preferences.respectIgnoreFiles; patterns = model.preferences.excludedPatterns.joined(separator: "\n") }
     }
 }
