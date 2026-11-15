@@ -27,6 +27,7 @@ import XCTest
         XCTAssertFalse(model.working)
         XCTAssertTrue(model.canStopFeature)
         XCTAssertEqual(AppExitGuard.reply(show:{_ in}),.terminateNow)
+        XCTAssertEqual(model.basket[file.path],Int64(bytes.count))
         XCTAssertEqual(try Data(contentsOf:file),bytes)
     }
     func testSkippedTrashReleasesBusyStateAndGlobalExitLease()async throws {try await checkSkippedRemoval(permanent:false)}

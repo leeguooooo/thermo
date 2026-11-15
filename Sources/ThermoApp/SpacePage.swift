@@ -262,7 +262,10 @@ final class SpaceLensModel: ObservableObject {
         stopDuplicates()
         working = true; exitRequested = false
         let lease = AppExitGuard.beginManualRemoval { self.exitRequested = true }
-        work.run(priority: .userInitiated) {
+        work.run(priority: .userInitiated,onSkipped:{ [self] in
+            working=false;exitRequested=false
+            AppExitGuard.endManualRemoval(lease)
+        }) {
             let result = remove(picked.keys.sorted(), measured, home, incomplete, identities, required)
             await MainActor.run { self.afterTrash(result); AppExitGuard.endManualRemoval(lease) }
         }
