@@ -17,7 +17,7 @@ import NativeFeatureAPI
         let original=AgentDiagnosticsFeature.registration
         let definition=NativeFeatureDefinition(manifest:original.manifest,ui:original.ui,makeSession:{gate in
             made+=1
-            let session=AgentDiagnosticsSession(availability:gate,makeScanner:{AgentScanner(enabled:$0,performAction:{_,_ in calls.hit();return .init(ok:false,log:[],backups:[])},diagnose:{calls.hit();return Self.report()},inspectMCP:{_ in calls.hit();return .init(generated:Date(),name:"fixture",agent:"fixture",state:.ready)})
+            let session=AgentDiagnosticsSession(availability:gate,makeScanner:{AgentScanner(enabled:$0,performAction:{_,_ in calls.hit();return .init(ok:false,log:[],backups:[])},diagnose:{calls.hit();return Self.report()},inspectMCP:{_ in calls.hit();return .init(generated:Date(),name:"fixture",agent:"fixture",state:.ready)})})
             sessions.append(session);return session
         })
         let catalog=try NativeFeatureCatalog(definitions:[definition]),store=NativeFeatureStore(catalog:catalog,enabled:{_ in true},navigation:.unavailable)
