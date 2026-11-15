@@ -46,8 +46,9 @@ struct ProcessInspectionTarget: Identifiable {
             let result = !token.isCancelled && allowed() ? Result { try read(expected) } : nil
             DispatchQueue.main.async {
                 defer { self.finished(id) }
-                guard self.token === token, !token.isCancelled, !self.retired, self.available(), let result else { return }
+                guard self.token === token else { return }
                 self.loading = false
+                guard !token.isCancelled, !self.retired, self.available(), let result else { return }
                 switch result {
                 case .success(let report): self.report = report
                 case .failure(let error): self.problem = tr(error.localizedDescription)
