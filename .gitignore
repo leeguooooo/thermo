@@ -6,3 +6,4 @@ dist.noindex/
 .DS_Store
 releases/
 .wrangler/
+__pycache__/
