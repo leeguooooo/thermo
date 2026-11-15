@@ -1,6 +1,7 @@
 import XCTest
 @testable import AgentDoctor
-@testable import ThermoApp
+@testable import AgentDiagnosticsFeature
+import NativeFeatureAPI
 
 final class MCPDefinitionStoreTests: XCTestCase {
     func item(_ id: String, enabled: Bool = true) -> AgentItem {

@@ -55,6 +55,9 @@ package struct NativeFeatureCatalog: Sendable {
         }
         for definition in definitions {
             guard definition.menuShortcuts.allSatisfy({key,value in value.count==1 && definition.manifest.entries.contains{$0.id==key && $0.kind == .menuBarItem}}) else{throw NativeRouteError("Invalid native menu shortcut.")}
+            if !definition.ui.sidebarLocations.isEmpty || definition.ui.hasBackdrop {
+                guard definition.manifest.entries.contains(where:{$0.kind == .page}) else{throw NativeRouteError("Native sidebar and backdrop contributions require declared pages.")}
+            }
             let contracts=definition.pageContracts
             guard Set(contracts.map(\.entry)).count == contracts.count else {throw NativeRouteError("Duplicate native page contract.")}
             for contract in contracts {

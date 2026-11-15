@@ -1,5 +1,6 @@
 import XCTest
-@testable import ThermoApp
+@testable import AgentDiagnosticsFeature
+import NativeFeatureAPI
 
 final class TaskComparisonModelTests: XCTestCase {
     private var fixtureURL: URL {

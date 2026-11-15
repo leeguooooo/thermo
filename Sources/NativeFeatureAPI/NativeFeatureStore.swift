@@ -50,6 +50,41 @@ import SwiftUI
             return session
         }
     }
+    /// Called for a real window. Returned views observe private feature state, never this store.
+    package func windowUI(selection:NativeFeatureRoute?,locations:Set<NativeSidebarLocation>)->NativeWindowUI {
+        let catalog=self.catalog
+        let selected=selection.flatMap{try? catalog.normalize($0)}
+        var groups:[NativeSidebarGroup]=[],overlays:[NativeOverlayPart]=[]
+        for id in catalog.order {
+            guard let definition=catalog.definitions[id] else{continue}
+            let mounted=definition.ui.sidebarLocations.intersection(locations)
+            guard !mounted.isEmpty || definition.ui.hasOverlay else{continue}
+            guard let session=admittedSession(id),case let .live(live)=states[id] else{continue}
+            let availability=live.availability,navigation=scopedNavigation(id),generation=ObjectIdentifier(live)
+            for location in NativeSidebarLocation.allCases where mounted.contains(location) {
+                groups.append(.init(id:id+":"+location.rawValue,location:location,manifest:definition.manifest,mount:{host in
+                    guard availability.acceptsWork else{return AnyView(EmptyView())}
+                    let rows=NativeSidebarRenderer {item in
+                        guard availability.acceptsWork,item.badge>=0,item.route.module==id,
+                              let route=try? catalog.normalize(item.route),
+                              let entry=definition.manifest.entries.first(where:{$0.id==route.entry && $0.kind == .page}) else{return AnyView(EmptyView())}
+                        return host.render(.init(route:route,manifest:definition.manifest,entry:entry,tint:item.tint,badge:item.badge,selected:selected==route,open:{_ = navigation.show(route)}))
+                    }
+                    return AnyView((session.ui(.sidebar(location:location,selection:selected,rows:rows),navigation:navigation) ?? AnyView(EmptyView())).id(generation))
+                }))
+            }
+            if definition.ui.hasOverlay,let view=session.ui(.windowOverlay,navigation:navigation) {
+                overlays.append(.init(id:id,generation:generation,view:view))
+            }
+        }
+        var backdrop:AnyView?
+        if let selected,catalog.definitions[selected.module]?.ui.hasBackdrop == true,
+           let session=admittedSession(selected.module),case let .live(live)=states[selected.module],
+           let view=session.ui(.backdrop(selected),navigation:scopedNavigation(selected.module)) {
+            backdrop=AnyView(view.id(ObjectIdentifier(live)))
+        }
+        return .init(sidebar:groups,overlay:AnyView(NativeOverlays(parts:overlays)),backdrop:backdrop)
+    }
     /// Explicit background contribution; metadata/status/quit queries remain cold.
     package func start(_ id:String) {
         guard let session=admittedSession(id),case let .live(live)=states[id],!live.started else{return}

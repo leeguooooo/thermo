@@ -419,7 +419,7 @@ struct PopoverView: View {
                     .menuStyle(.borderlessButton).fixedSize().help(tr("Screenshots and pins"))
                 }
                 ModulePanelLinks()
-                shortcut("stethoscope", tr("AI Agent Diagnostics"), .agents(.home))
+                shortcut("stethoscope", tr("AI Agent Diagnostics"), .native(.init(BuiltinModuleManifests.agents.id,"home")))
                 ForEach(BuiltinNativeFeatures.catalog.menuEntries.filter{modules.isOn($0.ref.module)}) {entry in
                     Button {AppModels.shared.nativeFeatures.activate(entry.ref)} label: {Image(systemName:entry.symbol).frame(width:22)}
                         .buttonStyle(.plain).foregroundStyle(Theme.textSecondary).help(tr(entry.title))

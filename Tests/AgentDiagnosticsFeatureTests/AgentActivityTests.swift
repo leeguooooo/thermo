@@ -1,6 +1,7 @@
 import XCTest
 @testable import AgentDoctor
-@testable import ThermoApp
+@testable import AgentDiagnosticsFeature
+import NativeFeatureAPI
 
 final class AgentActivityTests: XCTestCase {
     @MainActor func testResultsSurviveInventoryReplacementAndRemainBounded() {
