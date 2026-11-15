@@ -6,11 +6,6 @@ import SwiftUI
 import ThermoKit
 import ThermoL10n
 
-/// The pages under Claude tools in the sidebar.
-enum ClaudeTab: String, Hashable, CaseIterable {
-    case accounts, reset, privacy
-}
-
 /// Where the main window is.
 enum MainPage: Hashable {
     case overview, sensors, fans, settings
@@ -19,7 +14,6 @@ enum MainPage: Hashable {
     case apps(AppsTab)
     case space(SpaceTab)
     case memory
-    case claude(ClaudeTab)
     case compute(Bool)
     case history
     case yunx
@@ -48,8 +42,6 @@ enum MainPage: Hashable {
             guard parts.count > 1 else { return nil }
             let rest = parts[1].split(separator: ":", maxSplits: 1).map(String.init)
             self = .module(rest[0], rest.count > 1 ? rest[1] : "")
-        case "claude": self = .claude(parts.count > 1 ? (ClaudeTab(rawValue: parts[1]) ?? .accounts) : .accounts)
-        case "claude-cleanup": self = .claude(parts.count > 1 && parts[1] == "privacy" ? .privacy : .reset)
         case "cpu": self = .compute(false)
         case "gpu": self = .compute(true)
         case "space": self = .space(parts.count > 1 ? (SpaceTab(rawValue: parts[1]) ?? .browse) : .browse)
@@ -65,7 +57,6 @@ enum MainPage: Hashable {
         }
     }
     var isAgents: Bool { if case .agents = self { return true } else { return false } }
-    var claudeTab: ClaudeTab? { if case let .claude(t) = self { return t } else { return nil } }
     var appsTab: AppsTab? { if case let .apps(t) = self { return t } else { return nil } }
     var spaceTab: SpaceTab? { if case let .space(t) = self { return t } else { return nil } }
 }
@@ -324,8 +315,6 @@ struct MainView: View {
         case .agents:
             ModuleOffView().transition(.page)
         case .apps:
-            ModuleOffView().transition(.page)
-        case .claude:
             ModuleOffView().transition(.page)
         case .yunx:
             ModuleOffView().transition(.page)
