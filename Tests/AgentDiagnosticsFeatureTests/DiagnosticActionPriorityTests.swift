@@ -1,5 +1,5 @@
 import XCTest
-@testable import ThermoApp
+@testable import AgentDiagnosticsFeature
 @testable import AgentDoctor
 
 final class DiagnosticActionPriorityTests: XCTestCase {
