@@ -94,7 +94,7 @@ final class StatusMenu: NSObject, NSMenuDelegate {
                 menu.addItem(item(tr("Manage menu bar…"), "menubar.rectangle") { MenuBarManagerPanel.shared.show() })
                 
             case .history:
-                menu.addItem(page(tr("History"), "clock.arrow.circlepath", .history))
+                menu.addItem(page(tr("History"), "clock.arrow.circlepath", .module(BuiltinModuleManifests.history.id,"home")))
                 
             case .settings:
                 menu.addItem(item(tr("Settings…"), "gearshape", key: ",") { MainWindow.show(.settings) })

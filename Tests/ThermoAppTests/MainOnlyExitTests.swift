@@ -1,3 +1,4 @@
+import ModuleKit
 import AppKit
 import XCTest
 @testable import ThermoApp
@@ -11,10 +12,10 @@ final class MainOnlyExitTests: XCTestCase {
         let helper = AppExitGuard.beginHelperMaintenance()
         defer { AppExitGuard.endRestore(restore); AppExitGuard.endHelperMaintenance(helper) }
         XCTAssertEqual(delegate.applicationShouldTerminate(NSApplication.shared), .terminateCancel)
-        XCTAssertEqual(pages, [.history])
+        XCTAssertEqual(pages, [.module(BuiltinModuleManifests.history.id,"home")])
         AppExitGuard.endRestore(restore)
         XCTAssertEqual(delegate.applicationShouldTerminate(NSApplication.shared), .terminateCancel)
-        XCTAssertEqual(pages, [.history, .settings])
+        XCTAssertEqual(pages, [.module(BuiltinModuleManifests.history.id,"home"), .settings])
         AppExitGuard.endHelperMaintenance(helper)
         XCTAssertEqual(delegate.applicationShouldTerminate(NSApplication.shared), .terminateNow)
     }
@@ -80,7 +81,7 @@ final class MainOnlyExitTests: XCTestCase {
             await fulfillment(of: [requested], timeout: 2)
             XCTAssertEqual(requests, 1)
             switch kind {
-            case "restore": XCTAssertEqual(pages, [.history])
+            case "restore": XCTAssertEqual(pages, [.module(BuiltinModuleManifests.history.id,"home")])
             case "helper": XCTAssertEqual(pages, [.settings])
             case "manual": XCTAssertEqual(pages, [.space(.browse)]); XCTAssertEqual(notices, 1)
             default: XCTAssertTrue(pages.isEmpty)

@@ -19,7 +19,7 @@ enum AppExitGuard {
 
     static func reply(show: @MainActor (MainPage) -> Void = { MainWindow.show($0) }) -> NSApplication.TerminateReply {
         if !restores.isEmpty {
-            show(.history)
+            show(.module(BuiltinModuleManifests.history.id,"home"))
             return .terminateCancel
         }
         if !helperMaintenance.isEmpty {

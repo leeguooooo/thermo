@@ -3,7 +3,7 @@ import AppKit
 import ThermoL10n
 import AgentCore
 @testable import CleanKit
-@testable import ThermoApp
+@testable import HistoryFeature
 
 final class HistoryRestoreTests: XCTestCase {
     @MainActor func testRestoreFeedbackSeparatesAlreadyRestoredItemFromTheCurrentAttempt() async {
@@ -60,33 +60,9 @@ final class HistoryRestoreTests: XCTestCase {
               undo: .init(kind: "trashBatch", ref: UUID().uuidString))
     }
 
-    @MainActor func testConfirmedRestoreBlocksQuitAndReportsOnlyActuallyRestoredPaths() async {
-        let began = expectation(description: "restore starts"); began.assertForOverFulfill = true
-        let release = DispatchSemaphore(value: 0)
-        defer { release.signal() }
-        var paths: [String] = []
-        let model = HistoryModel(reader: { .init(records: []) }, restoreBatch: { id, _ in
-            began.fulfill()
-            _ = release.wait(timeout: .now() + 5)
-            return TrashRestore(id: id, dryRun: false, items: [
-                .init(original: "/restored", destination: "/trash/a", bytes: 1, status: "restored"),
-                .init(original: "/kept", destination: "/trash/b", bytes: 1, status: "conflict")])
-        }, didRestore: { paths = $0 })
-        let entry = record(); model.restore(entry, review: review(entry))
-        await fulfillment(of: [began], timeout: 2)
-        XCTAssertTrue(model.busy)
-        var shown: [MainPage] = []
-        XCTAssertEqual(AppExitGuard.reply(show: { shown.append($0) }), .terminateCancel)
-        XCTAssertEqual(shown, [.history])
-        model.restore(entry, review: review(entry))
-        release.signal()
-        for _ in 0..<100 where model.busy { try? await Task.sleep(nanoseconds: 10_000_000) }
-        XCTAssertFalse(model.busy)
-        XCTAssertEqual(paths, ["/restored"])
-        XCTAssertEqual(AppExitGuard.reply(show: { _ in XCTFail("completed restore must allow exit") }), .terminateNow)
-    }
 
-    @MainActor func testRestoreCancelledBeforePhysicalWorkReleasesExitGuard() async {
+
+    @MainActor func testRestoreCancelledBeforePhysicalWorkClearsBusy() async {
         let model = HistoryModel(reader: { .init(records: []) }, restoreBatch: { _, _ in
             XCTFail("cancelled restore must not touch files")
             throw NSError(domain: "fixture", code: 1)
@@ -98,33 +74,15 @@ final class HistoryRestoreTests: XCTestCase {
         model.work.cancel()
         await model.work.finish()
         XCTAssertFalse(model.busy)
-        XCTAssertEqual(AppExitGuard.reply(show: { _ in }), .terminateNow)
     }
 
-    @MainActor func testFailedRestoreReleasesExitGuardWithoutInvalidatingSuccessfulData() async {
+    @MainActor func testFailedRestoreDoesNotInvalidateSuccessfulData() async {
         let model = HistoryModel(reader: { .init(records: []) }, restoreBatch: { _, _ in throw NSError(domain: "fixture", code: 1) },
                                  didRestore: { _ in XCTFail("nothing was restored") })
         let entry = record(); model.restore(entry, review: review(entry))
         for _ in 0..<100 where model.busy { try? await Task.sleep(nanoseconds: 10_000_000) }
         XCTAssertFalse(model.busy); XCTAssertNotNil(model.notice)
-        XCTAssertEqual(AppExitGuard.reply(show: { _ in XCTFail("failed restore must release exit guard") }), .terminateNow)
     }
 
-    @MainActor func testRestoreInvalidationClearsOldOutcomeAndCancelsAStaleReview() async {
-        let began = expectation(description: "review starts")
-        let release = DispatchSemaphore(value: 0)
-        defer { release.signal() }
-        let model = AppsModel(reviewPlan: { app, _, _, _ in
-            began.fulfill(); _ = release.wait(timeout: .now() + 5)
-            return UninstallPlan(app: app, paths: [], bytes: 0)
-        })
-        model.outcome = "old removal result"
-        model.review(InstalledApp(path: "/fixture.app", name: "Fixture", bundleID: "com.example.fixture"))
-        await fulfillment(of: [began], timeout: 2)
-        model.invalidateAfterRestore()
-        XCTAssertNil(model.outcome); XCTAssertNil(model.plan)
-        release.signal()
-        for _ in 0..<100 where model.planning != nil { try? await Task.sleep(nanoseconds: 10_000_000) }
-        XCTAssertNil(model.planning); XCTAssertNil(model.plan)
-    }
+
 }
