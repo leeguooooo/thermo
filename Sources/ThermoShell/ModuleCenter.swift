@@ -310,14 +310,18 @@ struct ModuleSwitches: View {
                 Spacer()
                 Button(tr("Access records")){activity=status.manifest.localized(L10n.current.rawValue)}
                     .buttonStyle(PillButtonStyle()).controlSize(.small).fixedSize()
+                    .accessibilityLabel(tr("Access records for %1$@",status.builtin ? tr(status.manifest.name):status.manifest.localized(L10n.current.rawValue).name))
+                    .accessibilityIdentifier("module-center-activity-"+status.manifest.id)
                 Toggle("", isOn: Binding(get: { status.enabled }, set: { center.setEnabled(status.manifest.id,$0);if !$0{expanded.insert(status.manifest.id)} }))
-                    .labelsHidden().toggleStyle(.switch).accessibilityLabel(status.manifest.name)
+                    .labelsHidden().toggleStyle(.switch).accessibilityLabel(status.builtin ? tr(status.manifest.name):status.manifest.localized(L10n.current.rawValue).name)
+                    .accessibilityIdentifier("module-center-toggle-"+status.manifest.id)
                     .disabled(center.changing.contains(status.manifest.id))
             }.padding(.horizontal, Theme.Space.m).padding(.vertical, 8)
                 DisclosureGroup(tr("Access and stop details"),isExpanded:Binding(get:{expanded.contains(status.manifest.id)},set:{if $0{expanded.insert(status.manifest.id)}else{expanded.remove(status.manifest.id)}})) {
                     ModuleCapabilityDetails(manifest:status.manifest,builtin:status.builtin).padding(.top,8)
                     if let progress=center.stopProgress[status.manifest.id]{ModuleStopDetails(progress:progress).padding(.top,8)}
                 }.font(Theme.secondary).foregroundStyle(Theme.textSecondary)
+                    .accessibilityIdentifier("module-center-details-"+status.manifest.id)
                     .padding(.leading,46).padding(.trailing,Theme.Space.m).padding(.bottom,12)
             }
 

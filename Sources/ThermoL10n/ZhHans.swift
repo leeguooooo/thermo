@@ -4595,4 +4595,7 @@ let zhHans: [String: String] = [
 
     "Access and stop details": "访问范围与停用情况",
 
+    "Access records for %1$@": "%1$@ 的访问记录",
+    "%1$@ targets in this request": "本次请求涉及 %1$@ 个目标",
+
 ]

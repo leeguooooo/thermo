@@ -38,6 +38,7 @@ package struct ModuleActivityPanel: View {
                                     Text(outcome(record.outcome)).font(Theme.caption).foregroundStyle(record.outcome == .allowed ? Theme.good:Theme.caution)
                                 }
                                 if let target=record.targets.first {Text(target).font(Theme.mono).lineLimit(1).truncationMode(.middle).textSelection(.enabled)}
+                                if record.targetCount>1{Text(tr("%1$@ targets in this request",String(record.targetCount))).font(Theme.caption).foregroundStyle(Theme.textTertiary)}
                                 if let detail=record.detail,!detail.isEmpty {Text(detail).font(Theme.secondary).foregroundStyle(Theme.textSecondary).lineLimit(2)}
                             }
                         }
