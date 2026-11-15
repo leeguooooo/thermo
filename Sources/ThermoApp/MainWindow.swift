@@ -259,7 +259,7 @@ struct MainView: View {
         let nativeUI=models.nativeFeatures.windowUI(selection:page.nativeRoute,locations:Set(NativeSidebarLocation.allCases))
         ZStack {
             if let backdrop=nativeUI.backdrop {backdrop}
-            else {MainBackdrop(glow: glow, overrideTint: tint, monitor: monitor)}
+            else {MainBackdrop(glow:false,overrideTint:nil,monitor:monitor)}
             HStack(spacing: 0) {
                 MainSidebar(page: $page, monitor: monitor,nativeGroups:nativeUI.sidebar)
                     .frame(width: 228).background(Theme.sidebar.opacity(0.92))
@@ -278,29 +278,10 @@ struct MainView: View {
 
     }
 
-    var glow: Bool {
-        if let owner = BuiltinModules.owner(page) { return modules.isOn(owner.manifest.id) && owner.appearance(page).glow }
-        switch page {
-        case .overview: return true
-        default: return false
-        }
-    }
-
-    var tint: Color? {
-        if let owner = BuiltinModules.owner(page), modules.isOn(owner.manifest.id) { return owner.appearance(page).tint }
-        switch page {
-        default: return nil
-        }
-    }
-
     @ViewBuilder var content: some View {
-        if case let .native(route)=page {
+        if let route=page.nativeRoute {
             if let view=models.nativeFeatures.page(route) {view.id(route).transition(.page)}
             else {ModuleOffView().transition(.page)}
-        } else if let owner = BuiltinModules.owner(page) {
-            if modules.isOn(owner.manifest.id), let feature = BuiltinModules.page(page) {
-                owner.page(feature.entry, selection: $page, models: models).id(owner.manifest.id).transition(.page)
-            } else { ModuleOffView().transition(.page) }
         } else { coreContent }
     }
 
@@ -360,7 +341,7 @@ struct MainSidebar: View {
     @Namespace private var selectionSpace
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
-    @ViewBuilder func moduleRows(_ section: BuiltinSidebarSection, titled: Bool = false) -> some View {
+    @ViewBuilder func moduleRows(_ section: NativeSidebarLocation, titled: Bool = false) -> some View {
         ForEach(nativeGroups.filter{$0.location==section}) {group in
             if titled {header(tr(group.manifest.name))}
             group.content {item in
@@ -368,17 +349,7 @@ struct MainSidebar: View {
                     .padding(.leading,CGFloat(max(0,item.manifest.depth(of:item.entry.id)-1))*14))
             }
         }
-        ForEach(BuiltinModules.implementations.indices, id: \.self) { index in
-            let feature = BuiltinModules.implementations[index]
-            if modules.isOn(feature.manifest.id), feature.sidebarSections.contains(section), feature.manifest.entries.contains(where: { $0.kind == .page }) {
-                if titled { header(tr(feature.manifest.name)) }
-                BuiltinSidebarGroup(implementation: feature, section: section, selection: $page, row: { item in
-                    AnyView(row(item.target, tr(item.entry.title), item.entry.symbol ?? feature.manifest.symbol,
-                        item.tint, trailing: item.trailing, trailingColor: item.trailingColor, badge:item.badge, indent: item.entry.parent != nil, selected: item.selected)
-                        .padding(.leading, CGFloat(max(0, feature.manifest.depth(of: item.entry.id) - 1)) * 14))
-                })
-            }
-        }
+
     }
 
     var body: some View {
@@ -398,7 +369,7 @@ struct MainSidebar: View {
                     header(tr("Resources"))
                     moduleRows(.resources)
 
-                    if !BuiltinModules.implementations.contains(where: { modules.isOn($0.manifest.id) && $0.sidebarSections.contains(.storage) && $0.manifest.entries.contains(where: { $0.kind == .page }) }) {
+                    if !nativeGroups.contains(where:{$0.location == .storage}) {
                         header(tr("Storage & apps"))
                     }
                     moduleRows(.storage, titled: true)
@@ -415,7 +386,7 @@ struct MainSidebar: View {
                         }
                     }
 
-                    if nativeGroups.contains(where:{$0.location == .agents}) || BuiltinModules.implementations.contains(where:{modules.isOn($0.manifest.id) && $0.sidebarSections.contains(.agents)}) {
+                    if nativeGroups.contains(where:{$0.location == .agents}) {
                         header(tr("AI Agent Diagnostics"))
                         moduleRows(.agents)
                     }
