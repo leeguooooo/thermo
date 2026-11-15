@@ -54,6 +54,9 @@ package struct NativeFeatureCatalog: Sendable {
         guard Set(definitions.map{$0.manifest.id}).count == definitions.count else {
             throw NativeRouteError("Duplicate native feature.")
         }
+        guard definitions.filter({$0.ui.compactPanelEntry != nil}).count <= 1 else {
+            throw NativeRouteError("Only one native feature may own the compact panel.")
+        }
         for definition in definitions {
             guard definition.menuShortcuts.allSatisfy({key,value in value.count==1 && definition.manifest.entries.contains{$0.id==key && $0.kind == .menuBarItem}}) else{throw NativeRouteError("Invalid native menu shortcut.")}
             if !definition.ui.sidebarLocations.isEmpty || definition.ui.hasBackdrop {
@@ -79,6 +82,11 @@ package struct NativeFeatureCatalog: Sendable {
         }
         self.definitions=Dictionary(uniqueKeysWithValues:definitions.map{($0.manifest.id,$0)})
         order=definitions.map{$0.manifest.id}
+        for definition in definitions {
+            if let entry=definition.ui.compactPanelEntry {
+                _ = try normalize(.init(definition.manifest.id,entry))
+            }
+        }
     }
     package func manifest(_ id:String)->ModuleManifest? {definitions[id]?.manifest}
     package func normalize(_ input:NativeFeatureRoute)throws->NativeFeatureRoute {

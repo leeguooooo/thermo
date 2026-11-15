@@ -113,6 +113,14 @@ import SwiftUI
         }
         return .init(sidebar:groups,overlay:AnyView(NativeOverlays(parts:overlays)),backdrop:backdrop)
     }
+    /// Compact content is attached only to the exact declared page owner, with normal admission.
+    package func compactPanel(_ request:NativeFeatureRoute)->AnyView? {
+        guard let route=try? catalog.normalize(request),
+              catalog.definitions[route.module]?.ui.compactPanelEntry==route.entry,
+              let session=admittedSession(route.module),case let .live(live)=states[route.module],
+              let view=session.ui(.compactPanel(route),navigation:scopedNavigation(route.module)) else{return nil}
+        return AnyView(view.id(live.generation))
+    }
     /// Hierarchical menu content is declared separately so leaf menu metadata stays model-cold.
     package func menuContent(_ ref:NativeUIEntryRef)->NativeMenuContent? {
         guard let definition=catalog.definitions[ref.module],definition.ui.hasMenuContent,
