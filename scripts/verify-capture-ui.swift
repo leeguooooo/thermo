@@ -10,6 +10,7 @@ import ThermoKit
 import CaptureScriptCore
 import ThermoL10n
 import SwiftUI
+import Combine
 
 @main struct CaptureReview {
     @MainActor static func main() {
@@ -29,7 +30,14 @@ import SwiftUI
         let menu = NSMenu(), top = NSMenuItem(), items = NSMenu()
         items.addItem(withTitle: "Quit QA",action: #selector(NSApplication.terminate(_:)),keyEquivalent: "q")
         top.submenu = items; menu.addItem(top); app.mainMenu = menu
-        installStandardMenus()
+        let edit = NSMenuItem(), editing = NSMenu(title: "Edit")
+        for (title, selector, key) in [("Cut", #selector(NSText.cut(_:)), "x"),
+                                        ("Copy", #selector(NSText.copy(_:)), "c"),
+                                        ("Paste", #selector(NSText.paste(_:)), "v"),
+                                        ("Select All", #selector(NSText.selectAll(_:)), "a")] {
+            editing.addItem(withTitle: title, action: selector, keyEquivalent: key)
+        }
+        edit.submenu = editing; menu.addItem(edit)
         let image = ctx.makeImage()!
         var recordingWindow: CaptureRecordingWindow?
         var annotationWindow:CaptureEditor?
