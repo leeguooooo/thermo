@@ -140,9 +140,9 @@ final class SystemPulse: ObservableObject {
             let result: PulseActionReview
             if let read = self.readActionReview { result = read(hog, before, action) }
             else {
-            let after = self.sampler.sample()
-            let all = MachinePulse.group(ProcessTable.current(.init(cpu: false)).entries, byMemory: true, limit: nil)
-            result = PulseActionReview(action: action, target: hog, before: before, after: after,
+                let after = self.sampler.sample()
+                let all = MachinePulse.group(ProcessTable.current(.init(cpu: false)).entries, byMemory: true, limit: nil)
+                result = PulseActionReview(action: action, target: hog, before: before, after: after,
                                            afterTarget: PulseActionReview.findTarget(hog, in: all), inventoryAvailable: !all.isEmpty)
             }
             self.recordActionReview(result)

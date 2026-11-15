@@ -84,4 +84,44 @@ import XCTest
         withExtendedLifetime(observation) {}
     }
 
+    func testFreshDiagnosisCompletesAsSkippedAfterRetirementWithoutCallingTheAction() async {
+        let entered = expectation(description: "fresh diagnosis entered")
+        let skipped = expectation(description: "caller can release its operation")
+        let release = DispatchSemaphore(value: 0)
+        defer { release.signal() }
+        let queue = DispatchQueue(label: "thermo-fresh-diagnosis-retirement")
+        let system = SlowdownSystem(memoryBytes: 16 << 30, swapUsed: 0, swapTotal: 0,
+                                    pressure: .normal, load1: 1, cores: 8)
+        let found = SlowdownDiagnosis(sampled: Date(), system: system, memoryStrain: .none,
+                                      cpuStrain: .none, headline: "Fixture", culprits: [], also: [])
+        let recorder = PulseRecorder(queue: queue, readHistory: { [] }, readDiagnosis: {
+            entered.fulfill(); _ = release.wait(timeout: .now() + 10)
+            return (found, [])
+        })
+        recorder.start(); await drain(queue)
+        recorder.diagnoseFresh(onSkipped: { skipped.fulfill() }) { _, _ in
+            XCTFail("Retired diagnosis must not dispatch a process action")
+        }
+        await fulfillment(of: [entered], timeout: 2)
+        recorder.beginStopping(); release.signal()
+        await recorder.stop(); await drain(queue)
+        await fulfillment(of: [skipped], timeout: 2)
+        XCTAssertNil(recorder.diagnosis)
+    }
+    func testColdManualRequestsNeverReadAndFreshRequestReleasesCaller() async {
+        let queue = DispatchQueue(label: "thermo-cold-manual-diagnosis")
+        let skipped = expectation(description: "cold request skipped")
+        let recorder = PulseRecorder(queue: queue, samplingAllowed: { false }, readDiagnosis: {
+            XCTFail("Cold disabled recorder must not read process inventory")
+            let system = SlowdownSystem(memoryBytes: 0, swapUsed: 0, swapTotal: 0,
+                                        pressure: .normal, load1: 0, cores: 1)
+            return (SlowdownDiagnosis(sampled: Date(), system: system, memoryStrain: .none,
+                                     cpuStrain: .none, headline: "Unused", culprits: [], also: []), [])
+        })
+        recorder.diagnoseNow()
+        recorder.diagnoseFresh(onSkipped: { skipped.fulfill() }) { _, _ in XCTFail("Cold request cannot dispatch an action") }
+        await drain(queue); await fulfillment(of: [skipped], timeout: 2)
+        XCTAssertNil(recorder.diagnosis)
+    }
+
 }

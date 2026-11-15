@@ -122,23 +122,35 @@ final class PulseRecorder: ObservableObject {
     }
 
     /// Runs on `queue`.
-    @discardableResult private func diagnose(token: UUID? = nil) -> SlowdownDiagnosis {
+    @discardableResult private func diagnose(token: UUID) -> SlowdownDiagnosis {
         // Snapshots of the Overview card need a diagnosis with culprits even on a calm Mac.
         let fixture = ProcessInfo.processInfo.environment["THERMO_DIAGNOSIS_FIXTURE"]
             .flatMap { FileManager.default.contents(atPath: $0) }
             .flatMap { try? JSONDecoder().decode(SlowdownDiagnosis.self, from: $0) }
         let found = fixture ?? readDiagnosis?().0 ?? SlowdownDiagnosis.diagnose(slowdown.sample(), system: .read())
-        DispatchQueue.main.async { if token == nil || self.lifetime.accepts(token!) { self.diagnosis = found } }
+        DispatchQueue.main.async {
+            if self.samplingAllowed(), self.lifetime.accepts(token) { self.diagnosis = found }
+        }
         return found
     }
 
     /// A fresh answer now, e.g. after ending a culprit.
-    func diagnoseNow() { queue.async { self.diagnose() } }
+    func diagnoseNow() {
+        guard samplingAllowed(), let token = lifetime.current() else { return }
+        queue.async {
+            guard self.samplingAllowed(), self.lifetime.accepts(token) else { return }
+            self.diagnose(token: token)
+        }
+    }
 
     /// A fresh answer handed to `then` on the recorder's queue, with the processes it was made from.
     /// It reuses the long-lived sampler, so busy streaks and idle times are judged as on every tick.
-    func diagnoseFresh(then: @escaping (SlowdownDiagnosis, [SlowdownProcess]) -> Void) {
+    /// `onSkipped` also runs on the recorder queue, so an admitted caller can release its operation.
+    func diagnoseFresh(onSkipped: @escaping () -> Void = {},
+                       then: @escaping (SlowdownDiagnosis, [SlowdownProcess]) -> Void) {
+        let token = samplingAllowed() ? lifetime.current() : nil
         queue.async {
+            guard let token, self.samplingAllowed(), self.lifetime.accepts(token) else { onSkipped(); return }
             let processes: [SlowdownProcess]
             let found: SlowdownDiagnosis
             if let read = self.readDiagnosis { (found, processes) = read() }
@@ -146,7 +158,10 @@ final class PulseRecorder: ObservableObject {
                 processes = self.slowdown.sample()
                 found = SlowdownDiagnosis.diagnose(processes, system: .read())
             }
-            DispatchQueue.main.async { self.diagnosis = found }
+            guard self.samplingAllowed(), self.lifetime.accepts(token) else { onSkipped(); return }
+            DispatchQueue.main.async {
+                if self.samplingAllowed(), self.lifetime.accepts(token) { self.diagnosis = found }
+            }
             then(found, processes)
         }
     }
