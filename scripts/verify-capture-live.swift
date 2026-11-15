@@ -1,5 +1,5 @@
 // Real display capture QA with private drafts and pins. No helper, updater or global shortcuts.
-@testable import ThermoApp
+@testable import CaptureFeature
 import AppKit
 import AVFoundation
 import CaptureCore

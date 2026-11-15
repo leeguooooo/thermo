@@ -1,3 +1,4 @@
+import CaptureControlAdapter
 import AppKit
 import AgentCore
 import CaptureFeature
@@ -58,11 +59,11 @@ import XCTest
     }
     func testEnvelopeValidationAndQueriedFailureKeepWireSemantics() async throws {
         let control=Control()
-        let malformed=await CaptureControlBridge.handle(.init(action:"capture.run",arguments:["source":"return 1;","extra":"rejected"]),control:control)
+        let malformed=await CaptureControlEnvelope.handle(.init(action:"capture.run",arguments:["source":"return 1;","extra":"rejected"]),control:control)
         XCTAssertFalse(malformed.succeeded);XCTAssertTrue(control.calls.isEmpty)
-        let invalidID=await CaptureControlBridge.handle(.init(action:"capture.status",arguments:["id":"invalid"]),control:control)
+        let invalidID=await CaptureControlEnvelope.handle(.init(action:"capture.status",arguments:["id":"invalid"]),control:control)
         XCTAssertFalse(invalidID.succeeded);XCTAssertTrue(control.calls.isEmpty)
-        let id=UUID(),response=await CaptureControlBridge.handle(.init(action:"capture.status",arguments:["id":id.uuidString]),control:control)
+        let id=UUID(),response=await CaptureControlEnvelope.handle(.init(action:"capture.status",arguments:["id":id.uuidString]),control:control)
         XCTAssertTrue(response.succeeded);XCTAssertNil(response.issue)
         let report=try JSONDecoder().decode(CaptureCLIReport.self,from:XCTUnwrap(response.values["capture"]?.data(using:.utf8)))
         XCTAssertEqual(report.phase,.failed);XCTAssertEqual(report.issue,"previous operation failed")

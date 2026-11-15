@@ -594,10 +594,10 @@ func captureFailureMessage(_ error:Error) -> String {
                     let result = try await Task.detached(priority: .userInitiated) { try execute(image,true) }.value
                     guard self.featureEnabled(),!Task.isCancelled else{return}
                     if self.revision == revision {
-                        recognition = ([result.text] + result.codes).filter { !$0.isEmpty }.joined(separator: "\n")
-                        ocrSegments=result.segments;selectedOCRSegments=[];selectingOCRText=false
-                        if recognition.isEmpty { error = tr("No text or barcode found.") }
-                    } else { error = tr("The image changed. Run recognition again.") }
+                        self.recognition = ([result.text] + result.codes).filter { !$0.isEmpty }.joined(separator: "\n")
+                        self.ocrSegments=result.segments;self.selectedOCRSegments=[];self.selectingOCRText=false
+                        if self.recognition.isEmpty { self.error = tr("No text or barcode found.") }
+                    } else { self.error = tr("The image changed. Run recognition again.") }
                 } catch {if self.featureEnabled(),!Task.isCancelled{self.error=tr(error.localizedDescription)}}
             }
         } catch { self.error = tr(error.localizedDescription) }

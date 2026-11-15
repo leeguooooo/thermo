@@ -1,5 +1,6 @@
-// Link with the debug ThermoApp module to exercise production capture UI without the helper.
-@testable import ThermoApp
+// Build the private CaptureFeature in an isolated fixture; no public model exports.
+@testable import CaptureFeature
+import CaptureControlAdapter
 import AppKit
 import AVFoundation
 import CaptureCore
@@ -35,7 +36,7 @@ import SwiftUI
         var pinSession:CapturePinSession?
         var captureWorkspace:CaptureWorkspace?
         var shortcutModel:CaptureShortcutModel?
-        var cliHost:CaptureCLIHost?
+        var cliHost:(any CaptureApplicationControl)?
         var cliServer:AppControlServer?
         var screenshotReviewWindow:NSWindowController?
         var liveCaptureReview:LiveCaptureReview?
@@ -130,9 +131,9 @@ import SwiftUI
             }
             if Bundle.main.object(forInfoDictionaryKey:"ThermoCaptureCLIReview") as? Bool == true {
                 do {
-                    let host=CaptureCLIHost(workspace:workspace),directory=root.appendingPathComponent("control"),cli=Bundle.main.bundleURL.appendingPathComponent("Contents/Helpers/thermo")
+                    let host=CaptureReviewControl(workspace:workspace),directory=root.appendingPathComponent("control"),cli=Bundle.main.bundleURL.appendingPathComponent("Contents/Helpers/thermo")
                     let trust=try LocalControlPeerTrust(team:CodeSignature.teamIdentifier(),developmentExecutable:cli)
-                    cliHost=host;cliServer=try AppControlServer(directory:directory,authorize:{trust.accepts(auditToken:$0)}) {request,reply in Task{@MainActor in reply(await host.handle(request))}}
+                    cliHost=host;cliServer=try AppControlServer(directory:directory,authorize:{trust.accepts(auditToken:$0)}) {request,reply in Task{@MainActor in reply(await CaptureControlEnvelope.handle(request,control:host))}}
                     let info=["directory":directory.path,"cli":cli.path]
                     try JSONSerialization.data(withJSONObject:info).write(to:root.appendingPathComponent("control-info.json"),options:.atomic)
                 } catch {workspace.saving.issue=error.localizedDescription}
@@ -418,4 +419,14 @@ private struct CaptureSavingQA:View {
             }.padding(8)
         }
     }
+}
+
+@MainActor private final class CaptureReviewControl:CaptureApplicationControl {
+    private let workspace:CaptureWorkspace
+    private let ledger=CaptureCLIHost()
+    init(workspace:CaptureWorkspace){self.workspace=workspace}
+    func handle(_ request:CaptureControlRequest) async->CaptureControlResult {
+        await ledger.handle(request,access:.init(canUse:{self.workspace.enabled},workspace:{self.workspace}))
+    }
+    func cancelActive(){ledger.cancelActive()}
 }

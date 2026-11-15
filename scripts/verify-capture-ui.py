@@ -15,6 +15,7 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--output-dir', type=Path)
     parser.add_argument('--app-path', type=Path, help='Optional persistent QA app location, for example ~/Applications/ThermoCaptureQA.app')
+    parser.add_argument('--jobs',type=int,default=1,help='Bounded Swift build jobs')
     parser.add_argument('--bundle-id', help='Stable identity for an explicitly authorized live-capture QA profile')
     parser.add_argument('--sign-id', default='-', help='Signing identity; ad-hoc by default, Developer ID recommended for live permission tests')
     parser.add_argument('--recording-review', action='store_true')
@@ -63,35 +64,47 @@ def main():
     if app.exists():
         parser.error('Output app already exists; choose a fresh output directory.')
     output.mkdir(parents=True, exist_ok=True)
-    # Test builds emit the renamed ThermoApp_main entry point for @testable import.
-    subprocess.run(['swift', 'test', '-j', '4', '--filter', 'CaptureCoreTests'], check=True)
-    base = Path(subprocess.check_output(['swift', 'build', '--show-bin-path'], text=True).strip()).resolve()
-    package = json.loads(subprocess.check_output(['swift', 'package', 'describe', '--type', 'json'], text=True))
-    clang_targets = {target['name'] for target in package['targets'] if target.get('module_type') == 'ClangTarget'} | {'libwebp'}
+    if args.jobs < 1:
+        parser.error('jobs must be positive')
+    # A real temporary SPM target gets package visibility and exact transitive linking.
+    # Never link ThermoApp or expose its former private capture models for this harness.
+    import uuid
+    target = 'CaptureReviewFixture' + uuid.uuid4().hex[:10]
+    source_dir = root / 'Sources' / target
+    source_dir.mkdir()
+    package_file = root / 'Package.swift'
+    original_package = package_file.read_bytes()
+    needle = b'    targets: ['
+    if original_package.count(needle) != 1:
+        source_dir.rmdir()
+        raise RuntimeError('Expected one package target list')
+    declaration = ('\n        .executableTarget(name:"' + target + '",dependencies:["CaptureFeature","CaptureControlAdapter","CaptureCore","CaptureScriptCore","AgentCore","ThermoKit","ThermoL10n"]),').encode()
+    modified_package = original_package.replace(needle, needle + declaration)
     binary = app / 'Contents/MacOS/ThermoCaptureQA'
     binary.parent.mkdir(parents=True)
-    command = ['xcrun', 'swiftc', '-parse-as-library', str(root/'scripts/verify-capture-ui.swift'), str(root/'scripts/verify-capture-live.swift'), '-o', str(binary),
-               '-I', str(root/'Sources/CSQLite'), '-lsqlite3', '-lz', '-framework', 'AVKit', '-framework', 'WebKit', '-framework', 'Quartz', '-framework', 'JavaScriptCore']
-    if (base/'ExecutableModules').is_dir():
-        framework = base/'Sparkle.framework'
-        command += ['-I', str(base), '-F', str(base), '-framework', 'Sparkle', '-Xlinker', '-rpath', '-Xlinker', '@executable_path/../Frameworks']
-        for name in sorted(clang_targets):
-            for path in (root/'.build/out/Intermediates.noindex/GeneratedModuleMaps').glob(name+'.modulemap'):
-                command += ['-Xcc', '-fmodule-map-file='+str(path)]
-        modules = list((base/'ExecutableModules').glob('ThermoApp-*-testable.o'))
-        if len(modules) != 1:
-            raise RuntimeError('Expected one current ThermoApp testable object.')
-        command += [str(path) for path in base.glob('*.o')] + [str(modules[0])]
-    else:
-        sparkle = root/'.build/artifacts/sparkle/Sparkle/Sparkle.xcframework/macos-arm64_x86_64'
-        framework = sparkle/'Sparkle.framework'
-        command += ['-I', str(base/'Modules'), '-I', str(base/'CSMC.build'),
-                    '-I', str(base/'CWebPEncoder.build'), '-I', str(base/'libwebp.build'),
-                    '-F', str(sparkle), '-framework', 'Sparkle', '-Xlinker', '-rpath', '-Xlinker', '@executable_path/../Frameworks']
-        for name in sorted(clang_targets):
-            command += ['-I', str(base/(name+'.build'))]
-        command += (base/'ThermoApp.product/Objects.LinkFileList').read_text().splitlines()
-    subprocess.run(command, check=True)
+    copied_sources = []
+    try:
+        for name in ('verify-capture-ui.swift','verify-capture-live.swift'):
+            destination = source_dir / name
+            destination.write_bytes((root/'scripts'/name).read_bytes())
+            copied_sources.append(destination)
+        package_file.write_bytes(modified_package)
+        subprocess.run(['swift','build','--jobs',str(args.jobs),'--product',target],check=True)
+        subprocess.run(['swift','build','--jobs',str(args.jobs),'--product','thermo-capture-script'],check=True)
+        if args.capture_cli_review:
+            subprocess.run(['swift','build','--jobs',str(args.jobs),'--product','thermo'],check=True)
+        base = Path(subprocess.check_output(['swift','build','--show-bin-path'],text=True).strip()).resolve()
+        subprocess.run(['ditto',str(base/target),str(binary)],check=True)
+    finally:
+        if package_file.read_bytes() == modified_package:
+            package_file.write_bytes(original_package)
+            for source in copied_sources:
+                source.unlink()
+            source_dir.rmdir()
+        else:
+            backup = output/'Package.before-fixture.swift'
+            backup.write_bytes(original_package)
+            raise RuntimeError('Package.swift changed during the fixture build; preserved it and fixture sources. Original saved to '+str(backup))
     helpers=app/'Contents/Helpers'
     helpers.mkdir(parents=True)
     subprocess.run(['ditto',str(base/'thermo-capture-script'),str(helpers/'thermo-capture-script')],check=True)
@@ -99,9 +112,6 @@ def main():
     if args.capture_cli_review:
         subprocess.run(['ditto',str(base/'thermo'),str(helpers/'thermo')],check=True)
         subprocess.run(['codesign','--force','--sign','-','--identifier','dev.thermo.cli',str(helpers/'thermo')],check=True)
-    frameworks = app/'Contents/Frameworks'
-    frameworks.mkdir(parents=True)
-    subprocess.run(['ditto', str(framework), str(frameworks/'Sparkle.framework')], check=True)
     subprocess.run(['python3', str(root/'scripts/math-renderer/verify.py')], check=True)
     subprocess.run(['python3', str(root/'scripts/word-template/verify.py')], check=True)
     subprocess.run(['ditto', str(root/'Resources/CaptureWord'), str(app/'Contents/Resources/CaptureWord')], check=True)
