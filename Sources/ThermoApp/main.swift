@@ -684,10 +684,12 @@ if let i = CommandLine.arguments.firstIndex(of: "--render-preview"), i + 1 < Com
     let models = AppModels.shared
     func value(after flag: String) -> String? { args.firstIndex(of: flag).flatMap { $0 + 1 < args.count ? args[$0 + 1] : nil } }
     var page = value(after: "--page").flatMap(MainPage.init(argument:)) ?? .overview
-    for feature in BuiltinModules.implementations { feature.prepareReview(args, page: &page, models: models) }
-    if page == .memory, let i = args.firstIndex(of: "--fixture"), i + 1 < args.count {
-        models.nativeFeatures.prepareReview(.init(BuiltinModuleManifests.performance.id,"memory"),arguments:args)
-    }
+    do {
+        if let request=try models.nativeFeatures.catalog.resolveLegacyLaunch(args),models.nativeFeatures.preparePresentation(request) {
+            page = .native(request.route)
+        }
+    } catch {fputs("Invalid feature launch: \(error.localizedDescription)\n",stderr);exit(2)}
+    if let route=page.nativeRoute {models.nativeFeatures.prepareReview(route,arguments:args)}
     MainWindow.show(page)
     // `--height N`: a taller window, so a snapshot can show what sits below the fold.
     if let h = value(after: "--height").flatMap(Double.init), let w = MainWindow.window {

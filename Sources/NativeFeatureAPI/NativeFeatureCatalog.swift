@@ -142,6 +142,18 @@ package struct NativeFeatureCatalog: Sendable {
         }
         return found
     }
+    /// Legacy launch flags are decoded by their owner; the host only accepts checked requests.
+    package func resolveLegacyLaunch(_ arguments:[String])throws->NativePresentationRequest? {
+        var found:NativePresentationRequest?
+        for id in order {
+            guard let request=definitions[id]?.resolveLegacyLaunch(arguments) else{continue}
+            guard request.route.module==id else{throw NativeRouteError("A legacy launch must belong to its feature.")}
+            let checked=try normalizePresentation(request)
+            guard found == nil else{throw NativeRouteError("Ambiguous legacy feature launch.")}
+            found=checked
+        }
+        return found
+    }
     func accepts(_ ref:NativeUIEntryRef)->Bool {
         definitions[ref.module]?.manifest.entries.contains(where:{$0.id==ref.entry && ($0.kind == .menuBarItem || $0.kind == .settingsItem)}) == true
     }

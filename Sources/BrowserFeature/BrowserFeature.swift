@@ -21,6 +21,10 @@ package enum BrowserFeature {
             guard argument == "pages" || argument.hasPrefix("pages:") else{return nil}
             let app=argument.hasPrefix("pages:") ? String(argument.dropFirst(6)):""
             return route(app.isEmpty ? "Google Chrome":app)
+        },resolveLegacyLaunch:{arguments in
+            guard arguments.contains("--chrome-pages") else{return nil}
+            let app=arguments.firstIndex(of:"--app").flatMap{$0+1<arguments.count ? arguments[$0+1]:nil} ?? "Google Chrome"
+            return .init(route:route(app))
         },makeSession:{BrowserFeatureSession(availability:$0)})
     }
     static func route(_ app:String)->NativeFeatureRoute {.init(BuiltinModuleManifests.browser.id,"home",context:["app":.text(app)])}

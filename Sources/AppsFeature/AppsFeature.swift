@@ -42,6 +42,10 @@ package enum AppsFeature {
         if case let .text(channel)?=options["channel"] {models.updates.channel=channel}
         if case let .boolean(show)?=options["showRecovery"] {models.native.showRecovery=show}
     }
+    func prepareReview(_ route:NativeFeatureRoute,arguments:[String]) {
+        guard route.entry=="updates",let index=arguments.firstIndex(of:"--page"),index+1<arguments.count,arguments[index+1]=="apps:feeds" else{return}
+        preparePresentation(route,options:["channel":.text("native")])
+    }
     var status:NativeFeatureStatus {.init(modelLoaded:storedModels != nil)}
     func invalidateAfterRestore(_ paths:[String]) {if !paths.isEmpty {storedModels?.apps.invalidateAfterRestore()}}
     func retireVisibility(){storedModels?.retireViews()}

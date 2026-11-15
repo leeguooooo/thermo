@@ -9,10 +9,15 @@ import ThermoUI
 package enum DiskFeature {
     package static func registration(services:@escaping @MainActor @Sendable ()->any DiskServices)->NativeFeatureDefinition {
         let cache=DiskCacheEpoch()
-        return .init(manifest:BuiltinModuleManifests.disk,ui:.init(sidebarLocations:[.storage],hasBackdrop:true),resolveLegacyPage:{argument in
-            let argument=argument=="disk:home" ? "disk":argument
-            return BuiltinModuleManifests.disk.entries.first{$0.kind == .page && $0.scene==argument}.map{.init(BuiltinModuleManifests.disk.id,$0.id)}
+        return .init(manifest:BuiltinModuleManifests.disk,ui:.init(sidebarLocations:[.storage],hasBackdrop:true),resolveLegacyPage:legacyPage,resolveLegacyLaunch:{arguments in
+            guard arguments.contains("--disk") else{return nil}
+            let raw=arguments.firstIndex(of:"--page").flatMap{$0+1<arguments.count ? arguments[$0+1]:nil}
+            return .init(route:raw.flatMap{legacyPage("disk:"+$0)} ?? route(.home))
         },invalidateColdState:{paths in if !paths.isEmpty{cache.invalidate()}},makeSession:{DiskSession(availability:$0,services:services(),cache:cache)})
+    }
+    private static func legacyPage(_ argument:String)->NativeFeatureRoute? {
+        let argument=argument=="disk:home" ? "disk":argument
+        return BuiltinModuleManifests.disk.entries.first{$0.kind == .page && $0.scene==argument}.map{.init(BuiltinModuleManifests.disk.id,$0.id)}
     }
     static func route(_ page:DiskPage)->NativeFeatureRoute {
         switch page {
