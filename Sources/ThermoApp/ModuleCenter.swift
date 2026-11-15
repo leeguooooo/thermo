@@ -317,13 +317,10 @@ struct ModuleSettingsControls: View {
     @ObservedObject var center: ModuleCenter
     let models: AppModels
     var body: some View {
-        ForEach(BuiltinModules.implementations.indices, id: \.self) { index in
-            let owner = BuiltinModules.implementations[index]
-            if center.isOn(owner.manifest.id) {
-                ForEach(owner.manifest.entries.filter { $0.kind == .settingsItem }, id: \.id) { entry in
-                    InspectorDivider(inset: 46)
-                    owner.settings(entry, models: models)
-                }
+        ForEach(BuiltinModules.all.filter{center.isOn($0.id)},id:\.id) {manifest in
+            ForEach(manifest.entries.filter{$0.kind == .settingsItem},id:\.id) {entry in
+                InspectorDivider(inset:46)
+                models.nativeFeatures.inlineSettings(.init(manifest.id,entry.id))
             }
         }
         ForEach(center.visibleStatuses.filter(\.enabled), id: \.manifest.id) { status in

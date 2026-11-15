@@ -54,7 +54,7 @@ import SpaceFeature
         let target=SpaceModule.reveal("/fixture/folder",models:models)
         XCTAssertEqual(target,.native(.init(SpaceModule.manifest.id,"browse")))
         XCTAssertEqual(session.requests.first?.options,["path":.text("/fixture/folder")])
-        XCTAssertTrue(SpaceModule.snapshotReady(["--page","module:"+SpaceModule.manifest.id+":browse"],models:models,started:Date()))
+        XCTAssertTrue(models.nativeFeatures.snapshotReady(.init(SpaceModule.manifest.id,"browse"),arguments:["--page","module:"+SpaceModule.manifest.id+":browse"],started:Date()))
     }
     func testHostRemovalLeaseFinishesIdempotently() {
         var notices=0

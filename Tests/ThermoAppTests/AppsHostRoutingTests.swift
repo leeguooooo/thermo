@@ -74,7 +74,7 @@ import NativeFeatureAPI
         let models=AppModels(defaults:defaults,nativeDefinitions:[definition])
         let route=NativeFeatureRoute(AppsModule.manifest.id,"updates")
         _=models.nativeFeatures.page(route)
-        XCTAssertTrue(AppsModule.snapshotReady(["--page","module:"+AppsModule.manifest.id+":updates"],models:models,started:Date()))
+        XCTAssertTrue(models.nativeFeatures.snapshotReady(route,arguments:["--page","module:"+AppsModule.manifest.id+":updates"],started:Date()))
         XCTAssertEqual(session.requested,route)
     }
 }

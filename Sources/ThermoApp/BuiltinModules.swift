@@ -3,48 +3,22 @@ import ModuleKit
 import SwiftUI
 import ThermoL10n
 
-struct BuiltinSidebarItem: Identifiable {
-    let entry: ModuleManifest.Entry
-    let target: MainPage
-    let tint: Color
-    var trailing: String?
-    var trailingColor: Color?
-    var badge:Int = 0
-    var selected: Bool
-    var id: String { entry.id }
-}
-
-typealias BuiltinSidebarSection=NativeSidebarLocation
-
 /// Metadata and argument resolution never instantiate a feature. UI and lifetime callbacks run on main.
 protocol BuiltinModule: Sendable {
     static var manifest: ModuleManifest { get }
-    @MainActor static func start()
-    @MainActor static func overlay(models:AppModels)->AnyView
-    static var legacyMenuEntries: [String: String] { get }
-    static var sidebarSections: Set<BuiltinSidebarSection> { get }
-    static func owns(_ page: MainPage) -> Bool
+    static var legacyMenuEntries: [String:String] { get }
+    static func owns(_ page:MainPage)->Bool
     static func entry(for page:MainPage)->ModuleManifest.Entry?
-    static func canonicalArgument(_ argument: String) -> String
-    static func target(_ scene: String) -> MainPage?
-    static func supports(_ entry: ModuleManifest.Entry) -> Bool
-    @MainActor static func sidebar(section: BuiltinSidebarSection, page: Binding<MainPage>, models: AppModels,
-                                   row: @escaping @MainActor (BuiltinSidebarItem) -> AnyView) -> AnyView
-    @MainActor static func page(_ entry: ModuleManifest.Entry, selection: Binding<MainPage>, models: AppModels) -> AnyView
-    @MainActor static func settings(_ entry: ModuleManifest.Entry, models: AppModels) -> AnyView
-    @MainActor static func prepareStop(models: AppModels) throws -> BuiltinModules.FinishStop?
-    @MainActor static func appearance(_ page: MainPage) -> (glow: Bool, tint: Color?)
-    @MainActor static func prepareReview(_ arguments: [String], page: inout MainPage, models: AppModels)
-    @MainActor static func snapshotReady(_ arguments: [String], models: AppModels, started: Date) -> Bool
+    static func canonicalArgument(_ argument:String)->String
+    static func target(_ scene:String)->MainPage?
+    static func supports(_ entry:ModuleManifest.Entry)->Bool
+    @MainActor static func prepareStop(models:AppModels)throws->BuiltinModules.FinishStop?
 }
 
 extension BuiltinModule {
     static func entry(for page:MainPage)->ModuleManifest.Entry? {
         manifest.entries.first{$0.kind == .page && $0.scene.flatMap(target)==page}
     }
-    static var sidebarSections: Set<BuiltinSidebarSection> { [.storage] }
-    @MainActor static func start() {}
-    @MainActor static func overlay(models:AppModels)->AnyView {AnyView(EmptyView())}
 }
 
 enum BuiltinModules {
@@ -99,10 +73,8 @@ enum BuiltinModules {
     }
 
     @MainActor static func snapshotReady(_ page: MainPage, arguments: [String], models: AppModels, center: ModuleCenter, started: Date = .distantPast) -> Bool? {
-        if case let .native(route)=page{return models.nativeFeatures.snapshotReady(route,arguments:arguments,started:started)}
-        guard owner(page) != nil else { return nil }
-        guard center.shows(page), let feature = self.page(page) else { return true }
-        return feature.implementation.snapshotReady(arguments, models: models, started: started)
+        guard let route=page.nativeRoute else{return nil}
+        return models.nativeFeatures.snapshotReady(route,arguments:arguments,started:started)
     }
 
     typealias FinishStop = @MainActor () async -> Void
@@ -118,25 +90,5 @@ extension MainPage {
         if case let .native(route)=self{return route.module}
         if case let .module(id, _) = self { return id }
         return BuiltinModules.owner(self)?.manifest.id
-    }
-}
-
-struct BuiltinSidebarGroup: View {
-    let implementation: any BuiltinModule.Type
-    var section: BuiltinSidebarSection = .storage
-    @Binding var selection: MainPage
-    let row: @MainActor (BuiltinSidebarItem) -> AnyView
-    var body: some View { implementation.sidebar(section: section, page: $selection, models: .shared, row: row) }
-}
-
-/// Feature-owned notices stay attached to the window when another page is selected.
-struct BuiltinModuleOverlays:View {
-    let models:AppModels
-    @ObservedObject private var center=ModuleCenter.shared
-    var body:some View {
-        ForEach(BuiltinModules.implementations.indices,id:\.self) {index in
-            let feature=BuiltinModules.implementations[index]
-            if center.isOn(feature.manifest.id) {feature.overlay(models:models)}
-        }
     }
 }
