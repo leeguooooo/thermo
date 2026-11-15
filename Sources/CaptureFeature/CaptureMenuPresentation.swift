@@ -5,8 +5,12 @@ import ThermoL10n
 
 @MainActor enum CaptureMenuPresentation {
     static func content(workspace:CaptureWorkspace,available:@escaping ()->Bool)->NativeMenuContent {
-        .init(items:{nodes(workspace:workspace,placement:$0,available:available)},view:{placement,renderer in
-            AnyView(CaptureMenuObserver(workspace:workspace,shortcuts:workspace.shortcuts,placement:placement,renderer:renderer,available:available))
+        .init(items:{[weak workspace] placement in
+            guard let workspace,available() else{return []}
+            return nodes(workspace:workspace,placement:placement,available:available)
+        },view:{[weak workspace] placement,renderer in
+            guard let workspace,available() else{return AnyView(EmptyView())}
+            return AnyView(CaptureMenuObserver(workspace:workspace,shortcuts:workspace.shortcuts,placement:placement,renderer:renderer,available:available))
         })
     }
     static func nodes(workspace:CaptureWorkspace,placement:NativeMenuPlacement,available:@escaping ()->Bool)->[NativeMenuNode] {
@@ -14,8 +18,8 @@ import ThermoL10n
         let icons:[CaptureAction:String]=[.screenshot:"viewfinder",.pinClipboard:"pin",.openImage:"photo",.scrolling:"arrow.down.right.and.arrow.up.left",.recording:"record.circle",.recordingDrafts:"film.stack",.pinText:"text.quote",.pinLaTeX:"function",.pinGroups:"square.stack",.restorePin:"arrow.uturn.backward",.restoreMouseInteraction:"cursorarrow",.showPins:"eye",.hidePins:"eye.slash",.closePins:"xmark.circle",.saveSettings:"square.and.arrow.down",.shortcutSettings:"keyboard"]
         func action(_ value:CaptureAction,suffix:Bool = false)->NativeMenuNode {
             let title=tr(value.title)+(suffix ? workspace.shortcutSuffix(for:value):"")
-            return .action(.init(title:title,symbol:placement == .application ? nil:icons[value],perform:{
-                guard available(),workspace.enabled else{return}
+            return .action(.init(title:title,symbol:placement == .application ? nil:icons[value],perform:{[weak workspace] in
+                guard let workspace,available(),workspace.enabled else{return}
                 do{try workspace.perform(value)}catch{workspace.report(error)}
             }))
         }
@@ -25,8 +29,8 @@ import ThermoL10n
             return [.submenu(title:tr("Configured capture actions"),symbol:nil,items:entries.map{entry in
                 let label=workspace.shortcuts.label(for:entry)
                 let title=(entry.title.isEmpty ? tr(entry.action.title):entry.title)+(label.isEmpty ? "":"  "+label)
-                return .action(.init(title:title,perform:{
-                    guard available(),workspace.enabled else{return}
+                return .action(.init(title:title,perform:{[weak workspace] in
+                    guard let workspace,available(),workspace.enabled else{return}
                     workspace.shortcuts.run(entry)
                     if workspace.shortcuts.issue != nil{workspace.showActionSettings()}
                 }))
