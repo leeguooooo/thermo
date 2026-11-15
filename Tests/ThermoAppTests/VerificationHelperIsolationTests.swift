@@ -44,6 +44,7 @@ final class VerificationHelperIsolationTests: XCTestCase {
     @MainActor func testVisibilityOfDisabledPerformanceNeverAcquiresAnAdministrativeRefresh() async {
         let unexpected = expectation(description: "disabled view cannot create an unscoped helper connection")
         unexpected.isInverted = true
+        unexpected.assertForOverFulfill = false
         let monitor = Monitor(startMonitoring: false, helper: HelperClient(makeConnection: {
             unexpected.fulfill()
             return NSXPCConnection(machServiceName: "dev.thermo.qa.absent." + UUID().uuidString)
