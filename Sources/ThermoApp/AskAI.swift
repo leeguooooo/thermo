@@ -6,35 +6,6 @@ import AppKit
 import CleanKit
 import ThermoL10n
 
-/// The 空间透视 context menu opens this for one row.
-struct AskAISheet: View {
-    let question: LocalAIQuestion
-    var scope: FeatureTasks? = nil
-    let close: () -> Void
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: Theme.Space.l) {
-            HStack(spacing: Theme.Space.m) {
-                if let p = question.path {
-                    Image(nsImage: NSWorkspace.shared.icon(forFile: p)).resizable().frame(width: 32, height: 32).accessibilityHidden(true)
-                }
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(question.title).font(Theme.heading).foregroundStyle(Theme.textPrimary).lineLimit(1)
-                    if let p = question.path {
-                        Text(FSPath.tilde(p)).font(Theme.mono).foregroundStyle(Theme.textTertiary).lineLimit(1).truncationMode(.middle)
-                    }
-                }
-                Spacer()
-                if let b = question.bytes { Text(ByteFormat.string(b)).font(Theme.figure(.metric)).foregroundStyle(Theme.textPrimary) }
-            }
-            AskAIPanel(question: question,scope:scope)
-            HStack { Spacer(); Button(tr("Done"), action: close).keyboardShortcut(.defaultAction) }
-        }
-        .padding(Theme.Space.xl)
-        .frame(width: 520)
-    }
-}
-
 /// "AI pick" on a cleanup page: the local AI judges every item and ticks the ones it calls safe
 /// to delete. It never cleans; the first time it shows exactly what will be sent.
 struct AIPickButton: View {
