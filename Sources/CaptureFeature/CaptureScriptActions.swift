@@ -5,7 +5,7 @@ import CaptureScriptCore
 extension CaptureWorkspace {
     func executeScript(_ source:String,timeout:TimeInterval=300) async throws -> CaptureScriptResult {
         try requireEnabled()
-        guard !scriptRunning,!nativeScriptBusy else{throw CaptureSaveFailure.busy};scriptRunning=true;defer{scriptRunning=false}
+        guard !scriptRunning,!nativeScriptBusy,editorWork.count==0,!editorWork.hasOperations else{throw CaptureSaveFailure.busy};scriptRunning=true;defer{scriptRunning=false}
         let worker=scriptWorker ?? Bundle.main.bundleURL.appendingPathComponent("Contents/Helpers/thermo-capture-script")
         guard FileManager.default.isExecutableFile(atPath:worker.path) else {throw CaptureScriptFailure.unavailable}
         do {

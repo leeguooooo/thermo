@@ -49,7 +49,7 @@ import Foundation
         guard seen.count<100_000 else{return failure("Capture request limit reached; restart Thermo when idle.")}
         seen.insert(request.id)
         guard let workspace=access.workspace() else{return failure("This feature is switched off. Switch on Screenshots and pins in Settings to use it.")}
-        guard active==nil,!workspace.scriptRunning,!workspace.nativeScriptBusy,!workspace.captureBusy else{return failure("Another capture operation is in progress. No action started.")}
+        guard active==nil,!workspace.scriptRunning,!workspace.nativeScriptBusy,workspace.editorWork.count==0,!workspace.editorWork.hasOperations,!workspace.captureBusy else{return failure("Another capture operation is in progress. No action started.")}
         reports[request.id] = .init(id:request.id,phase:.running);order.append(request.id)
         while order.count>32{reports.removeValue(forKey:order.removeFirst())}
         active=request.id

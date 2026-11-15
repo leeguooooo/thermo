@@ -43,6 +43,7 @@ final class CaptureControlHub:@unchecked Sendable {
     @MainActor var ledger:CaptureCLIHost {
         if let storedLedger{return storedLedger};let value=CaptureCLIHost();storedLedger=value;return value
     }
+    @MainActor func cancelActive(){storedLedger?.cancelActive()}
     @MainActor func clear(_ session:CaptureSession){if current === session{current=nil}}
 }
 @MainActor struct CaptureExecutionAccess {
@@ -126,5 +127,5 @@ final class CaptureControlHub:@unchecked Sendable {
     }
     func retireVisibility(){}
     func quitBlocker()->NativeFeatureBlocker?{nil}
-    func shutdown(){storedWorkspace?.shutdown()}
+    func shutdown(){hub.cancelActive();storedWorkspace?.shutdown()}
 }
