@@ -73,8 +73,8 @@ final class TimelineEvents: ObservableObject {
         events = Array(merged.suffix(40))
     }
 
-    /// "swift-build (thermo · Claude Code)" or "Google Chrome".
     func retire() { events=[];busy=[:];busyNames=[:];journal=[];lastJournal = .distantPast }
+    /// "swift-build (thermo · Claude Code)" or "Google Chrome".
     static func label(_ hog: MachinePulse.Hog) -> String {
         let folder = hog.project.map { ($0 as NSString).lastPathComponent }.flatMap { $0.isEmpty || $0 == "~" ? nil : $0 }
         let origin = [folder, hog.owner].compactMap { $0 }

@@ -144,10 +144,10 @@ final class PanelModel: ObservableObject {
     }
 
     func finishStopping() async {
-        setActive(false)
+        setActive(false);resetBaselines()
         await worker.finish()
         while sampleInFlight { await withCheckedContinuation { done in DispatchQueue.main.asyncAfter(deadline:.now()+0.02){done.resume()} } }
-        resetBaselines();cpu=[];gpu=[];memory=[];download=[]
+        cpu=[];gpu=[];memory=[];download=[]
     }
     func resetBaselines() {
         worker.reset()

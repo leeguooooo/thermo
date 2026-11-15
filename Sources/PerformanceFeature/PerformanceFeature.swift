@@ -13,14 +13,6 @@ package enum PerformanceFeature {
         showSettings: @escaping @MainActor @Sendable () -> Void
     ) -> NativeFeatureDefinition {
         let manifest = BuiltinModuleManifests.performance
-        func checkText(_ options: [String:NativeContextValue]) throws {
-            for value in options.values {
-                guard case let .text(text) = value, !text.isEmpty, text.count <= 512,
-                      !text.unicodeScalars.contains(where: { CharacterSet.controlCharacters.contains($0) }) else {
-                    throw NativeRouteError("Invalid performance presentation text.")
-                }
-            }
-        }
         return .init(manifest: manifest, pageContracts: [
             .init(entry: "overview", optionFields: [.init("program",kind:.text,required:false)], checkOptions: checkText),
             .init(entry: "memory", optionFields: [.init("inspect",kind:.text,required:false)], checkOptions: checkText)
@@ -33,4 +25,13 @@ package enum PerformanceFeature {
                                fanFactory:fanFactory(),defaults:defaults(),showSettings:showSettings)
         })
     }
+    private static func checkText(_ options: [String:NativeContextValue]) throws {
+        for value in options.values {
+            guard case let .text(text) = value, !text.isEmpty, text.count <= 512,
+                  !text.unicodeScalars.contains(where: { CharacterSet.controlCharacters.contains($0) }) else {
+                throw NativeRouteError("Invalid performance presentation text.")
+            }
+        }
+    }
+
 }
