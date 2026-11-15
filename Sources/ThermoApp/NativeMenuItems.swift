@@ -13,7 +13,8 @@ import ThermoL10n
     }
     static func updateVisibility(in menu:NSMenu,enabled:(String)->Bool) {
         for item in menu.items {
-            if let ref=item.representedObject as? NativeUIEntryRef {item.isHidden = !enabled(ref.module)}
+            let ref=(item.representedObject as? NativeUIEntryRef) ?? (item.representedObject as? NativeMenuActionTarget)?.owner
+            if let ref{item.isHidden = !enabled(ref.module)}
         }
     }
 }
