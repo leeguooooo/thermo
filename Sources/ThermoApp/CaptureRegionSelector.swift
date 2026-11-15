@@ -103,7 +103,8 @@ import ThermoL10n
     private var captureTask: Task<Void, Never>?
     private var stitcher:CaptureScrollStitcher?
     private let region: CaptureRegionSelector.Region
-    init(region: CaptureRegionSelector.Region) { self.region = region }
+    private let captureLoop:(@MainActor () async throws->Void)?
+    init(region:CaptureRegionSelector.Region,captureLoop:(@MainActor () async throws->Void)? = nil){self.region=region;self.captureLoop=captureLoop}
     func start() {
         guard captureTask == nil else { return }
         running = true; issue = nil
@@ -112,6 +113,7 @@ import ThermoL10n
         captureTask = Task { [weak self] in
             guard let self else { return }
             do {
+                if let captureLoop {try await captureLoop()} else {
                 let content = try await SCShareableContent.excludingDesktopWindows(false, onScreenWindowsOnly: true)
                 guard let display = content.displays.first(where: { $0.displayID == self.region.displayID }) else { throw CaptureFailure.captureFailed }
                 try self.region.validateCurrentDisplay()
@@ -164,12 +166,14 @@ import ThermoL10n
                     }
                     try await Task.sleep(nanoseconds: 700_000_000)
                 }
+                }
             } catch is CancellationError { }
             catch { self.issue = tr(error.localizedDescription) }
             self.running = false; self.captureTask = nil
         }
     }
-    func stop() { captureTask?.cancel(); running = false }
+    func stop() { captureTask?.cancel() }
+    func finishStopping() async {await captureTask?.value}
     /// Negative deltas move the content towards its end (down, or right for horizontal pages).
     private static func postScroll(points:CGFloat,horizontal:Bool) {
         let delta=Int32(-points)
