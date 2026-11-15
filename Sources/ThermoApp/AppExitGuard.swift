@@ -49,8 +49,16 @@ enum AppExitGuard {
 
 @MainActor
 final class MainOnlyDelegate: NSObject, NSApplicationDelegate {
-    func applicationDidFinishLaunching(_ notification: Notification) { AppInstallationMonitor.shared.start() }
+    let featureLaunch = FeatureLaunchGate()
+    var deferInstallationMonitor = false
+    var selectionIsPresented: @MainActor () -> Bool = { FeatureSelectionWindow.isPresented }
+    var reopenFeatureSelection: @MainActor () -> Bool = { FeatureSelectionWindow.reopenIfPresented() }
+    var showMainWindow: @MainActor () -> Void = { MainWindow.show() }
+    func applicationDidFinishLaunching(_ notification: Notification) {
+        if !deferInstallationMonitor { AppInstallationMonitor.shared.start() }
+    }
     func applicationWillTerminate(_ notification: Notification) {
+        if deferInstallationMonitor || featureLaunch.isSelecting || selectionIsPresented() { return }
         MenuBarManager.shared.shutdown()
     }
     var showExitBlocker: @MainActor (MainPage) -> Void = { MainWindow.show($0) }
@@ -68,10 +76,12 @@ final class MainOnlyDelegate: NSObject, NSApplicationDelegate {
         }
     }
     func applicationShouldTerminate(_ sender: NSApplication) -> NSApplication.TerminateReply {
-        CaptureWorkspace.shared.terminationReply(AppExitGuard.reply(show: showExitBlocker))
+        if deferInstallationMonitor || featureLaunch.isSelecting || selectionIsPresented() { return .terminateNow }
+        return CaptureWorkspace.shared.terminationReply(AppExitGuard.reply(show: showExitBlocker))
     }
     func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows flag: Bool) -> Bool {
-        MainWindow.show()
+        if reopenFeatureSelection() { return false }
+        showMainWindow()
         return false
     }
 }

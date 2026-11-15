@@ -19,8 +19,12 @@ public enum FeatureLaunchPolicy {
         if let raw = saved[cohortKey] as? String, let cohort = Cohort(rawValue: raw) {
             return State(cohort: cohort, needsSelection: cohort == .fresh && !(saved[selectionKey] as? Bool ?? false))
         }
-        let data = home.appendingPathComponent("Library/Application Support/Thermo", isDirectory: true)
-        let legacy = !saved.isEmpty || FileManager.default.fileExists(atPath: data.path)
+        let roots = ["Library/Application Support/Thermo", "Library/Application Support/dev.thermo",
+                     "Library/Caches/Thermo", "Library/Caches/dev.thermo", "Library/Caches/dev.thermo.app",
+                     "Library/Logs/Thermo", "Library/Logs/dev.thermo.app"]
+        let legacy = !saved.isEmpty || roots.contains {
+            FileManager.default.fileExists(atPath: home.appendingPathComponent($0).path)
+        }
         return State(cohort: legacy ? .legacy : .fresh, needsSelection: !legacy)
     }
 
@@ -49,7 +53,8 @@ public enum FeatureLaunchPolicy {
     public static func allowsInteractiveSelection(arguments: [String], environment: [String: String]) -> Bool {
         guard environment["XCTestConfigurationFilePath"] == nil,
               environment["XCTestBundlePath"] == nil,
-              environment["SWIFT_TESTING_ENABLED"] == nil else { return false }
-        return !arguments.dropFirst().contains { $0.hasPrefix("--") && $0 != "--search" }
+              environment["SWIFT_TESTING_ENABLED"] == nil,
+              !arguments.contains(where: { $0.contains(".xctest") }) else { return false }
+        return arguments.dropFirst().allSatisfy { $0 == "--main" || $0 == "--search" }
     }
 }

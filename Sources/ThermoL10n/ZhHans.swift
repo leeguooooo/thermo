@@ -4552,4 +4552,8 @@ let zhHans: [String: String] = [
     "Local account profiles, reviewed data reset and privacy controls.": "本机账号配置、经确认的数据重置和隐私设置。",
     "Wait for Claude reset, recovery or privacy changes before switching this feature off.": "请等待 Claude 重置、恢复或隐私设置操作完成，再关闭此功能。",
     "Wait for the current AI check-up request before switching this feature off.": "请等待当前 AI 体检请求完成，再关闭此功能。",
+    // First launch feature selection
+    "Choose your Thermo features": "选择要启用的 Thermo 功能",
+    "Start with capture, menu bar, performance and search. Add anything else you need. You can change every choice in Settings → Features.": "默认启用截图、菜单栏管理、性能监测和搜索，也可以勾选其他需要的功能。以后随时可在「设置 → 功能」中修改。",
+
 ]

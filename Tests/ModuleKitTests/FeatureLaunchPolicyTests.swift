@@ -112,12 +112,38 @@ final class FeatureLaunchPolicyTests: XCTestCase {
     }
 
     func testReviewAndTestEntryPointsNeverConsumeSelection() {
-        let modes = ["--main", "--disk", "--agents", "--chrome-pages", "--snapshot", "--offscreen", "--ui-review", "--render-preview", "--verify-lifecycle", "--dump-status-menu", "--show-status-menu", "--show-panel", "--install-helper", "--unknown-qa-mode"]
+        let modes = ["--disk", "--agents", "--chrome-pages", "--snapshot", "--offscreen", "--ui-review", "--render-preview", "--verify-lifecycle", "--dump-status-menu", "--show-status-menu", "--show-panel", "--install-helper", "--unknown-qa-mode"]
         for mode in modes {
             XCTAssertFalse(FeatureLaunchPolicy.allowsInteractiveSelection(arguments: ["Thermo", mode], environment: [:]), mode)
         }
         XCTAssertTrue(FeatureLaunchPolicy.allowsInteractiveSelection(arguments: ["Thermo"], environment: [:]))
         XCTAssertTrue(FeatureLaunchPolicy.allowsInteractiveSelection(arguments: ["Thermo", "--search"], environment: [:]))
+        XCTAssertTrue(FeatureLaunchPolicy.allowsInteractiveSelection(arguments: ["Thermo", "--main"], environment: [:]))
+        XCTAssertTrue(FeatureLaunchPolicy.allowsInteractiveSelection(arguments: ["Thermo", "--main", "--search"], environment: [:]))
         XCTAssertFalse(FeatureLaunchPolicy.allowsInteractiveSelection(arguments: ["Thermo"], environment: ["XCTestConfigurationFilePath": "isolated"]))
     }
+    func testMainAndSearchWithAnyReviewParameterNeverConsumeSelection() {
+        for launch in [["--main"], ["--search"], ["--main", "--search"]] {
+            for parameter in ["--offscreen", "--snapshot", "--ui-review", "--page", "--render-preview", "--fixture", "--height", "--unknown", "review.json", "-SomeDefault"] {
+                XCTAssertFalse(FeatureLaunchPolicy.allowsInteractiveSelection(arguments: ["Thermo"] + launch + [parameter], environment: [:]), "\(launch) \(parameter)")
+            }
+        }
+        XCTAssertFalse(FeatureLaunchPolicy.allowsInteractiveSelection(arguments: ["Thermo", "test.xctest"], environment: [:]))
+    }
+
+    func testLegacyDataEvidenceIncludesSupportCachesAndLogsIndependently() throws {
+        for path in ["Library/Application Support/Thermo", "Library/Application Support/dev.thermo",
+                     "Library/Caches/Thermo", "Library/Caches/dev.thermo", "Library/Caches/dev.thermo.app",
+                     "Library/Logs/Thermo", "Library/Logs/dev.thermo.app"] {
+            try fixture { defaults, domain, home in
+                try FileManager.default.createDirectory(at: home.appendingPathComponent(path), withIntermediateDirectories: true)
+                let state = FeatureLaunchPolicy.assess(defaults: defaults, domain: domain, home: home)
+                XCTAssertEqual(state.cohort, .legacy, path)
+                XCTAssertFalse(state.needsSelection, path)
+                FeatureLaunchPolicy.install(state, in: defaults, persist: true)
+                XCTAssertTrue(BuiltinModuleManifests.all.allSatisfy { ModulePreferences.isEnabled($0, in: defaults) }, path)
+            }
+        }
+    }
+
 }

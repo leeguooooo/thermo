@@ -33,6 +33,7 @@ enum SingleInstance {
         lock = candidate
         observer = DistributedNotificationCenter.default().addObserver(forName: showWindow, object: nil, queue: .main) { notification in
             MainActor.assumeIsolated {
+                if FeatureSelectionWindow.reopenIfPresented() { return }
                 if notification.userInfo?["search"] as? Bool == true { LocalSearchPanel.shared.show() }
                 else { MainWindow.show() }
             }
