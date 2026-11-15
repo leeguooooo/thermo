@@ -20,7 +20,7 @@ import ThermoL10n
     }
 
     private let enabled:()->Bool
-    init(enabled:@escaping ()->Bool = {DownloadModule.enabled}) {self.enabled=enabled}
+    init(enabled:(()->Bool)? = nil) {self.enabled=enabled ?? {DownloadModule.enabled}}
     var active:Bool {timer != nil || panel != nil || current != nil}
     private var timer: Timer?
     private var hideTimer: Timer?
