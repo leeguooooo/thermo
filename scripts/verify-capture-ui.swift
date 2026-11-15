@@ -1,3 +1,4 @@
+// fixture-support: verify-capture-live-controls.swift
 import CaptureControlAPI
 // Build the private CaptureFeature in an isolated fixture; no public model exports.
 @testable import CaptureFeature

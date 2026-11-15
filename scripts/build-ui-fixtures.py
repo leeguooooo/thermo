@@ -36,7 +36,13 @@ def main():
     prefix='UIFixture'+uuid.uuid4().hex[:10];directories=[];declarations=[];fixtures=[];rows=[]
     try:
         for index,path in enumerate(sources):
-            source=path.read_text();imports=set(re.findall(r'(?m)^\s*(?:@testable\s+)?import\s+(\w+)',source))
+            main_source=path.read_bytes();source=main_source.decode();inputs=[]
+            for name in re.findall(r'(?m)^// fixture-support:\s*(.+)$',source):
+                support=(scripts/name.strip()).resolve()
+                if not support.is_relative_to(scripts) or support.suffix!='.swift' or not support.is_file():raise RuntimeError('Invalid fixture support source: '+name)
+                data=support.read_bytes();source+='\n'+data.decode()
+                inputs.append({'source':str(support.relative_to(root)),'SHA256':hashlib.sha256(data).hexdigest()})
+            imports=set(re.findall(r'(?m)^\s*(?:@testable\s+)?import\s+(\w+)',source))
             deps=imports & modules;target=prefix+str(index)
             if deps & {'ThermoShell','ThermoComposition'}:
                 match=re.search(r'(?P<tag>@main)\s*(?:@MainActor\s*)?(?:struct|enum)\s+(\w+)',source)
@@ -48,18 +54,21 @@ def main():
             directory=root/'Sources'/target;directory.mkdir();directories.append(directory)
             (directory/'Fixture.swift').write_text(source)
             declarations.append('\n        .executableTarget(name:'+json.dumps(target)+',dependencies:'+json.dumps(sorted(deps))+'),')
-            fixtures.append((path,target,source))
+            fixtures.append((path,target,source,hashlib.sha256(main_source).hexdigest(),inputs))
         modified=original.replace(needle,needle+''.join(declarations).encode());package.write_bytes(modified)
         receipt={'gitHead':subprocess.check_output(['git','rev-parse','HEAD'],cwd=root,text=True).strip(),
                  'packageSHA256':hashlib.sha256(original).hexdigest(),'compiledPackageSHA256':hashlib.sha256(modified).hexdigest(),
                  'scriptSHA256':hashlib.sha256(Path(__file__).read_bytes()).hexdigest(),'launched':False}
         (output/'source.json').write_text(json.dumps(receipt,indent=2)+'\n')
-        for path,target,source in fixtures:
+        for path,target,source,source_hash,inputs in fixtures:
             result=subprocess.run(['swift','build','--jobs',str(args.jobs),'--product',target],cwd=root,text=True,stdout=subprocess.PIPE,stderr=subprocess.STDOUT)
             log=output/(path.stem+'.log');log.write_text(result.stdout)
-            rows.append({'fixture':str(path.relative_to(root)),'target':target,'sourceSHA256':hashlib.sha256(path.read_bytes()).hexdigest(),
+            rows.append({'fixture':str(path.relative_to(root)),'target':target,'sourceSHA256':source_hash,'supportSources':inputs,
                          'compiledSourceSHA256':hashlib.sha256(source.encode()).hexdigest(),'passed':result.returncode==0,'exit':result.returncode,'log':str(log)})
             (output/'results.json').write_text(json.dumps(rows,indent=2)+'\n')
+            if result.returncode!=0:
+                print('Fixture failed: '+str(path.relative_to(root)))
+                print('\n'.join(line for line in result.stdout.splitlines() if 'error:' in line)[:6000])
             if result.returncode!=0 and not args.keep_going:raise RuntimeError('Fixture build failed: '+str(path)+'; see '+str(log))
     finally:
         if 'modified' not in locals() or package.read_bytes() in [original,modified]:

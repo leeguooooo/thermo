@@ -1,3 +1,4 @@
+import HotkeyCore
 import ThermoUI
 // Private-home native acceptance. No TCC changes. Active sessions have a separate
 // approximately 20-second QA watchdog; the production timeout remains unchanged.
