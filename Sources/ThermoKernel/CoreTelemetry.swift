@@ -50,6 +50,8 @@ import UserNotifications
             Task{@MainActor [weak self] in self?.receive(reading,token:token)}
         })
     }
+    package func dismissError(){latest.error=nil;values.send(latest)}
+    package func refreshCurrent(){guard let lease,accepts(lease) else{return};storedWorker?.refresh(lease.token)}
     package func preferencesDidChange(){if let lease{configure(lease)}}
     package func resetMenuBaselines(){
         guard let lease,accepts(lease) else{return}

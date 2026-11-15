@@ -54,6 +54,7 @@ extension HelperClient:KernelHelperTransport{}
     }
     package func bind(available:@escaping @MainActor ()->Bool)->any FanPolicyAccess{Client(owner:self,available:available)}
     private func valid(_ revision:Int,origin:Client?)->Bool{revision==policyRevision && !state.busy && (origin?.accepts ?? true) && !Task.isCancelled}
+    package func dismissError(){state.error=nil}
     package func refresh(){refresh(origin:nil)}
     private func refresh(origin:Client?) {
         guard automaticInteraction,origin?.accepts ?? true,!state.busy else{return}

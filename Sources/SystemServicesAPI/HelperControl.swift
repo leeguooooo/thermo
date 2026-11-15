@@ -36,6 +36,7 @@ package struct HelperReading:Sendable {
 @MainActor package protocol HelperAdministration:AnyObject {
     var latest:HelperReading{get}
     var readings:AnyPublisher<HelperReading,Never>{get}
+    func dismissError()
     func refresh()
     func install()
     func installWithPassword()

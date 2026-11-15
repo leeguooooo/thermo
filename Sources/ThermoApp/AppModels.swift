@@ -6,12 +6,15 @@ import ModuleKit
 @MainActor
 final class AppModels {
     static let shared = AppModels()
-    lazy var monitor = makeMonitor()
-    private let makeMonitor: () -> Monitor
+    lazy var services=AppSystemServices(defaults:defaults,samplingAllowed:{[defaults] in ModulePreferences.isEnabled(BuiltinModuleManifests.performance,in:defaults)})
+    lazy var monitor=makeMonitor?() ?? Monitor(services:services,samplingAllowed:{[defaults] in ModulePreferences.isEnabled(BuiltinModuleManifests.performance,in:defaults)})
+    private let defaults:UserDefaults
+    private let makeMonitor:(() -> Monitor)?
     let nativeFeatures:NativeFeatureStore
     lazy var updates = Updates()
     init(defaults: UserDefaults = .standard, nativeDefinitions:[NativeFeatureDefinition]? = nil,
-         makeMonitor: @escaping () -> Monitor = { Monitor(samplingAllowed: { ModulePreferences.isEnabled(BuiltinModuleManifests.performance, in: .standard) }) }) {
+         makeMonitor:(() -> Monitor)? = nil) {
+        self.defaults=defaults
         self.makeMonitor = makeMonitor
         let catalog=nativeDefinitions.map{try! NativeFeatureCatalog(definitions:$0)} ?? BuiltinNativeFeatures.catalog
         nativeFeatures=NativeFeatureStore(catalog:catalog,enabled:{id in

@@ -50,7 +50,7 @@ enum MainPage: Hashable {
         return try? BuiltinNativeFeatures.catalog.normalize(.init(feature.module.id,feature.entry.id))
     }
 
-    var samplingSurface: SamplingSurface {
+    var samplingSurface: TelemetrySurface {
         switch self {
         case .overview: return .overview
         case .sensors: return .sensors

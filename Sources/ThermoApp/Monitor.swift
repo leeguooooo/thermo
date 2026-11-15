@@ -1,631 +1,139 @@
-import NativeFeatureAPI
-import ThermoKernel
-import CleanKit
-import SystemServicesAPI
+import Combine
 import Foundation
-import ServiceManagement
+import SystemServicesAPI
+import ThermoKernel
 import ThermoKit
 import ThermoL10n
-import UserNotifications
-import AgentCore
 
-
-/// Owns the sampler on a background queue and publishes snapshots on the main thread.
-final class Monitor: ObservableObject {
-    @Published private(set) var snapshot: Snapshot?
-    /// nil means fans were not sampled, rather than a confirmed fanless machine.
-    @Published private(set) var sampledFans: [FanReading]?
-    @Published private(set) var fanReadingsUnavailable = false
-    var fanEmptyMessage: String { tr(fanReadingsUnavailable ? "Fan readings unavailable" : "Checking…") }
-
-    /// Fans whose 0 rpm has held for several samples: stopped while the Mac is cool, not unread.
-    @Published private(set) var stoppedFans: Set<Int> = []
-    private var fanZeroStreak: [Int: Int] = [:]
-
-    func publishSnapshot(_ value: Snapshot, parts: SamplerParts) {
-        fanReadingsUnavailable = parts.contains(.fans) && value.fansAvailable == false
-        let fans = parts.contains(.fans) && value.hasFanReadings ? value.fans : nil
-        if let fans {
-            fanZeroStreak = Self.zeroStreaks(fanZeroStreak, fans: fans)
-            let stopped = Set(fanZeroStreak.filter { $0.value >= Self.stoppedAfterSamples }.keys)
-            if stopped != stoppedFans { stoppedFans = stopped }
-        }
-        sampledFans = fans
-        snapshot = value
+/// Presentation bridge during the private Performance extraction; owns no sampler or helper IPC.
+@MainActor final class Monitor:ObservableObject {
+    let services:AppSystemServices
+    private let samplingAllowed:@Sendable ()->Bool
+    private var sampling:(any TelemetrySamplingLease)?
+    private var fan:(any FanPolicyAccess)?
+    private var observations=Set<AnyCancellable>()
+    private var surface:TelemetrySurface = .overview
+    private var unnamed=false
+    private var lastSnapshot:Date?
+    private var lastHelperRefresh=Date.distantPast
+    @Published var iconHidden=false
+    @Published private var reviewError:String?
+    #if DEBUG
+    @Published private var reviewFrame:TelemetryReading?
+    private var reviewStreak:[Int:Int]=[:]
+    #endif
+    private var frame:TelemetryReading {
+        #if DEBUG
+        if let reviewFrame{return reviewFrame}
+        #endif
+        return services.telemetry.latest
     }
-    /// The SMC's launch-time 0 lasts until its first real poll; three zeros in a row are a stopped fan.
-    static let stoppedAfterSamples = 3
-    static func zeroStreaks(_ previous: [Int: Int], fans: [FanReading]) -> [Int: Int] {
-        var next: [Int: Int] = [:]
-        for fan in fans where fan.rpm == 0 { next[fan.id] = (previous[fan.id] ?? 0) + 1 }
-        return next
+    private var helper:HelperReading{services.helper.latest}
+    var snapshot:Snapshot?{frame.snapshot}
+    var latest:Snapshot?{frame.latestSnapshot}
+    var sampledFans:[FanReading]?{frame.sampledFans}
+    var fanReadingsUnavailable:Bool{frame.fanReadingsUnavailable}
+    var stoppedFans:Set<Int>{frame.stoppedFans}
+    var fanEmptyMessage:String{tr(fanReadingsUnavailable ? "Fan readings unavailable":"Checking…")}
+    var history:[HistoryPoint]{frame.history}
+    var model:String{frame.model}
+    var systemMemory:SystemStats.Memory?{frame.memory}
+    var systemDisk:SystemStats.Disk?{frame.disk}
+    var menuLive:MenuLiveValues{services.telemetry.latest.menu}
+    var helperState:HelperState{helper.phase}
+    var policies:[Int:FanPolicy]{helper.policies}
+    var policiesAvailable:Bool{helper.policiesAvailable}
+    var fanControlState:FanControlState?{helper.fanControl}
+    var applyingPolicies:Bool{helper.applyingPolicies}
+    var installingHelper:Bool{helper.installing}
+    var uninstallingHelper:Bool{helper.uninstalling}
+    var helperBusy:Bool{helper.busy}
+    var pendingPolicies:[Int:FanPolicy]{helper.pendingPolicies}
+    var lidAwake:LidAwakeState?{helper.lidAwake}
+    var lidAwakePending:Bool{helper.lidAwakePending}
+    var lidAwakeBusy:Bool{helper.lidAwakeBusy}
+    var settingUp:Bool{helper.settingUp}
+    var setupStarted:Date?{helper.setupStarted}
+    var usesSMAppService:Bool{helper.usesSMAppService}
+    var lastError:String? {
+        get{reviewError ?? helper.error ?? frame.error}
+        set{reviewError=newValue;if newValue==nil{services.helper.dismissError();services.telemetry.dismissError()}}
     }
-    @Published private(set) var history: [HistoryPoint] = []
-    @Published private(set) var helperState: HelperState = .unknown
-    @Published private(set) var policies: [Int: FanPolicy] = [:]
-    @Published private(set) var policiesAvailable = false
-    @Published private(set) var fanControlState: FanControlState?
-    @Published private(set) var applyingPolicies = false
-    @Published private(set) var installingHelper = false
-    @Published private(set) var uninstallingHelper = false
-    var helperBusy: Bool { applyingPolicies || installingHelper || uninstallingHelper }
-    private var policyRevision = 0
-    private var lastHelperRefresh = Date.distantPast
-    @Published var lastError: String?
-    @Published private(set) var model = ""
-    /// The menu bar icon is hidden (behind the notch or pushed off by other icons).
-    @Published var iconHidden = false
-    @Published private(set) var systemMemory: SystemStats.Memory?
-    @Published private(set) var systemDisk: SystemStats.Disk?
-    private var windowSurface: SamplingSurface = .overview
-
-    func setWindowSurface(_ surface: SamplingSurface) {
-        guard windowSurface != surface else { return }
-        windowSurface = surface
-        refreshSamplingDemand()
-        if watched { sampleNow() }
-    }
-
-    private func refreshSamplingDemand() {
-        let open = watched, surface = popoverOpen ? SamplingSurface.overview : windowSurface
-        queue.async { self.fullSampling = open; self.samplingSurface = surface }
-    }
-
-    /// Called on the main thread after each sample (menu bar title).
-    var onUpdate: ((Snapshot) -> Void)?
-    var onMenuUpdate: (() -> Void)?
-    private(set) var menuLive = MenuLiveValues()
-    private let menuSampler = MenuLiveSampler(readCPU:QuickLoad.cpuTicks,cpuPercent:QuickLoad.cpuPercent)
-
-    func resetMenuBaselines() {
-        menuLive = MenuLiveValues()
-        queue.async { [weak self] in self?.menuSampler.reset() }
-        onMenuUpdate?()
-    }
-
-    /// Published copy of `watched` (panel or main window open) for views that must stop work when the panel closes: the popover's
-    /// SwiftUI views stay alive (no onDisappear) while it is closed.
-    @Published private(set) var panelVisible = false
-
-    var popoverOpen = false { didSet { if popoverOpen != oldValue { visibilityChanged() } } }
-    /// The main window is on screen: it shows the same live data as the panel.
-    var windowOpen = false { didSet { if windowOpen != oldValue { visibilityChanged() } } }
-    /// Someone is looking: full sampling at the chosen rate.
-    var watched: Bool { popoverOpen || windowOpen }
-
-    private func visibilityChanged() {
-        let open = watched
-        refreshSamplingDemand()
-        guard open != panelVisible else { return }
-        panelVisible = open
-        if open {
-            // SwiftUI only sees data while visible; hand over what accumulated meanwhile.
-            history = buffer
-            if let latest { publishSnapshot(latest, parts: latestParts) }
-        }
-        reschedule()
-        if open { sampleNow(); refreshHelper() }
-    }
-
-    static let historyWindow: TimeInterval = 900
-
-    private let queue = DispatchQueue(label: "dev.thermo.app.sampler", qos: .utility)
-    private var sampler: Sampler?
-    private let samplingLifetime = FeatureSamplingLifetime()
-    private let samplingAllowed: @Sendable () -> Bool
-    /// Mirror of `popoverOpen`, confined to `queue`.
-    private var fullSampling = false
-    private var samplingSurface: SamplingSurface = .overview
-    private var includeUnnamed = false
-
-    func showUnnamedSensors(_ enabled: Bool) {
-        queue.async { [weak self] in
-            self?.includeUnnamed = enabled
-            self?.sample()
-        }
-    }
-    private var timer: DispatchSourceTimer?
-    private var lastAlert = Date.distantPast
-    /// Background data, kept out of @Published so hidden SwiftUI views don't re-render.
-    private var buffer: [HistoryPoint] = []
-    private(set) var latest: Snapshot?
-    private var latestParts: SamplerParts = []
-    private let helper: HelperClient
-    private let helperInteraction: Bool
-
-    /// UI review suppresses automatic hardware/helper work, not explicit user actions.
-    nonisolated static func suppressesAutomaticControl(arguments: [String]) -> Bool {
-        let modes = ["--offscreen", "--snapshot", "--render-preview", "--verify-lifecycle", "--ui-review"]
-        return arguments.contains(where: modes.contains)
-    }
-
-    init(startMonitoring: Bool = true, helperInteraction: Bool = true,
-         helper: HelperClient = HelperClient(), arguments: [String] = CommandLine.arguments,
-         samplingAllowed: @escaping @Sendable () -> Bool = { true }) {
-        self.helper = helper
-        self.samplingAllowed = samplingAllowed
-        if samplingAllowed() { _ = samplingLifetime.start() }
-        // A snapshot must not contact an old helper and thereby start its update
-        // or setup path. Apply this to every Monitor, including lazy AppModels.
-        self.helperInteraction = helperInteraction && !Self.suppressesAutomaticControl(arguments: arguments)
-        guard startMonitoring, samplingAllowed() else { return }
-        reschedule()
-        refreshHelper()
-    }
-
-    var interval: TimeInterval { Settings.intervalValue(UserDefaults.standard.double(forKey: Settings.interval)) }
-
-    func reschedule() {
-        timer?.cancel(); timer = nil
-        guard samplingAllowed(), samplingLifetime.current() != nil else { return }
-        // Background: essential sensors only, at least every 2 s. Popover open: everything at the chosen rate.
-        let every = watched ? interval : max(interval, 2)
-        let t = DispatchSource.makeTimerSource(queue: queue)
-        t.schedule(deadline: .now(), repeating: every, leeway: .milliseconds(Int(every * 100)))
-        t.setEventHandler { [weak self] in self?.sample() }
-        t.resume()
-        timer = t
-    }
-
-    var samplingActive: Bool { timer != nil }
-    var canStopFeature: Bool { !helperBusy && !settingUp && pendingPolicies.isEmpty }
-    func startFeature() {
-        guard samplingAllowed(), timer == nil else { return }
-        if samplingLifetime.current() == nil { _ = samplingLifetime.start() }
-        refreshSamplingDemand(); reschedule()
-    }
-    func beginStoppingFeature() {
-        samplingLifetime.stop(); timer?.cancel(); timer = nil
-        latest = nil; snapshot = nil; sampledFans = nil; fanZeroStreak = [:]; stoppedFans = []
-        buffer = []; history = []; systemMemory = nil; systemDisk = nil; menuLive = MenuLiveValues()
-        onMenuUpdate?()
-    }
-    func finishStoppingFeature() async {
-        await withCheckedContinuation { done in
-            queue.async {
-                self.sampler = nil; self.menuSampler.reset(); self.fullSampling = false
-                done.resume()
+    var popoverOpen=false{didSet{if popoverOpen != oldValue{visibilityChanged()}}}
+    var windowOpen=false{didSet{if windowOpen != oldValue{visibilityChanged()}}}
+    var watched:Bool{popoverOpen || windowOpen}
+    var panelVisible:Bool{watched}
+    var samplingActive:Bool{services.telemetry.latest.sampling}
+    var canStopFeature:Bool{helper.canRetirePerformance}
+    var interval:TimeInterval{Settings.intervalValue(UserDefaults.standard.double(forKey:Settings.interval))}
+    var onUpdate:((Snapshot)->Void)?
+    var onMenuUpdate:(()->Void)?
+    init(services:AppSystemServices,startMonitoring:Bool = true,samplingAllowed:@escaping @Sendable ()->Bool){
+        self.services=services;self.samplingAllowed=samplingAllowed
+        services.telemetry.readings.sink{[weak self] _ in self?.objectWillChange.send()}.store(in:&observations)
+        services.helper.readings.sink{[weak self] _ in self?.objectWillChange.send()}.store(in:&observations)
+        services.telemetry.menuReadings.sink{[weak self] value in
+            guard let self else{return}
+            if let snapshot=value.snapshot,self.lastSnapshot != snapshot.timestamp{
+                self.lastSnapshot=snapshot.timestamp;self.onUpdate?(snapshot)
+                if self.watched,Date().timeIntervalSince(self.lastHelperRefresh)>=10{self.refreshFanObservation()}
             }
-        }
+            self.onMenuUpdate?()
+        }.store(in:&observations)
+        if startMonitoring && samplingAllowed(){startFeature();refreshFanObservation()}
     }
-
-    /// Retry initialization too: a temporary SMC failure must not leave the app stuck loading.
-    func sampleNow() {
-        queue.async { [weak self] in
-            guard let self else { return }
-            self.sample()
-        }
+    convenience init(startMonitoring:Bool = true,helperInteraction:Bool = true,helper:HelperClient = .init(),arguments:[String] = CommandLine.arguments,samplingAllowed:@escaping @Sendable ()->Bool = {true}){
+        self.init(services:AppSystemServices(helper:helper,helperInteraction:helperInteraction,arguments:arguments,samplingAllowed:samplingAllowed),startMonitoring:startMonitoring,samplingAllowed:samplingAllowed)
     }
-
-    private func prepareSampler(token: UUID) {
-        do {
-            let s = try Sampler(scope: .essential)
-            sampler = s
-            DispatchQueue.main.async { [weak self] in
-                guard self?.samplingLifetime.accepts(token) == true else { return }
-                self?.model = s.discovery.model
-                self?.lastError = nil
-            }
-        } catch {
-            DispatchQueue.main.async { [weak self] in if self?.samplingLifetime.accepts(token) == true { self?.lastError = "\(error)" } }
-        }
+    func startFeature(){
+        guard samplingAllowed(),sampling==nil else{return}
+        do{sampling=try services.telemetry.beginPerformanceSampling(available:{[samplingAllowed] in samplingAllowed()})}
+        catch{reviewError=error.localizedDescription;return}
+        fan=services.helper.bind(available:{[samplingAllowed] in samplingAllowed()});updateDemand()
     }
-
-    private func sample() {
-        guard samplingAllowed(), let token = samplingLifetime.current() else { return }
-        let open = fullSampling
-        let defaults = UserDefaults.standard
-        let preferences = MenuBarPreferences.read(defaults)
-        let live = menuSampler.sample(metrics: preferences.metrics)
-        let plan = SamplingPlan.make(visible: open, includeUnnamed: includeUnnamed, metrics: preferences.metrics,
-                                     alerts: defaults.bool(forKey: Settings.alertsEnabled), surface: samplingSurface)
-        if plan.parts.isEmpty {
-            DispatchQueue.main.async { [weak self] in
-                guard self?.samplingLifetime.accepts(token) == true else { return }
-                self?.menuLive = live
-                self?.onMenuUpdate?()
-            }
-            return
-        }
-        if sampler == nil { prepareSampler(token: token) }
-        guard let sampler else {
-            DispatchQueue.main.async { [weak self] in
-                guard self?.samplingLifetime.accepts(token) == true else { return }
-                self?.menuLive = live
-                self?.onMenuUpdate?()
-            }
-            return
-        }
-        sampler.scope = plan.scope
-        sampler.parts = plan.parts
-        sampler.groups = plan.groups
-        let s = sampler.sample()
-        // Filesystem/kernel reads happen once per sample, never during SwiftUI layout.
-        let resources = open && samplingSurface == .overview
-        let memory = resources ? SystemStats.memory() : nil
-        let disk = resources ? SystemStats.disk() : nil
-        var averages = [Double](repeating: 0, count: 3)
-        let load = getloadavg(&averages, 3) > 0 ? averages[0] / Double(max(1, ProcessInfo.processInfo.activeProcessorCount)) : nil
-        let point = HistoryPoint(time: s.timestamp, cpu: s.cpu, gpu: s.gpu, fans: s.fans.map(\.rpm), power: s.systemPower, load: load)
-        DispatchQueue.main.async { [weak self] in
-            guard let self, self.samplingLifetime.accepts(token) else { return }
-            self.menuLive = live
-            self.latest = s
-            self.latestParts = plan.parts
-            self.buffer.append(point)
-            let cutoff = Date().addingTimeInterval(-Self.historyWindow)
-            if let first = self.buffer.firstIndex(where: { $0.time >= cutoff }), first > 0 {
-                self.buffer.removeFirst(first)
-            }
-            if self.watched {
-                if resources {
-                    if self.systemMemory != memory { self.systemMemory = memory }
-                    if self.systemDisk != disk { self.systemDisk = disk }
-                }
-                self.publishSnapshot(s, parts: plan.parts)
-                self.history = self.buffer
-                if Date().timeIntervalSince(self.lastHelperRefresh) >= 10 { self.refreshHelper() }
-            }
-            self.onUpdate?(s)
-            self.checkAlert(s)
-        }
+    private func updateDemand(){sampling?.setDemand(.init(visible:watched,surface:popoverOpen ? .overview:surface,includeUnnamed:unnamed))}
+    private func visibilityChanged(){objectWillChange.send();updateDemand();if watched{sampleNow();refreshHelper()}}
+    func setWindowSurface(_ surface:TelemetrySurface){guard self.surface != surface else{return};self.surface=surface;updateDemand();if watched{sampleNow()}}
+    func showUnnamedSensors(_ value:Bool){unnamed=value;updateDemand();sampleNow()}
+    func sampleNow(){sampling?.refresh()}
+    func reschedule(){services.telemetry.preferencesDidChange()}
+    func resetMenuBaselines(){services.telemetry.resetMenuBaselines()}
+    func beginStoppingFeature(){
+        sampling?.beginStopping();fan?.beginRetiring()
+        #if DEBUG
+        reviewFrame=nil;reviewStreak=[:]
+        #endif
     }
-
-    // MARK: Alerts
-
-    private func checkAlert(_ s: Snapshot) {
-        let d = UserDefaults.standard
-        // UserNotifications throws (and kills the app) outside an app bundle, e.g. a bare dev build.
-        guard Bundle.main.bundleIdentifier != nil else { return }
-        guard d.bool(forKey: Settings.alertsEnabled), let hot = s.maximumKnownTemperature,
-              hot >= Settings.thresholdValue(d.double(forKey: Settings.alertThreshold)),
-              Date().timeIntervalSince(lastAlert) > 300 else { return }
-        lastAlert = Date()
-        let content = UNMutableNotificationContent()
-        content.title = tr("Mac is running hot")
-        let fahrenheit = d.bool(forKey: Settings.fahrenheit)
-        content.body = tr(fahrenheit ? "Hottest sensor at %1$@ °F" : "Hottest sensor at %1$@ °C", String(format: "%.0f", fahrenheit ? hot * 9 / 5 + 32 : hot))
-            + (s.fans.first.flatMap(\.rpm).map { tr(", fans at %1$@ rpm", String(format: "%.0f", $0)) } ?? "")
-        UNUserNotificationCenter.current().add(UNNotificationRequest(identifier: "thermo.hot", content: content, trigger: nil))
+    func finishStoppingFeature() async{await sampling?.finishStopping();await fan?.finishRetiring();sampling=nil;fan=nil;onMenuUpdate?()}
+    private func refreshFanObservation(){lastHelperRefresh=Date();fan?.refreshObservation()}
+    func refreshHelper(){lastHelperRefresh=Date();services.helper.refresh()}
+    func beginSetup(){services.helper.install()}
+    func stopSetup(){services.helper.stopSetup()}
+    func installHelper(){services.helper.install()}
+    func installHelperWithPassword(){services.helper.installWithPassword()}
+    func uninstallHelper(finished:@escaping ()->Void = {}){services.helper.uninstall(finished:finished)}
+    func openLoginItemsSettings(){services.helper.openLoginItemsSettings()}
+    func setLidAwake(_ on:Bool){services.helper.setLidAwake(on)}
+    func setPolicy(_ policy:FanPolicy,fan:Int){setPolicy(policy,fans:[fan])}
+    func setPolicy(_ policy:FanPolicy,fans:[Int]){
+        guard samplingAllowed() else{return}
+        if fan==nil{fan=services.helper.bind(available:{[samplingAllowed] in samplingAllowed()})}
+        fan?.request(policy,fans:fans)
     }
-
-    static func requestNotificationPermission() {
-        Task { @MainActor in NotificationAccess.shared.request() }
+    nonisolated static func suppressesAutomaticControl(arguments:[String])->Bool{arguments.contains{["--offscreen","--snapshot","--render-preview","--verify-lifecycle","--ui-review"].contains($0)}}
+    nonisolated static func requestNotificationPermission(){Task{@MainActor in NotificationAccess.shared.request()}}
+    #if DEBUG
+    // Display-only fixture input, never used to grant helper or sampling authority.
+    func publishSnapshot(_ snapshot:Snapshot,parts:SamplerParts){
+        var value=reviewFrame ?? services.telemetry.latest
+        value.fanReadingsUnavailable=parts.contains(.fans) && snapshot.fansAvailable == false
+        let fans=parts.contains(.fans) && snapshot.hasFanReadings ? snapshot.fans:nil
+        if let fans{reviewStreak=Self.zeroStreaks(reviewStreak,fans:fans);value.stoppedFans=Set(reviewStreak.filter{$0.value>=Self.stoppedAfterSamples}.keys)}
+        value.snapshot=snapshot;value.sampledFans=fans;reviewFrame=value
     }
-
-    // MARK: Helper / fan control
-
-    /// Developer ID builds register the bundled daemon with SMAppService (user approves it in
-    /// System Settings → Login Items). Ad-hoc builds install it with an administrator prompt.
-    let usesSMAppService = CodeSignature.teamIdentifier() != nil
-    private let daemon = SMAppService.daemon(plistName: HelperConstants.bundledPlistName)
-
-    /// Fan settings chosen before the helper could take them; applied as soon as it answers.
-    @Published private(set) var pendingPolicies: [Int: FanPolicy] = [:]
-    /// Keep awake with the lid closed, as the helper reports it; nil when the helper cannot say (absent or outdated).
-    @Published private(set) var lidAwake: LidAwakeState?
-    /// Turned on before the helper was ready; applied once it answers.
-    @Published private(set) var lidAwakePending = false
-    @Published private(set) var lidAwakeBusy = false
-    /// Set while the user is being walked through allowing the helper.
-    @Published private(set) var settingUp = false
-    @Published private(set) var setupStarted: Date?
-    private var setupTimer: Timer?
-    private var refreshingHelper = false
-
-    func refreshHelper() {
-        guard helperInteraction else { return }
-        guard !refreshingHelper, !helperBusy else { return }
-        refreshingHelper = true
-        lastHelperRefresh = Date()
-        let revision = policyRevision
-        Task { @MainActor in
-            defer { refreshingHelper = false }
-            // Whatever answers is running, however it was installed (Login Items or password).
-            if let v = try? await helper.version() {
-                let state = try? await helper.fanControlState()
-                guard revision == policyRevision, !helperBusy else { return }
-                fanControlState = state
-                policiesAvailable = state != nil
-                if let state { policies = state.policies }
-                helperState = v == HelperConstants.version ? .running : .outdated
-                observeLidAwake(helperState == .running ? try? await helper.lidAwakeState() : nil)
-                if helperState == .outdated { restartOutdatedHelper() }
-                finishSetup()
-                return
-            }
-            guard revision == policyRevision, !helperBusy else { return }
-            policiesAvailable = false
-            fanControlState = nil
-            if usesSMAppService {
-                switch daemon.status {
-                case .requiresApproval:
-                    helperState = .needsApproval
-                case .enabled:
-                    // Registered, but launchd will not start it: background items for this app or
-                    // developer are off in Login Items. Reinstalling cannot fix that; approving can.
-                    let refused = await Task.detached { Self.launchdRefusesHelper() }.value
-                    guard revision == policyRevision, !helperBusy else { return }
-                    helperState = refused ? .needsApproval : .notRunning
-                default:
-                    helperState = HelperInstaller.isInstalled ? .notRunning : .notInstalled
-                }
-            } else {
-                helperState = HelperInstaller.isInstalled ? .notRunning : .notInstalled
-            }
-        }
+    #endif
+    nonisolated static let stoppedAfterSamples=3
+    nonisolated static func zeroStreaks(_ previous:[Int:Int],fans:[FanReading])->[Int:Int]{
+        var next:[Int:Int]=[:];for fan in fans where fan.rpm==0{next[fan.id]=(previous[fan.id] ?? 0)+1};return next
     }
-
-    /// Starts setup the way a person expects: one administrator password prompt, done. A helper
-    /// that already answers is kept, and one already approved under Login Items is left to
-    /// launchd; nobody is sent hunting through System Settings.
-    func beginSetup() {
-        guard !settingUp, !helperBusy else { return }
-        settingUp = true
-        setupStarted = Date()
-        Task { @MainActor in
-            if (try? await helper.version()) != nil { refreshHelper(); return }
-            if usesSMAppService, daemon.status == .enabled,
-               !(await Task.detached { Self.launchdRefusesHelper() }.value) {
-                watchSetup()   // approved earlier; launchd is starting it
-                return
-            }
-            continueHelperInstallation()
-        }
-    }
-
-    /// Polls once a second while the user is in System Settings; stops when the helper answers
-    /// or after ten minutes.
-    private func watchSetup() {
-        setupTimer?.invalidate()
-        setupTimer = Timer.scheduledTimer(withTimeInterval: 1, repeats: true) { [weak self] t in
-            guard let self else { t.invalidate(); return }
-            if let start = self.setupStarted, Date().timeIntervalSince(start) > 600 {
-                self.stopSetup()
-                self.lastError = tr("The system helper did not respond. Your settings have not been applied. Retry setup when ready.")
-                return
-            }
-            self.refreshHelper()
-        }
-    }
-
-    func stopSetup() {
-        setupTimer?.invalidate()
-        setupTimer = nil
-        settingUp = false
-        setupStarted = nil
-    }
-
-    private func finishSetup() {
-        guard !helperBusy else { return }
-        guard [.running, .outdated].contains(helperState) else { stopSetup(); return }
-        stopSetup()
-        let pending = pendingPolicies
-        pendingPolicies = [:]
-        if !pending.isEmpty { applyPolicies(pending.sorted(by: { $0.key < $1.key }).map { ($0.key, $0.value) }) }
-        if lidAwakePending, helperState == .running { lidAwakePending = false; setLidAwake(true) }
-    }
-
-    // MARK: Keep awake with the lid closed
-
-    /// Through the helper: only root can stop lid-close sleep. Without a current helper this walks
-    /// the user through installing or updating it first, then turns it on.
-    func setLidAwake(_ on: Bool) {
-        guard !lidAwakeBusy else { return }
-        guard helperState == .running else {
-            lidAwakePending = on
-            if on, !settingUp { beginSetup() }
-            return
-        }
-        lidAwakeBusy = true
-        Task { @MainActor in
-            defer { lidAwakeBusy = false }
-            do {
-                let heatGuard = UserDefaults.standard.bool(forKey: Settings.lidAwakeHeatGuard)
-                try await helper.setLidAwake(on, heatGuard: heatGuard)
-                OperationJournal.record(OperationRecord(feature: "power", action: on ? "lidAwakeOn" : "lidAwakeOff",
-                                                        items: [.init(target: "disablesleep", status: "done",
-                                                                      detail: on && !heatGuard ? "heat guard off" : nil)]))
-            } catch {
-                lastError = tr("Could not change lid-closed sleep: %1$@", error.localizedDescription)
-                OperationJournal.record(OperationRecord(feature: "power", action: on ? "lidAwakeOn" : "lidAwakeOff",
-                                                        items: [.init(target: "disablesleep", status: "failed", detail: error.localizedDescription)]))
-            }
-            observeLidAwake(try? await helper.lidAwakeState())
-        }
-    }
-
-    /// Notices the helper turning it off by itself (heat, battery, no readings) and says so once.
-    private func observeLidAwake(_ state: LidAwakeState?) {
-        let before = lidAwake
-        lidAwake = state
-        guard let state, let off = state.lastAutoOff, off != before?.lastAutoOff, before?.armed == true, !state.armed else { return }
-        OperationJournal.record(OperationRecord(feature: "power", action: "lidAwakeAutoOff", subject: off.reason,
-                                                items: [.init(target: "disablesleep", status: "done", detail: off.detail)]))
-        guard Bundle.main.bundleIdentifier != nil else { return }
-        let content = UNMutableNotificationContent()
-        content.title = tr("Lid-closed awake turned off")
-        content.body = LidAwakeText.autoOff(off) + " " + tr("The Mac can sleep again when the lid is closed.")
-        UNUserNotificationCenter.current().add(UNNotificationRequest(identifier: "thermo.lidawake", content: content, trigger: nil))
-    }
-
-    /// The fallback that always works: one administrator prompt installs the helper as a
-    /// classic launch daemon (used when Login Items approval is stuck or not available).
-    /// Explicit repair bypasses cached background-registration state and version-only checks.
-    @MainActor func installHelperWithPassword() {
-        guard !helperBusy, !settingUp else { return }
-        continueHelperInstallation()
-    }
-
-    @MainActor private func continueHelperInstallation() {
-        guard !helperBusy else { return }
-        guard let bin = HelperInstaller.locateHelperBinary() else {
-            lastError = tr("thermo-helper not found inside the app bundle")
-            stopSetup()
-            return
-        }
-        performHelperInstallation(operation: {
-            if self.usesSMAppService, !HelperInstaller.isInstalled, self.daemon.status != .notRegistered {
-                try? self.daemon.unregister()
-            }
-            try HelperInstaller.install(from: bin)
-        })
-    }
-
-    /// An injected installer exercises busy/quit/failure behavior without admin or hardware work.
-    @MainActor func performHelperInstallation(operation: @escaping () throws -> Void,
-                                              finished: @escaping () -> Void = {}) {
-        guard !helperBusy else { return }
-        settingUp = true
-        installingHelper = true
-        policyRevision += 1
-        setupStarted = setupStarted ?? Date()
-        let exitGuard = AppExitGuard.beginHelperMaintenance()
-        DispatchQueue.global(qos: .userInitiated).async {
-            var failure: String?
-            do { try operation() } catch { failure = "\(error)" }
-            let error = failure
-            DispatchQueue.main.async {
-                AppExitGuard.endHelperMaintenance(exitGuard)
-                self.installingHelper = false
-                if let error {
-                    self.lastError = error.contains("cancelled") ? nil : error
-                    self.stopSetup()
-                } else {
-                    self.helper.reset()
-                    self.lastError = nil
-                    self.watchSetup()
-                }
-                finished()
-            }
-        }
-    }
-
-    /// `launchctl print` (no privileges needed) shows a spawn that launchd refuses as exit 78
-    /// (EX_CONFIG) — what happens when the user turned Thermo off under "Allow in the Background".
-    nonisolated static func launchdRefusesHelper() -> Bool {
-        let result = CommandRunner.run("/bin/launchctl", arguments: ["print", "system/\(HelperConstants.label)"],
-                                       timeout: 5, captureError: false)
-        guard result.status == 0, !result.timedOut, !result.cancelled, !result.truncated else { return false }
-        let text = result.output
-        return text.contains("last exit code = 78") || text.contains("job state = spawn failed")
-    }
-
-    private let helperUpgrade = HelperUpgradeCoordinator()
-
-    /// Helpers before 1.0.2 don't restart themselves when the app is updated, so
-    /// after an update they keep running the old binary until a reboot. For the
-    /// SMAppService daemon, unregister + register makes launchd start the new one
-    /// (the old helper returns the fans to auto on SIGTERM). Once per launch.
-    @MainActor private func restartOutdatedHelper() {
-        guard !HelperInstaller.isInstalled, usesSMAppService, daemon.status == .enabled,
-              !helperUpgrade.attempted, !helperBusy else { return }
-        installingHelper = true
-        policyRevision += 1
-        Task { @MainActor in
-            do {
-                // Recheck immediately before touching the registration: a password install
-                // may have completed since refreshHelper observed the old version.
-                let restarted = try await helperUpgrade.restartManaged(legacyInstalled: HelperInstaller.isInstalled,
-                    unregister: { try await self.daemon.unregister() },
-                    register: { try self.daemon.register() })
-                if !restarted { installingHelper = false; return }
-            } catch {
-                lastError = tr("Helper update: %1$@", error.localizedDescription)
-            }
-            if daemon.status == .requiresApproval { SMAppService.openSystemSettingsLoginItems() }
-            try? await Task.sleep(nanoseconds: 2_000_000_000)
-            installingHelper = false
-            refreshHelper()
-        }
-    }
-
-    func setPolicy(_ policy: FanPolicy, fan: Int) {
-        setPolicy(policy, fans: [fan])
-    }
-
-    func setPolicy(_ policy: FanPolicy, fans: [Int]) {
-        guard samplingAllowed(), samplingLifetime.current() != nil, !helperBusy, !fans.isEmpty else { return }
-        do { try policy.validate() } catch { lastError = "\(error)"; return }
-        let changes = Set(fans).sorted().map { ($0, policy) }
-        guard [.running, .outdated].contains(helperState) else {
-            for (fan, policy) in changes { pendingPolicies[fan] = policy }
-            if !settingUp { beginSetup() }
-            return
-        }
-        applyPolicies(changes)
-    }
-
-    private func applyPolicies(_ changes: [(Int, FanPolicy)]) {
-        guard !helperBusy else { return }
-        applyingPolicies = true
-        policyRevision += 1
-        Task { @MainActor in
-            var state: FanControlState?
-            let result = await FanPolicyOperation.run(changes,
-                set: { try await self.helper.setPolicy($0, fan: $1) },
-                read: {
-                    let current = try await self.helper.fanControlState()
-                    state = current
-                    return current.policies
-                })
-            fanControlState = state
-            if let active = result.policies { policies = active }
-            policiesAvailable = result.policies != nil
-            FanPolicyJournal.record(changes, active: result.policies, error: result.error, fans: sampledFans ?? [])
-            lastError = result.error ?? state?.failure
-            applyingPolicies = false
-            sampleNow()
-            if result.policies == nil { refreshHelper() }
-        }
-    }
-
-    /// "Install…" / "Reinstall…" / "Update…" buttons and `--install-helper`.
-    func installHelper() { beginSetup() }
-
-    func openLoginItemsSettings() { SMAppService.openSystemSettingsLoginItems() }
-
-    @MainActor func uninstallHelper(finished: @escaping () -> Void = {}) {
-        uninstallHelper(operation: {
-            if HelperInstaller.isInstalled {
-                try HelperInstaller.uninstall()
-            } else if self.usesSMAppService && self.daemon.status != .notRegistered {
-                try self.helper.withRemovalPreparation {
-                    try self.daemon.unregister()
-                    guard self.daemon.status == .notRegistered else {
-                        throw FanControlError.helper("helper background registration removal was not confirmed")
-                    }
-                }
-            } else {
-                throw FanControlError.helper("no helper registration could be verified; nothing was removed")
-            }
-        }, finished: finished)
-    }
-
-    /// The injected operation keeps regression checks away from the real root helper.
-    @MainActor func uninstallHelper(operation: @escaping () throws -> Void, finished: @escaping () -> Void = {}) {
-        guard !helperBusy, !settingUp else { return }
-        uninstallingHelper = true
-        let exitGuard = AppExitGuard.beginHelperMaintenance()
-        policyRevision += 1
-        policiesAvailable = false
-        fanControlState = nil
-        stopSetup()
-        pendingPolicies = [:]
-        DispatchQueue.global(qos: .userInitiated).async {
-            var failure: String?
-            do { try operation() } catch { failure = "\(error)" }
-            let error = failure
-            DispatchQueue.main.async {
-                AppExitGuard.endHelperMaintenance(exitGuard)
-                self.uninstallingHelper = false
-                self.lastError = error
-                self.helper.reset()
-                if error == nil { self.policies = [:] }
-                self.refreshHelper()
-                finished()
-            }
-        }
-    }
-
 }
