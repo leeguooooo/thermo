@@ -18,7 +18,7 @@ enum PluginsModule:BuiltinModule {
         guard section == .software,let entry=manifest.entries.first else{return AnyView(EmptyView())}
         return row(.init(entry:entry,target:.plugins,tint:.orange,selected:owns(page.wrappedValue)))
     }
-    @MainActor static func page(_ entry:ModuleManifest.Entry,selection:Binding<MainPage>,models:AppModels)->AnyView {AnyView(HistoryPage(model:models.plugins,open:{selection.wrappedValue=$0}))}
+    @MainActor static func page(_ entry:ModuleManifest.Entry,selection:Binding<MainPage>,models:AppModels)->AnyView {AnyView(PluginsPage(model:models.plugins,open:{selection.wrappedValue=$0}))}
     @MainActor static func settings(_ entry:ModuleManifest.Entry,models:AppModels)->AnyView {AnyView(EmptyView())}
     @MainActor static func prepareStop(models:AppModels)throws->BuiltinModules.FinishStop? {try models.preparePluginsStop()}
     @MainActor static func appearance(_ page:MainPage)->(glow:Bool,tint:Color?){(false,nil)}

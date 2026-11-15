@@ -4545,6 +4545,7 @@ let zhHans: [String: String] = [
     "Agent configuration checks, reviewed repairs, MCP inspection and local tool-use analysis.": "Agent 配置检查、经确认的修复、MCP 检查和本机工具用量分析。",
     "Wait for the confirmed agent configuration changes before switching diagnostics off.": "请等待已确认的 agent 配置变更完成，再关闭诊断。",
     "Review a local health snapshot before sending it to the selected AI.": "发送给所选 AI 前，先核对本机体检快照。",
+    "Browse, install and update Claude Code plugins with reviewed commands.": "浏览 Claude Code 插件，核对命令后安装或更新。",
     "Wait for plugin installation or updates before switching this feature off.": "请等待插件安装或更新完成，再关闭此功能。",
     "Wait for the current AI check-up request before switching this feature off.": "请等待当前 AI 体检请求完成，再关闭此功能。",
 ]
