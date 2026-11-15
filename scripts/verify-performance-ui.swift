@@ -60,7 +60,7 @@ private struct PerformanceReviewPanel:View {
     }
 }
 @MainActor final class PerformanceReview:NSObject,NSApplicationDelegate,NSPopoverDelegate {
-    let root:URL,defaults:UserDefaults,state=PerformanceReviewState()
+    let root:URL,defaults:UserDefaults,state:PerformanceReviewState
     let telemetry:CoreTelemetry
     let helper:CoreHelperAdministration
     let store:NativeFeatureStore
@@ -70,6 +70,7 @@ private struct PerformanceReviewPanel:View {
     let started=Date()
     init(root:URL,defaults:UserDefaults){
         self.root=root;self.defaults=defaults
+        let state=PerformanceReviewState();self.state=state
         let telemetry=CoreTelemetry(defaults:defaults,samplingAllowed:{true});self.telemetry=telemetry
         let helper=CoreHelperAdministration(automaticInteractionAllowed:false,beginMaintenance:{UUID()},endMaintenance:{_ in},
             fans:{telemetry.latest.sampledFans ?? []},refreshTelemetry:{telemetry.refreshCurrent()});self.helper=helper
@@ -77,7 +78,6 @@ private struct PerformanceReviewPanel:View {
             PerformanceSession(availability:available,telemetry:telemetry,administration:helper,fanFactory:helper,defaults:defaults,showSettings:{},
                 makeRecorder:{PulseRecorder(readHistory:{[]},samplingAllowed:{false},readOnBattery:{false})},actionsAllowed:{false})
         }
-        let state=self.state
         store=NativeFeatureStore(definitions:[definition],enabled:{_ in ModulePreferences.isEnabled(BuiltinModuleManifests.performance,in:defaults)},navigation:.init(show:{state.present($0)}))
         super.init();state.store=store;state.showWindow={[weak self] in self?.popover.performClose(nil);self?.window?.makeKeyAndOrderFront(nil)}
     }
@@ -96,7 +96,11 @@ private struct PerformanceReviewPanel:View {
         status?.button?.title="PQ";status?.button?.setAccessibilityLabel("Thermo Performance QA")
         status?.button?.target=self;status?.button?.action=#selector(showPanel)
         for name in [NSWindow.didChangeOcclusionStateNotification,NSWindow.didMiniaturizeNotification,NSWindow.didDeminiaturizeNotification,NSWindow.willCloseNotification]{
-            observers.append(NotificationCenter.default.addObserver(forName:name,object:window,queue:.main){[weak self] _ in MainActor.assumeIsolated{self?.visibilityChanged()}})
+            observers.append(NotificationCenter.default.addObserver(forName:name,object:window,queue:.main){[weak self] event in MainActor.assumeIsolated{
+                guard let self else{return}
+                if event.name==NSWindow.willCloseNotification{self.state.visible=false;self.store.setWindowPresentation(visible:false,selection:self.state.route);self.store.retireVisibility()}
+                else{self.visibilityChanged()}
+            }})
         }
         store.start(BuiltinModuleManifests.performance.id);showConsole()
         timer=Timer.scheduledTimer(withTimeInterval:1,repeats:true){[weak self] _ in MainActor.assumeIsolated{self?.record()}}
