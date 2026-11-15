@@ -23,7 +23,7 @@ public enum ProcessActionGate {
             let token=value.lowercased(),command=((token as NSString).lastPathComponent as NSString).deletingPathExtension
             if names.contains(command) || token.contains("/claude/versions/") || token.contains("/@anthropic-ai/claude-code/") || token.contains("/@openai/codex/"){return false}
         }
-        return allowApplication || process.app==nil
+        return allowApplication || !executable.contains(".app/Contents/MacOS/")
     }
     public static func identityAllows(_ expected:ProcessIdentity,current:ProcessIdentity?,uid:UInt32 = getuid(),me:Int32 = getpid())->Bool {
         guard expected==current else{return false}
