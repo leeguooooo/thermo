@@ -190,6 +190,22 @@ import SwiftUI
         }
         return nil
     }
+    /// Exit probes never admit a cold feature. A deferred decision retains its exact origin.
+    package func prepareTermination()->NativeTerminationDecision {
+        for id in catalog.order {
+            let session:any NativeFeatureSession
+            switch states[id] {
+            case let .live(live):session=live.session
+            case let .draining(pending):session=pending.live.session
+            case nil:continue
+            }
+            switch session.prepareTermination() {
+            case .allow:continue
+            case let decision:return decision
+            }
+        }
+        return .allow
+    }
     /// Refusal happens before availability is revoked. An accepted drain is idempotent and
     /// keeps the old generation fenced even when the caller has not yet persisted the switch.
     package func prepareStop(_ id:String)throws->NativeFeatureDrain? {

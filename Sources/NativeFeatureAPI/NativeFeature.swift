@@ -44,6 +44,7 @@ package struct NativeFeatureBusy:Error,LocalizedError,CustomStringConvertible {
     var status:NativeFeatureStatus {get}
     func start()
     func shutdown()
+    func prepareTermination()->NativeTerminationDecision
     func invalidateAfterRestore(_ paths:[String])
     func retireVisibility()
     func quitBlocker()->NativeFeatureBlocker?
@@ -71,6 +72,7 @@ extension NativeFeatureSession {
     package func invalidateAfterRestore(_ paths:[String]) {}
     package func start() {}
     package func shutdown() {}
+    package func prepareTermination()->NativeTerminationDecision{.allow}
     package func preparePresentation(_ route:NativeFeatureRoute,options:[String:NativeContextValue]) {}
     package func prepareReview(_ route:NativeFeatureRoute,arguments:[String]) {}
     package func snapshotReady(_ route:NativeFeatureRoute,arguments:[String],started:Date)->Bool {status.snapshotReady}
