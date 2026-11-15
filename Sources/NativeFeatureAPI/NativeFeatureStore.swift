@@ -21,6 +21,10 @@ import SwiftUI
         }
     }
     private enum State {case live(Live),draining(Draining)}
+    private struct PageIdentity:Hashable {
+        let generation:UUID
+        let route:NativeFeatureRoute
+    }
     package let catalog:NativeFeatureCatalog
     private let enabled:(String)->Bool
     private let navigation:NativeNavigation
@@ -197,8 +201,10 @@ import SwiftUI
         return true
     }
     package func page(_ request:NativeFeatureRoute)->AnyView? {
-        guard let route=try? catalog.normalize(request) else{return nil}
-        return admittedSession(route.module)?.page(route,navigation:scopedNavigation(route.module))
+        guard let route=try? catalog.normalize(request),
+              let session=admittedSession(route.module),case let .live(live)=states[route.module],
+              let view=session.page(route,navigation:scopedNavigation(route.module)) else{return nil}
+        return AnyView(view.id(PageIdentity(generation:live.generation,route:route)))
     }
     package func prepareReview(_ request:NativeFeatureRoute,arguments:[String]) {
         guard let route=try? catalog.normalize(request) else{return}
