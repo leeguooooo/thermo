@@ -31,6 +31,7 @@ enum AppExitGuard {
             return .terminateCancel
         }
         if let page=AppModels.shared.pluginsExitBlocker(){show(page);return .terminateCancel}
+        if let page=AppModels.shared.claudeExitBlocker(){show(page);return .terminateCancel}
         if let page=AppModels.shared.checkupExitBlocker(){show(page);return .terminateCancel}
         if let page=AppModels.shared.agentsExitBlocker(){show(page);return .terminateCancel}
         if let page=AppModels.shared.connectionsExitBlocker(){show(page);return .terminateCancel}

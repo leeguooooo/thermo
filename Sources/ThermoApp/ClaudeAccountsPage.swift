@@ -5,22 +5,31 @@ import ThermoL10n
 
 @MainActor
 final class ClaudeAccountsModel: ObservableObject {
-    static let shared = ClaudeAccountsModel()
+    static var shared:ClaudeAccountsModel {AppModels.shared.claudeAccounts}
+    let work=FeatureTasks()
+    private let profilesService:ClaudeProfiles
+    init(enabled:@escaping ()->Bool = {true},profiles:ClaudeProfiles = ClaudeProfiles()) {work.enabled=enabled;profilesService=profiles}
+    func stopFeature(){work.stop()}
+    func finishFeatureStop() async {await work.finish();profiles=[];loaded=false;notice=nil}
     @Published private(set) var profiles: [ClaudeProfile] = []
     @Published private(set) var loaded = false
     @Published var notice: String?
 
     func refresh() {
-        Task {
-            let list = await Task.detached { ClaudeProfiles().list() }.value
-            profiles = list
-            loaded = true
+        guard work.acceptsWork else{return}
+        let service=profilesService
+        work.run(priority:.userInitiated) {
+            let list=service.list()
+            await MainActor.run {
+                guard self.work.acceptsWork else{return}
+                self.profiles=list;self.loaded=true
+            }
         }
     }
-
     func create(name: String) -> String? {
+        guard work.acceptsWork else{return tr("This feature is switched off.")}
         do {
-            let profile = try ClaudeProfiles().create(name: name)
+            let profile = try profilesService.create(name: name)
             open(profile)
             refresh()
             return nil
@@ -35,6 +44,7 @@ final class ClaudeAccountsModel: ObservableObject {
 
     /// A `.command` file opens in the user's terminal without asking for Automation access.
     func open(_ profile: ClaudeProfile) {
+        guard work.acceptsWork else{return}
         let file = FileManager.default.temporaryDirectory.appendingPathComponent("thermo-claude-\(profile.name).command")
         do {
             try Data("#!/bin/zsh -il\nrm -f \"$0\"\n\(profile.launchCommand)\n".utf8).write(to: file)
@@ -46,6 +56,7 @@ final class ClaudeAccountsModel: ObservableObject {
     }
 
     func copy(_ profile: ClaudeProfile) {
+        guard work.acceptsWork else{return}
         NSPasteboard.general.clearContents()
         NSPasteboard.general.setString(profile.launchCommand, forType: .string)
     }

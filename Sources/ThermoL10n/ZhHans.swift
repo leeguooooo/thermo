@@ -4547,5 +4547,7 @@ let zhHans: [String: String] = [
     "Review a local health snapshot before sending it to the selected AI.": "发送给所选 AI 前，先核对本机体检快照。",
     "Browse, install and update Claude Code plugins with reviewed commands.": "浏览 Claude Code 插件，核对命令后安装或更新。",
     "Wait for plugin installation or updates before switching this feature off.": "请等待插件安装或更新完成，再关闭此功能。",
+    "Local account profiles, reviewed data reset and privacy controls.": "本机账号配置、经确认的数据重置和隐私设置。",
+    "Wait for Claude reset, recovery or privacy changes before switching this feature off.": "请等待 Claude 重置、恢复或隐私设置操作完成，再关闭此功能。",
     "Wait for the current AI check-up request before switching this feature off.": "请等待当前 AI 体检请求完成，再关闭此功能。",
 ]

@@ -127,9 +127,9 @@ final class AppModels {
         set { storedDisk = newValue }
     }
 
-    init(defaults: UserDefaults = .standard, makeApps: @escaping @MainActor () -> AppsFeatureModels = { AppsFeatureModels() }, makeSpace: @escaping SpaceFactory = { SpaceLensModel(enabled:$0) }, invalidateSpaceCache: @escaping @MainActor () -> Void = { SpaceLens.invalidateCache() }, makeBrowser: @escaping BrowserFactory = {ChromePagesModel(enabled:$0,app:$1,appMemoryKB:$2,gpuKB:$3)}, makeWorkspace: @escaping WorkspaceFactory = {TabWorkspaceModel(enabled:$0,app:$1)}, makeConnections:@escaping ConnectionsFactory = {ConnectionsModel(enabled:$0)}, makeHistory:@escaping HistoryFactory = {HistoryModel(enabled:$0)}, makeAgents:@escaping AgentsFactory = {AgentScanner(enabled:$0)}, makePlugins:@escaping PluginsFactory = {PluginsModel(enabled:$0)}, makeCheckup:@escaping CheckupFactory = {CheckupModel(enabled:$0)}, makeDisk: @escaping () -> DiskModel = { DiskModel(retentionPreferences:.stored(in:.standard)) },
+    init(defaults: UserDefaults = .standard, makeApps: @escaping @MainActor () -> AppsFeatureModels = { AppsFeatureModels() }, makeSpace: @escaping SpaceFactory = { SpaceLensModel(enabled:$0) }, invalidateSpaceCache: @escaping @MainActor () -> Void = { SpaceLens.invalidateCache() }, makeBrowser: @escaping BrowserFactory = {ChromePagesModel(enabled:$0,app:$1,appMemoryKB:$2,gpuKB:$3)}, makeWorkspace: @escaping WorkspaceFactory = {TabWorkspaceModel(enabled:$0,app:$1)}, makeConnections:@escaping ConnectionsFactory = {ConnectionsModel(enabled:$0)}, makeHistory:@escaping HistoryFactory = {HistoryModel(enabled:$0)}, makeAgents:@escaping AgentsFactory = {AgentScanner(enabled:$0)}, makeClaudeAccounts:@escaping ClaudeAccountsFactory = {ClaudeAccountsModel(enabled:$0)}, makeClaudeCleanup:@escaping ClaudeCleanupFactory = {ClaudeCleanupModel(enabled:$0)}, makePlugins:@escaping PluginsFactory = {PluginsModel(enabled:$0)}, makeCheckup:@escaping CheckupFactory = {CheckupModel(enabled:$0)}, makeDisk: @escaping () -> DiskModel = { DiskModel(retentionPreferences:.stored(in:.standard)) },
          makeMonitor: @escaping () -> Monitor = { Monitor(samplingAllowed: { ModulePreferences.isEnabled(BuiltinModuleManifests.performance, in: .standard) }) }) {
-        self.makePlugins=makePlugins;self.makeCheckup=makeCheckup;self.makeAgents=makeAgents;self.makeHistory=makeHistory;self.makeConnections=makeConnections;self.makeDisk = makeDisk;self.makeApps=makeApps;self.makeSpace=makeSpace;self.invalidateSpaceCache=invalidateSpaceCache;self.makeBrowser=makeBrowser;self.makeWorkspace=makeWorkspace;self.defaults=defaults
+        self.makeClaudeAccounts=makeClaudeAccounts;self.makeClaudeCleanup=makeClaudeCleanup;self.makePlugins=makePlugins;self.makeCheckup=makeCheckup;self.makeAgents=makeAgents;self.makeHistory=makeHistory;self.makeConnections=makeConnections;self.makeDisk = makeDisk;self.makeApps=makeApps;self.makeSpace=makeSpace;self.invalidateSpaceCache=invalidateSpaceCache;self.makeBrowser=makeBrowser;self.makeWorkspace=makeWorkspace;self.defaults=defaults
         self.makeMonitor = makeMonitor
     }
 
@@ -169,7 +169,6 @@ final class AppModels {
     var startup: StartupItemsModel { software.startup }
     var softwareUpdates: AppUpdatesModel { software.updates }
     var nativeUpdates: NativeUpdatesModel { software.native }
-    lazy var claudeCleanup = ClaudeCleanupModel()
     typealias PluginsFactory = @MainActor (@escaping ()->Bool)->PluginsModel
     private let makePlugins:PluginsFactory
     private var storedPlugins:PluginsModel?
@@ -188,6 +187,41 @@ final class AppModels {
         return { [weak self] in
             await model.finishFeatureStop()
             if self?.storedPlugins === model {self?.storedPlugins=nil}
+        }
+    }
+    typealias ClaudeAccountsFactory = @MainActor (@escaping ()->Bool)->ClaudeAccountsModel
+    typealias ClaudeCleanupFactory = @MainActor (@escaping ()->Bool)->ClaudeCleanupModel
+    private let makeClaudeAccounts:ClaudeAccountsFactory
+    private let makeClaudeCleanup:ClaudeCleanupFactory
+    private var storedClaudeAccounts:ClaudeAccountsModel?
+    private var storedClaudeCleanup:ClaudeCleanupModel?
+    var claudeLoaded:Bool {storedClaudeAccounts != nil || storedClaudeCleanup != nil}
+    var claudeAccounts:ClaudeAccountsModel {
+        if let storedClaudeAccounts{return storedClaudeAccounts}
+        let defaults=self.defaults
+        let model=makeClaudeAccounts {ModulePreferences.isEnabled(BuiltinModuleManifests.claude,in:defaults)}
+        storedClaudeAccounts=model;return model
+    }
+    var claudeCleanup:ClaudeCleanupModel {
+        if let storedClaudeCleanup{return storedClaudeCleanup}
+        let defaults=self.defaults
+        let model=makeClaudeCleanup {ModulePreferences.isEnabled(BuiltinModuleManifests.claude,in:defaults)}
+        storedClaudeCleanup=model;return model
+    }
+    var claudeSnapshotReady:Bool {storedClaudeAccounts?.loaded == true || (storedClaudeCleanup?.loaded == true && storedClaudeCleanup?.busy == false)}
+    func claudeExitBlocker()->MainPage? {
+        guard let cleanup=storedClaudeCleanup,!cleanup.canStopFeature else{return nil}
+        return .claude(cleanup.privacyOperationRunning ? .privacy:.reset)
+    }
+    func prepareClaudeStop()throws->BuiltinModules.FinishStop? {
+        guard storedClaudeAccounts != nil || storedClaudeCleanup != nil else{return nil}
+        guard storedClaudeCleanup?.canStopFeature != false else{throw BuiltinModules.StopRefused(description:tr("Wait for Claude reset, recovery or privacy changes before switching this feature off."))}
+        let accounts=storedClaudeAccounts,cleanup=storedClaudeCleanup
+        accounts?.stopFeature();cleanup?.stopFeature()
+        return { [weak self] in
+            await accounts?.finishFeatureStop();await cleanup?.finishFeatureStop()
+            if self?.storedClaudeAccounts === accounts {self?.storedClaudeAccounts=nil}
+            if self?.storedClaudeCleanup === cleanup {self?.storedClaudeCleanup=nil}
         }
     }
     var appStore: AppStoreModel { software.store }

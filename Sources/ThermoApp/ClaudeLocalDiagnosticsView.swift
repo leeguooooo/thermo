@@ -3,10 +3,32 @@ import AppKit
 import SwiftUI
 import ThermoL10n
 
+@MainActor final class ClaudeDiagnosticsModel:ObservableObject {
+    let work=FeatureTasks()
+    @Published private(set) var report:ClaudeLocalReport?
+    @Published private(set) var scanning=false
+    private let scanLocal:@Sendable ()->ClaudeLocalReport
+    init(enabled:@escaping ()->Bool = {true},scan:@escaping @Sendable ()->ClaudeLocalReport = {ClaudeLocalDiagnostics().scan()}) {work.enabled=enabled;scanLocal=scan}
+    func scan() {
+        guard work.acceptsWork,!scanning else{return};scanning=true
+        let scan=scanLocal
+        work.run(priority:.userInitiated,onSkipped:{[weak self] in self?.scanning=false}) {
+            let result=scan()
+            await MainActor.run {
+                guard self.work.acceptsWork else{return}
+                self.report=result;self.scanning=false
+            }
+        }
+    }
+    func stopFeature(){work.stop()}
+    func finishFeatureStop() async {await work.finish();report=nil;scanning=false}
+}
+
 @MainActor
 struct ClaudeLocalDiagnosticsView: View {
-    @State private var report: ClaudeLocalReport?
-    @State private var scanning = false
+    @ObservedObject var model:ClaudeDiagnosticsModel
+    private var report:ClaudeLocalReport? {model.report}
+    private var scanning:Bool {model.scanning}
     @State private var expanded = false
     @State private var exportError: String?
 
@@ -46,16 +68,11 @@ struct ClaudeLocalDiagnosticsView: View {
             }
         }
     }
-    private func scan() {
-        guard !scanning else { return }; scanning = true; exportError = nil
-        Task {
-            let result = await Task.detached(priority: .userInitiated) { ClaudeLocalDiagnostics().scan() }.value
-            report = result; scanning = false
-        }
-    }
+    private func scan() {exportError=nil;model.scan()}
     private func save(_ report: ClaudeLocalReport) {
+        guard model.work.acceptsWork else{return}
         let panel = NSSavePanel(); panel.nameFieldStringValue = "thermo-claude-diagnostics.json"
-        guard panel.runModal() == .OK, let url = panel.url else { return }
+        guard panel.runModal() == .OK, model.work.acceptsWork, let url = panel.url else { return }
         do {
             try Data(report.json.utf8).write(to: url, options: .atomic)
             try FileManager.default.setAttributes([.posixPermissions: 0o600], ofItemAtPath: url.path)
