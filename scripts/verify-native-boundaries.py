@@ -7,13 +7,17 @@ import re
 import sys
 
 
-def source_imports(text):
+def source_code(text):
     # Ignore embedded Swift examples and comments before inspecting import statements.
     text = re.sub(r'(?s)(#*)""".*?"""\1', '', text)
     text = re.sub(r'"(?:\\.|[^"\\])*"', '', text)
     text = re.sub(r'/\*.*?\*/', '', text, flags=re.S)
     text = re.sub(r'//[^\n]*', '', text)
-    return set(re.findall(r'(?m)^\s*(?:@\w+(?:\([^\n]*?\))?\s+)*(?:(?:public|package|internal|private)\s+)?import\s+(?:(?:struct|class|enum|protocol|typealias|func|var|let)\s+)?([A-Za-z_]\w*)', text))
+    return text
+
+
+def source_imports(text):
+    return set(re.findall(r'(?m)^\s*(?:@\w+(?:\([^\n]*?\))?\s+)*(?:(?:public|package|internal|private)\s+)?import\s+(?:(?:struct|class|enum|protocol|typealias|func|var|let)\s+)?([A-Za-z_]\w*)', source_code(text)))
 
 
 def problems(package, complete=False, source_root=None):
@@ -67,9 +71,17 @@ def problems(package, complete=False, source_root=None):
                     continue
                 if any(path == item or path.is_relative_to(item) for item in excluded):
                     continue
-                for imported in sorted(source_imports(file.read_text()) & graph.keys()):
+                text = file.read_text()
+                imports = source_imports(text) & graph.keys()
+                for imported in sorted(imports):
                     if imported != name and imported not in reachable(name):
                         errors.append(f"{name} imports undeclared target {imported} in {file.relative_to(root)}")
+                    if complete and name in {"ThermoApp", "ThermoShell", "ThermoKernel"} and imported in features:
+                        errors.append(f"{name} must not import feature implementation {imported}")
+                if complete and name == "ThermoComposition":
+                    exported = set(re.findall(r'@_exported\s+import\s+(\w+)', source_code(text))) & features
+                    for imported in sorted(exported):
+                        errors.append(f"ThermoComposition must not re-export {imported}")
     if complete:
         for name in sorted(hosts):
             if name not in graph:

@@ -172,7 +172,7 @@ final class StatusMenu: NSObject, NSMenuDelegate {
             case .overview:
                 submenu.addItem(page(tr("Overview"), "gauge.with.dots.needle.67percent", .overview))
             case .aiCheckup:
-                submenu.addItem(page(tr("AI Check-up"), "waveform.path.ecg", .checkup))
+                submenu.addItem(page(tr("AI Check-up"), "waveform.path.ecg", .module(BuiltinModuleManifests.checkup.id,"home")))
             case .sensors:
                 submenu.addItem(page(tr("Sensors"), "thermometer.medium", .sensors))
             case .fans:

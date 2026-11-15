@@ -1,3 +1,4 @@
+import LocalAIUI
 import ThermoUI
 import AgentCore
 import AppKit
@@ -19,10 +20,10 @@ import ThermoL10n
         guard PerformanceModule.enabled else { return }
         guard phase != .asking else { return }
         snapshot = CheckupSnapshot(uptime: ProcessInfo.processInfo.systemUptime, diagnosis: diagnosis)
-        if CheckupModel.shared.consented { ask() } else { phase = .preview }
+        if CheckupConsent().allowed { ask() } else { phase = .preview }
     }
 
-    func send() { CheckupModel.shared.consented = true; ask() }
+    func send() {guard PerformanceModule.enabled else{return};CheckupConsent().allowed = true; ask() }
     func cancel() { if phase != .asking { phase = .idle } }
 
     /// Offscreen snapshots only: show a saved AI answer for the diagnosis fixture without asking anyone.
@@ -35,6 +36,7 @@ import ThermoL10n
     }
 
     private func ask() {
+        guard PerformanceModule.enabled else{return}
         guard let snapshot, let backend = LocalAIStore.shared.backend else {
             phase = .failed(tr("No AI found on this Mac.")); return
         }
@@ -219,7 +221,7 @@ struct MemoryReliefCard: View {
                 Text(lead).font(Theme.secondary).foregroundStyle(Theme.textSecondary)
                     .lineLimit(3).fixedSize(horizontal: false, vertical: true)
                 if let f = advice.finding(for: step), !f.impact.isEmpty {
-                    let (verdict, tone) = CheckupPage.safety(f.safety)
+                    let (verdict, tone) = AISafetyPresentation.label(f.safety)
                     HStack(alignment: .firstTextBaseline, spacing: Theme.Space.s) {
                         Label(tr("AI advice: %1$@", verdict), systemImage: "sparkles").font(Theme.label).foregroundStyle(tone)
                             .padding(.horizontal, 6).padding(.vertical, 2).background(Capsule().fill(tone.opacity(0.15))).fixedSize()
