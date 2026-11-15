@@ -45,6 +45,8 @@ RELEASES=releases
 SPARKLE_BIN=.build/artifacts/sparkle/Sparkle/bin
 
 swift scripts/check-build-output.swift "$DIST"
+# Source targets keep trusted native features separate without changing process placement.
+swift package dump-package | python3 scripts/verify-native-boundaries.py
 
 arch_flags=""
 for a in $ARCHS; do arch_flags="$arch_flags --arch $a"; done
