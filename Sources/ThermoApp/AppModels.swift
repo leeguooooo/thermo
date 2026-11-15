@@ -12,6 +12,7 @@ final class AppModels {
     private let defaults:UserDefaults
     private let makeSystemPresentation:(() -> SystemPresentation)?
     let nativeFeatures:NativeFeatureStore
+    let assembly:ShellFeatureAssembly
     lazy var updates = Updates()
     init(defaults: UserDefaults = .standard, services:AppSystemServices? = nil,nativeDefinitions:[NativeFeatureDefinition]? = nil,
          makeSystemPresentation:(() -> SystemPresentation)? = nil) {
@@ -22,7 +23,8 @@ final class AppModels {
         self.services=services
         let reference=ShellFeatureStoreReference()
         let environment=ShellFeatureEnvironment.bound(defaults:defaults,services:services,store:{reference.store})
-        let definitions=nativeDefinitions ?? BuiltinNativeFeatures.registrations(environment:{environment})
+        assembly=BuiltinNativeFeatures.makeAssembly(environment:{environment})
+        let definitions=nativeDefinitions ?? assembly.definitions
         let catalog=try! NativeFeatureCatalog(definitions:definitions)
         nativeFeatures=NativeFeatureStore(catalog:catalog,enabled:{id in
             guard let manifest=catalog.manifest(id) else{return false}
