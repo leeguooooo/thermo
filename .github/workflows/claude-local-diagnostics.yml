@@ -31,6 +31,6 @@ jobs:
           swift package dump-package | python3 scripts/verify-native-boundaries.py --source-root .
           PYTHONDONTWRITEBYTECODE=1 python3 -m unittest discover -s scripts/tests -p 'test_native_boundaries.py'
       - name: Test native modules, diagnostics and CLI contracts
-        run: swift test --jobs 3 --filter 'ClaudeLocalDiagnosticsTests|ClaudeLocalCommandTests|CLICompletenessTests|PrivacyToolsTests|FeatureTests|NativeFeatureAPITests|FeatureLaunch.*Tests|FirstRunPrewarmTests|FeatureTasksTests|SpaceSkippedRemovalTests|SpaceLensModelTests|MainOnlyExitTests'
+        run: swift test --jobs 3 --filter 'ClaudeLocalDiagnosticsTests|ClaudeLocalCommandTests|CLICompletenessTests|PrivacyToolsTests|FeatureTests|NativeFeatureAPITests|FeatureLaunch.*Tests|FirstRunPrewarmTests|FeatureTasksTests|SpaceSkippedRemovalTests|SpaceLensModelTests|MainOnlyExitTests|NativeFeatureStopMessageTests'
       - name: Build App
         run: swift build --jobs 3 --product ThermoApp
