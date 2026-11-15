@@ -61,6 +61,7 @@ final class MainOnlyDelegate: NSObject, NSApplicationDelegate {
     func applicationWillTerminate(_ notification: Notification) {
         if deferInstallationMonitor || featureLaunch.isSelecting || selectionIsPresented() { return }
         MenuBarManager.shared.shutdown()
+        AppModels.shared.nativeFeatures.shutdown(BuiltinModuleManifests.search.id)
     }
     var showExitBlocker: @MainActor (MainPage) -> Void = { MainWindow.show($0) }
     /// Shared by the standalone entry point and an offscreen AppKit acceptance test.

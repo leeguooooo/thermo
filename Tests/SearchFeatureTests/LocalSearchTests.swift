@@ -3,7 +3,7 @@ import ThermoUI
 import XCTest
 import Carbon
 import SearchCore
-@testable import ThermoApp
+@testable import SearchFeature
 
 @MainActor final class LocalSearchTests: XCTestCase {
     func testSlowOldQueryCannotReplaceNewResultsOrBeOpened() async throws {
@@ -65,8 +65,9 @@ import SearchCore
         model.stop()
     }
     func testSearchShortcutConflictPreservesPreviousLeaseAndSuppressesRepeat() throws {
+        let defaults=UserDefaults(suiteName:"thermo-search-shortcut-test-"+UUID().uuidString)!
         let backend = Backend(); var calls = 0
-        let model = LocalSearchShortcut(backend: backend) { calls += 1 }
+        let model = LocalSearchShortcut(backend:backend,defaults:defaults) {calls += 1}
         let first = CleanScreenKeyBinding(keyCode: 49, modifiers: UInt32(optionKey), keyLabel: "Space")
         XCTAssertTrue(first.validForSearch); XCTAssertFalse(first.valid)
         model.apply(first, persist: false)
@@ -78,13 +79,16 @@ import SearchCore
         model.shutdown(); XCTAssertTrue(backend.lease.released)
     }
     func testSpotlightTakeoverRestoresWhenLeavingCommandSpace() throws {
+        let name="thermo-search-spotlight-test-"+UUID().uuidString
+        let isolated=UserDefaults(suiteName:name)!
+        defer{isolated.removePersistentDomain(forName:name)}
         let backend = Backend(); var spotlightOn = true, backup = false
         var holder: SpotlightShortcut.Holder?
         let spotlight = SpotlightShortcut(commandSpaceTaken: { spotlightOn },
                                           release: { backup = true; spotlightOn = false },
                                           restore: { if backup { spotlightOn = true; backup = false } },
                                           released: { backup }, otherHolder: { holder })
-        let model = LocalSearchShortcut(backend: backend, spotlight: spotlight, action: {}, record: { _ in })
+        let model = LocalSearchShortcut(backend: backend, spotlight: spotlight, defaults:isolated, action: {}, record: { _ in })
         model.apply(LocalSearchShortcut.optionSpace, persist: false)
         model.takeOverSpotlight()
         XCTAssertEqual(model.binding, LocalSearchShortcut.commandSpace); XCTAssertFalse(spotlightOn); XCTAssertTrue(model.spotlightReleased)

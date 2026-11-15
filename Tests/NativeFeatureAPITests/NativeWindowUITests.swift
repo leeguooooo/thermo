@@ -15,6 +15,7 @@ import XCTest
             switch surface {
             case let .sidebar(_,_,rows):surfaces.append("sidebar");for item in contributions{_ = rows(item)}
             case let .inlineSettings(ref):surfaces.append("settings:"+ref.entry);settingsNavigation=navigation
+            case .renderPreview:surfaces.append("render")
             case .windowOverlay:surfaces.append("overlay")
             case .backdrop:surfaces.append("backdrop")
             }

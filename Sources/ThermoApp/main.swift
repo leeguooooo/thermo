@@ -57,7 +57,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate, UNU
         AppControlHost.shared.start()
         CleanScreenShortcutModel.enableLive()
         ModuleCenter.shared.start()
-        if CommandLine.arguments.contains("--search") { DispatchQueue.main.async { LocalSearchPanel.shared.show() } }
+        if CommandLine.arguments.contains("--search") { DispatchQueue.main.async { SearchModule.show() } }
         BatteryCareModel.shared.restoreSavedPreference()
         _ = AppModels.shared.updates  // Sparkle starts checking with the app
         // Slowdown history and alerts, in the background whether or not the panel is open.
@@ -210,7 +210,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate, UNU
         installStandardMenus()
     }
 
-    @objc private func openSearchFromMenu() { LocalSearchPanel.shared.show() }
+    @objc private func openSearchFromMenu() { SearchModule.show() }
     func menuNeedsUpdate(_ menu: NSMenu) {
         for item in menu.items {
             if let ref=item.representedObject as? NativeUIEntryRef {item.isHidden = !ModuleCenter.shared.isOn(ref.module)}
@@ -335,10 +335,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate, UNU
     func applicationWillTerminate(_ notification: Notification) {
         if featureLaunch.isSelecting { return }
         MenuBarManager.shared.shutdown()
-        LocalSearchShortcut.shared.shutdown()
+        AppModels.shared.nativeFeatures.shutdown(BuiltinModuleManifests.search.id)
         CaptureCLIHost.shared.cancelActive()
         CaptureWorkspace.shared.shutdown()
-        LocalSearchModel.shared.stop()
         AppModels.shared.nativeFeatures.shutdown(BuiltinModuleManifests.download.id)
         // Fan policies live in the helper and intentionally survive the app quitting.
     }
@@ -440,14 +439,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate, UNU
 
 /// Debug aid: `Thermo --render-preview DIR` writes the menu bar panel as a PNG and exits.
 /// (The main window's pages: `Thermo --main --offscreen --page PAGE --snapshot PATH`.)
-/// The shared search model, started and given a query, for the preview render.
-@MainActor private func searchPreviewModel() -> LocalSearchModel {
-    let model = LocalSearchModel.shared
-    model.start()
-    model.query = "th"
-    return model
-}
-
 @MainActor func renderPreviews(to dir: String) {
     Settings.register()
     renderingPreview = true
@@ -476,7 +467,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate, UNU
             ("tool-focus", AnyView(FocusPanel(model: FocusTimerModel.shared))),
             ("tool-menu-bar", AnyView(MenuBarManagerView(model: .shared).frame(width: 940, height: 740))),
             // The search panel at its window size, with a query so the result rows and footer show.
-            ("tool-search", AnyView(LocalSearchView(model: searchPreviewModel()).frame(width: 680, height: 520))),
+            ("tool-search", AnyView((AppModels.shared.nativeFeatures.renderPreview(.init(BuiltinModuleManifests.search.id,"settings")) ?? AnyView(ModuleOffView())).frame(width:680,height:520))),
             // The shared confirmation, as three pages fill it.
             ("confirm-uninstall", AnyView(ConfirmSheet(title: tr("Uninstall %1$@?", "Example"),
                 summary: tr("%1$@ and %2$@ of its files go to the Trash: %3$@ in all.", "Example", "3", "1.2 GB"), destructive: false,

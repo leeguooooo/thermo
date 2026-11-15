@@ -73,7 +73,7 @@ final class StatusMenu: NSObject, NSMenuDelegate {
                 menu.addItem(item(tr("Open Thermo"), "macwindow", key: "o") { MainWindow.show() })
                 
             case .searchAppsAndFiles:
-                menu.addItem(item(tr("Search apps and files"), "magnifyingglass") { LocalSearchPanel.shared.show() })
+                menu.addItem(item(tr("Search apps and files"), "magnifyingglass") { SearchModule.show() })
                 
             case .menuGroup(let group):
                 menu.addItem(materializeGroup(group))

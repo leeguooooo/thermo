@@ -1,14 +1,19 @@
+import DocumentPreviewAPI
+import SwiftUI
 import AppKit
 import SearchCore
 import XCTest
-@testable import ThermoApp
+@testable import SearchFeature
 
 @MainActor final class LocalSearchWindowTests: XCTestCase {
+    private static func shortcut()->LocalSearchShortcut {
+        LocalSearchShortcut(spotlight:.init(commandSpaceTaken:{false},release:{},restore:{},released:{false},otherHolder:{nil}),action:{},record:{_ in})
+    }
     func testSearchAcceptsFirstClickFromAnotherApplication() throws {
         _ = NSApplication.shared
         let directory = FileManager.default.temporaryDirectory.appendingPathComponent("thermo-search-window-" + UUID().uuidString)
         let model = LocalSearchModel(directory: directory)
-        let controller = LocalSearchPanel(model: model)
+        let controller = LocalSearchPanel(model:model,shortcut:Self.shortcut(),preview:SearchWindowPreview())
         defer { controller.hide(restoreFocus: false); model.stop(); try? FileManager.default.removeItem(at: directory) }
         let content = try XCTUnwrap(controller.window?.contentView)
         XCTAssertTrue(content.acceptsFirstMouse(for: nil), "Clicking Preview from the terminal must act on the first click")
@@ -17,7 +22,7 @@ import XCTest
         _ = NSApplication.shared
         let directory = FileManager.default.temporaryDirectory.appendingPathComponent("thermo-search-window-" + UUID().uuidString)
         let model = LocalSearchModel(directory: directory)
-        let controller = LocalSearchPanel(model: model)
+        let controller = LocalSearchPanel(model:model,shortcut:Self.shortcut(),preview:SearchWindowPreview())
         let search = try XCTUnwrap(controller.window)
         let preview = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 400, height: 300), styleMask: [.titled, .closable], backing: .buffered, defer: false)
         preview.isReleasedWhenClosed = false; preview.delegate = controller
@@ -51,7 +56,7 @@ import XCTest
         let first=SearchItem(path:firstURL.path,name:firstURL.lastPathComponent,kind:.file)
         let second=SearchItem(path:secondURL.path,name:secondURL.lastPathComponent,kind:.file)
         let model=LocalSearchModel(directory:directory.appendingPathComponent("index")) {term,_ in .init(query:term,items:[term=="first" ? first:second])}
-        let controller=LocalSearchPanel(model:model)
+        let controller=LocalSearchPanel(model:model,shortcut:Self.shortcut(),preview:SearchWindowPreview())
         controller.window?.alphaValue=0
         defer {controller.hide(restoreFocus:false);model.stop();try? FileManager.default.removeItem(at:directory)}
         model.query="first"
@@ -72,7 +77,12 @@ import XCTest
         XCTAssertFalse(secondWindow?.isVisible ?? false,"requesting the same file again still toggles its preview closed")
         controller.hide(restoreFocus:false);model.stop()
         await model.finishStopping()
-        SearchPreviewController.shared.stop();await SearchPreviewController.shared.finishStopping()
     }
 
+}
+
+@MainActor private final class SearchWindowPreview:DocumentPreviewPresentation {
+    func content(selection:SelectedDocument,roots:[String],request:UUID)->AnyView{AnyView(EmptyView())}
+    func stop(ifCurrent:UUID?){}
+    func finishStopping() async{}
 }

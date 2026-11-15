@@ -1,16 +1,37 @@
 // Production search controller in an owned, private-index QA application. No helper or app-control server.
-@testable import ThermoApp
+@testable import SearchFeature
+import DocumentPreviewAPI
+import DocumentPreviewHost
+import HotkeyCore
+import ModuleHost
+import Combine
 import AppKit
 import Carbon
 import SearchCore
 import ThermoL10n
+
+/// Private harness composition; production does not export model or panel singletons.
+@MainActor private final class SearchUIFixture {
+    static let shared=SearchUIFixture()
+    let model=LocalSearchModel()
+    lazy var shortcut=LocalSearchShortcut(action:{[weak self] in self?.panel.toggle()})
+    let manager=ModuleManager()
+    var loaded=false
+    let statuses=CurrentValueSubject<[ModuleManager.Status],Never>([])
+    lazy var service=SandboxedDocumentPreviewService(manager:manager,worker:SearchFeature.previewWorkerID,loaded:{[weak self] in self?.loaded == true},statuses:statuses.eraseToAnyPublisher(),restartRequired:{nil})
+    lazy var panel=LocalSearchPanel(model:model,shortcut:shortcut,preview:service.makePresentation(available:{true}))
+    init(){
+        manager.onChange={[weak self] _ in guard let self else{return};statuses.send(manager.modules)}
+        Task{await manager.load{_ in false};loaded=true;statuses.send(manager.modules)}
+    }
+}
 
 @MainActor final class SearchReviewDelegate: NSObject, NSApplicationDelegate {
     var controls: NSWindow?
     private var clipboardBackup: [[NSPasteboard.PasteboardType: Data]]?
     private var copiedPath: String?
     @objc func captureClipboard() {
-        guard let item = LocalSearchModel.shared.selected,
+        guard let item = SearchUIFixture.shared.model.selected,
               let root = Bundle.main.object(forInfoDictionaryKey: "ThermoSearchFixtureRoot") as? String,
               item.path.hasPrefix(root + "/files/") else { return }
         clipboardBackup = (NSPasteboard.general.pasteboardItems ?? []).map { item in
@@ -35,12 +56,12 @@ import ThermoL10n
         NSApp.activate(ignoringOtherApps: true)
         controls?.makeKeyAndOrderFront(nil)
         showSearch()
-        print("QA_LAUNCHED \(NSApp.windows.count) \(LocalSearchPanel.shared.window?.isVisible == true)"); fflush(stdout)
+        print("QA_LAUNCHED \(NSApp.windows.count) \(SearchUIFixture.shared.panel.window?.isVisible == true)"); fflush(stdout)
     }
-    @objc func showSearch() { LocalSearchPanel.shared.show() }
-    @objc func showSettings() { LocalSearchPanel.shared.show(settings: true) }
+    @objc func showSearch() { SearchUIFixture.shared.panel.show() }
+    @objc func showSettings() { SearchUIFixture.shared.panel.show(settings: true) }
     @objc func conflictProbe() {
-        let shortcut = LocalSearchShortcut.shared
+        let shortcut = SearchUIFixture.shared.shortcut
         let previous = shortcut.binding
         let candidate = CleanScreenKeyBinding(keyCode: 79, modifiers: UInt32(cmdKey | optionKey | controlKey), keyLabel: "F18")
         var reference: EventHotKeyRef?
@@ -55,19 +76,19 @@ import ThermoL10n
             if let field = view as? NSTextField, field.placeholderString == tr("Search apps and files") { return field }
             return view.subviews.lazy.compactMap(input).first
         }
-        guard let window = LocalSearchPanel.shared.window, let content = window.contentView, let field = input(content) else { print("QA_IME_NO_FIELD"); return }
+        guard let window = SearchUIFixture.shared.panel.window, let content = window.contentView, let field = input(content) else { print("QA_IME_NO_FIELD"); return }
         window.makeFirstResponder(field)
         guard let editor = field.currentEditor() as? NSTextView else { print("QA_IME_NO_EDITOR"); return }
         editor.setMarkedText("拼音输入", selectedRange: NSRange(location: 4, length: 0), replacementRange: NSRange(location: NSNotFound, length: 0))
         let handled = field.delegate?.control?(field, textView: editor, doCommandBy: #selector(NSResponder.insertNewline(_:)))
         print("QA_IME_COMPOSITION_DEFERRED \(editor.hasMarkedText() && handled == false)"); fflush(stdout)
         editor.unmarkText()
-        LocalSearchModel.shared.query = ""
-        LocalSearchPanel.shared.show()
+        SearchUIFixture.shared.model.query = ""
+        SearchUIFixture.shared.panel.show()
     }
     func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows flag: Bool) -> Bool { showSearch(); return false }
     func applicationWillTerminate(_ notification: Notification) {
-        LocalSearchShortcut.shared.shutdown(); LocalSearchModel.shared.stop(); print("QA_EXIT"); fflush(stdout)
+        SearchUIFixture.shared.shortcut.shutdown(); SearchUIFixture.shared.model.stop(); print("QA_EXIT"); fflush(stdout)
     }
 }
 
@@ -100,9 +121,9 @@ import ThermoL10n
             stack.addArrangedSubview(NSButton(title: title, target: delegate, action: action))
         }
         controls.contentView = stack; delegate.controls = controls
-        LocalSearchShortcut.shared.activate()
+        SearchUIFixture.shared.shortcut.activate()
         print("QA_PRIVATE_INDEX \(SearchStore.defaultDirectory.path.hasPrefix(root.path + "/"))")
-        print("QA_SHORTCUT \(LocalSearchShortcut.shared.binding?.label ?? "unavailable")"); fflush(stdout)
+        print("QA_SHORTCUT \(SearchUIFixture.shared.shortcut.binding?.label ?? "unavailable")"); fflush(stdout)
         DispatchQueue.main.asyncAfter(deadline: .now() + 900) { app.terminate(nil) }
         withExtendedLifetime(delegate) { app.run() }
     }

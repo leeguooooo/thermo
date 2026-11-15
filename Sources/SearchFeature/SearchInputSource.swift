@@ -6,7 +6,6 @@ import Foundation
 /// user's ASCII keyboard layout (ABC, US…) and put the previous input method back on close —
 /// unless the user picked another source themselves in the meantime.
 @MainActor final class SearchInputSource {
-    static let shared = SearchInputSource()
     static let preferenceKey = "dev.thermo.search.switchToASCIIInput"
     static var enabled: Bool {
         UserDefaults.standard.object(forKey: preferenceKey) as? Bool ?? true
