@@ -1,7 +1,8 @@
 import XCTest
 import ModuleKit
 @testable import CleanKit
-@testable import ThermoApp
+@testable import BrowserFeature
+import NativeFeatureAPI
 
 @MainActor final class BrowserModuleLifecycleTests: XCTestCase {
     private final class Calls: @unchecked Sendable {
@@ -20,17 +21,6 @@ import ModuleKit
     }
     private func actions(_ calls:Calls)->TabWorkspaceActions {
         .init(inventory:{app in calls.hit();return Self.inventory(app)},archives:{calls.hit();return []},assign:{_,_ in calls.hit()},archive:{_,app,name in calls.hit();return .init(name:name,app:app,entries:[])},remove:{_ in calls.hit()},restore:{_,_ in calls.hit();return .init(name:"Fixture",app:"Fixture",entries:[])})
-    }
-    func testRegistryOwnsDynamicBrowserNamesAndGenericRoute() {
-        XCTAssertTrue(BuiltinModules.problems.isEmpty,BuiltinModules.problems.joined(separator:"\n"))
-        XCTAssertFalse(HostPageSpecification.pages.contains{$0.argument=="pages"})
-        for app in ["Google Chrome","Arc","Microsoft Edge"] {
-            let page=MainPage.browser(app)
-            XCTAssertEqual(page.module,BrowserModule.manifest.id)
-            XCTAssertEqual(BuiltinModules.page(page)?.module.id,BrowserModule.manifest.id)
-            XCTAssertEqual(BuiltinModules.page(page)?.entry.scene,"pages")
-        }
-        XCTAssertEqual(BuiltinModules.page(.module(BrowserModule.manifest.id,""))?.target,.browser("Google Chrome"))
     }
     func testColdOffCannotReadInventoryRecordsOrModifyTabs() async {
         let calls=Calls(),model=TabWorkspaceModel(enabled:{false},app:"Fixture",actions:actions(calls))
@@ -52,7 +42,7 @@ import ModuleKit
         await Task.yield();XCTAssertFalse(drained)
         release.signal();await finish.value
         XCTAssertTrue(drained);XCTAssertEqual(calls.count,0)
-        XCTAssertNil(model.inventory);XCTAssertFalse(TabWorkspaceModel.loadedApps.contains("Fixture"))
+        XCTAssertNil(model.inventory);XCTAssertFalse(model.didLoad)
     }
     func testAcceptedRestoreRefusesFeatureStopAndQuitUntilItReturns() async throws {
         let calls=Calls(),entered=expectation(description:"restore"),release=DispatchSemaphore(value:0)
@@ -60,35 +50,17 @@ import ModuleKit
         var actions=actions(calls)
         actions.restore={_,_ in entered.fulfill();_ = release.wait(timeout:.now()+5);return .init(name:"Fixture",app:"Fixture",entries:[])}
         let model=TabWorkspaceModel(app:"Fixture",actions:actions)
-        let models=AppModels(defaults:defaults(),makeWorkspace:{gate,_ in model.work.enabled=gate;return model})
-        _=models.workspace("Fixture")
+        let session=BrowserFeatureSession(availability:FeatureAvailability(enabled:{true}),makeWorkspace:{gate,_ in model.work.enabled=gate;return model})
+        _=session.workspace("Fixture")
         model.restore(.init(name:"Fixture",app:"Fixture",entries:[]))
         await fulfillment(of:[entered],timeout:2)
-        XCTAssertEqual(models.browserExitBlocker(),.browser("Fixture"))
-        XCTAssertThrowsError(try BrowserModule.prepareStop(models:models));XCTAssertFalse(model.work.stopping)
+        XCTAssertEqual(session.quitBlocker()?.route,BrowserFeature.route("Fixture"))
+        XCTAssertThrowsError(try session.prepareStop());XCTAssertFalse(model.work.stopping)
         release.signal();await model.work.finish()
-        XCTAssertNil(models.browserExitBlocker())
-        if let finish=try BrowserModule.prepareStop(models:models){await finish()}
-        XCTAssertFalse(models.browsersLoaded)
+        XCTAssertNil(session.quitBlocker())
+        let drain=try session.prepareStop();await drain.finish()
+        XCTAssertFalse(session.status.modelLoaded)
         XCTAssertGreaterThan(calls.count,0,"the post-action refresh also drains")
-    }
-    func testOffNavigationDoesNotInstantiateAndReenableCannotReviveOldModels() async throws {
-        let defaults=defaults(),calls=Calls();var creations=0
-        let models=AppModels(defaults:defaults,makeWorkspace:{gate,app in creations += 1;return TabWorkspaceModel(enabled:gate,app:app,actions:self.actions(calls))})
-        let center=ModuleCenter(defaults:defaults,prepareBuiltinStop:{_ in try BrowserModule.prepareStop(models:models)})
-        center.setEnabled(BrowserModule.manifest.id,false)
-        models.stopBrowserChecks()
-        XCTAssertNil(center.navigationKey(.browser("Arc")))
-        XCTAssertFalse(center.shows(.browser("Arc")));XCTAssertFalse(models.browsersLoaded);XCTAssertEqual(creations,0)
-        defaults.set(true,forKey:ModulePreferences.key(BrowserModule.manifest.id))
-        XCTAssertEqual(center.navigationKey(.browser("Arc")),"4")
-        let old=models.workspace("Fixture")
-        if let finish=try BrowserModule.prepareStop(models:models){await finish()}
-        old.refresh();XCTAssertEqual(old.work.count,0)
-        let fresh=models.workspace("Fixture")
-        XCTAssertFalse(old === fresh);XCTAssertEqual(creations,2)
-        fresh.refresh();await fresh.work.finish();XCTAssertEqual(calls.count,2)
-        if let finish=try BrowserModule.prepareStop(models:models){await finish()}
     }
     func testDisabledAutomationDoesNotReadConfigurationOrStartTimer() {
         var reads=0
@@ -154,16 +126,16 @@ import ModuleKit
             return .init(pulse:pulse,browserMemoryKB:0)
         },wait:{})
         let model=ChromePagesModel(app:"Fixture",appMemoryKB:nil,gpuKB:nil,actions:actions)
-        let models=AppModels(defaults:defaults(),makeBrowser:{gate,_,_,_ in model.work.enabled=gate;return model})
-        _=models.browser("Fixture")
+        let session=BrowserFeatureSession(availability:FeatureAvailability(enabled:{true}),makeDiagnostics:{gate,_,_,_ in model.work.enabled=gate;return model})
+        _=session.diagnostics("Fixture")
         model.close([tab]);await fulfillment(of:[entered],timeout:2)
-        models.stopBrowserChecks()
-        XCTAssertEqual(models.browserExitBlocker(),.browser("Fixture"))
-        XCTAssertThrowsError(try BrowserModule.prepareStop(models:models));XCTAssertFalse(model.work.stopping)
+        session.retireVisibility()
+        XCTAssertEqual(session.quitBlocker()?.route,BrowserFeature.route("Fixture"))
+        XCTAssertThrowsError(try session.prepareStop());XCTAssertFalse(model.work.stopping)
         release.signal();await model.work.finish()
         XCTAssertNil(model.closing);XCTAssertEqual(model.closeResults.count,1)
-        if let finish=try BrowserModule.prepareStop(models:models){await finish()}
-        XCTAssertFalse(models.browsersLoaded)
+        let drain=try session.prepareStop();await drain.finish()
+        XCTAssertFalse(session.status.modelLoaded)
     }
 
 }

@@ -5,13 +5,6 @@ import CleanKit
 /// also covers CLI/manual operations. Each cycle reads fresh metadata and native group state.
 @MainActor
 final class TabAutomation: ObservableObject {
-    private static var instance:TabAutomation?
-    static var shared:TabAutomation {
-        if let instance{return instance}
-        let model=TabAutomation(enabled:{BrowserModule.enabled});instance=model;return model
-    }
-    static var current:TabAutomation? {instance}
-    static func stopIfStarted() {instance?.stop();instance=nil}
     private let enabled:()->Bool
     private let configuration:()->TabOrganizer.Configuration?
     private var active=false

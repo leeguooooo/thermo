@@ -8,8 +8,8 @@ import ThermoL10n
     func showDownloadPage()
 }
 package enum DownloadFeature {
-    package static func registration(presentation: any DownloadPresentation) -> NativeFeatureDefinition {
-        .init(manifest: BuiltinModuleManifests.download, makeSession: { DownloadSession(availability:$0,presentation:presentation) })
+    package static func registration(presentation: @escaping @MainActor @Sendable () -> any DownloadPresentation) -> NativeFeatureDefinition {
+        .init(manifest: BuiltinModuleManifests.download, makeSession: { DownloadSession(availability:$0,presentation:presentation()) })
     }
 }
 @MainActor final class DownloadSession: NativeFeatureSession {
@@ -55,7 +55,8 @@ package enum DownloadFeature {
         setup.work.runOnMain{[weak setup] in await setup?.offerOnLaunch()}
     }
     func shutdown() {storedPrompt?.stop();storedModel?.shutdown();storedSetup?.stopFeature()}
-    func page(entry:String)->AnyView? {
+    func page(_ route:NativeFeatureRoute,navigation:NativeNavigation)->AnyView? {
+        let entry=route.entry
         guard availability.acceptsWork,entry=="home" else{return nil}
         return AnyView(YunXDownloadPage(model:model,setup:setup,refreshClipboard:{[weak self] in
             guard let self,self.availability.acceptsWork else{return}

@@ -19,7 +19,8 @@ package enum ClaudeFeature {
          makeCleanup:@escaping @MainActor (@escaping ()->Bool)->ClaudeCleanupModel = {ClaudeCleanupModel(enabled:$0)}) {
         self.availability=availability;self.makeAccounts=makeAccounts;self.makeCleanup=makeCleanup
     }
-    func page(entry:String)->AnyView? {
+    func page(_ route:NativeFeatureRoute,navigation:NativeNavigation)->AnyView? {
+        let entry=route.entry
         guard availability.acceptsWork,let tab=ClaudeTab(rawValue:entry) else{return nil}
         let availability=availability
         switch tab {

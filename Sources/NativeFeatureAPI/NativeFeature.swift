@@ -4,7 +4,8 @@ import SwiftUI
 package struct NativeFeatureRoute:Hashable,Sendable {
     package let module:String
     package let entry:String
-    package init(_ module:String,_ entry:String) {self.module=module;self.entry=entry}
+    package let context:[String:NativeContextValue]
+    package init(_ module:String,_ entry:String,context:[String:NativeContextValue] = [:]) {self.module=module;self.entry=entry;self.context=context}
 }
 @MainActor package final class FeatureAvailability {
     private let enabled:()->Bool
@@ -36,25 +37,34 @@ package struct NativeFeatureBusy:Error,CustomStringConvertible {
 }
 /// Native feature implementations own models; callers see only UI and lifecycle contributions.
 @MainActor package protocol NativeFeatureSession:AnyObject {
-    func page(entry:String)->AnyView?
+    func page(_ route:NativeFeatureRoute,navigation:NativeNavigation)->AnyView?
     var status:NativeFeatureStatus {get}
     func start()
     func shutdown()
     func retireVisibility()
     func quitBlocker()->NativeFeatureBlocker?
-    func prepareReview(_ arguments:[String])
+    func preparePresentation(_ route:NativeFeatureRoute,options:[String:NativeContextValue])
+    func prepareReview(_ route:NativeFeatureRoute,arguments:[String])
+    func snapshotReady(_ route:NativeFeatureRoute,arguments:[String],started:Date)->Bool
+    func activate(_ entry:NativeUIEntryRef,navigation:NativeNavigation)->Bool
     func prepareStop()throws->NativeFeatureDrain
 }
-package struct NativeFeatureDefinition {
+package struct NativeFeatureDefinition:Sendable {
     package let manifest:ModuleManifest
-    package let makeSession:@MainActor (FeatureAvailability)->any NativeFeatureSession
-    package init(manifest:ModuleManifest,makeSession:@escaping @MainActor (FeatureAvailability)->any NativeFeatureSession) {
-        self.manifest=manifest;self.makeSession=makeSession
+    package let pageContracts:[NativePageContract]
+    package let menuShortcuts:[String:String]
+    let resolveLegacyPage:@Sendable (String)->NativeFeatureRoute?
+    let makeSession:@MainActor @Sendable (FeatureAvailability)->any NativeFeatureSession
+    package init(manifest:ModuleManifest,pageContracts:[NativePageContract] = [],menuShortcuts:[String:String] = [:],resolveLegacyPage:@escaping @Sendable (String)->NativeFeatureRoute? = {_ in nil},makeSession:@escaping @MainActor @Sendable (FeatureAvailability)->any NativeFeatureSession) {
+        self.manifest=manifest;self.pageContracts=pageContracts;self.menuShortcuts=menuShortcuts;self.resolveLegacyPage=resolveLegacyPage;self.makeSession=makeSession
     }
 }
 
 extension NativeFeatureSession {
     package func start() {}
     package func shutdown() {}
-    package func prepareReview(_ arguments:[String]) {}
+    package func preparePresentation(_ route:NativeFeatureRoute,options:[String:NativeContextValue]) {}
+    package func prepareReview(_ route:NativeFeatureRoute,arguments:[String]) {}
+    package func snapshotReady(_ route:NativeFeatureRoute,arguments:[String],started:Date)->Bool {status.snapshotReady}
+    package func activate(_ entry:NativeUIEntryRef,navigation:NativeNavigation)->Bool {false}
 }

@@ -1,4 +1,6 @@
 import ThermoUI
+import ModuleKit
+import NativeFeatureAPI
 import ModuleHost
 import AgentDoctor
 import AppKit
@@ -9,7 +11,8 @@ import ThermoL10n
 /// Where the main window is.
 enum MainPage: Hashable {
     case overview, sensors, fans, settings
-    case browser(String)
+    case native(NativeFeatureRoute)
+    static func browser(_ app:String)->MainPage {.native(.init(BuiltinModuleManifests.browser.id,"home",context:["app":.text(app)]))}
     case agents(SidebarEntry)
     case apps(AppsTab)
     case space(SpaceTab)
@@ -21,6 +24,7 @@ enum MainPage: Hashable {
     /// `--page` values: overview, checkup, sensors, fans, settings, pages, disk, disk:overview, disk:<category>,
     /// module:<id>[:<entry>], agents, agents:<area>, apps, apps:leftovers, apps:store, plugins, space, space:large, space:duplicates, memory, cpu, gpu, claude, claude:<accounts|reset|privacy>, claude-cleanup, history, connections.
     init?(argument: String) {
+        if let native=try? BuiltinNativeFeatures.catalog.resolveLegacyPage(argument) {self = .native(native);return}
         if let feature = BuiltinModules.argument(argument) { self = feature; return }
         let parts = argument.split(separator: ":", maxSplits: 1).map(String.init)
         guard let command = parts.first else { return nil }
@@ -29,7 +33,6 @@ enum MainPage: Hashable {
         case "sensors": self = .sensors
         case "fans": self = .fans
         case "settings": self = .settings
-        case "pages": self = .browser(parts.count > 1 ? parts[1] : "Google Chrome")
         case "agents": self = .agents(parts.count > 1 ? (Area(rawValue: parts[1]).map { .area($0) } ?? .home) : .home)
         case "apps": self = .apps(parts.count > 1 ? (parts[1] == "feeds" ? .updates : AppsTab(rawValue: parts[1]) ?? .installed) : .installed)
         case "memory": self = .memory
@@ -124,7 +127,20 @@ enum MainWindow {
         }
     }
 
+    @discardableResult static func showNative(_ request:NativePresentationRequest)->Bool {
+        guard let canonical=try? BuiltinNativeFeatures.catalog.normalizePresentation(request),
+              NSApp.modalWindow == nil,window?.attachedSheet == nil,
+              AppModels.shared.nativeFeatures.preparePresentation(canonical) else{return false}
+        show(.native(canonical.route));return true
+    }
     static func show(_ page: MainPage? = nil) {
+        if case let .native(route)?=page {
+            guard let normalized=try? BuiltinNativeFeatures.catalog.normalize(route) else{return}
+            showCanonical(.native(normalized));return
+        }
+        showCanonical(page)
+    }
+    private static func showCanonical(_ page:MainPage?) {
         (NSApp.delegate as? AppDelegate)?.closeMenuPanel()
         if let page { state.page = page }
         let models = AppModels.shared
@@ -169,12 +185,11 @@ enum MainWindow {
             center.addObserver(forName: NSWindow.willCloseNotification, object: w, queue: .main) { _ in
                 MainActor.assumeIsolated {
                     setSamplingVisibility(false)
-                    models.stopBrowserChecks()
+                    models.nativeFeatures.retireVisibility()
                     models.retireSoftwareViews()
                     SpaceOverviewModel.shared.stop()
                     models.stopSpaceViews()
                     MemoryModel.shared.stop()
-                    models.nativeFeatures.retireVisibility()
                     ComputeModel.shared.stop()
                     ComputeModel.cpu.stop()
                     ComputeModel.shared.releaseReadingsIfIdle()
@@ -291,7 +306,10 @@ struct MainView: View {
     }
 
     @ViewBuilder var content: some View {
-        if let owner = BuiltinModules.owner(page) {
+        if case let .native(route)=page {
+            if let view=models.nativeFeatures.page(route) {view.id(route).transition(.page)}
+            else {ModuleOffView().transition(.page)}
+        } else if let owner = BuiltinModules.owner(page) {
             if modules.isOn(owner.manifest.id), let feature = BuiltinModules.page(page) {
                 owner.page(feature.entry, selection: $page, models: models).id(owner.manifest.id).transition(.page)
             } else { ModuleOffView().transition(.page) }
@@ -306,7 +324,7 @@ struct MainView: View {
             WindowPage(title: tr("Settings"), subtitle: "Thermo \(AppInfo.version)") {
                 SettingsView(monitor: monitor, updates: models.updates)
             }.transition(.page)
-        case .browser:
+        case .native:
             ModuleOffView().transition(.page)
         case .agents:
             ModuleOffView().transition(.page)

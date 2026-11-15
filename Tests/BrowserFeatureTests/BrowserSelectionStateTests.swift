@@ -1,6 +1,7 @@
 import XCTest
 @testable import CleanKit
-@testable import ThermoApp
+@testable import BrowserFeature
+import NativeFeatureAPI
 
 private final class PageActionFixture: @unchecked Sendable {
     let lock = NSLock()

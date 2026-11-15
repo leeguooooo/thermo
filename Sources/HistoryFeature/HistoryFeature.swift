@@ -17,7 +17,8 @@ package enum HistoryFeature {
          makeModel: @escaping @MainActor (@escaping () -> Bool, any HistoryServices) -> HistoryModel = { HistoryModel(enabled: $0, services: $1) }) {
         self.availability = availability; self.services = services; self.makeModel = makeModel
     }
-    func page(entry: String) -> AnyView? {
+    func page(_ route:NativeFeatureRoute,navigation:NativeNavigation) -> AnyView? {
+        let entry=route.entry
         guard availability.acceptsWork, entry == "home" else { return nil }
         if storedModel == nil { let availability = availability; storedModel = makeModel({ availability.acceptsWork }, services) }
         guard let model = storedModel else { return nil }

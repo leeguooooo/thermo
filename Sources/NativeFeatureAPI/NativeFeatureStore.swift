@@ -20,20 +20,26 @@ import SwiftUI
         }
     }
     private enum State {case live(Live),draining(Draining)}
-    private let definitions:[String:NativeFeatureDefinition]
-    private let order:[String]
+    package let catalog:NativeFeatureCatalog
     private let enabled:(String)->Bool
+    private let navigation:NativeNavigation
     private var states:[String:State]=[:]
-    package init(definitions:[NativeFeatureDefinition],enabled:@escaping (String)->Bool) {
-        precondition(Set(definitions.map{$0.manifest.id}).count==definitions.count,"duplicate native feature")
-        self.definitions=Dictionary(uniqueKeysWithValues:definitions.map{($0.manifest.id,$0)})
-        self.enabled=enabled;order=definitions.map{$0.manifest.id}
+    package init(catalog:NativeFeatureCatalog,enabled:@escaping (String)->Bool,navigation:NativeNavigation) {
+        self.catalog=catalog;self.enabled=enabled;self.navigation=navigation
     }
-    private func isPage(_ route:NativeFeatureRoute)->Bool {
-        definitions[route.module]?.manifest.entries.contains(where:{$0.id==route.entry && $0.kind == .page}) ?? false
+    package convenience init(definitions:[NativeFeatureDefinition],enabled:@escaping (String)->Bool,navigation:NativeNavigation = .unavailable) {
+        self.init(catalog:try! NativeFeatureCatalog(definitions:definitions),enabled:enabled,navigation:navigation)
+    }
+    package func canPresent(_ route:NativeFeatureRoute)->Bool {
+        guard (try? catalog.normalize(route)) != nil,enabled(route.module) else{return false}
+        switch states[route.module] {
+        case .draining:return false
+        case let .live(live):return live.availability.acceptsWork
+        case nil:return true
+        }
     }
     private func admittedSession(_ id:String)->(any NativeFeatureSession)? {
-        guard enabled(id),let definition=definitions[id] else{return nil}
+        guard enabled(id),let definition=catalog.definitions[id] else{return nil}
         switch states[id] {
         case .draining:return nil
         case let .live(live):return live.availability.acceptsWork ? live.session:nil
@@ -51,7 +57,7 @@ import SwiftUI
     }
     /// Final exit cleanup only. Normal feature disable still requires prepareStop + drain.
     package func shutdown(_ feature:String? = nil) {
-        for id in feature.map({[$0]}) ?? order {
+        for id in feature.map({[$0]}) ?? catalog.order {
             let live:Live
             switch states[id] {
             case let .live(value):live=value
@@ -62,13 +68,38 @@ import SwiftUI
             live.didShutdown=true;live.availability.revoke();live.session.shutdown()
         }
     }
-    package func page(_ route:NativeFeatureRoute)->AnyView? {
-        guard isPage(route) else{return nil}
-        return admittedSession(route.module)?.page(entry:route.entry)
+    private func scopedNavigation(_ id:String)->NativeNavigation {
+        guard case let .live(live)=states[id] else{return .unavailable}
+        let availability=live.availability,navigation=navigation
+        return NativeNavigation {request in
+            guard availability.acceptsWork else{return false}
+            return navigation.show(request)
+        }
     }
-    package func prepareReview(_ route:NativeFeatureRoute,arguments:[String]) {
-        guard isPage(route) else{return}
-        admittedSession(route.module)?.prepareReview(arguments)
+    @discardableResult package func preparePresentation(_ request:NativePresentationRequest)->Bool {
+        guard let canonical=try? catalog.normalizePresentation(request),canPresent(canonical.route) else{return false}
+        guard !canonical.options.isEmpty else{return true}
+        guard let session=admittedSession(canonical.route.module) else{return false}
+        session.preparePresentation(canonical.route,options:canonical.options)
+        return true
+    }
+    package func page(_ request:NativeFeatureRoute)->AnyView? {
+        guard let route=try? catalog.normalize(request) else{return nil}
+        return admittedSession(route.module)?.page(route,navigation:scopedNavigation(route.module))
+    }
+    package func prepareReview(_ request:NativeFeatureRoute,arguments:[String]) {
+        guard let route=try? catalog.normalize(request) else{return}
+        admittedSession(route.module)?.prepareReview(route,arguments:arguments)
+    }
+    package func snapshotReady(_ request:NativeFeatureRoute,arguments:[String],started:Date)->Bool {
+        guard let route=try? catalog.normalize(request) else{return false}
+        guard canPresent(route) else{return true}
+        guard case let .live(live)=states[route.module] else{return false}
+        return live.session.snapshotReady(route,arguments:arguments,started:started)
+    }
+    @discardableResult package func activate(_ ref:NativeUIEntryRef)->Bool {
+        guard catalog.accepts(ref) else{return false}
+        return admittedSession(ref.module)?.activate(ref,navigation:scopedNavigation(ref.module)) ?? false
     }
     package func status(_ id:String)->NativeFeatureStatus {
         switch states[id] {
@@ -86,7 +117,7 @@ import SwiftUI
         }
     }
     package func quitBlocker(_ feature:String? = nil)->NativeFeatureBlocker? {
-        for id in feature.map({[$0]}) ?? order {
+        for id in feature.map({[$0]}) ?? catalog.order {
             switch states[id] {
             case let .live(live):if let blocker=live.session.quitBlocker(){return blocker}
             case let .draining(pending):if let blocker=pending.live.session.quitBlocker(){return blocker}
