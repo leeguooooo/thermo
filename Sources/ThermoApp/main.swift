@@ -14,7 +14,7 @@ import ModuleKit
 /// The menu bar panel is sized once per show for the screen it opens on. SwiftUI changes while it is open
 /// must not resize it, or AppKit shifts it across the menu bar and onto the neighbouring display.
 @MainActor enum PanelPopover {
-    static func host(_ monitor: Monitor) -> NSHostingController<PopoverView> {
+    static func host(_ monitor: SystemPresentation) -> NSHostingController<PopoverView> {
         let host = NSHostingController(rootView: PopoverView(monitor: monitor))
         host.sizingOptions = []
         return host
@@ -32,7 +32,7 @@ import ModuleKit
 final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate, UNUserNotificationCenterDelegate, NSMenuItemValidation, NSMenuDelegate {
     private var statusItem: NSStatusItem!
     private let popover = NSPopover()
-    private var monitor: Monitor { AppModels.shared.monitor }
+    private var monitor: SystemPresentation { AppModels.shared.system }
     private var lastTitle: String?
     private var menuFreshnessTimer: Timer?
     private var menuPreferences = MenuBarPreferences()
@@ -426,7 +426,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate, UNU
 @MainActor func renderPreviews(to dir: String) {
     Settings.register()
     renderingPreview = true
-    let monitor = AppModels.shared.monitor
+    let monitor = AppModels.shared.system
     // ImageRenderer never fires onAppear; start the "why is it slow" sampler up front.
     AppModels.shared.nativeFeatures.start(BuiltinModuleManifests.performance.id)
     AppModels.shared.nativeFeatures.setMenuPanelVisible(true)
@@ -615,7 +615,7 @@ if CommandLine.arguments.contains("--show-status-menu") || CommandLine.arguments
                 menu.popUp(positioning: nil, at: top, in: nil)
                 exit(0)
             }
-            let monitor = AppModels.shared.monitor
+            let monitor = AppModels.shared.system
             AppModels.shared.nativeFeatures.start(BuiltinModuleManifests.performance.id)
             AppModels.shared.nativeFeatures.setMenuPanelVisible(true)
             monitor.popoverOpen = true
@@ -675,7 +675,7 @@ if let i = CommandLine.arguments.firstIndex(of: "--render-preview"), i + 1 < Com
 /// `--ui-review` keeps a visible window while suppressing automatic helper/policy restoration.
 @MainActor func openMainOnly(_ args: [String]) {
     Settings.register()
-    if !Monitor.suppressesAutomaticControl(arguments: args) {
+    if !AppLaunchMode.suppressesAutomaticControl(arguments: args) {
         CleanScreenShortcutModel.enableLive()
         BatteryCareModel.shared.restoreSavedPreference()
     }
@@ -712,7 +712,7 @@ if let i = CommandLine.arguments.firstIndex(of: "--render-preview"), i + 1 < Com
         case .compute: return models.nativeFeatures.snapshotReady(.init(BuiltinModuleManifests.performance.id,"cpu"),arguments:args,started:started)
         case .memory: return models.nativeFeatures.snapshotReady(.init(BuiltinModuleManifests.performance.id,"memory"),arguments:args,started:started)
         case .overview: return models.nativeFeatures.snapshotReady(.init(BuiltinModuleManifests.performance.id,"overview"),arguments:args,started:started)
-        default: return models.monitor.snapshot != nil || !PerformanceModule.enabled
+        default: return models.system.snapshot != nil || !PerformanceModule.enabled
         }
     }
 }

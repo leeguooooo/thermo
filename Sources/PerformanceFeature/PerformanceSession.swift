@@ -165,12 +165,12 @@ import ThermoUI
     }
     var status: NativeFeatureStatus {
         var readers: [String:NativeReaderStatus]=[:]
-        if let x=storedCPU {readers["cpu"] = .init(sampling:x.samplingActive,workInFlight:x.sampleInFlight)}
-        if let x=storedGPU {readers["gpu"] = .init(sampling:x.samplingActive,workInFlight:x.sampleInFlight)}
-        if let x=storedMemory {readers["memory"] = .init(sampling:x.samplingActive,workInFlight:x.sampleInFlight)}
+        if let x=storedCPU {readers["cpu"] = .init(sampling:x.samplingActive,workInFlight:x.sampleInFlight,publishedAt:x.current?.sampled)}
+        if let x=storedGPU {readers["gpu"] = .init(sampling:x.samplingActive,workInFlight:x.sampleInFlight,publishedAt:x.current?.sampled)}
+        if let x=storedMemory {readers["memory"] = .init(sampling:x.samplingActive,workInFlight:x.sampleInFlight,publishedAt:x.sampled)}
         if let x=storedPanel {readers["panel"] = .init(sampling:x.samplingActive,workInFlight:x.sampleInFlight)}
-        if let x=storedPulse {readers["pulse"] = .init(sampling:x.samplingActive,holders:x.holderCount)}
-        if let x=storedRecorder {readers["history"] = .init(sampling:x.samplingActive)}
+        if let x=storedPulse {readers["pulse"] = .init(sampling:x.samplingActive,holders:x.holderCount,publishedAt:x.current?.sampled)}
+        if let x=storedRecorder {readers["history"] = .init(sampling:x.samplingActive,publishedAt:x.recent.last?.t)}
         return .init(modelLoaded:storedModel != nil || !readers.isEmpty,sampling:readers.values.contains{$0.sampling} || storedModel?.samplingActive == true,
                      snapshotReady:storedModel?.snapshot != nil || storedCPU?.current != nil || storedGPU?.current != nil || storedMemory?.sampled != nil,readers:readers)
     }

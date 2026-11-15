@@ -1,7 +1,7 @@
 import XCTest
 import AgentCore
 import Darwin
-@testable import ThermoApp
+@testable import PerformanceFeature
 
 final class ProcessActionTests: XCTestCase {
     func testProcessActionRejectsReusedPIDAndChangedExecutable() {

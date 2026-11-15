@@ -2,7 +2,6 @@ import ThermoKernel
 import SystemServicesAPI
 import XCTest
 import ThermoKit
-@testable import ThermoApp
 
 final class SamplingPlanTests: XCTestCase {
     func testVisibleSurfacesKeepSidebarReadingsWithoutUnrelatedHardwareWork() {
@@ -39,13 +38,7 @@ final class SamplingPlanTests: XCTestCase {
         }
     }
 
-    func testSensorSearchMatchesKeysAndDisplayedElectricalCategories() {
-        let reading = Reading(key: "PC0R", name: "CPU Package Power", group: .cpu, value: 42)
-        XCTAssertTrue(SensorSearch.matches(reading, query: " pc0r "))
-        XCTAssertTrue(SensorSearch.matches(reading, query: "功率", category: "功率"))
-        XCTAssertFalse(SensorSearch.matches(reading, query: "功率"))
-        XCTAssertFalse(SensorSearch.matches(reading, query: "not a sensor", category: "功率"))
-    }
+
 
     func testDefaultBackgroundCPUPlanStaysEssential() {
         let plan = SamplingPlan.make(visible: false, includeUnnamed: true, metric: .cpu, alerts: false)

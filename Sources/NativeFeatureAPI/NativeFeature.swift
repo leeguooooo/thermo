@@ -19,8 +19,9 @@ package struct NativeReaderStatus: Sendable {
     package var sampling: Bool
     package var workInFlight: Bool?
     package var holders: Int?
-    package init(sampling: Bool, workInFlight: Bool? = nil, holders: Int? = nil) {
-        self.sampling = sampling; self.workInFlight = workInFlight; self.holders = holders
+    package var publishedAt: Date?
+    package init(sampling: Bool, workInFlight: Bool? = nil, holders: Int? = nil, publishedAt: Date? = nil) {
+        self.sampling = sampling; self.workInFlight = workInFlight; self.holders = holders; self.publishedAt = publishedAt
     }
 }
 package struct NativeFeatureStatus {

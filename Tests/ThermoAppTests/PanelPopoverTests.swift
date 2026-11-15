@@ -5,7 +5,7 @@ import ThermoKit
 
 @MainActor final class PanelPopoverTests: XCTestCase {
     func testPanelIsSizedForItsScreenAndStaysPutWhileOpen() async throws {
-        let monitor = Monitor(startMonitoring: false, helperInteraction: false)
+        let monitor = SystemPresentation(helperInteraction: false)
         let popover = NSPopover()
         popover.animates = false
         popover.contentViewController = PanelPopover.host(monitor)

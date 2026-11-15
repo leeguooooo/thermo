@@ -6,14 +6,14 @@ import XCTest
 final class VerificationHelperIsolationTests: XCTestCase {
     @MainActor func testVerificationModesNeverCreateAHelperConnection() async {
         for flag in ["--offscreen", "--snapshot", "--render-preview", "--verify-lifecycle", "--ui-review"] {
-            XCTAssertTrue(Monitor.suppressesAutomaticControl(arguments: ["Thermo", "--main", flag]))
+            XCTAssertTrue(AppLaunchMode.suppressesAutomaticControl(arguments: ["Thermo", "--main", flag]))
             let unexpected = expectation(description: "no helper connection for " + flag)
             unexpected.isInverted = true
             let client = HelperClient(makeConnection: {
                 unexpected.fulfill()
                 return NSXPCConnection(machServiceName: "dev.thermo.qa.absent." + UUID().uuidString)
             })
-            let monitor = Monitor(startMonitoring: false, helper: client,
+            let monitor = SystemPresentation(helper: client,
                                   arguments: ["Thermo", "--main", flag])
             monitor.refreshHelper()
             await fulfillment(of: [unexpected], timeout: 0.05)
@@ -22,18 +22,18 @@ final class VerificationHelperIsolationTests: XCTestCase {
 
     @MainActor func testInteractiveRefreshStillUsesInjectedClientAndExplicitDisableWins() async {
         let called = expectation(description: "interactive helper connection")
-        XCTAssertFalse(Monitor.suppressesAutomaticControl(arguments: ["Thermo", "--main", "--page", "agents:mcp"]))
+        XCTAssertFalse(AppLaunchMode.suppressesAutomaticControl(arguments: ["Thermo", "--main", "--page", "agents:mcp"]))
         let client = HelperClient(makeConnection: {
             called.fulfill()
             return NSXPCConnection(machServiceName: "dev.thermo.qa.absent." + UUID().uuidString)
         })
-        let monitor = Monitor(startMonitoring: false, helper: client, arguments: ["Thermo", "--main"])
+        let monitor = SystemPresentation(helper: client, arguments: ["Thermo", "--main"])
         monitor.refreshHelper()
         await fulfillment(of: [called], timeout: 1)
 
         let unexpected = expectation(description: "explicitly disabled helper connection")
         unexpected.isInverted = true
-        let disabled = Monitor(startMonitoring: false, helperInteraction: false,
+        let disabled = SystemPresentation(helperInteraction: false,
             helper: HelperClient(makeConnection: {
                 unexpected.fulfill()
                 return NSXPCConnection(machServiceName: "dev.thermo.qa.absent." + UUID().uuidString)
@@ -45,14 +45,13 @@ final class VerificationHelperIsolationTests: XCTestCase {
         let unexpected = expectation(description: "disabled view cannot create an unscoped helper connection")
         unexpected.isInverted = true
         unexpected.assertForOverFulfill = false
-        let monitor = Monitor(startMonitoring: false, helper: HelperClient(makeConnection: {
+        let monitor = SystemPresentation(helper: HelperClient(makeConnection: {
             unexpected.fulfill()
             return NSXPCConnection(machServiceName: "dev.thermo.qa.absent." + UUID().uuidString)
-        }), arguments: ["Thermo", "--main"], samplingAllowed: { false })
+        }), arguments: ["Thermo", "--main"])
         monitor.windowOpen = true
         monitor.popoverOpen = true
         await fulfillment(of: [unexpected], timeout: 0.1)
-        monitor.beginStoppingFeature(); await monitor.finishStoppingFeature()
     }
 
 }

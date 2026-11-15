@@ -3,6 +3,12 @@ import ThermoKit
 import ThermoL10n
 
 package enum FanPolicyText {
+    package static func error(_ error:String)->String {
+        if error.contains("no automatic-control readback key") || error.contains("no manual-control readback key") {
+            return tr("Fan control could not be verified on this Mac. Open fan settings for details.")
+        }
+        return error
+    }
     package static func label(_ policy: FanPolicy) -> String {
         switch policy {
         case .auto: return tr("Auto")

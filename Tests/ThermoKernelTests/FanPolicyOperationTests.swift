@@ -1,7 +1,6 @@
 import ThermoKernel
 import XCTest
 import ThermoKit
-@testable import ThermoApp
 
 final class FanPolicyOperationTests: XCTestCase {
     enum Failure: Error { case write, read }

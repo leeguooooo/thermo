@@ -1,7 +1,6 @@
 import SystemServicesAPI
 import XCTest
 import ThermoL10n
-@testable import ThermoApp
 
 final class SettingsValidationTests: XCTestCase {
     func testInvalidIntervalsCannotReachTimerConversions() {

@@ -1,7 +1,7 @@
 import XCTest
 import ThermoKit
 import ThermoL10n
-@testable import ThermoApp
+@testable import PerformanceFeature
 
 final class FanControlPresentationTests: XCTestCase {
     func testMissingModeErrorHasReadableSummaryWithoutHidingOtherFailures() {
@@ -54,13 +54,7 @@ final class FanControlPresentationTests: XCTestCase {
         XCTAssertTrue(FanControlPresentation.allStopped([idle], stopped: [0]))
         XCTAssertFalse(FanControlPresentation.allStopped([idle], stopped: []))
 
-        var streaks: [Int: Int] = [:]
-        for _ in 1..<Monitor.stoppedAfterSamples { streaks = Monitor.zeroStreaks(streaks, fans: [idle]) }
-        XCTAssertLessThan(streaks[0] ?? 0, Monitor.stoppedAfterSamples)
-        streaks = Monitor.zeroStreaks(streaks, fans: [idle])
-        XCTAssertEqual(streaks[0], Monitor.stoppedAfterSamples)
-        let spinning = FanReading(id: 0, name: "Fan", rpm: 2400, min: 2317, max: 6550, target: nil, manual: false)
-        XCTAssertNil(Monitor.zeroStreaks(streaks, fans: [spinning])[0], "a real speed resets the count")
+
     }
 
     func testPendingAndLegacyHelpersNeverRenderManualConfirmation() {

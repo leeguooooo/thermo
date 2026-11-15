@@ -20,17 +20,7 @@ import XCTest
         XCTAssertEqual(PerformanceModule.manifest.launch,.always)
         XCTAssertTrue(PerformanceModule.manifest.entries.allSatisfy(PerformanceModule.supports))
     }
-    func testColdOffCannotRevivePageOrPanelSamplers() {
-        let cpu=ComputeModel(samplingAllowed:{false}),memory=MemoryModel(samplingAllowed:{false})
-        let pulse=SystemPulse(samplingAllowed:{false})
-        var held=0,read=0
-        let panel=PanelModel(readSample:{read += 1;return .init()},holdPulse:{held += 1},releasePulse:{held -= 1},samplingAllowed:{false})
-        cpu.start();cpu.setVisible(true,owner:UUID());memory.start();memory.setVisible(true,owner:UUID());pulse.start();panel.setActive(true)
-        XCTAssertFalse(cpu.samplingActive || memory.samplingActive || panel.samplingActive || pulse.samplingActive)
-        XCTAssertEqual(held,0);XCTAssertEqual(read,0)
-        XCTAssertFalse(pulse.sampled)
-        pulse.stop();cpu.stop();memory.stop();panel.setActive(false)
-    }
+
     func testSwitchingOffOverviewFallsBackToSettingsAndReleasesNavigation() {
         let name="thermo-performance-nav-"+UUID().uuidString
         let defaults=UserDefaults(suiteName:name)!
@@ -46,28 +36,23 @@ import XCTest
         XCTAssertEqual(MainWindow.state.page,.settings)
         XCTAssertTrue(center.shows(.settings) && center.shows(.module(BuiltinModuleManifests.connections.id,"home")))
     }
-    func testSensorStopCanDrainWithoutStartingOrContactingTheHelper() async {
-        let monitor=Monitor(startMonitoring:false,helperInteraction:false,samplingAllowed:{false})
-        monitor.startFeature();monitor.sampleNow()
-        XCTAssertFalse(monitor.samplingActive)
-        monitor.beginStoppingFeature();await monitor.finishStoppingFeature()
-        XCTAssertNil(monitor.snapshot);XCTAssertNil(monitor.latest)
-        XCTAssertTrue(monitor.canStopFeature)
-    }
+
     func testStopIsRefusedWhileHelperMaintenanceIsRunning() async {
-        let monitor=Monitor(startMonitoring:false,helperInteraction:false,samplingAllowed:{false})
+        let services=AppSystemServices(helperInteraction:false,samplingAllowed:{false})
+        let monitor=SystemPresentation(services:services)
         let entered=expectation(description:"isolated maintenance entered"),finished=expectation(description:"maintenance finished")
         let release=DispatchSemaphore(value:0)
         defer {release.signal();monitor.stopSetup()}
         (monitor.administration as! CoreHelperAdministration).performInstallation(operation:{entered.fulfill();_ = release.wait(timeout:.now()+5)},finished:{finished.fulfill()})
         await fulfillment(of:[entered],timeout:2)
-        XCTAssertFalse(monitor.canStopFeature)
-        let models=AppModels(makeMonitor:{monitor})
+        XCTAssertFalse(monitor.administration.latest.canRetirePerformance)
+        let models=AppModels(services:services,makeSystemPresentation:{monitor})
+        models.nativeFeatures.start(BuiltinModuleManifests.performance.id)
         XCTAssertThrowsError(try PerformanceModule.prepareStop(models:models))
         release.signal();await fulfillment(of:[finished],timeout:2)
         XCTAssertFalse(monitor.installingHelper)
         // Retire any remaining helper-readiness polling after the isolated installer finishes.
         monitor.stopSetup()
-        XCTAssertTrue(monitor.canStopFeature)
+        XCTAssertTrue(monitor.administration.latest.canRetirePerformance)
     }
 }

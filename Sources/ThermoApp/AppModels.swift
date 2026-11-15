@@ -9,15 +9,15 @@ final class AppModels {
     static let shared = AppModels()
     let services:AppSystemServices
     var preferences:UserDefaults{defaults}
-    lazy var monitor=makeMonitor?() ?? Monitor(services:services,startMonitoring:false,samplingAllowed:{[defaults] in ModulePreferences.isEnabled(BuiltinModuleManifests.performance,in:defaults)})
+    lazy var system=makeSystemPresentation?() ?? SystemPresentation(services:services)
     private let defaults:UserDefaults
-    private let makeMonitor:(() -> Monitor)?
+    private let makeSystemPresentation:(() -> SystemPresentation)?
     let nativeFeatures:NativeFeatureStore
     lazy var updates = Updates()
     init(defaults: UserDefaults = .standard, services:AppSystemServices? = nil,nativeDefinitions:[NativeFeatureDefinition]? = nil,
-         makeMonitor:(() -> Monitor)? = nil) {
+         makeSystemPresentation:(() -> SystemPresentation)? = nil) {
         self.defaults=defaults
-        self.makeMonitor = makeMonitor
+        self.makeSystemPresentation = makeSystemPresentation
         let interactive=NSClassFromString("XCTestCase") == nil
         let services=services ?? AppSystemServices(defaults:defaults,helperInteraction:interactive,samplingAllowed:{interactive && ModulePreferences.isEnabled(BuiltinModuleManifests.performance,in:defaults)})
         self.services=services

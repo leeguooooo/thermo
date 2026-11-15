@@ -31,12 +31,7 @@ enum FanControlPresentation {
     static func allStopped(_ fans: [FanReading], stopped: Set<Int>) -> Bool {
         !fans.isEmpty && fans.allSatisfy { $0.rpm == 0 && stopped.contains($0.id) }
     }
-    static func errorText(_ error: String) -> String {
-        if error.contains("no automatic-control readback key") || error.contains("no manual-control readback key") {
-            return tr("Fan control could not be verified on this Mac. Open fan settings for details.")
-        }
-        return error
-    }
+    static func errorText(_ error:String)->String{FanPolicyText.error(error)}
     static func observation(_ state: FanControlState?, fan: Int) -> String {
         guard let state else { return tr("Hardware verification unavailable") }
         if let failure = state.failure { return tr("Control error: %1$@", errorText(failure)) }

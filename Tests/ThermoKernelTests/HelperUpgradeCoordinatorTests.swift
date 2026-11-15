@@ -1,6 +1,5 @@
 import ThermoKernel
 import XCTest
-@testable import ThermoApp
 
 final class HelperUpgradeCoordinatorTests: XCTestCase {
     @MainActor func testPasswordInstalledHelperIsNeverUnregisteredAndDoesNotConsumeManagedRetry() async throws {

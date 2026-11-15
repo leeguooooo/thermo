@@ -12,9 +12,6 @@ enum PerformanceModule: BuiltinModule {
     static let legacyMenuEntries: [String: String] = [:]
     static let sidebarSections: Set<BuiltinSidebarSection> = []
     @MainActor static var enabled: Bool { ModuleCenter.shared.isOn(manifest.id) }
-    @MainActor private static var legacyOperations=Set<UUID>()
-    @MainActor static func beginOperation()->UUID? {guard enabled else{return nil};let id=UUID();legacyOperations.insert(id);return id}
-    @MainActor static func endOperation(_ id:UUID){legacyOperations.remove(id)}
     @MainActor static func start(){AppModels.shared.nativeFeatures.start(manifest.id)}
     static func owns(_ page: MainPage) -> Bool {
         switch page {

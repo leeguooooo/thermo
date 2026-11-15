@@ -80,7 +80,7 @@ import UserNotifications
         if lease.demand.visible || reading.error != nil || reading.model != nil{values.send(latest)}
         publishMenu()
     }
-    private func publishSnapshot(_ snapshot:Snapshot,parts:SamplerParts) {
+    func publishSnapshot(_ snapshot:Snapshot,parts:SamplerParts) {
         latest.fanReadingsUnavailable=parts.contains(.fans) && snapshot.fansAvailable == false
         let fans=parts.contains(.fans) && snapshot.hasFanReadings ? snapshot.fans:nil
         if let fans,lastFanSample != snapshot.timestamp {

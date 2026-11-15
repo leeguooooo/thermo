@@ -5,7 +5,7 @@ import ThermoKit
 
 final class HelperMaintenanceTests: XCTestCase {
     @MainActor func testInstallationBlocksQuitAndDuplicateMaintenanceUntilOperationReturns() async {
-        let monitor = Monitor(startMonitoring: false, helperInteraction: false)
+        let monitor = SystemPresentation(helperInteraction: false)
         let release = DispatchSemaphore(value: 0)
         defer { release.signal(); monitor.stopSetup() }
         let entered = expectation(description: "installer entered")
@@ -32,7 +32,7 @@ final class HelperMaintenanceTests: XCTestCase {
     }
 
     @MainActor func testFailedInstallationReleasesQuitProtectionAndReportsFailure() async {
-        let monitor = Monitor(startMonitoring: false, helperInteraction: false)
+        let monitor = SystemPresentation(helperInteraction: false)
         let finished = expectation(description: "failed installer finished")
         (monitor.administration as! CoreHelperAdministration).performInstallation(operation: {
             throw NSError(domain: "fixture", code: 1, userInfo: [NSLocalizedDescriptionKey: "fixture install failure"])
@@ -45,7 +45,7 @@ final class HelperMaintenanceTests: XCTestCase {
     }
 
     @MainActor func testRemovalBlocksDuplicateRemovalAndPolicySetup() async {
-        let monitor = Monitor(startMonitoring: false)
+        let monitor = SystemPresentation(helperInteraction:false)
         let release = DispatchSemaphore(value: 0)
         let finished = expectation(description: "removal finishes")
         let duplicate = expectation(description: "duplicate never runs")
@@ -72,7 +72,7 @@ final class HelperMaintenanceTests: XCTestCase {
     }
 
     @MainActor func testFailedRemovalReleasesBusyStateAndReportsFailure() async {
-        let monitor = Monitor(startMonitoring: false)
+        let monitor = SystemPresentation(helperInteraction:false)
         let finished = expectation(description: "failed removal finishes")
         (monitor.administration as! CoreHelperAdministration).performUninstallation(operation: {
             throw NSError(domain: "fixture", code: 1, userInfo: [NSLocalizedDescriptionKey: "fixture removal failure"])

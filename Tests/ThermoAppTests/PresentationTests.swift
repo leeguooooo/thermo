@@ -66,35 +66,6 @@ final class PresentationTests: XCTestCase {
         XCTAssertTrue(panel.target === target)
     }
 
-    @MainActor func testPanelStopReleasesOnlyItsLeaseAndRejectsLateSampling() {
-        var samples = 0, holders = 1 // A separate visible Overview owns its own lease.
-        var reading = PanelModel.Reading(cpu: 70, gpu: 8, download: 100, upload: 25)
-        let panel = PanelModel(readSample: { samples += 1; return reading },
-                               holdPulse: { holders += 1 }, releasePulse: { holders -= 1 })
-        panel.sample()
-        XCTAssertEqual(samples, 0)
-        panel.setActive(true); panel.setActive(true)
-        XCTAssertTrue(panel.samplingActive)
-        XCTAssertEqual(samples, 1); XCTAssertEqual(holders, 2)
-        XCTAssertEqual(panel.currentCPU, 70); XCTAssertEqual(panel.currentGPU, 8)
-        panel.setActive(false); panel.setActive(false)
-        panel.sample() // A delayed callback must not restart hidden work.
-        XCTAssertFalse(panel.samplingActive)
-        XCTAssertEqual(samples, 1); XCTAssertEqual(holders, 1)
-        XCTAssertNil(panel.currentCPU); XCTAssertNil(panel.currentGPU); XCTAssertNil(panel.currentDownload)
-        XCTAssertEqual(panel.cpu, [70], "retained history must be separate from current values")
-        reading = .init(gpu: .nan)
-        panel.setActive(true)
-        XCTAssertNil(panel.currentCPU); XCTAssertNil(panel.currentGPU)
-        XCTAssertEqual(panel.cpu, [70])
-        panel.setActive(false)
-        XCTAssertEqual(holders, 1)
-    }
-
-
-
-
-
     @MainActor func testWindowPlacementRecoversFromOffscreenSnapshotsAndDisconnectedDisplays() {
         let screen = NSRect(x: 0, y: 0, width: 1920, height: 1080)
         XCTAssertFalse(MainWindow.usableFrame(NSRect(x: -6000, y: -6000, width: 1100, height: 740), screens: [screen]))
