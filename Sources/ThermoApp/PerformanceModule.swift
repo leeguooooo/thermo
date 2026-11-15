@@ -71,7 +71,7 @@ enum PerformanceModule: BuiltinModule {
     @MainActor static func settings(_ entry: ModuleManifest.Entry, models: AppModels) -> AnyView { AnyView(EmptyView()) }
     @MainActor static func prepareStop(models: AppModels) throws -> BuiltinModules.FinishStop? {
         guard models.monitor.canStopFeature, operations.isEmpty, SystemPulse.shared.quitting.isEmpty,
-              SystemPulse.shared.restarting == nil, MemoryReliefAdvice.shared.phase != .asking else {
+              SystemPulse.shared.restarting == nil, !SystemPulse.shared.actionReviewInFlight, MemoryReliefAdvice.shared.phase != .asking else {
             throw BuiltinModules.StopRefused(description: tr("Wait for fan setup, memory relief or the current process action before switching this feature off."))
         }
         retiring = true

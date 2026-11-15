@@ -17,6 +17,9 @@ final class SystemPulse: ObservableObject {
     @Published private(set) var quitting: Set<String> = []
     @Published private(set) var actionFeedback: String?
     private var reviewID = UUID()
+    // Main-thread ownership lasts from scheduling through the real read, journal write and UI receipt.
+    private var pendingActionReviews = Set<UUID>()
+    var actionReviewInFlight: Bool { !pendingActionReviews.isEmpty }
     private let queue: DispatchQueue
     private var timer: DispatchSourceTimer?
     /// Confined to `queue`. Kept across start/stop so reopening shows fresh numbers in one cheap pass.
@@ -130,6 +133,7 @@ final class SystemPulse: ObservableObject {
     /// Recheck the entire process inventory; an idle reopened app can fall out of the busiest list.
     func review(_ hog: Hog, before: MachinePulse, action: PulseActionReview.Action) {
         let id = UUID(); reviewID = id
+        pendingActionReviews.insert(id)
         actionFeedback = tr("Checking the effect of the action…")
         queue.asyncAfter(deadline: .now() + reviewDelay) { [weak self] in
             guard let self else { return }
@@ -143,6 +147,7 @@ final class SystemPulse: ObservableObject {
             }
             self.recordActionReview(result)
             DispatchQueue.main.async {
+                defer { self.pendingActionReviews.remove(id) }
                 guard self.reviewID == id else { return }
                 self.actionFeedback = MachinePulse.sentences(result.summary, result.detail)
             }
@@ -151,6 +156,8 @@ final class SystemPulse: ObservableObject {
     }
 
     @MainActor func finishStoppingFeature() async {
+        // A queue fence alone misses work scheduled with asyncAfter but not enqueued yet.
+        while actionReviewInFlight { try? await Task.sleep(nanoseconds: 20_000_000) }
         await withCheckedContinuation { done in queue.async { done.resume() } }
         if timer == nil { current = nil }
     }
