@@ -1,3 +1,4 @@
+import Foundation
 import AgentCore
 import CaptureFeature
 import CaptureScriptCore
