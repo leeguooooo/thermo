@@ -63,6 +63,20 @@ class NativeBoundariesTests(unittest.TestCase):
             errors = check.problems(self.package, source_root=temporary)
             self.assertTrue(any("AgentCore imports undeclared target ThermoL10n" in error for error in errors))
 
+    def test_executable_cannot_import_a_transitively_linked_feature(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            source = Path(temporary) / "Sources/ThermoApp"
+            source.mkdir(parents=True)
+            (source / "main.swift").write_text("import ConnectionsFeature\n")
+            self.assertIn("ThermoApp must not import feature implementation ConnectionsFeature", check.problems(self.package, complete=True, source_root=temporary))
+
+    def test_composition_cannot_reexport_feature_implementations(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            source = Path(temporary) / "Sources/ThermoComposition"
+            source.mkdir(parents=True)
+            (source / "Application.swift").write_text("@_exported import ConnectionsFeature\n")
+            self.assertIn("ThermoComposition must not re-export ConnectionsFeature", check.problems(self.package, complete=True, source_root=temporary))
+
     def test_embedded_swift_templates_do_not_create_import_dependencies(self):
         text = '\n'.join(['// import FakeFeature', 'let code = #"""', 'import FakeFeature', '"""#', '/* import FakeFeature */', '@_implementationOnly import struct ModuleKit.ModuleManifest'])
         self.assertEqual(check.source_imports(text), {"ModuleKit"})
