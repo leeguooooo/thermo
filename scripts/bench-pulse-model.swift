@@ -2,11 +2,8 @@
 import Foundation
 import AppKit
 import Combine
-@testable import ThermoApp
+@testable import PerformanceFeature
 import CleanKit
-
-@_silgen_name("$s9ThermoApp20installStandardMenusyyF")
-@MainActor func fixtureStandardMenus() {}
 
 final class Meter: @unchecked Sendable {
     let sampler = PulseSampler(), lock = NSLock()
