@@ -20,7 +20,10 @@ enum ConnectionsModule:BuiltinModule {
     }
     @MainActor static func page(_ entry:ModuleManifest.Entry,selection:Binding<MainPage>,models:AppModels)->AnyView {models.nativeFeatures.page(.init(manifest.id,entry.id)) ?? AnyView(EmptyView())}
     @MainActor static func settings(_ entry:ModuleManifest.Entry,models:AppModels)->AnyView {AnyView(EmptyView())}
-    @MainActor static func prepareStop(models:AppModels)throws->BuiltinModules.FinishStop? {try models.nativeFeatures.prepareStop(manifest.id).map{drain in {await drain.finish()}}}
+    @MainActor static func prepareStop(models:AppModels)throws->BuiltinModules.FinishStop? {
+        guard let drain=try models.nativeFeatures.prepareStop(manifest.id) else{return nil}
+        return {await drain.finish()}
+    }
     @MainActor static func appearance(_ page:MainPage)->(glow:Bool,tint:Color?){(false,nil)}
     @MainActor static func prepareReview(_ arguments:[String],page:inout MainPage,models:AppModels) {}
     @MainActor static func snapshotReady(_ arguments:[String],models:AppModels,started:Date)->Bool {
