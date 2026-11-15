@@ -238,7 +238,7 @@ final class YunXDownloadModel: ObservableObject {
         preview?.player.pause();preview=nil
         if let cleanup=previewCleanup {previewCleanup=nil;await cleanup()}
         if let gopeed {await gopeed.stop()}
-        engine=nil;gopeed=nil;source=nil;videoLink=nil;shareLink=nil
+        engine=nil;gopeed=nil;source=nil;videoLink=nil;shareLink=nil;storedDrives=nil;storedParsers=nil
         files=[];path=[];selected=[];video=nil;jobs=[];accounts=[];tasks=[:];runners=[:];p2pTasks=[:];retryAfter=[:]
         link="";passcode="";passcodeAsked=false;error=nil;notice=nil;login=nil;chromeWaiting=nil
         savePicker=nil;torrentPick=nil;pendingP2P=nil;pendingFfmpeg=nil;drivesOverride=nil
@@ -292,12 +292,18 @@ final class YunXDownloadModel: ObservableObject {
     private let limit: YunXLimitBox
     private let chromeCookies: YunXChromeCookies
     private var drivesOverride: CloudDriveRegistry?
-    private lazy var drives: CloudDriveRegistry = {
-        if let drivesOverride { return drivesOverride }
-        let vault = self.vault
-        return CloudDriveRegistry(credentialUpdated: { updated, previous in try? vault.rotate(previous: previous, updated: updated) })
-    }()
-    private lazy var parsers = VideoParsers()
+    private var storedDrives:CloudDriveRegistry?
+    private var drives:CloudDriveRegistry {
+        if let storedDrives{return storedDrives}
+        let vault=self.vault
+        let registry=drivesOverride ?? CloudDriveRegistry(credentialUpdated:{updated,previous in try? vault.rotate(previous:previous,updated:updated)})
+        storedDrives=registry;return registry
+    }
+    private var storedParsers:VideoParsers?
+    private var parsers:VideoParsers {
+        if let storedParsers{return storedParsers}
+        let parsers=VideoParsers();storedParsers=parsers;return parsers
+    }
     private var source: Source?
     private var videoLink: DetectedVideoLink?
     private var shareLink: (link: ParsedShareLink, passcode: String)?
