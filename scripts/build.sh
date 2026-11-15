@@ -47,7 +47,7 @@ SPARKLE_BIN=.build/artifacts/sparkle/Sparkle/bin
 swift scripts/check-build-output.swift "$DIST"
 # Source targets keep trusted native features separate without changing process placement.
 NATIVE_PACKAGE_GRAPH="$(swift package dump-package)"
-printf '%s\n' "$NATIVE_PACKAGE_GRAPH" | python3 scripts/verify-native-boundaries.py --source-root .
+printf '%s\n' "$NATIVE_PACKAGE_GRAPH" | python3 scripts/verify-native-boundaries.py --complete --source-root .
 
 arch_flags=""
 for a in $ARCHS; do arch_flags="$arch_flags --arch $a"; done

@@ -99,7 +99,7 @@ import SwiftUI
                         guard availability.acceptsWork,item.badge>=0,item.route.module==id,
                               item.trailing?.unicodeScalars.contains(where:{$0.value == 0 || $0.value == 10 || $0.value == 13}) != true,
                               let route=try? catalog.normalize(item.route),
-                              let entry=definition.manifest.entries.first(where:{$0.id==route.entry && $0.kind == .page}) else{return AnyView(EmptyView())}
+                              let entry=definition.manifest.entries.first(where:{$0.id==(item.displayEntry ?? route.entry) && $0.kind == .page}) else{return AnyView(EmptyView())}
                         return host.render(.init(route:route,manifest:definition.manifest,entry:entry,tint:item.tint,badge:item.badge,trailing:item.trailing,trailingColor:item.trailingColor,selected:selected==route,open:{_ = navigation.show(route)}))
                     }
                     return AnyView((session.ui(.sidebar(location:location,selection:selected,rows:rows),navigation:navigation) ?? AnyView(EmptyView())).id(generation))
@@ -163,6 +163,10 @@ import SwiftUI
         return admittedSession(ref.module) != nil
     }
     /// Explicit background contribution; metadata/status/quit queries remain cold.
+    package func startBackground(_ id:String) {
+        guard catalog.backgroundFeatures.contains(id) else{return}
+        start(id)
+    }
     package func start(_ id:String) {
         guard let session=admittedSession(id),case let .live(live)=states[id],!live.started else{return}
         live.started=true;session.start()

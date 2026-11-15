@@ -26,7 +26,7 @@ SCRIPTS = ["verify-skill-context.py", "verify-skill-quality.py", "verify-tool-us
            "verify-mcp-cleanup-details.py", "verify-cli-completeness.py",
            "verify-skill-instruction-usage.py", "verify-ai-diagnostics-contract.py",
            "verify-media-text-split.py"]
-SUITES = {"ThermoKitTests", "ThermoHelperTests", "ThermoCLITests", "ThermoAppTests",
+SUITES = {"ThermoKitTests", "ThermoHelperTests", "ThermoCLITests", "ThermoCompositionTests",
           "CleanKitTests", "AgentDoctorTests", "AgentCoreTests"}
 
 

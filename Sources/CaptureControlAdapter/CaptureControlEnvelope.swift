@@ -1,6 +1,6 @@
+import CaptureControlAPI
 import Foundation
 import AgentCore
-import CaptureFeature
 import CaptureScriptCore
 
 /// Same-user transport envelopes are translated only at the composition boundary.

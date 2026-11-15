@@ -1,3 +1,4 @@
+import CaptureControlAPI
 import CaptureCore
 import CaptureScriptCore
 import Foundation

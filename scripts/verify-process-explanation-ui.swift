@@ -1,5 +1,6 @@
+import ThermoUI
 // Owned, read-only UI acceptance. The short-lived child only requests idle-sleep prevention.
-@testable import ThermoApp
+@testable import PerformanceFeature
 import AgentCore
 import AppKit
 import SwiftUI
@@ -33,7 +34,7 @@ import ThermoL10n
         item.submenu=submenu;menu.addItem(item);app.mainMenu=menu
         let window=NSWindow(contentRect:NSRect(x:0,y:0,width:640,height:560),styleMask:[.titled,.closable,.resizable],backing:.buffered,defer:false)
         window.title="Thermo Process Explanation QA";window.isReleasedWhenClosed=false
-        window.contentView=NSHostingView(rootView:ProcessExplanationView(target:.init(identity:own,candidates:options)).preferredColorScheme(.dark))
+        window.contentView=NSHostingView(rootView:ProcessExplanationView(target:.init(identity:own,candidates:options),makeModel:{ProcessExplanationModel()}).preferredColorScheme(.dark))
         window.center();window.makeKeyAndOrderFront(nil);app.activate(ignoringOtherApps:true)
         func reportWindow() {
             print("QA_WINDOW pid=\(getpid()) number=\(window.windowNumber) visible=\(window.isVisible) activeSpace=\(window.isOnActiveSpace) width=\(window.frame.width) height=\(window.frame.height) screen=\(window.screen != nil)")

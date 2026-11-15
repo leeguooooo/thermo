@@ -1,12 +1,11 @@
+import ThermoUI
 // Production panel/model/coordinator; simulated SMC and private recovery/prefs only.
-@testable import ThermoApp
+@testable import ThermoShell
 import AppKit
 import SwiftUI
 @testable import ThermoKit
 import ThermoL10n
 
-@_silgen_name("$s9ThermoApp20installStandardMenusyyF")
-@MainActor func fixtureStandardMenus() {}
 
 final class FakeBattery: @unchecked Sendable {
     let root: URL, lock = NSLock()

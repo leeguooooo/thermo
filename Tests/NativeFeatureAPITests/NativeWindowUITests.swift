@@ -60,6 +60,20 @@ import XCTest
         XCTAssertEqual(rows.count,1);XCTAssertEqual(rows[0].entry,manifest.entries[0]);XCTAssertEqual(rows[0].manifest,manifest)
         XCTAssertEqual(rows[0].badge,3);XCTAssertTrue(rows[0].selected)
     }
+    func testRootLabelKeepsTheExactSelectedDestinationAndRejectsInvalidLabels()throws {
+        var manifest=manifest
+        manifest.entries.append(.init(id:"details",kind:.page,title:"Details"))
+        let session=Session(),target=NativeFeatureRoute(id,"details")
+        session.contributions=[.init(route:target,tint:.blue,displayEntry:"home"),.init(route:target,tint:.blue,displayEntry:"unknown"),.init(route:target,tint:.blue,displayEntry:"action")]
+        let definition=NativeFeatureDefinition(manifest:manifest,ui:.init(sidebarLocations:[.agents]),makeSession:{_ in session})
+        var opened:[NativeFeatureRoute]=[]
+        let store=NativeFeatureStore(definitions:[definition],enabled:{_ in true},navigation:.init{opened.append($0.route);return true})
+        let group=try XCTUnwrap(store.windowUI(selection:target,locations:[.agents]).sidebar.first)
+        var rows:[NativeSidebarRow]=[]
+        _=group.content{rows.append($0);return AnyView(EmptyView())}
+        XCTAssertEqual(rows.count,1);XCTAssertEqual(rows.first?.entry.id,"home");XCTAssertEqual(rows.first?.route,target);XCTAssertTrue(rows.first?.selected == true)
+        rows.first?.open();XCTAssertEqual(opened,[target])
+    }
     func testOldRowsAndDeferredRendererStayRevokedAcrossReenable()async throws {
         var made=0,shows=0,sessions:[Session]=[]
         let id=id

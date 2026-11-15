@@ -11,6 +11,9 @@ package enum AgentDiagnosticsFeature {
             guard argument=="agents" || argument.hasPrefix("agents:") else{return nil}
             let suffix=argument.hasPrefix("agents:") ? String(argument.dropFirst(7)):""
             return route(Area(rawValue:suffix))
+        },resolveLegacyLaunch:{arguments in
+            guard let index=arguments.firstIndex(of:"--agents") else{return nil}
+            return .init(route:route(index+1<arguments.count ? Area(rawValue:arguments[index+1]):nil))
         },makeSession:{AgentDiagnosticsSession(availability:$0)})
     }
     static func route(_ area:Area?)->NativeFeatureRoute {.init(BuiltinModuleManifests.agents.id,area?.rawValue ?? "home")}

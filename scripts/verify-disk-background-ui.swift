@@ -1,13 +1,12 @@
+import ThermoUI
 // Owned cache fixture. A gate simulates blocked storage; only the wrapper buttons
 // control that gate. The category, scan and stop controls are production views.
-@testable import ThermoApp
+@testable import DiskFeature
 import AppKit
 import CleanKit
 import SwiftUI
 import ThermoL10n
 
-@_silgen_name("$s9ThermoApp20installStandardMenusyyF")
-@MainActor func fixtureStandardMenus() {}
 
 final class DiskReadGate: @unchecked Sendable {
     let release = DispatchSemaphore(value: 0)

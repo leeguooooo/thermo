@@ -88,6 +88,56 @@ import ModuleKit
         let wrong=NativeFeatureDefinition(manifest:manifest,pageContracts:[.init(entry:"action")],makeSession:{_ in Session()})
         XCTAssertThrowsError(try NativeFeatureCatalog(definitions:[wrong]))
     }
+    func testPrivateWorkerOwnershipIsColdAndUnambiguous()throws {
+        var made=0
+        let worker="com.example.preview"
+        let first=NativeFeatureDefinition(manifest:manifest,privateWorkers:[worker],makeSession:{_ in made+=1;return Session()})
+        let other=ModuleManifest(id:"com.example.other",name:"Other",summary:"",symbol:"doc",version:"1",entries:[])
+        let second=NativeFeatureDefinition(manifest:other,makeSession:{_ in made+=1;return Session()})
+        let catalog=try NativeFeatureCatalog(definitions:[first,second])
+        XCTAssertEqual(catalog.manifests.map(\.id),[id,other.id])
+        XCTAssertEqual(catalog.privateWorkers(id),[worker])
+        XCTAssertTrue(catalog.privateWorkers(other.id).isEmpty)
+        XCTAssertEqual(catalog.workerOwner(worker)?.id,id)
+        XCTAssertNil(catalog.workerOwner("unknown"))
+        let duplicate=NativeFeatureDefinition(manifest:other,privateWorkers:[worker],makeSession:{_ in Session()})
+        XCTAssertThrowsError(try NativeFeatureCatalog(definitions:[first,duplicate]))
+        let collision=NativeFeatureDefinition(manifest:other,privateWorkers:[id],makeSession:{_ in Session()})
+        XCTAssertThrowsError(try NativeFeatureCatalog(definitions:[first,collision]))
+        XCTAssertEqual(made,0)
+    }
+    func testLegacyLaunchIsValidatedBeforeAnySessionIsCreated()throws {
+        var made=0
+        let id=self.id
+        let valid=NativeFeatureDefinition(manifest:manifest,resolveLegacyLaunch:{args in
+            args.contains("--fixture") ? .init(route:.init(id,"home")):nil
+        },makeSession:{_ in made+=1;return Session()})
+        let catalog=try NativeFeatureCatalog(definitions:[valid])
+        XCTAssertNil(try catalog.resolveLegacyLaunch([]))
+        XCTAssertEqual(try catalog.resolveLegacyLaunch(["--fixture"])?.route,.init(id,"home"))
+        let invalid=NativeFeatureDefinition(manifest:manifest,resolveLegacyLaunch:{_ in .init(route:.init("com.example.other","home"))},makeSession:{_ in made+=1;return Session()})
+        XCTAssertThrowsError(try NativeFeatureCatalog(definitions:[invalid]).resolveLegacyLaunch([]))
+        let badOptions=NativeFeatureDefinition(manifest:manifest,resolveLegacyLaunch:{_ in .init(route:.init(id,"home"),options:["undeclared":.text("no")])},makeSession:{_ in made+=1;return Session()})
+        XCTAssertThrowsError(try NativeFeatureCatalog(definitions:[badOptions]).resolveLegacyLaunch([]))
+        let other=ModuleManifest(id:"com.example.other",name:"Other",summary:"",symbol:"doc",version:"1",entries:[.init(id:"home",kind:.page,title:"Home")])
+        let duplicate=NativeFeatureDefinition(manifest:other,resolveLegacyLaunch:{_ in .init(route:.init("com.example.other","home"))},makeSession:{_ in made+=1;return Session()})
+        XCTAssertThrowsError(try NativeFeatureCatalog(definitions:[valid,duplicate]).resolveLegacyLaunch(["--fixture"]))
+        XCTAssertEqual(made,0)
+    }
+    func testLegacyMenuAliasesAreUniqueDeclaredPagesAndStayCold()throws {
+        var made=0
+        let definition=NativeFeatureDefinition(manifest:manifest,legacyMenuEntries:["old-menu":"home"],makeSession:{_ in made+=1;return Session()})
+        let catalog=try NativeFeatureCatalog(definitions:[definition])
+        XCTAssertEqual(try catalog.resolveLegacyMenu("old-menu"),.init(id,"home"))
+        XCTAssertNil(try catalog.resolveLegacyMenu("unknown"))
+        for entry in ["unknown","action"] {
+            XCTAssertThrowsError(try NativeFeatureCatalog(definitions:[.init(manifest:manifest,legacyMenuEntries:["old":entry],makeSession:{_ in Session()})]))
+        }
+        let other=ModuleManifest(id:"com.example.other",name:"Other",summary:"",symbol:"doc",version:"1",entries:[.init(id:"home",kind:.page,title:"Home")])
+        let duplicate=NativeFeatureDefinition(manifest:other,legacyMenuEntries:["old-menu":"home"],makeSession:{_ in Session()})
+        XCTAssertThrowsError(try NativeFeatureCatalog(definitions:[definition,duplicate]))
+        XCTAssertEqual(made,0)
+    }
     func testRestoreInvalidationIsExistingOnlyAndDoesNotTouchDrainingGeneration()async throws {
         let session=Session();var made=0
         let store=NativeFeatureStore(definitions:[definition{_ in made+=1;return session}],enabled:{_ in true})

@@ -54,6 +54,21 @@ package struct NativeFeatureCatalog: Sendable {
         guard Set(definitions.map{$0.manifest.id}).count == definitions.count else {
             throw NativeRouteError("Duplicate native feature.")
         }
+        let nativeIDs=Set(definitions.map{$0.manifest.id})
+        var workers=Set<String>(),legacyMenus=Set<String>()
+        for definition in definitions {
+            for worker in definition.privateWorkers {
+                guard !worker.isEmpty,!nativeIDs.contains(worker),workers.insert(worker).inserted else {
+                    throw NativeRouteError("A private worker must have exactly one native feature owner.")
+                }
+            }
+            for (key,entry) in definition.legacyMenuEntries {
+                guard !key.isEmpty,legacyMenus.insert(key).inserted,
+                      definition.manifest.entries.contains(where:{$0.id==entry && $0.kind == .page}) else {
+                    throw NativeRouteError("A legacy menu entry must have exactly one declared native page.")
+                }
+            }
+        }
         guard definitions.filter({$0.ui.compactPanelEntry != nil}).count <= 1 else {
             throw NativeRouteError("Only one native feature may own the compact panel.")
         }
@@ -86,9 +101,22 @@ package struct NativeFeatureCatalog: Sendable {
             if let entry=definition.ui.compactPanelEntry {
                 _ = try normalize(.init(definition.manifest.id,entry))
             }
+            for entry in definition.legacyMenuEntries.values {_ = try normalize(.init(definition.manifest.id,entry))}
         }
     }
     package func manifest(_ id:String)->ModuleManifest? {definitions[id]?.manifest}
+    package var manifests:[ModuleManifest] {order.compactMap{definitions[$0]?.manifest}}
+    package var backgroundFeatures:[String] {order.filter{definitions[$0]?.runsInBackground == true}}
+    package func privateWorkers(_ id:String)->Set<String> {definitions[id]?.privateWorkers ?? []}
+    package func workerOwner(_ worker:String)->ModuleManifest? {
+        manifests.first{definitions[$0.id]?.privateWorkers.contains(worker)==true}
+    }
+    package func resolveLegacyMenu(_ key:String)throws->NativeFeatureRoute? {
+        for id in order {
+            if let entry=definitions[id]?.legacyMenuEntries[key] {return try normalize(.init(id,entry))}
+        }
+        return nil
+    }
     package func normalize(_ input:NativeFeatureRoute)throws->NativeFeatureRoute {
         guard let definition=definitions[input.module],definition.manifest.entries.contains(where:{$0.id==input.entry && $0.kind == .page}) else {
             throw NativeRouteError("Unknown feature page.")
@@ -125,6 +153,18 @@ package struct NativeFeatureCatalog: Sendable {
             let normalized=try normalize(route)
             guard found == nil || found == normalized else{throw NativeRouteError("Ambiguous legacy feature page.")}
             found=normalized
+        }
+        return found
+    }
+    /// Legacy launch flags are decoded by their owner; the host only accepts checked requests.
+    package func resolveLegacyLaunch(_ arguments:[String])throws->NativePresentationRequest? {
+        var found:NativePresentationRequest?
+        for id in order {
+            guard let request=definitions[id]?.resolveLegacyLaunch(arguments) else{continue}
+            guard request.route.module==id else{throw NativeRouteError("A legacy launch must belong to its feature.")}
+            let checked=try normalizePresentation(request)
+            guard found == nil else{throw NativeRouteError("Ambiguous legacy feature launch.")}
+            found=checked
         }
         return found
     }

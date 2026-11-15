@@ -1,12 +1,10 @@
 // Actual installed tools through production scanning, review and cleanup in a marked test home.
 @testable import CleanKit
-@testable import ThermoApp
+@testable import DiskFeature
 import CryptoKit
 import Foundation
 import ThermoL10n
 
-@_silgen_name("$s9ThermoApp20installStandardMenusyyF")
-@MainActor func nativeCacheFixtureMenus() {}
 
 enum NativeCacheFixture {
     static func files(_ roots: [String]) -> [String:String] {

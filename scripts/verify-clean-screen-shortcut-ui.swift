@@ -1,14 +1,14 @@
+import HotkeyCore
+import ThermoUI
 // Private-home native acceptance. No TCC changes. Active sessions have a separate
 // approximately 20-second QA watchdog; the production timeout remains unchanged.
-@testable import ThermoApp
+@testable import ThermoShell
 import AppKit
 import ApplicationServices
 import Carbon
 import SwiftUI
 import ThermoL10n
 
-@_silgen_name("$s9ThermoApp20installStandardMenusyyF")
-@MainActor func fixtureStandardMenus() {}
 
 func ownTapCount() -> Int {
     var count: UInt32=0

@@ -1,5 +1,9 @@
-// Owned, opt-in recovery/Trash fixture. Ad-hoc signed apps; their executables are never launched.
-@testable import ThermoApp
+import ThermoUI
+// Owned, opt-in recovery/Trash fixture. Fixture apps never launch the fake tool executables.
+@testable import AppsFeature
+@testable import HistoryFeature
+@testable import DiskFeature
+@testable import ThermoComposition
 @testable import CleanKit
 import AppKit
 import AgentCore
@@ -24,7 +28,7 @@ import ThermoL10n
     let home: String
     @State var scenario = 0
     @State var page = 0
-    @StateObject var history = HistoryModel()
+    @StateObject var history = HistoryModel(services:HistoryHostServices())
     @StateObject var disk = DiskModel()
     init(home: String, initialPage: Int = 0) { self.home=home;_page=State(initialValue:initialPage) }
     var body: some View {
@@ -37,7 +41,7 @@ import ThermoL10n
                 Text("备份").tag(0);Text("历史恢复").tag(1);Text("聊天期限（只读）").tag(2)
             }.pickerStyle(.segmented)
             if page == 0 { BackupScenario(scenario,home:home).id(scenario) }
-            else if page == 1 { HistoryPage(model:history,open:{ _ in }) }
+            else if page == 1 { HistoryPage(model:history,services:HistoryHostServices()) }
             else { DiskCategoryPage(model:disk,category:.aiSessions,clean:{}) }
 
         }.padding(14).preferredColorScheme(.dark)

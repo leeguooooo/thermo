@@ -5,7 +5,7 @@ import ThermoL10n
 
 package enum PluginsFeature {
     package static func registration(navigate:@escaping @MainActor (NativeFeatureRoute)->Void)->NativeFeatureDefinition {
-        .init(manifest:BuiltinModuleManifests.plugins,makeSession:{PluginsSession(availability:$0,navigate:navigate)})
+        .init(manifest:BuiltinModuleManifests.plugins,ui:.init(sidebarLocations:[.software]),resolveLegacyPage:{argument in argument=="plugins" ? .init(BuiltinModuleManifests.plugins.id,"home"):nil},makeSession:{PluginsSession(availability:$0,navigate:navigate)})
     }
 }
 @MainActor final class PluginsSession:NativeFeatureSession {
@@ -16,6 +16,10 @@ package enum PluginsFeature {
     init(availability:FeatureAvailability,navigate:@escaping (NativeFeatureRoute)->Void,
          makeModel:@escaping @MainActor (@escaping ()->Bool)->PluginsModel = {PluginsModel(enabled:$0)}) {
         self.availability=availability;self.navigate=navigate;self.makeModel=makeModel
+    }
+    func ui(_ surface:NativeUISurface,navigation:NativeNavigation)->AnyView? {
+        guard availability.acceptsWork,case let .sidebar(location,_,rows)=surface,location == .software else{return nil}
+        return AnyView(rows(.init(route:.init(BuiltinModuleManifests.plugins.id,"home"),tint:.orange)))
     }
     func page(_ route:NativeFeatureRoute,navigation:NativeNavigation)->AnyView? {
         let entry=route.entry

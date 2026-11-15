@@ -14,12 +14,12 @@ import ThermoL10n
 @MainActor private final class SearchUIFixture {
     static let shared=SearchUIFixture()
     let model=LocalSearchModel()
-    lazy var shortcut=LocalSearchShortcut(action:{[weak self] in self?.panel.toggle()})
+    lazy var shortcut:LocalSearchShortcut=LocalSearchShortcut(action:{[weak self] in self?.panel.toggle()})
     let manager=ModuleManager()
     var loaded=false
     let statuses=CurrentValueSubject<[ModuleManager.Status],Never>([])
-    lazy var service=SandboxedDocumentPreviewService(manager:manager,worker:SearchFeature.previewWorkerID,loaded:{[weak self] in self?.loaded == true},statuses:statuses.eraseToAnyPublisher(),restartRequired:{nil})
-    lazy var panel=LocalSearchPanel(model:model,shortcut:shortcut,preview:service.makePresentation(available:{true}))
+    lazy var service:SandboxedDocumentPreviewService=SandboxedDocumentPreviewService(manager:manager,worker:SearchFeature.previewWorkerID,loaded:{[weak self] in self?.loaded == true},statuses:statuses.eraseToAnyPublisher(),restartRequired:{nil})
+    lazy var panel:LocalSearchPanel=LocalSearchPanel(model:model,shortcut:shortcut,preview:service.makePresentation(available:{true}))
     init(){
         manager.onChange={[weak self] _ in guard let self else{return};statuses.send(manager.modules)}
         Task{await manager.load{_ in false};loaded=true;statuses.send(manager.modules)}

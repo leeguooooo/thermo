@@ -1,13 +1,12 @@
+import ThermoUI
 // Owned native acceptance. No permission request or TCC change. Starting is a
 // deliberate UI action; an independent QA timer ends any active mode after 20 s.
-@testable import ThermoApp
+@testable import ThermoShell
 import ApplicationServices
 import AppKit
 import SwiftUI
 import ThermoL10n
 
-@_silgen_name("$s9ThermoApp20installStandardMenusyyF")
-@MainActor func fixtureStandardMenus() {}
 
 func ownTapCount() -> Int {
     var count: UInt32 = 0

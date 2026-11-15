@@ -1,5 +1,6 @@
+import ThermoUI
 // Read-only production process view for an explicitly selected root process.
-@testable import ThermoApp
+@testable import PerformanceFeature
 import AgentCore
 import AppKit
 import SwiftUI
@@ -23,7 +24,7 @@ import ThermoL10n
         let window = NSWindow(contentRect: NSRect(x: 0,y: 0,width: 640,height: 560),
                               styleMask: [.titled,.closable,.resizable], backing: .buffered, defer: false)
         window.title = "Thermo System Process QA"; window.isReleasedWhenClosed = false
-        window.contentView = NSHostingView(rootView: ProcessExplanationView(target: .init(identity: identity)).preferredColorScheme(.dark))
+        window.contentView = NSHostingView(rootView: ProcessExplanationView(target:.init(identity: identity),makeModel:{ProcessExplanationModel()}).preferredColorScheme(.dark))
         window.center(); window.makeKeyAndOrderFront(nil); app.activate(ignoringOtherApps: true)
         DispatchQueue.main.asyncAfter(deadline: .now()+90) { app.terminate(nil) }
         withExtendedLifetime(window) { app.run() }

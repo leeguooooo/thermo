@@ -5,7 +5,7 @@ import ThermoL10n
 
 package enum ConnectionsFeature {
     package static func registration()->NativeFeatureDefinition {
-        .init(manifest:BuiltinModuleManifests.connections,makeSession:{ConnectionsSession(availability:$0)})
+        .init(manifest:BuiltinModuleManifests.connections,ui:.init(sidebarLocations:[.machine]),resolveLegacyPage:{argument in argument=="connections" ? .init(BuiltinModuleManifests.connections.id,"home"):nil},makeSession:{ConnectionsSession(availability:$0)})
     }
 }
 @MainActor final class ConnectionsSession:NativeFeatureSession {
@@ -14,6 +14,10 @@ package enum ConnectionsFeature {
     private var storedModel:ConnectionsModel?
     init(availability:FeatureAvailability,makeModel:@escaping @MainActor (@escaping ()->Bool)->ConnectionsModel = {ConnectionsModel(enabled:$0)}) {
         self.availability=availability;self.makeModel=makeModel
+    }
+    func ui(_ surface:NativeUISurface,navigation:NativeNavigation)->AnyView? {
+        guard availability.acceptsWork,case let .sidebar(location,_,rows)=surface,location == .machine else{return nil}
+        return AnyView(rows(.init(route:.init(BuiltinModuleManifests.connections.id,"home"),tint:.blue)))
     }
     func page(_ route:NativeFeatureRoute,navigation:NativeNavigation)->AnyView? {
         let entry=route.entry

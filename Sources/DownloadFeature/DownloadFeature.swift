@@ -9,7 +9,7 @@ import ThermoL10n
 }
 package enum DownloadFeature {
     package static func registration(presentation: @escaping @MainActor @Sendable () -> any DownloadPresentation) -> NativeFeatureDefinition {
-        .init(manifest: BuiltinModuleManifests.download, makeSession: { DownloadSession(availability:$0,presentation:presentation()) })
+        .init(manifest: BuiltinModuleManifests.download,runsInBackground:true,ui:.init(sidebarLocations:[.software]), resolveLegacyPage:{argument in argument=="yunx" || argument.hasPrefix("yunx:") ? .init(BuiltinModuleManifests.download.id,"home"):nil},makeSession: { DownloadSession(availability:$0,presentation:presentation()) })
     }
 }
 @MainActor final class DownloadSession: NativeFeatureSession {
@@ -55,6 +55,10 @@ package enum DownloadFeature {
         setup.work.runOnMain{[weak setup] in await setup?.offerOnLaunch()}
     }
     func shutdown() {storedPrompt?.stop();storedModel?.shutdown();storedSetup?.stopFeature()}
+    func ui(_ surface:NativeUISurface,navigation:NativeNavigation)->AnyView? {
+        guard availability.acceptsWork,case let .sidebar(location,_,rows)=surface,location == .software else{return nil}
+        return AnyView(rows(.init(route:.init(BuiltinModuleManifests.download.id,"home"),tint:.blue)))
+    }
     func page(_ route:NativeFeatureRoute,navigation:NativeNavigation)->AnyView? {
         let entry=route.entry
         guard availability.acceptsWork,entry=="home" else{return nil}

@@ -87,8 +87,10 @@ def problems(package, complete=False, source_root=None):
                         errors.append(f"{name} imports undeclared target {imported} in {file.relative_to(root)}")
                     if complete and name in {"ThermoApp", "ThermoShell", "ThermoKernel"} and imported in features:
                         errors.append(f"{name} must not import feature implementation {imported}")
+                    if complete and name == "ThermoApp" and imported != "ThermoComposition":
+                        errors.append(f"ThermoApp must import only ThermoComposition, not {imported}")
                 if complete and name == "ThermoComposition":
-                    exported = set(re.findall(r'@_exported\s+import\s+(\w+)', source_code(text))) & features
+                    exported = set(re.findall(r'@_exported\s+import\s+(\w+)', source_code(text))) & graph.keys()
                     for imported in sorted(exported):
                         errors.append(f"ThermoComposition must not re-export {imported}")
     if complete:
