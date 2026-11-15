@@ -37,6 +37,7 @@ package struct NativeMenuEntry: Identifiable, Sendable {
     package let title:String
     package let symbol:String
     package let shortcut:String
+    package let hasContent:Bool
     package var id:NativeUIEntryRef {ref}
 }
 package struct NativeRouteError: Error, LocalizedError {
@@ -58,6 +59,7 @@ package struct NativeFeatureCatalog: Sendable {
             if !definition.ui.sidebarLocations.isEmpty || definition.ui.hasBackdrop {
                 guard definition.manifest.entries.contains(where:{$0.kind == .page}) else{throw NativeRouteError("Native sidebar and backdrop contributions require declared pages.")}
             }
+            if definition.ui.hasMenuContent && !definition.manifest.entries.contains(where:{$0.kind == .menuBarItem}) {throw NativeRouteError("Native menu content requires a declared menu entry.")}
             let contracts=definition.pageContracts
             guard Set(contracts.map(\.entry)).count == contracts.count else {throw NativeRouteError("Duplicate native page contract.")}
             for contract in contracts {
@@ -125,7 +127,7 @@ package struct NativeFeatureCatalog: Sendable {
         order.flatMap {id in
             guard let definition=definitions[id] else{return [NativeMenuEntry]()}
             return definition.manifest.entries.filter{$0.kind == .menuBarItem}.map {
-                NativeMenuEntry(ref:.init(id,$0.id),title:$0.title,symbol:$0.symbol ?? definition.manifest.symbol,shortcut:definition.menuShortcuts[$0.id] ?? "")
+                NativeMenuEntry(ref:.init(id,$0.id),title:$0.title,symbol:$0.symbol ?? definition.manifest.symbol,shortcut:definition.menuShortcuts[$0.id] ?? "",hasContent:definition.ui.hasMenuContent)
             }
         }
     }

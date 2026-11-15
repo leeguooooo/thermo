@@ -94,6 +94,14 @@ import SwiftUI
         }
         return .init(sidebar:groups,overlay:AnyView(NativeOverlays(parts:overlays)),backdrop:backdrop)
     }
+    /// Hierarchical menu content is declared separately so leaf menu metadata stays model-cold.
+    package func menuContent(_ ref:NativeUIEntryRef)->NativeMenuContent? {
+        guard let definition=catalog.definitions[ref.module],definition.ui.hasMenuContent,
+              definition.manifest.entries.contains(where:{$0.id==ref.entry && $0.kind == .menuBarItem}),
+              let session=admittedSession(ref.module),case let .live(live)=states[ref.module],
+              let content=session.menuContent(ref) else{return nil}
+        return content.scoped(to:live.availability,generation:live.generation)
+    }
     /// Inline UI is admitted only for an exact declared settings entry.
     package func inlineSettings(_ ref:NativeUIEntryRef)->AnyView? {
         guard catalog.definitions[ref.module]?.manifest.entries.contains(where:{$0.id==ref.entry && $0.kind == .settingsItem}) == true,

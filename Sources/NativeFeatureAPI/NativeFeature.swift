@@ -39,6 +39,7 @@ package struct NativeFeatureBusy:Error,LocalizedError,CustomStringConvertible {
 }
 /// Native feature implementations own models; callers see only UI and lifecycle contributions.
 @MainActor package protocol NativeFeatureSession:AnyObject {
+    func menuContent(_ ref:NativeUIEntryRef)->NativeMenuContent?
     func ui(_ surface:NativeUISurface,navigation:NativeNavigation)->AnyView?
     func page(_ route:NativeFeatureRoute,navigation:NativeNavigation)->AnyView?
     var status:NativeFeatureStatus {get}
@@ -68,6 +69,7 @@ package struct NativeFeatureDefinition:Sendable {
 }
 
 extension NativeFeatureSession {
+    package func menuContent(_ ref:NativeUIEntryRef)->NativeMenuContent?{nil}
     package func ui(_ surface:NativeUISurface,navigation:NativeNavigation)->AnyView?{nil}
     package func invalidateAfterRestore(_ paths:[String]) {}
     package func start() {}
