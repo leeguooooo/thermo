@@ -47,9 +47,15 @@ struct PerformanceNavigation: Sendable {
         _ = native.show(.init(route:.init(BuiltinModuleManifests.browser.id,"home",context:["app":.text(hog.name)]),options:options))
     }
 }
+struct PerformanceInspectionFactory: Sendable {
+    let make: @MainActor @Sendable () -> ProcessExplanationModel
+    static let unavailable = PerformanceInspectionFactory(make: { ProcessExplanationModel(available: { false }) })
+}
+private enum PerformanceInspectionKey: EnvironmentKey { static let defaultValue = PerformanceInspectionFactory.unavailable }
 private enum PerformanceOperationsKey: EnvironmentKey { static let defaultValue = PerformanceOperations.unavailable }
 private enum PerformanceNavigationKey: EnvironmentKey { static let defaultValue = PerformanceNavigation.unavailable }
 extension EnvironmentValues {
+    var performanceInspections: PerformanceInspectionFactory { get { self[PerformanceInspectionKey.self] } set { self[PerformanceInspectionKey.self] = newValue } }
     var performanceOperations: PerformanceOperations { get { self[PerformanceOperationsKey.self] } set { self[PerformanceOperationsKey.self] = newValue } }
     var performanceNavigation: PerformanceNavigation { get { self[PerformanceNavigationKey.self] } set { self[PerformanceNavigationKey.self] = newValue } }
 }
