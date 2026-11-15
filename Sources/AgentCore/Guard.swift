@@ -68,6 +68,21 @@ public struct Guard: Sendable {
         return refusal(Self.deletionLocation(p), home: canonicalHome, protected: canonicalProtected, sealed: canonicalSealed)
     }
 
+    /// Reading may inspect ordinary folders but never private data or agent memory.
+    /// Structural deletion guards (for example the Caches root itself) are not read bans.
+    public func readingRefusal(_ path:String)->String? {
+        guard path.hasPrefix("/"),!path.split(separator:"/").contains(where:{$0==".." || $0=="."}) else{return "relative path"}
+        let p=URL(fileURLWithPath:path).standardizedFileURL.path
+        if let why=sensitiveRefusal(p,sealed:sealed){return why}
+        return sensitiveRefusal(URL(fileURLWithPath:p).resolvingSymlinksInPath().path,sealed:canonicalSealed)
+    }
+    private func sensitiveRefusal(_ p:String,sealed:[String])->String? {
+        if let root=sealed.first(where:{p==$0 || p.hasPrefix($0+"/")}){return "inside protected location "+AgentHome(home:home).tilde(root)}
+        if p.contains("/.claude/projects/"),p.split(separator:"/").contains("memory"){return "Claude memory"}
+        if p.hasSuffix("/.git") || p.contains("/.git/"){return "git metadata"}
+        return nil
+    }
+
     private func refusal(_ p: String, home: String, protected: [String], sealed: [String]) -> String? {
         if let root = cloneRoots.first(where: { p.hasPrefix($0 + "/") }) {
             let parts = p.dropFirst(root.count + 1).split(separator: "/")
