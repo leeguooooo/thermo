@@ -365,15 +365,16 @@ struct PopoverView: View {
             HStack(spacing: 6) {
                 PanelButton(title: tr("Open Console"), symbol: "macwindow", prominent: true) { MainWindow.show(.overview) }
                 Spacer(minLength: 0)
-                if modules.isOn(CaptureModule.manifest.id) {
-                    Menu { CaptureMenuItems() } label: { Image(systemName: "viewfinder").frame(width: 22) }
-                    .menuStyle(.borderlessButton).fixedSize().help(tr("Screenshots and pins"))
-                }
                 ModulePanelLinks()
                 shortcut("stethoscope", tr("AI Agent Diagnostics"), .native(.init(BuiltinModuleManifests.agents.id,"home")))
                 ForEach(BuiltinNativeFeatures.catalog.menuEntries.filter{modules.isOn($0.ref.module)}) {entry in
-                    Button {AppModels.shared.nativeFeatures.activate(entry.ref)} label: {Image(systemName:entry.symbol).frame(width:22)}
-                        .buttonStyle(.plain).foregroundStyle(Theme.textSecondary).help(tr(entry.title))
+                    if entry.hasContent {
+                        Menu{NativeFeatureMenuView(ref:entry.ref,placement:.popover)} label:{Image(systemName:entry.symbol).frame(width:22)}
+                            .menuStyle(.borderlessButton).fixedSize().help(tr(entry.title))
+                    } else {
+                        Button{AppModels.shared.nativeFeatures.activate(entry.ref)} label:{Image(systemName:entry.symbol).frame(width:22)}
+                            .buttonStyle(.plain).foregroundStyle(Theme.textSecondary).help(tr(entry.title))
+                    }
                 }
                 shortcut("clock.arrow.circlepath", tr("History"), .module(BuiltinModuleManifests.history.id,"home"))
                 // An icon like its neighbours: with a text button the English row overflowed the 372 pt panel.

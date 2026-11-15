@@ -31,16 +31,23 @@ import SwiftUI
     package convenience init(definitions:[NativeFeatureDefinition],enabled:@escaping (String)->Bool,navigation:NativeNavigation = .unavailable) {
         self.init(catalog:try! NativeFeatureCatalog(definitions:definitions),enabled:enabled,navigation:navigation)
     }
-    package func canPresent(_ route:NativeFeatureRoute)->Bool {
-        guard (try? catalog.normalize(route)) != nil,enabled(route.module) else{return false}
-        switch states[route.module] {
+    private func acceptsWork(_ id:String)->Bool {
+        guard enabled(id),catalog.definitions[id] != nil else{return false}
+        switch states[id] {
         case .draining:return false
         case let .live(live):return live.availability.acceptsWork
         case nil:return true
         }
     }
+    package func canPresent(_ route:NativeFeatureRoute)->Bool {
+        (try? catalog.normalize(route)) != nil && acceptsWork(route.module)
+    }
+    /// Policy-only probe: validation/dry-run may inspect admission without constructing a session.
+    package func canAdmitUIEntryOwner(_ ref:NativeUIEntryRef)->Bool {
+        catalog.accepts(ref) && acceptsWork(ref.module)
+    }
     private func admittedSession(_ id:String)->(any NativeFeatureSession)? {
-        guard enabled(id),let definition=catalog.definitions[id] else{return nil}
+        guard acceptsWork(id),let definition=catalog.definitions[id] else{return nil}
         switch states[id] {
         case .draining:return nil
         case let .live(live):return live.availability.acceptsWork ? live.session:nil
@@ -87,6 +94,14 @@ import SwiftUI
         }
         return .init(sidebar:groups,overlay:AnyView(NativeOverlays(parts:overlays)),backdrop:backdrop)
     }
+    /// Hierarchical menu content is declared separately so leaf menu metadata stays model-cold.
+    package func menuContent(_ ref:NativeUIEntryRef)->NativeMenuContent? {
+        guard let definition=catalog.definitions[ref.module],definition.ui.hasMenuContent,
+              definition.manifest.entries.contains(where:{$0.id==ref.entry && $0.kind == .menuBarItem}),
+              let session=admittedSession(ref.module),case let .live(live)=states[ref.module],
+              let content=session.menuContent(ref) else{return nil}
+        return content.scoped(to:live.availability,generation:live.generation)
+    }
     /// Inline UI is admitted only for an exact declared settings entry.
     package func inlineSettings(_ ref:NativeUIEntryRef)->AnyView? {
         guard catalog.definitions[ref.module]?.manifest.entries.contains(where:{$0.id==ref.entry && $0.kind == .settingsItem}) == true,
@@ -103,7 +118,7 @@ import SwiftUI
     }
     /// Inert checked owner admission for an existing UI-related system operation. Returns no model.
     package func admitUIEntryOwner(_ ref:NativeUIEntryRef)->Bool {
-        guard catalog.accepts(ref) else{return false}
+        guard canAdmitUIEntryOwner(ref) else{return false}
         return admittedSession(ref.module) != nil
     }
     /// Explicit background contribution; metadata/status/quit queries remain cold.
@@ -189,6 +204,22 @@ import SwiftUI
             }
         }
         return nil
+    }
+    /// Exit probes never admit a cold feature. A deferred decision retains its exact origin.
+    package func prepareTermination()->NativeTerminationDecision {
+        for id in catalog.order {
+            let session:any NativeFeatureSession
+            switch states[id] {
+            case let .live(live):session=live.session
+            case let .draining(pending):session=pending.live.session
+            case nil:continue
+            }
+            switch session.prepareTermination() {
+            case .allow:continue
+            case let decision:return decision
+            }
+        }
+        return .allow
     }
     /// Refusal happens before availability is revoked. An accepted drain is idempotent and
     /// keeps the old generation fenced even when the caller has not yet persisted the switch.

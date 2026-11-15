@@ -39,11 +39,13 @@ package struct NativeFeatureBusy:Error,LocalizedError,CustomStringConvertible {
 }
 /// Native feature implementations own models; callers see only UI and lifecycle contributions.
 @MainActor package protocol NativeFeatureSession:AnyObject {
+    func menuContent(_ ref:NativeUIEntryRef)->NativeMenuContent?
     func ui(_ surface:NativeUISurface,navigation:NativeNavigation)->AnyView?
     func page(_ route:NativeFeatureRoute,navigation:NativeNavigation)->AnyView?
     var status:NativeFeatureStatus {get}
     func start()
     func shutdown()
+    func prepareTermination()->NativeTerminationDecision
     func invalidateAfterRestore(_ paths:[String])
     func retireVisibility()
     func quitBlocker()->NativeFeatureBlocker?
@@ -67,10 +69,12 @@ package struct NativeFeatureDefinition:Sendable {
 }
 
 extension NativeFeatureSession {
+    package func menuContent(_ ref:NativeUIEntryRef)->NativeMenuContent?{nil}
     package func ui(_ surface:NativeUISurface,navigation:NativeNavigation)->AnyView?{nil}
     package func invalidateAfterRestore(_ paths:[String]) {}
     package func start() {}
     package func shutdown() {}
+    package func prepareTermination()->NativeTerminationDecision{.allow}
     package func preparePresentation(_ route:NativeFeatureRoute,options:[String:NativeContextValue]) {}
     package func prepareReview(_ route:NativeFeatureRoute,arguments:[String]) {}
     package func snapshotReady(_ route:NativeFeatureRoute,arguments:[String],started:Date)->Bool {status.snapshotReady}

@@ -9,8 +9,9 @@ package struct NativeUIContributions:Sendable {
     package let sidebarLocations:Set<NativeSidebarLocation>
     package let hasOverlay:Bool
     package let hasBackdrop:Bool
-    package init(sidebarLocations:Set<NativeSidebarLocation> = [],hasOverlay:Bool = false,hasBackdrop:Bool = false) {
-        self.sidebarLocations=sidebarLocations;self.hasOverlay=hasOverlay;self.hasBackdrop=hasBackdrop
+    package let hasMenuContent:Bool
+    package init(sidebarLocations:Set<NativeSidebarLocation> = [],hasOverlay:Bool = false,hasBackdrop:Bool = false,hasMenuContent:Bool = false) {
+        self.sidebarLocations=sidebarLocations;self.hasOverlay=hasOverlay;self.hasBackdrop=hasBackdrop;self.hasMenuContent=hasMenuContent
     }
     package static let none=NativeUIContributions()
 }

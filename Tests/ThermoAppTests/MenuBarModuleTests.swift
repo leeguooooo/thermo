@@ -86,9 +86,9 @@ import MenuBarCore
     }
     func testModuleOffHidesManagementEntryButKeepsEmergencyRecovery() {
         let context=StatusMenuLayout.RuntimeContext(menuBarEnabled:false,hasBattery:true,keepAwakeActive:false,focusTimerActive:false,
-            configuredCaptureEntriesAppear:false,menuBarQuickControlsAppear:true,updatesCanCheck:true,
+            menuBarQuickControlsAppear:true,updatesCanCheck:true,
             moreToolsActiveStates:.init(cleanScreenActive:false,lowLatencyActive:false,batteryProtectionActive:false))
-        let layout=StatusMenuLayout.make(context:context,captureShortcutSuffix:"",pinShortcutSuffix:"",configuredCaptureEntries:[])
+        let layout=StatusMenuLayout.make(context:context)
         XCTAssertFalse(layout.productItems.contains {if case .manageMenuBar=$0{return true};return false})
         XCTAssertFalse(layout.retainedExtras.quickControls.isEmpty)
     }

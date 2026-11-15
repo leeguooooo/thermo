@@ -40,9 +40,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate, UNU
     var reopenFeatureSelection: @MainActor () -> Bool = { FeatureSelectionWindow.reopenIfPresented() }
     var showMainWindow: @MainActor () -> Void = { MainWindow.show() }
 
+    private let nativeTermination=NativeTerminationCoordinator()
     func applicationShouldTerminate(_ sender: NSApplication) -> NSApplication.TerminateReply {
         if featureLaunch.isSelecting { return .terminateNow }
-        return CaptureWorkspace.shared.terminationReply(AppExitGuard.reply())
+        return nativeTermination.reply(after:AppExitGuard.reply(),features:AppModels.shared.nativeFeatures)
     }
 
     func applicationDidFinishLaunching(_ notification: Notification) {
@@ -183,19 +184,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate, UNU
         main.addItem(appItem)
         let appMenu = NSMenu()
         appMenu.addItem(withTitle: tr("Open Console"), action: #selector(openFromMenu), keyEquivalent: "o").target = self
-        appMenu.addItem(withTitle: tr("Capture screen…"), action: #selector(captureFromMenu), keyEquivalent: "").target = self
-        appMenu.addItem(withTitle: tr("Pin clipboard"), action: #selector(pinFromMenu), keyEquivalent: "").target = self
-        appMenu.addItem(withTitle: tr("Open image…"), action: #selector(openImageFromMenu), keyEquivalent: "").target = self
-        appMenu.addItem(withTitle: tr("Scrolling capture…"), action: #selector(scrollCaptureFromMenu), keyEquivalent: "").target = self
-        appMenu.addItem(withTitle: tr("Record screen…"), action: #selector(recordScreenFromMenu), keyEquivalent: "").target = self
-        appMenu.addItem(withTitle: tr("Recording drafts…"), action: #selector(recordingDraftsFromMenu), keyEquivalent: "").target = self
-        for item in appMenu.items.suffix(6) { item.representedObject = CaptureModule.manifest.id }
         appMenu.delegate = self
         menuNeedsUpdate(appMenu)
         let panelItem = appMenu.addItem(withTitle: tr("Open Menu Panel"), action: #selector(openPanelFromMenu), keyEquivalent: "p")
         panelItem.target = self
         panelItem.keyEquivalentModifierMask = [.command, .shift]
-        NativeMenuItems.append(to:appMenu,entries:BuiltinNativeFeatures.catalog.menuEntries,target:self,action:#selector(activateNativeMenu(_:)),enabled:ModuleCenter.shared.isOn)
+        NativeMenuItems.append(to:appMenu,entries:BuiltinNativeFeatures.catalog.menuEntries,target:self,action:#selector(activateNativeMenu(_:)),enabled:ModuleCenter.shared.isOn,content:AppModels.shared.nativeFeatures.menuContent)
         appMenu.addItem(.separator())
         appMenu.addItem(withTitle: tr("Hide Thermo"), action: #selector(NSApplication.hide(_:)), keyEquivalent: "h")
         appMenu.addItem(withTitle: tr("Quit Thermo"), action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q")
@@ -205,6 +199,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate, UNU
     }
 
     func menuNeedsUpdate(_ menu: NSMenu) {
+        NativeMenuItems.refreshContent(in:menu)
         NativeMenuItems.updateVisibility(in:menu,enabled:ModuleCenter.shared.isOn)
         for item in menu.items {
             if let id = item.representedObject as? String, BuiltinModules.manifest(id) != nil {
@@ -212,12 +207,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate, UNU
             }
         }
     }
-    @objc private func captureFromMenu() { CaptureWorkspace.shared.capture() }
-    @objc private func pinFromMenu() { CaptureWorkspace.shared.pinClipboard() }
-    @objc private func openImageFromMenu() { CaptureWorkspace.shared.importImage() }
-    @objc private func scrollCaptureFromMenu() { CaptureWorkspace.shared.captureScrolling() }
-    @objc private func recordScreenFromMenu() { CaptureWorkspace.shared.recordScreen() }
-    @objc private func recordingDraftsFromMenu() { CaptureWorkspace.shared.recordScreen(draftsOnly:true) }
 
     @objc private func activateNativeMenu(_ sender:NSMenuItem) {
         guard let ref=sender.representedObject as? NativeUIEntryRef else{return}
@@ -329,8 +318,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate, UNU
         if featureLaunch.isSelecting { return }
         MenuBarManager.shared.shutdown()
         AppModels.shared.nativeFeatures.shutdown(BuiltinModuleManifests.search.id)
-        CaptureCLIHost.shared.cancelActive()
-        CaptureWorkspace.shared.shutdown()
+        CaptureControlBridge.cancelActive()
+        AppModels.shared.nativeFeatures.shutdown(BuiltinModuleManifests.capture.id)
         AppModels.shared.nativeFeatures.shutdown(BuiltinModuleManifests.download.id)
         // Fan policies live in the helper and intentionally survive the app quitting.
     }
@@ -442,7 +431,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate, UNU
     monitor.popoverOpen = true
     DispatchQueue.main.asyncAfter(deadline: .now() + 4) {
         // The capture menu as a plain list (Buttons as rows, Dividers as rules), for reviewing its wording and groups.
-        let m = ImageRenderer(content: VStack(alignment: .leading, spacing: 6) { CaptureMenuItems() }
+        let m = ImageRenderer(content: VStack(alignment:.leading,spacing:6){NativeFeatureMenuView(ref:.init(BuiltinModuleManifests.capture.id,"tools"),placement:.review)}
             .buttonStyle(.plain).padding(16).frame(width: 300, alignment: .leading).background(Color(nsColor: .windowBackgroundColor)))
         m.scale = 2
         if let img = m.cgImage {
