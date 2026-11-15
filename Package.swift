@@ -71,7 +71,7 @@ let package = Package(
         // The contract between the kernel and feature modules: manifest, capabilities, XPC protocols. No dependencies.
         .target(name: "ModuleKit"),
         .target(name: "NativeFeatureAPI", dependencies: ["ModuleKit"]),
-        .target(name: "ModuleKernelCore", dependencies: ["ModuleHost", "ModuleKit", "AgentCore", "CleanKit", "ThermoL10n"]),
+        .target(name: "ModuleKernelCore", dependencies: ["ModuleHost", "ModuleKit", "AgentCore", "CleanKit", "ThermoUI", "ThermoL10n"]),
         .executableTarget(name: "PermissionUIHarness", dependencies: ["ModuleKernelCore", "ModuleKit", "AgentCore", "CleanKit", "ThermoL10n"]),
         .target(name: "LocalAIUI", dependencies: ["NativeFeatureAPI", "ThermoUI", "ThermoL10n", "CleanKit"]),
         .target(name: "ClaudeFeature", dependencies: ["NativeFeatureAPI", "ThermoUI", "ThermoL10n", "ModuleKit", "CleanKit", "AgentDoctor"]),

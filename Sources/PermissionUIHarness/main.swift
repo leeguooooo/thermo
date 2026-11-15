@@ -2,15 +2,31 @@ import AgentCore
 import AppKit
 import CleanKit
 import Foundation
+import SwiftUI
 import ModuleKernelCore
 import ModuleKit
 import ThermoL10n
 
 /// An owned-fixture UI acceptance host. It uses production broker, rules, confirmation and undo.
 @MainActor final class PermissionQA:NSObject,NSApplicationDelegate {
+    private var window:NSWindow?
     func applicationDidFinishLaunching(_ notification:Notification) {
         L10n.override = .simplifiedChinese
+        if let path=Bundle.main.object(forInfoDictionaryKey:"ThermoQAActivityFixture") as? String {
+            let root=URL(fileURLWithPath:path)
+            guard path.hasPrefix(NSHomeDirectory()+"/Library/Caches/Thermo-permission-QA-"),
+                  (try? String(contentsOf:root.appendingPathComponent(".owner"),encoding:.utf8))=="Owned Thermo permission UI QA\n" else {NSApp.terminate(nil);return}
+            showActivity(root);return
+        }
         Task {await run()}
+    }
+    private func showActivity(_ root:URL) {
+        let log=ModuleAccessLog(home:root.appendingPathComponent("logs").path)
+        let ids=["com.example.thermo-permission-qa.cancel","com.example.thermo-permission-qa.allow"]
+        let window=NSWindow(contentRect:NSRect(x:0,y:0,width:560,height:440),styleMask:[.titled,.closable],backing:.buffered,defer:false)
+        window.title="Thermo 模块活动 QA";window.isReleasedWhenClosed=false
+        window.contentView=NSHostingView(rootView:ModuleActivityPanel(name:"Thermo QA",load:{log.summary(modules:ids)},close:{NSApp.terminate(nil)}))
+        self.window=window;window.center();window.makeKeyAndOrderFront(nil);NSApp.activate(ignoringOtherApps:true)
     }
     private func run() async {
         var checks:[String:Any]=[:]
@@ -45,8 +61,7 @@ import ThermoL10n
         checks["fixtureRoot"]=root.path
         checks["sourceCommit"]=Bundle.main.object(forInfoDictionaryKey:"ThermoSourceCommit") as? String ?? "unknown"
         try? JSONSerialization.data(withJSONObject:checks,options:[.sortedKeys,.prettyPrinted]).write(to:result)
-        let done=NSAlert();done.messageText="Thermo 权限 QA 已结束";done.informativeText=result.path;done.addButton(withTitle:"完成");done.runModal()
-        NSApp.terminate(nil)
+        showActivity(root)
     }
 }
 MainActor.assumeIsolated {
