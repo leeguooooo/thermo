@@ -4,7 +4,6 @@ import SwiftUI
 /// ModuleCenter remains the one authority for persisted preferences and external CLI admission.
 @MainActor package final class NativeFeatureStore {
     private struct Live {
-        let generation:UUID
         let availability:FeatureAvailability
         let session:any NativeFeatureSession
     }
@@ -39,7 +38,7 @@ import SwiftUI
         case nil:
             let availability=FeatureAvailability { [weak self] in self?.enabled(id) ?? false }
             let session=definition.makeSession(availability)
-            states[id] = .live(.init(generation:UUID(),availability:availability,session:session))
+            states[id] = .live(.init(availability:availability,session:session))
             return session
         }
     }
