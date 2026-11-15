@@ -16,7 +16,6 @@ func captureFailureMessage(_ error:Error) -> String {
 }
 
 @MainActor final class CaptureWorkspace: ObservableObject {
-    static let shared = CaptureWorkspace(featureEnabled: { ModuleCenter.shared.isOn(BuiltinModuleManifests.capture.id) })
     @Published var issue: String?
     @Published var capturing = false
     @Published var pinCount = 0
@@ -86,16 +85,16 @@ func captureFailureMessage(_ error:Error) -> String {
     func stopFeature() throws {
         guard !nativeScriptBusy,!captureBusy,!scriptRunning,!shortcuts.scriptRunning,!recordingActive,
               !pinSession.batchExport.running,!pinSession.windows.values.contains(where: { $0.model.recognizing }) else {
-            throw BuiltinModules.StopRefused(description:tr("Finish the current capture, recording or export before switching this feature off."))
+            throw NativeFeatureBusy(tr("Finish the current capture, recording or export before switching this feature off."))
         }
         if #available(macOS 14, *), let scrolling=scrollWindow as? ScrollCaptureWindow, scrolling.captureRunning {
-            throw BuiltinModules.StopRefused(description:tr("Finish the current capture, recording or export before switching this feature off."))
+            throw NativeFeatureBusy(tr("Finish the current capture, recording or export before switching this feature off."))
         }
         do {
             try pinSession.flushForQuit()
             try shortcuts.deactivate()
         } catch {
-            throw BuiltinModules.StopRefused(description:captureFailureMessage(error))
+            throw NativeFeatureBusy(captureFailureMessage(error))
         }
         pinSession.suspendWindows()
         savingWindow?.close();savingWindow=nil;actionsWindow?.close();actionsWindow=nil
@@ -259,10 +258,12 @@ func captureFailureMessage(_ error:Error) -> String {
     func captureScrolling() {
         guard allowUse() else { return }
         if #available(macOS 14, *) {
+            if let scrolling=scrollWindow as? ScrollCaptureWindow,scrolling.captureRunning || scrolling.window?.isVisible == true {scrolling.showWindow(nil);return}
             if let scrollWindow, scrollWindow.window?.isVisible == true { scrollWindow.showWindow(nil); return }
             selectRegion(confirmTitle: tr("Start scrolling capture")) { [weak self] region in
-                guard let self, let region else { return }
-                let window = ScrollCaptureWindow(region: region); self.scrollWindow = window; window.showWindow(nil)
+                guard let self,self.enabled,let region else{return}
+                if let scrolling=self.scrollWindow as? ScrollCaptureWindow,scrolling.captureRunning || scrolling.window?.isVisible == true{scrolling.showWindow(nil);return}
+                let window = ScrollCaptureWindow(region:region,open:{[weak self] in self?.open($0)}); self.scrollWindow = window; window.showWindow(nil)
             }
         } else { issue = tr("Scrolling capture requires macOS 14 or later."); showIssue() }
     }
@@ -276,7 +277,7 @@ func captureFailureMessage(_ error:Error) -> String {
             let window = CaptureRecordingWindow(region:nil); recordingWindow = window; window.showWindow(nil); return
         }
         selectRegion(confirmTitle: tr("Start recording")) { [weak self] region in
-            guard let self, let region else { return }
+            guard let self,self.enabled,let region else{return}
             let window = CaptureRecordingWindow(region:region); self.recordingWindow = window; window.showWindow(nil)
         }
     }
@@ -301,18 +302,21 @@ func captureFailureMessage(_ error:Error) -> String {
         selector.select { [weak self] region in self?.regionSelector = nil;completion(region) }
     }
     var recordingActive: Bool { recordingWindow?.model.active == true || recordingWindow?.model.exporting == true }
-    func terminationReply(_ previous:NSApplication.TerminateReply) -> NSApplication.TerminateReply {
-        guard previous == .terminateNow else { return previous }
+    func prepareTermination()->NativeTerminationDecision {
         if pinSession.batchExport.running {
-            pinSession.batchExport.noteQuitBlocked();pinSession.showLibrary();return .terminateCancel
+            pinSession.batchExport.noteQuitBlocked();pinSession.showLibrary();return .cancel
         }
         if afterTask != nil || saving.running {
-            saving.issue=tr("Wait for the capture action chain to finish before quitting.");showSavingSettings();return .terminateCancel
+            saving.issue=tr("Wait for the capture action chain to finish before quitting.");showSavingSettings();return .cancel
         }
-        do { try pinSession.flushForQuit() } catch { report(error);return .terminateCancel }
-        guard recordingActive else { return previous }
-        Task { NSApp.reply(toApplicationShouldTerminate:await finishRecordingForQuit()) }
-        return .terminateLater
+        do{try pinSession.flushForQuit()}catch{report(error);return .cancel}
+        guard recordingActive else{return .allow}
+        return .deferred(NativeTerminationTicket{await self.finishRecordingForQuit()})
+    }
+    func finishFeatureStop() async {
+        await afterTask?.value
+        await nativeScriptWork.finish()
+        if #available(macOS 14,*),let scrolling=scrollWindow as? ScrollCaptureWindow{await scrolling.finishStopping()}
     }
     func finishRecordingForQuit() async -> Bool {
         guard let model = recordingWindow?.model else { return true }

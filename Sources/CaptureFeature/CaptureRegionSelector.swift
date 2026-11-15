@@ -186,20 +186,22 @@ import ThermoL10n
 @MainActor final class ScrollCaptureWindow: NSWindowController, NSWindowDelegate {
     private let model: ScrollCaptureModel
     var captureRunning: Bool { model.running }
-    init(region: CaptureRegionSelector.Region) {
-        model = ScrollCaptureModel(region: region)
+    init(region:CaptureRegionSelector.Region,open:@escaping(CGImage)->Void) {
+        model = ScrollCaptureModel(region:region)
         let panel = NSPanel(contentRect: NSRect(x: 0,y: 0,width: 340,height: 480), styleMask: [.titled,.closable,.resizable], backing: .buffered, defer: false)
         panel.title = tr("Scrolling capture"); panel.level = .floating; panel.isReleasedWhenClosed = false; panel.center()
         super.init(window: panel); panel.delegate = self
-        panel.contentView = NSHostingView(rootView: ScrollCaptureView(model: model))
+        panel.contentView = NSHostingView(rootView: ScrollCaptureView(model:model,open:open))
     }
     required init?(coder: NSCoder) { fatalError("init(coder:) is not used") }
     func windowWillClose(_ notification: Notification) { model.stop() }
+    func finishStopping() async{await model.finishStopping()}
 }
 
 @available(macOS 14, *)
 private struct ScrollCaptureView: View {
     @ObservedObject var model: ScrollCaptureModel
+    let open:(CGImage)->Void
     var body: some View {
         VStack(spacing: 12) {
             Text(tr("Scroll the selected content slowly. Thermo windows are excluded.")).font(.callout)
@@ -225,7 +227,7 @@ private struct ScrollCaptureView: View {
             if let issue = model.issue { Text(issue).font(.caption).foregroundStyle(.orange) }
             HStack {
                 Button(tr(model.running ? "Stop" : "Start")) { model.running ? model.stop() : model.start() }
-                Button(tr("Edit / pin result")) { if let image = model.image { CaptureWorkspace.shared.open(image) } }.disabled(model.running || model.image == nil)
+                Button(tr("Edit / pin result")) { if let image = model.image { open(image) } }.disabled(model.running || model.image == nil)
             }
         }.padding(16).frame(minWidth: 260,minHeight: 320)
     }

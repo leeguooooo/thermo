@@ -4,7 +4,7 @@ import ThermoL10n
 
 struct CaptureConfiguredActionsMenu:View {
     @ObservedObject var model:CaptureShortcutModel
-    var onIssue:()->Void = { CaptureWorkspace.shared.showActionSettings() }
+    var onIssue:()->Void = {}
     var body:some View {
         if model.settings.entries.contains(where: { $0.appearsInMenu }) {
             Menu(tr("Configured capture actions")) {
