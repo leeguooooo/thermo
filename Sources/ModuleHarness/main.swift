@@ -7,7 +7,9 @@ import ModuleKit
 // never shipped. Prints one line per check and exits 0 only when all passed.
 
 setvbuf(stdout, nil, _IOLBF, 0)
-let a = "dev.thermo.probe.a", b = "dev.thermo.probe.b"
+let runTag=ProcessInfo.processInfo.environment["THERMO_HARNESS_RUN"]
+let probePrefix=runTag.map{"dev.thermo.probe-r"+$0} ?? "dev.thermo.probe"
+let a = probePrefix+".a", b = probePrefix+".b"
 var failures = 0
 func check(_ ok: Bool, _ what: String) { print((ok ? "ok    " : "FAIL  ") + what); if !ok { failures += 1 } }
 func note(_ what: String) { print("      " + what) }
@@ -25,12 +27,12 @@ func uptime() -> Double { ProcessInfo.processInfo.systemUptime }
     let timing = ModuleLifecycle.Timing(idleTimeout: 2, firstBackoff: 0.5, longestBackoff: 4, stableRun: 60)
     let manager = ModuleManager(timing: timing)
     // The kernel side of the probe's requests: real file services, a yes to every confirmation, a throwaway log.
-    let scratch = "/private/tmp/thermo-probe"
+    let scratch = runTag.map{"/private/tmp/thermo-probe-"+$0} ?? "/private/tmp/thermo-probe"
     try? FileManager.default.removeItem(atPath: scratch)
     for folder in ["/logs", "/open", "/bin"] { try? FileManager.default.createDirectory(atPath: scratch + folder, withIntermediateDirectories: true) }
     FileManager.default.createFile(atPath: scratch + "/open/note.txt", contents: Data("hello".utf8))
     FileManager.default.createFile(atPath: scratch + "/bin/old.txt", contents: Data("old".utf8))
-    let outside = NSHomeDirectory() + "/.thermo-probe-outside.txt"
+    let outside = runTag == nil ? NSHomeDirectory()+"/.thermo-probe-outside.txt":scratch+"/outside.txt"
     FileManager.default.createFile(atPath: outside, contents: Data("private".utf8))
     let log = ModuleAccessLog(home: scratch + "/logs")
     manager.kernel = { manifest in
