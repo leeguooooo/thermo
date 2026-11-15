@@ -1,3 +1,4 @@
+import Foundation
 import ModuleKit
 import SwiftUI
 
@@ -58,7 +59,7 @@ package enum NativeUISurface {
 }
 @MainActor struct NativeOverlayPart:Identifiable {
     let id:String
-    let generation:ObjectIdentifier
+    let generation:UUID
     let view:AnyView
 }
 @MainActor struct NativeOverlays:View {

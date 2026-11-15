@@ -4,6 +4,7 @@ import SwiftUI
 /// ModuleCenter remains the one authority for persisted preferences and external CLI admission.
 @MainActor package final class NativeFeatureStore {
     @MainActor private final class Live {
+        let generation=UUID()
         let availability:FeatureAvailability
         let session:any NativeFeatureSession
         var started=false, didShutdown=false
@@ -60,7 +61,7 @@ import SwiftUI
             let mounted=definition.ui.sidebarLocations.intersection(locations)
             guard !mounted.isEmpty || definition.ui.hasOverlay else{continue}
             guard let session=admittedSession(id),case let .live(live)=states[id] else{continue}
-            let availability=live.availability,navigation=scopedNavigation(id),generation=ObjectIdentifier(live)
+            let availability=live.availability,navigation=scopedNavigation(id),generation=live.generation
             for location in NativeSidebarLocation.allCases where mounted.contains(location) {
                 groups.append(.init(id:id+":"+location.rawValue,location:location,manifest:definition.manifest,mount:{host in
                     guard availability.acceptsWork else{return AnyView(EmptyView())}
@@ -81,7 +82,7 @@ import SwiftUI
         if let selected,catalog.definitions[selected.module]?.ui.hasBackdrop == true,
            let session=admittedSession(selected.module),case let .live(live)=states[selected.module],
            let view=session.ui(.backdrop(selected),navigation:scopedNavigation(selected.module)) {
-            backdrop=AnyView(view.id(ObjectIdentifier(live)))
+            backdrop=AnyView(view.id(live.generation))
         }
         return .init(sidebar:groups,overlay:AnyView(NativeOverlays(parts:overlays)),backdrop:backdrop)
     }

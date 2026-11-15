@@ -1,6 +1,6 @@
 import XCTest
 @testable import AgentDoctor
-@testable import ThermoApp
+@testable import AgentDiagnosticsFeature
 
 final class StructuredUsageSortTests: XCTestCase {
     func testAppInstructionSortUsesSharedKnownAndUnknownRules() throws {
