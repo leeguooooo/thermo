@@ -25,6 +25,17 @@ final class ModuleCLITests: XCTestCase {
         XCTAssertThrowsError(try ModuleCLI.commandLease(["watch"],defaults:defaults,home:home.path))
         XCTAssertTrue(try FileManager.default.contentsOfDirectory(atPath:home.path).isEmpty)
     }
+    func testClaudeToolsOffRefusesPrivacyResetAndRecoveryBeforeAnyServiceStarts() throws {
+        let name="thermo-claude-cli-"+UUID().uuidString,defaults=UserDefaults(suiteName:name)!
+        defer{defaults.removePersistentDomain(forName:name)}
+        defaults.set(false,forKey:ModulePreferences.key(BuiltinModuleManifests.claude.id))
+        for words in [["privacy","profiles"],["privacy","lookup"],["privacy","dns"],["claude-reset","list"],["claude-reset","restore","fixture"]] {
+            XCTAssertEqual(ModuleCLI.builtinManifest(words)?.id,BuiltinModuleManifests.claude.id)
+            XCTAssertThrowsError(try ModuleCLI.requireBuiltinFeature(words,defaults:defaults))
+        }
+        defaults.set(true,forKey:ModulePreferences.key(BuiltinModuleManifests.claude.id))
+        XCTAssertNoThrow(try ModuleCLI.requireBuiltinFeature(["privacy","profiles"],defaults:defaults))
+    }
     func testDisabledAgentDiagnosticsRefusesAllAliasesWithoutDisablingCleanup() throws {
         let name="thermo-agents-cli-"+UUID().uuidString,defaults=UserDefaults(suiteName:name)!
         defer{defaults.removePersistentDomain(forName:name)}

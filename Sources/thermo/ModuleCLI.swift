@@ -43,6 +43,7 @@ enum ModuleCLI {
         if root=="search" {return BuiltinModuleManifests.search}
         if root=="apps" || root=="app" {return BuiltinModuleManifests.apps}
         if root=="tabs" {return BuiltinModuleManifests.browser}
+        if root=="privacy" || root=="claude-reset" {return BuiltinModuleManifests.claude}
         if root=="history" {return BuiltinModuleManifests.history}
         if ["agents","agent","doctor"].contains(root) {return BuiltinModuleManifests.agents}
         if root=="space" {return BuiltinModuleManifests.space}
