@@ -26,7 +26,7 @@ package enum CheckupFeature {
     func page(_ route:NativeFeatureRoute,navigation:NativeNavigation)->AnyView? {
         let entry=route.entry
         guard availability.acceptsWork,entry=="home" else{return nil}
-        return AnyView(CheckupPage(reading:reading,open:navigate,model:model))
+        return AnyView(CheckupPage(reading:reading,open:{[availability,navigate] route in guard availability.acceptsWork else{return};navigate(route)},model:model))
     }
     var status:NativeFeatureStatus {.init(modelLoaded:storedModel != nil,snapshotReady:storedModel != nil)}
     func retireVisibility() {}

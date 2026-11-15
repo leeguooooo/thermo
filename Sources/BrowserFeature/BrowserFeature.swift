@@ -142,13 +142,15 @@ private struct BrowserRoot:View {
         return .task(.organize)
     }()
     var body:some View {
-        switch section {
+        Group {switch section {
         case .diagnostics:ChromePagesView(model:session.diagnostics(app),embedded:true,section:$section)
         case .task:
             VStack(spacing:0) {
                 BrowserHeader(section:$section,subtitle:tr("Group tabs without closing them, or save links and close tabs you are not using."))
                 TabWorkspaceView(model:session.workspace(app),archive:session.archive,task:Binding(get:{if case let .task(task)=section{return task};return .organize},set:{section = .task($0)}))
             }
+        }}.onReceive(NotificationCenter.default.publisher(for:BrowserArchiveState.notification,object:session.archive)) {_ in
+            if session.availability.acceptsWork,session.archive.requested,app=="Google Chrome" {section = .task(.archive)}
         }
     }
 }

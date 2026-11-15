@@ -22,7 +22,7 @@ package enum PluginsFeature {
         guard availability.acceptsWork,entry=="home" else{return nil}
         if storedModel==nil {let availability=availability;storedModel=makeModel{availability.acceptsWork}}
         guard let model=storedModel else{return nil}
-        return AnyView(PluginsPage(model:model,openDiagnostics:{[navigate] in navigate(.init(BuiltinModuleManifests.agents.id,"plugins"))}))
+        return AnyView(PluginsPage(model:model,openDiagnostics:{[availability,navigate] in guard availability.acceptsWork else{return};navigate(.init(BuiltinModuleManifests.agents.id,"plugins"))}))
     }
     var status:NativeFeatureStatus {.init(modelLoaded:storedModel != nil,snapshotReady:storedModel.map{$0.loaded && !$0.checkingUpdates} ?? false)}
     func retireVisibility() {}

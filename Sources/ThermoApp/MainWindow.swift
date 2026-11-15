@@ -1,4 +1,5 @@
 import ThermoUI
+import ModuleKit
 import NativeFeatureAPI
 import ModuleHost
 import AgentDoctor
