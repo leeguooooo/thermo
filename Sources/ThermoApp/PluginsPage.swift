@@ -1,3 +1,5 @@
+import ThermoUI
+import NativeFeatureAPI
 import AgentCore
 import AppKit
 import SwiftUI

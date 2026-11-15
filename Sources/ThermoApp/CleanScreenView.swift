@@ -1,3 +1,4 @@
+import ThermoUI
 import SwiftUI
 import ThermoL10n
 

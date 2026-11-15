@@ -1,3 +1,4 @@
+import ThermoUI
 @testable import ThermoApp
 @testable import CleanKit
 import Foundation

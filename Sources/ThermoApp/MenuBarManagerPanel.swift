@@ -1,3 +1,4 @@
+import ThermoUI
 import AppKit
 import MenuBarCore
 import SwiftUI

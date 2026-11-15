@@ -1,3 +1,5 @@
+import NativeFeatureAPI
+import ThermoUI
 import AgentCore
 import AppKit
 import CleanKit

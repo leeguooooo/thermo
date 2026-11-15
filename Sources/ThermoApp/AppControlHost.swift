@@ -1,3 +1,4 @@
+import ThermoUI
 import AgentCore
 import AppKit
 import Foundation

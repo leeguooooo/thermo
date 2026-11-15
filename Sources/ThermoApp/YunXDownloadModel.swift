@@ -1,3 +1,4 @@
+import NativeFeatureAPI
 import AVFoundation
 import AppKit
 import CloudDriveKit

@@ -1,3 +1,4 @@
+import ThermoUI
 import XCTest
 import Carbon
 import SearchCore

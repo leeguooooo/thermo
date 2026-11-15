@@ -1,3 +1,4 @@
+import NativeFeatureAPI
 import AgentDoctor
 import AppKit
 import SwiftUI
