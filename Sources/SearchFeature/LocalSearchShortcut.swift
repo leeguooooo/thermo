@@ -1,3 +1,4 @@
+import HotkeyCore
 import ThermoUI
 import AgentCore
 import AppKit
@@ -15,7 +16,6 @@ extension CleanScreenKeyBinding {
 }
 
 @MainActor final class LocalSearchShortcut: ObservableObject {
-    static let shared = LocalSearchShortcut(module: BuiltinModuleManifests.search)
     static let key = "dev.thermo.search.shortcut"
     static let commandSpace = CleanScreenKeyBinding(keyCode: 49, modifiers: UInt32(cmdKey), keyLabel: "Space")
     static let optionSpace = CleanScreenKeyBinding(keyCode: 49, modifiers: UInt32(optionKey), keyLabel: "Space")
@@ -54,7 +54,7 @@ extension CleanScreenKeyBinding {
         self.commandSpaceOfferDismissed = defaults.bool(forKey: Self.offerDismissedKey)
         self.backend = backend ?? CarbonCleanScreenHotkeys(validate: { $0.validForSearch }, shared: { $0.sameGesture(Self.commandSpace) })
         self.spotlight = spotlight ?? .system
-        self.action = action ?? { LocalSearchPanel.shared.toggle() }
+        self.action = action ?? {}
     }
     func activate() {
         guard featureOn, !active, !uncertain else { return }; active = true
@@ -177,24 +177,27 @@ extension CleanScreenKeyBinding {
 
 struct SearchShortcutRecorder: NSViewRepresentable {
     @ObservedObject var model: LocalSearchShortcut
-    func makeNSView(context: Context) -> Recorder { let view = Recorder(); view.model = model; return view }
+    var available:()->Bool = {true}
+    func makeNSView(context: Context) -> Recorder { let view = Recorder(); view.model = model;view.available=available; return view }
     func updateNSView(_ view: Recorder, context: Context) {
+        view.available=available
         view.title = model.recording ? tr("Press a shortcut; Esc cancels") : model.binding?.label ?? tr("Record shortcut…")
         view.setAccessibilityLabel(tr("Record global search shortcut"))
     }
     final class Recorder: NSButton {
         weak var model: LocalSearchShortcut?
+        var available:()->Bool = {true}
         override var acceptsFirstResponder: Bool { true }
         init() { super.init(frame: .zero); bezelStyle = .rounded; target = self; action = #selector(record) }
         required init?(coder: NSCoder) { fatalError("init(coder:) is not used") }
-        @objc func record() { model?.recording = true; window?.makeFirstResponder(self) }
+        @objc func record() { guard available() else{return};model?.recording = true; window?.makeFirstResponder(self) }
         override func resignFirstResponder() -> Bool { model?.recording = false; return super.resignFirstResponder() }
         override func performKeyEquivalent(with event: NSEvent) -> Bool {
             if model?.recording == true, event.type == .keyDown { keyDown(with: event); return true }
             return super.performKeyEquivalent(with: event)
         }
         override func keyDown(with event: NSEvent) {
-            guard model?.recording == true else { super.keyDown(with: event); return }
+            guard available(),model?.recording == true else { super.keyDown(with: event); return }
             if event.keyCode == 53 { model?.recording = false }
             else { model?.apply(.captured(event)) }
         }

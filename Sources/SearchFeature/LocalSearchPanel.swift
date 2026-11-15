@@ -1,21 +1,18 @@
 import ThermoUI
 import AppKit
-import QuickLookUI
+import DocumentPreviewAPI
 import SearchCore
 import SwiftUI
 import ThermoL10n
 
 @MainActor final class LocalSearchPanel: NSWindowController, NSWindowDelegate {
-    private static var panel: LocalSearchPanel?
-    static var shared: LocalSearchPanel {
-        if let panel { return panel }
-        let value = LocalSearchPanel(); panel = value; return value
-    }
-    static func closeIfOpen() { panel?.hide(restoreFocus: false); panel?.window?.close(); panel = nil }
     private var previousApplication: NSRunningApplication?
     private var preview: NSWindow?
     private var presentingPreview = false
     private let model: LocalSearchModel
+    private let shortcut:LocalSearchShortcut
+    private let documentPreview:any DocumentPreviewPresentation
+    private let inputSource=SearchInputSource()
     private final class Panel: NSPanel {
         override var canBecomeKey: Bool { true }
         override var canBecomeMain: Bool { false }
@@ -26,8 +23,8 @@ import ThermoL10n
     private final class PreviewWindow: NSWindow {
         override func cancelOperation(_ sender: Any?) { close() }
     }
-    init(model: LocalSearchModel = .shared) {
-        self.model = model
+    init(model: LocalSearchModel,shortcut:LocalSearchShortcut,preview:any DocumentPreviewPresentation) {
+        self.model = model;self.shortcut=shortcut;self.documentPreview=preview
         let panel = Panel(contentRect: NSRect(x: 0, y: 0, width: 680, height: 520),
                           styleMask: [.titled, .fullSizeContentView, .nonactivatingPanel], backing: .buffered, defer: false)
         panel.title = tr("Search apps and files"); panel.titleVisibility = .hidden
@@ -36,10 +33,11 @@ import ThermoL10n
         panel.isReleasedWhenClosed = false; panel.isMovableByWindowBackground = true
         panel.level = .floating; panel.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary, .transient]
         panel.becomesKeyOnlyIfNeeded = false; panel.hidesOnDeactivate = false
-        super.init(window: panel); panel.delegate = self
-        panel.contentView = Host(rootView: LocalSearchView(model: model).ignoresSafeArea().preferredColorScheme(.dark))
+        super.init(window: panel); panel.delegate = self;model.panel=self
+        panel.contentView = Host(rootView: LocalSearchView(model: model,shortcut:shortcut).ignoresSafeArea().preferredColorScheme(.dark))
     }
     required init?(coder: NSCoder) { fatalError("init(coder:) is not used") }
+    func retire(){hide(restoreFocus:false);window?.close();model.panel=nil}
     func toggle() { window?.isVisible == true ? hide() : show() }
     func show(settings: Bool = false) {
         guard model.enabled else { return }
@@ -47,7 +45,7 @@ import ThermoL10n
         model.applyDefaultFoldersOnce()
         model.refreshApplications()
         if window?.isVisible != true {
-            SearchInputSource.shared.panelWillShow()
+            inputSource.panelWillShow()
             let front = NSWorkspace.shared.frontmostApplication
             previousApplication = front?.processIdentifier == ProcessInfo.processInfo.processIdentifier ? nil : front
             if let screen = NSScreen.screens.first(where: { NSMouseInRect(NSEvent.mouseLocation, $0.frame, false) }) ?? NSScreen.main, let window {
@@ -56,14 +54,14 @@ import ThermoL10n
             }
         }
         model.showSettings = settings
-        LocalSearchShortcut.shared.refreshCommandSpaceHolder()
+        shortcut.refreshCommandSpaceHolder()
         model.submit(); window?.makeKeyAndOrderFront(nil)
         NotificationCenter.default.post(name: .localSearchFocus, object: nil)
     }
     func hide(restoreFocus: Bool = true) {
         preview?.close(); preview = nil
         window?.orderOut(nil)
-        SearchInputSource.shared.panelDidHide()
+        inputSource.panelDidHide()
         if restoreFocus, let previousApplication, !previousApplication.isTerminated { previousApplication.activate(options: []) }
         previousApplication = nil
     }
@@ -78,7 +76,7 @@ import ThermoL10n
         if window?.isVisible == true { window?.makeKeyAndOrderFront(nil) }
     }
     func previewSelected() {
-        guard let item = model.selected, item.kind != .application else { return }
+        guard model.enabled,let item = model.selected, item.kind != .application else { return }
         guard FileManager.default.fileExists(atPath: item.path) else { model.error = tr("This item is no longer available. Check its location and try again."); return }
         let url=URL(fileURLWithPath:item.path).standardizedFileURL
         if let shown=preview,shown.isVisible {
@@ -91,7 +89,7 @@ import ThermoL10n
         panel.representedURL=url
         panel.title = item.name; panel.isReleasedWhenClosed = false; panel.level = .floating; panel.delegate = self
         panel.minSize = NSSize(width: 640, height: 400)
-        panel.contentView = NSHostingView(rootView: SearchFilePreviewView(item: item, open: { [weak self] in
+        panel.contentView = NSHostingView(rootView: SearchFilePreviewView(item: item,roots:model.preferences.roots,preview:documentPreview,open: { [weak self] in
             self?.model.open(item)
         }, reveal: { [weak self] in
             self?.model.selection = item.id; self?.model.revealSelected()
@@ -110,7 +108,7 @@ extension Notification.Name { static let localSearchFocus = Notification.Name("d
 
 struct LocalSearchView: View {
     @ObservedObject var model: LocalSearchModel
-    @ObservedObject private var shortcut = LocalSearchShortcut.shared
+    @ObservedObject var shortcut:LocalSearchShortcut
     @State private var confirmingSpotlight = false
     var body: some View {
         VStack(spacing: 0) {
@@ -128,13 +126,13 @@ struct LocalSearchView: View {
                     if let holder = shortcut.commandSpaceHolder {
                         Text(LocalSearchShortcut.heldMessage(holder)).font(Theme.secondary)
                         Spacer(minLength: 8)
-                        Button(tr("Open %@", holder.name)) { NSWorkspace.shared.open(holder.app) }
+                        Button(tr("Open %@", holder.name)) { if model.enabled {NSWorkspace.shared.open(holder.app)} }
                     } else {
                         Text(tr("Open Thermo search with ⌘Space instead of Spotlight?")).font(Theme.secondary)
                         Spacer(minLength: 8)
                         Button(tr("Use ⌘Space…")) { model.presentingDialog = true; confirmingSpotlight = true }
                     }
-                    Button(tr("Not now")) { shortcut.dismissCommandSpaceOffer() }.buttonStyle(.plain).foregroundStyle(Theme.textSecondary)
+                    Button(tr("Not now")) { if model.enabled {shortcut.dismissCommandSpaceOffer()} }.buttonStyle(.plain).foregroundStyle(Theme.textSecondary)
                 }.padding(.horizontal, 22).padding(.vertical, 10).background(Theme.surface)
                 if let issue = shortcut.issue {
                     Text(issue).font(Theme.caption).foregroundStyle(Theme.caution).frame(maxWidth: .infinity, alignment: .leading)
@@ -188,7 +186,7 @@ struct LocalSearchView: View {
                                 .contextMenu {
                                     Button(tr("Open")) { model.selection = item.id; model.open(item) }
                                     Button(tr("Show in Finder")) { model.selection = item.id; model.revealSelected() }
-                                    if item.kind != .application { Button(tr("Preview")) { model.selection = item.id; LocalSearchPanel.shared.previewSelected() } }
+                                    if item.kind != .application { Button(tr("Preview")) { model.selection = item.id; model.panel?.previewSelected() } }
                                     if model.canOpenInPreview(item) {
                                         Button(tr("Open with Preview")) { model.selection = item.id; model.openInPreview() }
                                     }
@@ -222,7 +220,7 @@ struct LocalSearchView: View {
                             .background(Theme.surfaceActive).clipShape(RoundedRectangle(cornerRadius: 6))
                         Button { model.revealSelected() } label: { Label(tr("Show in Finder") + "  ⌘↩", systemImage: "folder") }
                         if selected.kind != .application {
-                            Button { LocalSearchPanel.shared.previewSelected() } label: { Label(tr("Preview") + "  ⌘Y", systemImage: "eye") }
+                            Button { model.panel?.previewSelected() } label: { Label(tr("Preview") + "  ⌘Y", systemImage: "eye") }
                         }
                         Spacer(minLength: 0)
                     }.buttonStyle(.borderless).font(Theme.secondary)
@@ -244,10 +242,10 @@ struct LocalSearchView: View {
             }.font(Theme.caption).foregroundStyle(Theme.textTertiary).lineLimit(1).padding(.horizontal, 20).padding(.vertical, 10)
 
         }.foregroundStyle(Theme.textPrimary).background(Theme.canvas)
-            .sheet(isPresented: $model.showSettings) { LocalSearchSettings(model: model) }
+            .sheet(isPresented: $model.showSettings) { LocalSearchSettings(model:model,shortcut:shortcut) }
             .alert(tr("Use ⌘Space for Thermo search?"), isPresented: $confirmingSpotlight) {
                 Button(tr("Cancel"), role: .cancel) { model.presentingDialog = false }
-                Button(tr("Use ⌘Space")) { model.presentingDialog = false; shortcut.takeOverSpotlight() }
+                Button(tr("Use ⌘Space")) { model.presentingDialog = false; if model.enabled {shortcut.takeOverSpotlight()} }
             } message: {
                 Text(tr("Thermo turns off Spotlight's ⌘Space in Keyboard Shortcuts. Spotlight still opens from the menu bar. Give it back in Search settings, or by choosing another search shortcut."))
             }
@@ -274,7 +272,7 @@ private struct LocalSearchInput: NSViewRepresentable {
         override func viewDidMoveToWindow() { super.viewDidMoveToWindow(); DispatchQueue.main.async { [weak self] in if let self { self.window?.makeFirstResponder(self) } } }
         override func performKeyEquivalent(with event: NSEvent) -> Bool {
             guard event.modifierFlags.contains(.command), (currentEditor() as? NSTextView)?.hasMarkedText() != true else { return super.performKeyEquivalent(with: event) }
-            if event.keyCode == 16 { LocalSearchPanel.shared.previewSelected(); return true }
+            if event.keyCode == 16 { model?.panel?.previewSelected(); return true }
             if event.keyCode == 36 { model?.revealSelected(); return true }
             if event.keyCode == 8, event.modifierFlags.contains(.shift) { model?.copySelectedPath(); return true }
             return super.performKeyEquivalent(with: event)
@@ -302,7 +300,7 @@ private struct LocalSearchInput: NSViewRepresentable {
                 if NSApp.currentEvent?.modifierFlags.contains(.command) == true { model.revealSelected() }
                 else { model.openSelected() }
             case #selector(NSResponder.cancelOperation(_:)):
-                if !model.query.isEmpty { model.query = "" } else { LocalSearchPanel.shared.hide() }
+                if !model.query.isEmpty { model.query = "" } else { model.panel?.hide() }
             default: return false
             }
             return true
@@ -327,7 +325,7 @@ private struct LocalSearchAlias: View {
 
 private struct LocalSearchSettings: View {
     @ObservedObject var model: LocalSearchModel
-    @ObservedObject private var shortcut = LocalSearchShortcut.shared
+    @ObservedObject var shortcut:LocalSearchShortcut
     @State private var hidden = false
     @AppStorage(SearchInputSource.preferenceKey) private var asciiInput = true
     @State private var ignores = true
@@ -366,24 +364,24 @@ private struct LocalSearchSettings: View {
                 next.excludedPatterns = patterns.components(separatedBy: .newlines).filter { !$0.isEmpty }; model.configure(next)
             } }
             Divider()
-            Toggle(isOn: $asciiInput) {
+            Toggle(isOn: Binding(get:{asciiInput},set:{if model.enabled{asciiInput=$0}})) {
                 VStack(alignment: .leading, spacing: 2) {
                     Text(tr("Switch to English input while searching"))
                     Text(tr("Letters such as xtsz go straight to search instead of the input method. The previous input method comes back when search closes.")).font(Theme.caption).foregroundStyle(Theme.textSecondary)
                 }
             }
-            HStack { Text(tr("Global search shortcut")).font(Theme.rowTitle); Spacer(); SearchShortcutRecorder(model: shortcut).frame(width: 220, height: 28); Button(tr("Remove")) { shortcut.apply(nil) } }
+            HStack { Text(tr("Global search shortcut")).font(Theme.rowTitle); Spacer(); SearchShortcutRecorder(model:shortcut,available:{model.enabled}).frame(width: 220, height: 28); Button(tr("Remove")) { if model.enabled {shortcut.apply(nil)} } }
             if let issue = shortcut.issue { Text(issue).font(Theme.caption).foregroundStyle(Theme.caution) }
             if shortcut.spotlightReleased || shortcut.binding?.sameGesture(LocalSearchShortcut.commandSpace) != true { HStack {
                 if let holder = shortcut.commandSpaceHolder, !shortcut.spotlightReleased {
                     Text(LocalSearchShortcut.heldMessage(holder)).font(Theme.caption).foregroundStyle(Theme.textSecondary)
                     Spacer()
-                    Button(tr("Open %@", holder.name)) { NSWorkspace.shared.open(holder.app) }
+                    Button(tr("Open %@", holder.name)) { if model.enabled {NSWorkspace.shared.open(holder.app)} }
                 } else {
                     Text(shortcut.spotlightReleased ? tr("Spotlight's ⌘Space is turned off so Thermo search can use it.") : tr("⌘Space is Spotlight's shortcut. Thermo can turn it off and use it for search."))
                         .font(Theme.caption).foregroundStyle(Theme.textSecondary)
                     Spacer()
-                    if shortcut.spotlightReleased { Button(tr("Give ⌘Space back to Spotlight")) { shortcut.giveBackToSpotlight() } }
+                    if shortcut.spotlightReleased { Button(tr("Give ⌘Space back to Spotlight")) { if model.enabled {shortcut.giveBackToSpotlight()} } }
                     else { Button(tr("Use ⌘Space…")) { confirmingSpotlight = true } }
                 }
             } }
@@ -391,12 +389,12 @@ private struct LocalSearchSettings: View {
         }.padding(24).frame(width: 610).foregroundStyle(Theme.textPrimary).background(Theme.canvas)
             .alert(tr("Use ⌘Space for Thermo search?"), isPresented: $confirmingSpotlight) {
                 Button(tr("Cancel"), role: .cancel) {}
-                Button(tr("Use ⌘Space")) { shortcut.takeOverSpotlight() }
+                Button(tr("Use ⌘Space")) { if model.enabled {shortcut.takeOverSpotlight()} }
             } message: {
                 Text(tr("Thermo turns off Spotlight's ⌘Space in Keyboard Shortcuts. Spotlight still opens from the menu bar. Give it back in Search settings, or by choosing another search shortcut."))
             }
             // Re-checked on return from another app, where the user may have just changed its shortcut.
-            .onReceive(NSWorkspace.shared.notificationCenter.publisher(for: NSWorkspace.didActivateApplicationNotification)) { _ in shortcut.refreshCommandSpaceHolder() }
-            .onAppear { shortcut.refreshCommandSpaceHolder(); hidden = model.preferences.includeHiddenFiles; ignores = model.preferences.respectIgnoreFiles; patterns = model.preferences.excludedPatterns.joined(separator: "\n") }
+            .onReceive(NSWorkspace.shared.notificationCenter.publisher(for: NSWorkspace.didActivateApplicationNotification)) { _ in if model.enabled {shortcut.refreshCommandSpaceHolder()} }
+            .onAppear { if model.enabled {shortcut.refreshCommandSpaceHolder()}; hidden = model.preferences.includeHiddenFiles; ignores = model.preferences.respectIgnoreFiles; patterns = model.preferences.excludedPatterns.joined(separator: "\n") }
     }
 }

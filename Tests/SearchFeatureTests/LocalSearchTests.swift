@@ -1,8 +1,9 @@
+import HotkeyCore
 import ThermoUI
 import XCTest
 import Carbon
 import SearchCore
-@testable import ThermoApp
+@testable import SearchFeature
 
 @MainActor final class LocalSearchTests: XCTestCase {
     func testSlowOldQueryCannotReplaceNewResultsOrBeOpened() async throws {
@@ -64,8 +65,9 @@ import SearchCore
         model.stop()
     }
     func testSearchShortcutConflictPreservesPreviousLeaseAndSuppressesRepeat() throws {
+        let defaults=UserDefaults(suiteName:"thermo-search-shortcut-test-"+UUID().uuidString)!
         let backend = Backend(); var calls = 0
-        let model = LocalSearchShortcut(backend: backend) { calls += 1 }
+        let model = LocalSearchShortcut(backend:backend,defaults:defaults) {calls += 1}
         let first = CleanScreenKeyBinding(keyCode: 49, modifiers: UInt32(optionKey), keyLabel: "Space")
         XCTAssertTrue(first.validForSearch); XCTAssertFalse(first.valid)
         model.apply(first, persist: false)
@@ -77,13 +79,16 @@ import SearchCore
         model.shutdown(); XCTAssertTrue(backend.lease.released)
     }
     func testSpotlightTakeoverRestoresWhenLeavingCommandSpace() throws {
+        let name="thermo-search-spotlight-test-"+UUID().uuidString
+        let isolated=UserDefaults(suiteName:name)!
+        defer{isolated.removePersistentDomain(forName:name)}
         let backend = Backend(); var spotlightOn = true, backup = false
         var holder: SpotlightShortcut.Holder?
         let spotlight = SpotlightShortcut(commandSpaceTaken: { spotlightOn },
                                           release: { backup = true; spotlightOn = false },
                                           restore: { if backup { spotlightOn = true; backup = false } },
                                           released: { backup }, otherHolder: { holder })
-        let model = LocalSearchShortcut(backend: backend, spotlight: spotlight, action: {}, record: { _ in })
+        let model = LocalSearchShortcut(backend: backend, spotlight: spotlight, defaults:isolated, action: {}, record: { _ in })
         model.apply(LocalSearchShortcut.optionSpace, persist: false)
         model.takeOverSpotlight()
         XCTAssertEqual(model.binding, LocalSearchShortcut.commandSpace); XCTAssertFalse(spotlightOn); XCTAssertTrue(model.spotlightReleased)
@@ -132,6 +137,24 @@ import SearchCore
         let fresh = try XCTUnwrap(UserDefaults(suiteName: "search-defaults-" + UUID().uuidString))
         chosen.applyDefaultFoldersOnce(defaults: fresh, home: home.path)
         XCTAssertEqual(chosen.preferences.roots, mine.roots)
+    }
+
+    func testLateOpenFailureCannotMutateOrReopenARetiredSearch() async throws {
+        let root=FileManager.default.temporaryDirectory.appendingPathComponent("thermo-search-open-"+UUID().uuidString)
+        try FileManager.default.createDirectory(at:root,withIntermediateDirectories:true)
+        defer{try? FileManager.default.removeItem(at:root)}
+        let file=root.appendingPathComponent("owned.txt");try Data("owned".utf8).write(to:file)
+        let item=SearchItem(path:file.path,name:file.lastPathComponent,kind:.file)
+        var completion:LocalSearchModel.OpenCompletion?
+        let model=LocalSearchModel(directory:root.appendingPathComponent("index"),launch:{_,_,_,callback in completion=callback},executeQuery:{term,_ in .init(query:term,items:[item])})
+        model.query="owned"
+        for _ in 0..<100 where model.selected == nil {try await Task.sleep(nanoseconds:10_000_000)}
+        model.open(item);let callback=try XCTUnwrap(completion)
+        model.stop();await model.finishStopping()
+        callback(nil,NSError(domain:"owned-launch-failure",code:1))
+        try await Task.sleep(nanoseconds:20_000_000)
+        XCTAssertNil(model.error);XCTAssertNil(model.panel);XCTAssertNil(model.store)
+        XCTAssertEqual(try Data(contentsOf:file),Data("owned".utf8))
     }
 
 }

@@ -94,6 +94,18 @@ import SwiftUI
               let view=session.ui(.inlineSettings(ref),navigation:scopedNavigation(ref.module)) else{return nil}
         return AnyView(view.id(live.generation))
     }
+    /// Explicit developer rendering of a declared settings contribution, without background start.
+    package func renderPreview(_ ref:NativeUIEntryRef)->AnyView? {
+        guard catalog.definitions[ref.module]?.manifest.entries.contains(where:{$0.id==ref.entry && $0.kind == .settingsItem}) == true,
+              let session=admittedSession(ref.module),case let .live(live)=states[ref.module],
+              let view=session.ui(.renderPreview(ref),navigation:scopedNavigation(ref.module)) else{return nil}
+        return AnyView(view.id(live.generation))
+    }
+    /// Inert checked owner admission for an existing UI-related system operation. Returns no model.
+    package func admitUIEntryOwner(_ ref:NativeUIEntryRef)->Bool {
+        guard catalog.accepts(ref) else{return false}
+        return admittedSession(ref.module) != nil
+    }
     /// Explicit background contribution; metadata/status/quit queries remain cold.
     package func start(_ id:String) {
         guard let session=admittedSession(id),case let .live(live)=states[id],!live.started else{return}

@@ -1,36 +1,36 @@
-import ThermoUI
 import AppKit
 import Carbon
 
 // Shared key bindings and Carbon leases; existing type names are retained for callers.
-struct CleanScreenKeyBinding: Codable, Equatable {
-    var keyCode: UInt32
-    var modifiers: UInt32
-    var keyLabel: String
-    static let allowed = UInt32(cmdKey) | UInt32(controlKey) | UInt32(optionKey) | UInt32(shiftKey)
-    var valid: Bool {
+package struct CleanScreenKeyBinding: Codable, Equatable {
+    package var keyCode: UInt32
+    package var modifiers: UInt32
+    package var keyLabel: String
+    package init(keyCode:UInt32,modifiers:UInt32,keyLabel:String){self.keyCode=keyCode;self.modifiers=modifiers;self.keyLabel=keyLabel}
+    package static let allowed = UInt32(cmdKey) | UInt32(controlKey) | UInt32(optionKey) | UInt32(shiftKey)
+    package var valid: Bool {
         keyCode < 128 && keyCode != 53 && !(54...63).contains(keyCode) && modifiers & ~Self.allowed == 0 &&
         modifiers.nonzeroBitCount >= 2 && modifiers & (UInt32(cmdKey) | UInt32(controlKey) | UInt32(optionKey)) != 0 &&
         !keyLabel.isEmpty && keyLabel.count <= 24 && !keyLabel.unicodeScalars.contains { CharacterSet.controlCharacters.contains($0) }
     }
-    func sameGesture(_ other: Self) -> Bool { keyCode == other.keyCode && modifiers == other.modifiers }
-    var label: String {
+    package func sameGesture(_ other: Self) -> Bool { keyCode == other.keyCode && modifiers == other.modifiers }
+    package var label: String {
         [(UInt32(controlKey),"⌃"),(UInt32(optionKey),"⌥"),(UInt32(shiftKey),"⇧"),(UInt32(cmdKey),"⌘")]
             .filter { modifiers & $0.0 != 0 }.map(\.1).joined() + keyLabel
     }
-    static func flags(_ flags: NSEvent.ModifierFlags) -> UInt32 {
+    package static func flags(_ flags: NSEvent.ModifierFlags) -> UInt32 {
         var value: UInt32 = 0
         if flags.contains(.command) { value |= UInt32(cmdKey) }; if flags.contains(.control) { value |= UInt32(controlKey) }
         if flags.contains(.option) { value |= UInt32(optionKey) }; if flags.contains(.shift) { value |= UInt32(shiftKey) }
         return value
     }
-    static func flags(_ flags: CGEventFlags) -> UInt32 {
+    package static func flags(_ flags: CGEventFlags) -> UInt32 {
         var value: UInt32 = 0
         if flags.contains(.maskCommand) { value |= UInt32(cmdKey) }; if flags.contains(.maskControl) { value |= UInt32(controlKey) }
         if flags.contains(.maskAlternate) { value |= UInt32(optionKey) }; if flags.contains(.maskShift) { value |= UInt32(shiftKey) }
         return value
     }
-    static func captured(_ event: NSEvent) -> CleanScreenKeyBinding {
+    package static func captured(_ event: NSEvent) -> CleanScreenKeyBinding {
         let special: [UInt16:String] = [36:"↩",48:"⇥",49:"Space",51:"⌫",76:"⌅",117:"⌦",123:"←",124:"→",125:"↓",126:"↑",
             122:"F1",120:"F2",99:"F3",118:"F4",96:"F5",97:"F6",98:"F7",100:"F8",101:"F9",109:"F10",103:"F11",111:"F12",
             105:"F13",107:"F14",113:"F15",106:"F16",64:"F17",79:"F18",80:"F19",90:"F20"]
@@ -39,17 +39,17 @@ struct CleanScreenKeyBinding: Codable, Equatable {
     }
 }
 
-@MainActor protocol CleanScreenHotkeyLease: AnyObject { func release() throws }
-@MainActor protocol CleanScreenHotkeyBackend {
+@MainActor package protocol CleanScreenHotkeyLease: AnyObject { func release() throws }
+@MainActor package protocol CleanScreenHotkeyBackend {
     func register(_ binding: CleanScreenKeyBinding, event: @escaping (Bool) -> Void) throws -> CleanScreenHotkeyLease
 }
 
-@MainActor final class CarbonCleanScreenHotkeys: CleanScreenHotkeyBackend {
+@MainActor package final class CarbonCleanScreenHotkeys: CleanScreenHotkeyBackend {
     private let validate: (CleanScreenKeyBinding) -> Bool
     private let shared: (CleanScreenKeyBinding) -> Bool
     /// `shared` gestures register without the exclusive flag: macOS refuses an exclusive claim on any combo in the
     /// system shortcut table, even after that system shortcut is turned off.
-    init(validate: @escaping (CleanScreenKeyBinding) -> Bool = { $0.valid }, shared: @escaping (CleanScreenKeyBinding) -> Bool = { _ in false }) {
+    package init(validate: @escaping (CleanScreenKeyBinding) -> Bool = { $0.valid }, shared: @escaping (CleanScreenKeyBinding) -> Bool = { _ in false }) {
         self.validate = validate; self.shared = shared
     }
     private struct Entry { var binding: CleanScreenKeyBinding; var ref: EventHotKeyRef; var event: (Bool)->Void }
@@ -69,7 +69,7 @@ struct CleanScreenKeyBinding: Codable, Equatable {
             Task { @MainActor in try? owner?.remove(id) }
         }
     }
-    func register(_ binding: CleanScreenKeyBinding, event: @escaping (Bool) -> Void) throws -> CleanScreenHotkeyLease {
+    package func register(_ binding: CleanScreenKeyBinding, event: @escaping (Bool) -> Void) throws -> CleanScreenHotkeyLease {
         guard validate(binding), Self.nextID < UInt32.max else { throw Failure(status:OSStatus(paramErr)) }
         try prepare()
         Self.nextID += 1

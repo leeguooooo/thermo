@@ -53,6 +53,7 @@ package enum NativeUISurface {
     case sidebar(location:NativeSidebarLocation,selection:NativeFeatureRoute?,rows:NativeSidebarRenderer)
     case windowOverlay
     case inlineSettings(NativeUIEntryRef)
+    case renderPreview(NativeUIEntryRef)
     case backdrop(NativeFeatureRoute)
 }
 @MainActor package struct NativeWindowUI {

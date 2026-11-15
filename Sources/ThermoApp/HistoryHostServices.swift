@@ -73,7 +73,7 @@ import ThermoL10n
         case .startup: open(.native(.init(BuiltinModuleManifests.apps.id,"startup")))
         case .claudeReset: open(.module(BuiltinModuleManifests.claude.id, "reset"))
         case .privacy: open(.module(BuiltinModuleManifests.claude.id, "privacy"))
-        case .searchSettings: LocalSearchPanel.shared.show(settings: true)
+        case .searchSettings: SearchModule.show(settings: true)
         case .tabs: open(.browser("Google Chrome"))
         case .trash: NSWorkspace.shared.open(FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent(".Trash"))
         case .reveal(let path): NSWorkspace.shared.activateFileViewerSelecting([URL(fileURLWithPath: path)])

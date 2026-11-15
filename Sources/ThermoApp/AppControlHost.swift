@@ -1,3 +1,4 @@
+import HotkeyCore
 import ModuleKit
 import ThermoUI
 import AgentCore
@@ -90,14 +91,13 @@ import ThermoKit
         defer { if writes.contains(action) { mutating = false } }
         switch action {
         case "search.show", "search.settings":
-            LocalSearchPanel.shared.show(settings: action == "search.settings")
-            return result(["action": action, "windowVisible": "true"])
+            let shown=SearchModule.show(settings:action == "search.settings")
+            return result(["action":action,"windowVisible":String(shown)],shown ? nil:"Search is unavailable while its feature is stopping.")
         case "search.useCommandSpace", "search.giveBackCommandSpace":
-            let shortcut = LocalSearchShortcut.shared, taking = action == "search.useCommandSpace"
-            if taking { shortcut.takeOverSpotlight() } else { shortcut.giveBackToSpotlight() }
-            let values = ["action": action, "shortcut": shortcut.binding?.label ?? "none", "spotlightReleased": String(shortcut.spotlightReleased)]
-            let done = taking ? shortcut.binding?.sameGesture(LocalSearchShortcut.commandSpace) == true : !shortcut.spotlightReleased
-            return result(values, done ? nil : shortcut.issue ?? "The ⌘Space change was not confirmed. Check Search settings.")
+            let taking=action == "search.useCommandSpace"
+            let state=taking ? SearchModule.access.takeOverSpotlight():SearchModule.access.giveBackSpotlight()
+            let values=["action":action,"shortcut":state.label,"spotlightReleased":String(state.spotlightReleased)]
+            return result(values,state.confirmed ? nil:state.issue ?? "The ⌘Space change was not confirmed. Check Search settings.")
         case "keep-awake.start", "keep-awake.stop", "keep-awake.status":
             if action == "keep-awake.start", let idleMode { idleAwake.start(mode: idleMode, seconds: idleSeconds) }
             if action == "keep-awake.stop" { idleAwake.stop() }

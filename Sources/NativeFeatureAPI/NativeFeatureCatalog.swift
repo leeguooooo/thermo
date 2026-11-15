@@ -119,7 +119,7 @@ package struct NativeFeatureCatalog: Sendable {
         return found
     }
     func accepts(_ ref:NativeUIEntryRef)->Bool {
-        definitions[ref.module]?.manifest.entries.contains(where:{$0.id==ref.entry && $0.kind == .menuBarItem}) == true
+        definitions[ref.module]?.manifest.entries.contains(where:{$0.id==ref.entry && ($0.kind == .menuBarItem || $0.kind == .settingsItem)}) == true
     }
     package var menuEntries:[NativeMenuEntry] {
         order.flatMap {id in

@@ -73,7 +73,7 @@ package enum DiskFeature {
             guard ref.module==BuiltinModuleManifests.disk.id,let entry=BuiltinModuleManifests.disk.entries.first(where:{$0.id==ref.entry && $0.kind == .settingsItem}) else{return nil}
             return AnyView(CleanupProtectionsButton(disk:disk,asRow:true,title:tr(entry.title),symbol:entry.symbol ?? BuiltinModuleManifests.disk.symbol))
         case let .backdrop(route):return AnyView(WindowBackdrop(glow:route.entry=="scan",tint:Color(red:0.36,green:0.42,blue:1)))
-        case .windowOverlay:return nil
+        case .windowOverlay,.renderPreview:return nil
         }
     }
     var status:NativeFeatureStatus {.init(modelLoaded:storedDisk != nil || storedOverview != nil,sampling:storedDisk.map{$0.scanning || $0.loadingSaved} == true || storedOverview?.measuring == true,snapshotReady:storedDisk.map{!$0.loadingSaved && !$0.scanning && $0.report != nil} ?? false)}
