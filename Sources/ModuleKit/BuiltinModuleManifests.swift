@@ -148,6 +148,6 @@ public enum ModulePreferences {
     public static let appDomain = "dev.thermo.app"
     public static func key(_ id: String) -> String { "module.enabled." + id }
     public static func isEnabled(_ manifest: ModuleManifest, in defaults: UserDefaults) -> Bool {
-        defaults.object(forKey:key(manifest.id)) == nil ? manifest.enabledByDefault : defaults.bool(forKey:key(manifest.id))
+        defaults.object(forKey:key(manifest.id)) == nil ? FeatureLaunchPolicy.defaultEnabled(manifest, in: defaults) : defaults.bool(forKey:key(manifest.id))
     }
 }

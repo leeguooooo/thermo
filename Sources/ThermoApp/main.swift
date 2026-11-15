@@ -35,12 +35,22 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate, UNU
     private var menuFreshnessTimer: Timer?
     private var menuPreferences = MenuBarPreferences()
     private var menuValidAfter = Date.distantPast
+    private let featureLaunch = FeatureLaunchGate()
+    var reopenFeatureSelection: @MainActor () -> Bool = { FeatureSelectionWindow.reopenIfPresented() }
+    var showMainWindow: @MainActor () -> Void = { MainWindow.show() }
 
     func applicationShouldTerminate(_ sender: NSApplication) -> NSApplication.TerminateReply {
-        CaptureWorkspace.shared.terminationReply(AppExitGuard.reply())
+        if featureLaunch.isSelecting { return .terminateNow }
+        return CaptureWorkspace.shared.terminationReply(AppExitGuard.reply())
     }
 
     func applicationDidFinishLaunching(_ notification: Notification) {
+        featureLaunch.launch(needsSelection: featureLaunchState?.needsSelection == true) { [weak self] in
+            self?.startFeaturesAndInterface()
+        }
+    }
+
+    private func startFeaturesAndInterface() {
         Settings.register()
         AppInstallationMonitor.shared.start()
         AppControlHost.shared.start()
@@ -155,7 +165,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate, UNU
 
     /// Clicking the Dock icon (or opening Thermo.app again) opens the main window.
     func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows flag: Bool) -> Bool {
-        MainWindow.show()
+        if reopenFeatureSelection() { return false }
+        showMainWindow()
         return false
     }
 
@@ -316,6 +327,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate, UNU
     }
 
     func applicationWillTerminate(_ notification: Notification) {
+        if featureLaunch.isSelecting { return }
         MenuBarManager.shared.shutdown()
         LocalSearchShortcut.shared.shutdown()
         CaptureCLIHost.shared.cancelActive()
@@ -568,6 +580,15 @@ private final class PageMenuTarget: NSObject, NSMenuItemValidation {
     NSApp.windowsMenu = windowMenu
 }
 
+// Capture upgrade evidence before SingleInstance creates Application Support/Thermo/app.lock.
+// Only ordinary launches and bare --main/--search consume onboarding; QA modes never do.
+let featureLaunchState: FeatureLaunchPolicy.State? = {
+    guard FeatureLaunchPolicy.allowsInteractiveSelection(arguments: CommandLine.arguments,
+                                                        environment: ProcessInfo.processInfo.environment),
+          NSClassFromString("XCTestCase") == nil else { return nil }
+    return FeatureLaunchPolicy.assess(defaults: .standard, domain: ModulePreferences.appDomain,
+                                     home: URL(fileURLWithPath: NSHomeDirectory()))
+}()
 L10n.apply(preference: UserDefaults.standard.string(forKey: L10n.defaultsKey))
 // Freeze launch metadata before an updater can replace the bundle on disk.
 _ = AppInfo.buildMetadata
@@ -635,6 +656,10 @@ if !CommandLine.arguments.contains("--offscreen"), !CommandLine.arguments.contai
         fputs("Thermo cannot acquire its instance lock: \(error)\n", stderr)
         exit(1)
     }
+}
+// The lock winner alone writes migration state, before AppDelegate/model initializers run.
+if let featureLaunchState {
+    FeatureLaunchPolicy.install(featureLaunchState, in: .standard, persist: true)
 }
 if CommandLine.arguments.contains("--verify-lifecycle") {
     do {
@@ -714,10 +739,21 @@ if let i = CommandLine.arguments.firstIndex(of: "--render-preview"), i + 1 < Com
 
 if ["--main", "--disk", "--agents", "--chrome-pages"].contains(where: CommandLine.arguments.contains) {
     let mainOnlyDelegate = MainActor.assumeIsolated { MainOnlyDelegate() }
+    MainActor.assumeIsolated {
+        mainOnlyDelegate.deferInstallationMonitor = featureLaunchState?.needsSelection == true
+    }
     app.delegate = mainOnlyDelegate
     // `--offscreen`: no Dock icon, no window on the user's screen.
     app.setActivationPolicy(CommandLine.arguments.contains("--offscreen") ? .accessory : .regular)
-    DispatchQueue.main.async { MainActor.assumeIsolated { openMainOnly(CommandLine.arguments) } }
+    DispatchQueue.main.async {
+        MainActor.assumeIsolated {
+            mainOnlyDelegate.featureLaunch.launch(needsSelection: featureLaunchState?.needsSelection == true) {
+                mainOnlyDelegate.deferInstallationMonitor = false
+                AppInstallationMonitor.shared.start()
+                openMainOnly(CommandLine.arguments)
+            }
+        }
+    }
     // Only the main window closing ends the app (not sheets, menus or alerts).
     let closeObserver = MainActor.assumeIsolated { MainOnlyDelegate.observeMainWindowClosing() }
     withExtendedLifetime((mainOnlyDelegate, closeObserver)) { app.run() }

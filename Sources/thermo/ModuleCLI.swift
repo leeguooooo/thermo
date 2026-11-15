@@ -10,9 +10,12 @@ enum ModuleCLI {
         let tool: String
         let arguments: [String: ModuleArgument]
     }
-    static func defaults() throws -> UserDefaults {
-        guard let value = UserDefaults(suiteName: ModulePreferences.appDomain) else { throw CLIError("Cannot read module settings.") }
+    static func defaults(domain: String = ModulePreferences.appDomain, home: String = NSHomeDirectory()) throws -> UserDefaults {
+        guard let value = UserDefaults(suiteName: domain) else { throw CLIError("Cannot read module settings.") }
         value.synchronize()
+        let state = FeatureLaunchPolicy.assess(defaults: value, domain: domain,
+                                               home: URL(fileURLWithPath: home))
+        FeatureLaunchPolicy.install(state, in: value, persist: false)
         return value
     }
     static func manifests() -> [ModuleManifest] {

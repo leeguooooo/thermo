@@ -8,7 +8,7 @@ import SwiftUI
 import ThermoL10n
 
 /// The app's one module manager and what the UI is built from: the pages of the modules that are on.
-/// Which modules are on is remembered per module; a new module starts as its manifest says.
+/// Which modules are on is remembered per module; builtin defaults also follow the installation cohort.
 @MainActor final class ModuleCenter: ObservableObject {
     static let shared = ModuleCenter(startBuiltin: BuiltinModules.start, updatesAppMenu: true, commandHome:NSHomeDirectory())
 
@@ -48,7 +48,7 @@ import ThermoL10n
 
     static func key(_ id: String) -> String { ModulePreferences.key(id) }
 
-    /// The person's choice for a module, or the manifest's default when they never chose.
+    /// The person's choice for a module, or its installation policy when they never chose.
     /// `bool(forKey:)` also reads a value given on the command line (`-module.enabled.<id> NO`).
     static func stored(_ manifest: ModuleManifest, in defaults: UserDefaults) -> Bool {
         ModulePreferences.isEnabled(manifest, in: defaults)
