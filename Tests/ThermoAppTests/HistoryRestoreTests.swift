@@ -86,6 +86,21 @@ final class HistoryRestoreTests: XCTestCase {
         XCTAssertEqual(AppExitGuard.reply(show: { _ in XCTFail("completed restore must allow exit") }), .terminateNow)
     }
 
+    @MainActor func testRestoreCancelledBeforePhysicalWorkReleasesExitGuard() async {
+        let model = HistoryModel(reader: { .init(records: []) }, restoreBatch: { _, _ in
+            XCTFail("cancelled restore must not touch files")
+            throw NSError(domain: "fixture", code: 1)
+        }, didRestore: { _ in XCTFail("nothing was restored") })
+        let entry = record()
+        model.restore(entry, review: review(entry))
+        XCTAssertTrue(model.busy)
+        // The detached worker cannot pass its MainActor admission check until this yields.
+        model.work.cancel()
+        await model.work.finish()
+        XCTAssertFalse(model.busy)
+        XCTAssertEqual(AppExitGuard.reply(show: { _ in }), .terminateNow)
+    }
+
     @MainActor func testFailedRestoreReleasesExitGuardWithoutInvalidatingSuccessfulData() async {
         let model = HistoryModel(reader: { .init(records: []) }, restoreBatch: { _, _ in throw NSError(domain: "fixture", code: 1) },
                                  didRestore: { _ in XCTFail("nothing was restored") })
