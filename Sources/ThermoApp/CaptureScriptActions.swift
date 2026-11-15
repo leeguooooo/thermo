@@ -5,7 +5,7 @@ import CaptureScriptCore
 extension CaptureWorkspace {
     func executeScript(_ source:String,timeout:TimeInterval=300) async throws -> CaptureScriptResult {
         try requireEnabled()
-        guard !scriptRunning else{throw CaptureSaveFailure.busy};scriptRunning=true;defer{scriptRunning=false}
+        guard !scriptRunning,!nativeScriptBusy else{throw CaptureSaveFailure.busy};scriptRunning=true;defer{scriptRunning=false}
         let worker=scriptWorker ?? Bundle.main.bundleURL.appendingPathComponent("Contents/Helpers/thermo-capture-script")
         guard FileManager.default.isExecutableFile(atPath:worker.path) else {throw CaptureScriptFailure.unavailable}
         do {
@@ -15,9 +15,13 @@ extension CaptureWorkspace {
             try pinSession.flush();return result
         } catch {try? pinSession.flush();throw error}
     }
+    func finishScriptActions() async{await nativeScriptWork.finish()}
     func performScriptAction(_ raw:String) async throws -> CaptureScriptValue {
         try requireEnabled()
         try Task.checkCancellation()
+        guard let ticket=nativeScriptWork.beginOperation() else{throw CaptureSaveFailure.busy}
+        defer{nativeScriptWork.endOperation(ticket)}
+        if let nativeScriptAction {return try await nativeScriptAction(raw)}
         if raw == "status" {return .object(["pins":.number(Double(pinSession.count)),"capturing":.bool(captureBusy),"group":.string(pinSession.library.currentGroupID.uuidString)])}
         guard let action=CaptureAction(rawValue:raw) else {throw CaptureScriptFailure.execution("Unknown capture action: "+raw)}
         switch action {
