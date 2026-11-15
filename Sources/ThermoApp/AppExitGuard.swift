@@ -62,7 +62,10 @@ final class MainOnlyDelegate: NSObject, NSApplicationDelegate {
         if deferInstallationMonitor || featureLaunch.isSelecting || selectionIsPresented() { return }
         MenuBarManager.shared.shutdown()
         AppModels.shared.nativeFeatures.shutdown(BuiltinModuleManifests.search.id)
+        CaptureControlBridge.cancelActive()
+        AppModels.shared.nativeFeatures.shutdown(BuiltinModuleManifests.capture.id)
     }
+    private let nativeTermination=NativeTerminationCoordinator()
     var showExitBlocker: @MainActor (MainPage) -> Void = { MainWindow.show($0) }
     /// Shared by the standalone entry point and an offscreen AppKit acceptance test.
     /// Termination is deferred until other close observers have retired page content.
@@ -79,7 +82,7 @@ final class MainOnlyDelegate: NSObject, NSApplicationDelegate {
     }
     func applicationShouldTerminate(_ sender: NSApplication) -> NSApplication.TerminateReply {
         if deferInstallationMonitor || featureLaunch.isSelecting || selectionIsPresented() { return .terminateNow }
-        return CaptureWorkspace.shared.terminationReply(AppExitGuard.reply(show: showExitBlocker))
+        return nativeTermination.reply(after:AppExitGuard.reply(show:showExitBlocker),features:AppModels.shared.nativeFeatures)
     }
     func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows flag: Bool) -> Bool {
         if reopenFeatureSelection() { return false }

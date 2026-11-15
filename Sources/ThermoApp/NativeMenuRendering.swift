@@ -51,3 +51,14 @@ import SwiftUI
         image.size=NSSize(width:16,height:16);return image
     }
 }
+
+@MainActor struct NativeFeatureMenuView:View {
+    let ref:NativeUIEntryRef
+    let placement:NativeMenuPlacement
+    @ObservedObject private var modules=ModuleCenter.shared
+    var body:some View {
+        if modules.isOn(ref.module),let content=AppModels.shared.nativeFeatures.menuContent(ref) {
+            content.view(placement,renderer:.init{AnyView(NativeMenuRows(nodes:$0))})
+        }
+    }
+}

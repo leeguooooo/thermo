@@ -13,9 +13,10 @@ import ThermoKit
     private let defaults: UserDefaults
     private let screen: CleanScreenModel
     private let idleAwake: IdleAwakeModel
-    private let captureHost:CaptureCLIHost?
-    init(defaults: UserDefaults = .standard, screen: CleanScreenModel? = nil, idleAwake: IdleAwakeModel? = nil,capture:CaptureCLIHost?=nil) {
-        self.captureHost=capture;self.defaults = defaults; self.screen = screen ?? .shared; self.idleAwake = idleAwake ?? .shared
+    typealias CaptureHandler = @MainActor (AppControlRequest) async->AppControlResponse
+    private let captureHandler:CaptureHandler
+    init(defaults: UserDefaults = .standard, screen: CleanScreenModel? = nil, idleAwake: IdleAwakeModel? = nil,capture:CaptureHandler? = nil) {
+        self.captureHandler=capture ?? CaptureControlBridge.handle;self.defaults = defaults; self.screen = screen ?? .shared; self.idleAwake = idleAwake ?? .shared
     }
     private var server: AppControlServer?
     private let integration = AgentAccess()
@@ -44,7 +45,7 @@ import ThermoKit
         if action.hasPrefix("search."), action != "search.giveBackCommandSpace", !SearchModule.enabled {
             return result([:], "Search apps and files is switched off. Enable it in Thermo Settings before using it.")
         }
-        if action.hasPrefix("capture."){return await (captureHost ?? .shared).handle(request)}
+        if action.hasPrefix("capture."){return await captureHandler(request)}
         let reads = ["status","screen.status","login.status","updates.status","helper.status","permissions.status","integration.status","awdl.status","keep-awake.status"]
         let writes = ["screen.start","screen.stop","screen.duration","screen.shortcut","screen.clear-shortcut","login.on","login.off","updates.on","updates.off","updates.check","helper.install","helper.uninstall","permissions.notifications","permissions.accessibility","permissions.login","integration.link","integration.claude","integration.codex","awdl.on","awdl.off","keep-awake.start","keep-awake.stop","search.show","search.settings","search.useCommandSpace","search.giveBackCommandSpace"]
         guard reads.contains(action) || writes.contains(action) else { return result([:], "Unsupported App control operation.") }

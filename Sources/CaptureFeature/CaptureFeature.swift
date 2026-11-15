@@ -16,6 +16,7 @@ package struct CaptureControlRequest:Sendable {
 package struct CaptureControlResult:Sendable {
     package let report:CaptureCLIReport
     package let succeeded:Bool
+    package init(report:CaptureCLIReport,succeeded:Bool){self.report=report;self.succeeded=succeeded}
 }
 @MainActor package protocol CaptureApplicationControl:AnyObject {
     func handle(_ request:CaptureControlRequest) async->CaptureControlResult
