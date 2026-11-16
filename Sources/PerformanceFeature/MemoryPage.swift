@@ -515,7 +515,7 @@ struct MemoryPage: View {
     }
 
     /// One process. It carries its own End, so a single process can go without its whole row.
-    func partRow(_ h: MachinePulse.Hog, _ p: MachinePulse.Hog.Part) -> some View {
+    func partRow(_ h: MachinePulse.Hog, _ p: MachinePulse.Part) -> some View {
         let target = singleStop(h, p)
         // Verbatim: a PID is an identifier, not a quantity, so no thousands separator.
         let title = [MachinePulse.roleName(p.role), "PID \(p.pid)", p.uptime.map { MemorySuspects.duration($0) }]
@@ -561,7 +561,7 @@ struct MemoryPage: View {
 
     /// The hand-picked action for one process, or nil when it has none: system processes and
     /// Thermo are never stopped, and an app's own process leaves through Quit unless forced.
-    func singleStop(_ h: MachinePulse.Hog, _ p: MachinePulse.Hog.Part, force: Bool = false) -> SystemPulse.SingleStop? {
+    func singleStop(_ h: MachinePulse.Hog, _ p: MachinePulse.Part, force: Bool = false) -> SystemPulse.SingleStop? {
         guard let kind = p.stop, let identity = h.processIdentities?.first(where: { $0.pid == p.pid }) else { return nil }
         let appMain = h.app != nil && (p.role == "main" || h.applicationIdentity?.pid == p.pid)
         if appMain && !force { return nil }
