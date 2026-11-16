@@ -18,7 +18,7 @@ import XCTest
         return root
     }
     func manifest(_ id: String, entries: [ModuleManifest.Entry]) -> ModuleManifest {
-        ModuleManifest(id: id, name: "Views", summary: "", symbol: "cube", version: "1", entries: entries)
+        ModuleManifest(id: id, name: "Views", summary: "", symbol: "cube", version: "1.0.0", entries: entries)
     }
     let page = ModuleManifest.Entry(id: "main", kind: .page, title: "Main", scene: "main")
 
@@ -58,6 +58,9 @@ import XCTest
         defer { try? FileManager.default.removeItem(at: root) }
         let registry = registry(); registry.load(from: root)
         XCTAssertTrue(registry.manifests.isEmpty); XCTAssertEqual(registry.problems.count, 3)
+        XCTAssertTrue(registry.problems.contains { $0.contains("already taken") })
+        XCTAssertTrue(registry.problems.contains { $0.contains("only pages and menu bar items") })
+        XCTAssertTrue(registry.problems.contains { $0.contains("has no scene") })
     }
 
     func testNothingLoadsWithoutTheDevelopmentFolderSetting() {
