@@ -17,8 +17,8 @@ public struct MachinePulse: Codable, Sendable, Equatable {
         public var pids: [Int32]
         /// The .app for GUI programs; quitting goes through the app so it can save its work.
         public var app: String?
-        /// False for anything Thermo never offers to stop: other users' or system processes,
-        /// AI agent sessions, Thermo itself.
+        /// False for anything no whole-row action stops: other users' or system processes,
+        /// AI agent sessions, Thermo itself. One agent process can still be ended by hand; see `Part.stop`.
         public var quittable: Bool
         /// Where a command-line program runs (its working directory, `~/…`), e.g. the project a test runner belongs to.
         public var project: String? = nil
@@ -86,7 +86,14 @@ public struct MachinePulse: Codable, Sendable, Equatable {
         public var ppid: Int32? = nil
         public var owner: String? = nil
         public var project: String? = nil
+        /// How this one process may be stopped by hand; nil for system processes, other users'
+        /// processes and Thermo itself, which are never stopped.
+        public var stop: Stop? = nil
     }
+
+    /// `agentSession` is offered only on the Memory page, one process at a time, after a
+    /// confirmation that names what is lost. Nothing automatic ends an agent session.
+    public enum Stop: String, Codable, Sendable { case end, agentSession }
 
     public struct Advice: Codable, Sendable, Equatable {
         /// "restart": quit and reopen the app; it restores its windows and frees what it piled up.
@@ -330,8 +337,14 @@ public struct MachinePulse: Codable, Sendable, Equatable {
             let exe = p.details.executable ?? ""
             var project: String?
             if app == nil, let cwd = p.details.cwd, cwd != "/" { project = tilde(cwd) }
+            // The same rule the action gate applies, so a row never offers what the gate would refuse
+            // (an agent started through an interpreter, for example).
             let agent = ProcessTable.agentNames.contains(name.lowercased()) || exe.contains("/claude/versions/")
-            let quittable = p.pid != me && p.uid == getuid() && !agent && !exe.hasPrefix("/System/") && !exe.hasPrefix("/usr/")
+                || ProcessActionGate.isAgent(.init(pid: p.pid, ppid: 1, uid: p.uid, name: name, executable: p.details.executable,
+                                                   argv: p.details.argv, cwd: nil, started: nil))
+            let own = p.pid != me && p.uid == getuid() && !exe.hasPrefix("/System/") && !exe.hasPrefix("/usr/")
+            let quittable = own && !agent
+            let stop: Stop? = !own ? nil : agent ? .agentSession : .end
             // In place: copying the row out and back would copy its pids and parts for every process.
             func add(_ h: inout Hog) {
                 if app == nil, !h.pids.isEmpty, h.owner != p.owner || h.owners != nil {
@@ -357,7 +370,7 @@ public struct MachinePulse: Codable, Sendable, Equatable {
                     if h.parts == nil { h.parts = [] }
                     h.parts!.append(Part(pid: p.pid, role: role(p.details.argv), memoryKB: p.memoryKB, residentKB: p.residentKB,
                                       memoryMetric: p.memoryMetric, cpu: p.cpu, uptime: p.uptime,
-                                      ppid: p.ppid, owner: p.owner, project: project))
+                                      ppid: p.ppid, owner: p.owner, project: project, stop: stop))
                 }
             }
             add(&byKey[key, default: Hog(id: key, name: name, cpu: 0, memoryKB: 0, pids: [], app: app, quittable: quittable,
