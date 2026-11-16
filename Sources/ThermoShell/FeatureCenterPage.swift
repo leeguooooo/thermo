@@ -19,6 +19,13 @@ struct FeatureCenterPage:View {
             }
             Text(tr("Access records cover requests handled by module permissions. Other recorded changes appear in operation history."))
                 .font(Theme.secondary).foregroundStyle(Theme.textSecondary)
+            TimelineView(.periodic(from:.now,by:3)){_ in
+                if let thermo=ModuleUsage.read(getpid()) {
+                    Text(tr("Built-in features run inside Thermo, which uses %1$@ of memory now. A single feature's share can't be measured.",ModuleUsageLine.memory(thermo.footprintBytes)))
+                        .font(Theme.secondary).foregroundStyle(Theme.textSecondary)
+                        .accessibilityIdentifier("module-center-thermo-usage")
+                }
+            }
             VStack(spacing:0){ModuleSwitches(center:center)}.glass(radius:Theme.radius)
             ModuleMarketSection(model:ModuleMarketModel.shared(center)).padding(.top,Theme.Space.m)
         }
@@ -42,9 +49,9 @@ struct ModuleUsageLine:View {
         switch usage {
         case .off: return tr("Off: uses no memory or energy.")
         case .notRunning: return tr("Not running now: uses no memory or energy.")
-        case .shared(let thermo):
-            guard let thermo else {return tr("Runs inside Thermo's process; its own memory and energy can't be measured separately.")}
-            return tr("Runs inside Thermo's process (Thermo in total: %1$@); its own share can't be measured separately.",memory(thermo.footprintBytes))
+        case .shared:
+            // Thermo's own total is shown once above the list.
+            return tr("Runs inside Thermo's process.")
         case .process(let usage):
             let cpu=String(format:"%.1f",usage.cpuSeconds)
             guard usage.energyJoules > 0 else {
@@ -155,8 +162,12 @@ struct FeatureStopChecklist:View {
             }
             Button(tr("Cancel"),role:.cancel){}
         } message:{
-            Text(tr("You can put it back from operation history. The feature starts empty the next time it is switched on."))
+            Text(Self.trashMessage(items ?? []))
         }
+    }
+    static func trashMessage(_ items:[FeatureDataCleanup.Item])->String {
+        let listed=items.map{tr($0.data.title)+" ("+ByteCountFormatter.string(fromByteCount:$0.bytes,countStyle:.file)+")"}.joined(separator:tr(", "))
+        return tr("Moves %1$@ to the Trash. You can put it back from operation history. The feature starts empty the next time it is switched on.",listed)
     }
     private func reload()async {
         let id=id
