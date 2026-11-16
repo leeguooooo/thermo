@@ -30,7 +30,7 @@ let broker = CapabilityBroker(manifest: manifest, home: home, log: log, handlers
 func run() async {
     guard WasmHost.isSupported else { print("SKIP needs macOS 15 or later"); return }
     let host = WasmHost(manifest: manifest, wasm: wasm, broker: broker,
-                        limits: .init(memoryBytes: 1 << 20, callTimeout: 1, fuel: 50_000_000, suspendAfter: 100),
+                        limits: .init(memoryBytes: 1 << 20, callTimeout: 2, fuel: 2_000_000, suspendAfter: 100),
                         launcher: .process(runner))
     func call(_ name: String, _ input: Data = Data()) async -> Result<WasmHost.Result, WasmHost.Failure> {
         do { return .success(try await host.call(name, input: input)) } catch { return .failure(error as? WasmHost.Failure ?? .crashed) }
