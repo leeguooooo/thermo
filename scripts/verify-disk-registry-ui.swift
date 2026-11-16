@@ -23,10 +23,10 @@ private struct DiskReviewFactory:ShellFeatureFactory {
         let base=BuiltinFeatureFactory().makeAssembly(environment:environment)
         let definition=DiskFeature.makeRegistration(services:{DiskHostServices(environment:environment())},makeSession:{available,services,cache in
             DiskSession(availability:available,services:services,cache:cache,makeDisk:{cache,work in
-                let io=DiskScanIO(options:{scope,category,_ in
-                    var options=ScanOptions(projectRoots:[])
+                let io=DiskScanIO(options:{scope,category,retention in
+                    var options=DiskModel.scanOptions(scope:scope,category:category,sessionRetentionDays:retention)
+                    options.projectRoots=[]
                     options.home=home;options.discoverProjectRoots=false;options.olderThanDays=0;options.onlyIDs=["old-installers"]
-                    options.categories=category.map{[$0]} ?? (scope == .ai ? [.aiSessions]:[.system])
                     return options
                 },cached:DiskScanIO.live.cached,scan:DiskScanIO.live.scan)
                 let model=DiskModel(scanIO:io,requestNotifications:{},enabled:{available.acceptsWork},cache:cache,explanationWork:work)
