@@ -8,12 +8,19 @@ import ThermoUI
 
 package enum DiskFeature {
     package static func registration(services:@escaping @MainActor @Sendable ()->any DiskServices)->NativeFeatureDefinition {
+        makeRegistration(services:services)
+    }
+    static func makeRegistration(services:@escaping @MainActor @Sendable ()->any DiskServices,
+                                 makeSession:(@MainActor @Sendable (FeatureAvailability,any DiskServices,DiskCacheEpoch)->DiskSession)? = nil)->NativeFeatureDefinition {
         let cache=DiskCacheEpoch()
         return .init(manifest:BuiltinModuleManifests.disk,ui:.init(sidebarLocations:[.storage],hasBackdrop:true),legacyMenuEntries:["smartScan":"scan"],resolveLegacyPage:legacyPage,resolveLegacyLaunch:{arguments in
             guard arguments.contains("--disk") else{return nil}
             let raw=arguments.firstIndex(of:"--page").flatMap{$0+1<arguments.count ? arguments[$0+1]:nil}
             return .init(route:raw.flatMap{legacyPage("disk:"+$0)} ?? route(.home))
-        },invalidateColdState:{paths in if !paths.isEmpty{cache.invalidate()}},makeSession:{DiskSession(availability:$0,services:services(),cache:cache)})
+        },invalidateColdState:{paths in if !paths.isEmpty{cache.invalidate()}},makeSession:{availability in
+            let services=services()
+            return makeSession?(availability,services,cache) ?? DiskSession(availability:availability,services:services,cache:cache)
+        })
     }
     private static func legacyPage(_ argument:String)->NativeFeatureRoute? {
         let argument=argument=="disk:home" ? "disk":argument

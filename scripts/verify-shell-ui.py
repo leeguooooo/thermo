@@ -13,9 +13,12 @@ def main():
     parser=argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--jobs',type=int,default=1)
     parser.add_argument('--output-dir',type=Path)
+    parser.add_argument('--fixture-source',type=Path,default=Path(__file__).with_suffix('.swift'))
     args=parser.parse_args()
     if args.jobs<1:parser.error('jobs must be positive')
     root=Path(__file__).resolve().parents[1]
+    fixture=args.fixture_source.resolve()
+    if not fixture.is_relative_to(root/'scripts') or fixture.suffix!='.swift' or not fixture.is_file():parser.error('Fixture source must be a Swift file under scripts/.')
     output=args.output_dir.expanduser().resolve() if args.output_dir else Path(tempfile.mkdtemp(prefix='thermo-shell-review-',suffix='.noindex'))
     if not output.name.startswith('thermo-shell-review-') or output.suffix!='.noindex':parser.error('Output must be thermo-shell-review-*.noindex.')
     app=output/'ThermoShellQA.app'
@@ -23,7 +26,7 @@ def main():
     output.mkdir(parents=True,exist_ok=True);(output/'.thermo-shell-fixture').touch()
     home=output/'home';home.mkdir();(home/'.thermo-shell-fixture-home').touch()
     build=output/'thermo-ui-fixtures-build.noindex'
-    subprocess.run(['python3',str(root/'scripts/build-ui-fixtures.py'),'--jobs',str(args.jobs),'--output-dir',str(build),str(root/'scripts/verify-shell-ui.swift')],cwd=root,check=True)
+    subprocess.run(['python3',str(root/'scripts/build-ui-fixtures.py'),'--jobs',str(args.jobs),'--output-dir',str(build),str(fixture)],cwd=root,check=True)
     results=json.loads((build/'results.json').read_text());assert len(results)==1 and results[0]['passed']
     base=Path(subprocess.check_output(['swift','build','--show-bin-path'],cwd=root,text=True).strip())
     binary=app/'Contents/MacOS/ThermoShellQA';binary.parent.mkdir(parents=True)
@@ -44,7 +47,7 @@ def main():
     (output/'source.json').write_text(json.dumps({
         'gitHead':subprocess.check_output(['git','rev-parse','HEAD'],cwd=root,text=True).strip(),
         'workingTreeDiffSHA256':hashlib.sha256(subprocess.check_output(['git','diff','HEAD'],cwd=root)).hexdigest(),
-        'fixtureSourceSHA256':hashlib.sha256((root/'scripts/verify-shell-ui.swift').read_bytes()).hexdigest(),
+        'fixtureSource':str(fixture.relative_to(root)),'fixtureSourceSHA256':hashlib.sha256(fixture.read_bytes()).hexdigest(),
         'executableSHA256':hashlib.sha256(binary.read_bytes()).hexdigest(),'launched':False,
         'composition':'production factory and MainWindow','performanceActionsEnabled':False,'historyRecording':False,
         'automaticHelperInteraction':False,'appControlServer':False,'home':str(home),
