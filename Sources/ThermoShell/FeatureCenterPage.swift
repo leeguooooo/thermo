@@ -20,6 +20,7 @@ struct FeatureCenterPage:View {
             Text(tr("Access records cover requests handled by module permissions. Other recorded changes appear in operation history."))
                 .font(Theme.secondary).foregroundStyle(Theme.textSecondary)
             VStack(spacing:0){ModuleSwitches(center:center)}.glass(radius:Theme.radius)
+            ModuleMarketSection(model:ModuleMarketModel.shared(center)).padding(.top,Theme.Space.m)
         }
     }
 }
