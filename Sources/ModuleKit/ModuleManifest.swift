@@ -183,7 +183,14 @@ public struct ModuleManifest: Codable, Sendable, Equatable {
             if capability.kind.takesScope {
                 guard let scope = capability.scope else { found.append("\(capability.kind.rawValue) needs a scope"); continue }
                 if capability.kind == .networkConnect {
-                    if scope == "*" || scope == "*." || scope.contains("/") { found.append("network scope \(scope) must be a host or *.domain") }
+                    if scope == "*" || scope == "*." || scope.contains("/") || scope.contains(":") || scope.contains("@") {
+                        found.append("network scope \(scope) must be a host or *.domain")
+                    } else {
+                        let host = scope.hasPrefix("*.") ? String(scope.dropFirst(2)) : scope
+                        if Capability.isIPLiteral(host) || Capability.isLocalHost(host) {
+                            found.append("network scope \(scope) must be a public host name, not an address or local name")
+                        }
+                    }
                 } else if let path = Capability.path(scope, home: "/Users/x") {
                     // Deleting may never be granted for a whole volume or a whole home folder.
                     if capability.kind == .filesDelete, path == "/" || path == "/Users" || path == "/Users/x" {
