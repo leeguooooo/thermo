@@ -36,7 +36,7 @@ struct SetupShareControls:View {
         guard panel.runModal() == .OK,let url=panel.url else{return}
         do {
             let data=try Data(contentsOf:url)
-            pending=.init(review:try SetupShare.review(data,manifests:NativeModules.all,current:.standard))
+            pending = .init(review:try SetupShare.review(data,manifests:NativeModules.all,current:.standard))
         } catch SetupShare.ReadError.newerVersion {
             problem=tr("This setup was exported by a newer Thermo. Update Thermo first.")
         } catch {

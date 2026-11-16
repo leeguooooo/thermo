@@ -79,7 +79,7 @@ import ThermoL10n
         for status in now where !status.enabled && status.phase == .stopped && status.pid == nil {
             if stopProgress[status.manifest.id] == .waiting {stopProgress[status.manifest.id] = .processExited}
         }
-        for status in now where status.suspended && defaults.bool(forKey: Self.key(status.manifest.id)) {
+        for status in now where status.suspended && Self.stored(status.manifest, in: defaults) {
             // Remember it, so a relaunch does not start the crash loop again; other modules are untouched.
             defaults.set(false, forKey: Self.key(status.manifest.id))
             switchIssues[status.manifest.id] = tr("Switched off after crashing %1$@ times in a row. Switch it on again to retry.", String(status.crashes == 0 ? ModuleLifecycle.Timing().suspendAfter : status.crashes))
