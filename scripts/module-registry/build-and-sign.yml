@@ -19,14 +19,26 @@ permissions:
   contents: write
 jobs:
   modules:
-    runs-on: macos-15
+    runs-on: macos-26
+    env:
+      DEVELOPER_DIR: /Applications/Xcode_26.6.app/Contents/Developer
     steps:
       - uses: actions/checkout@v4
       - name: Check out Thermo for the packing tool
         uses: actions/checkout@v4
         with: { repository: leeguooooo/thermo, path: thermo }
-      - name: Build packing tool
-        run: swift build -c release --package-path thermo --product ModulePack
+      - name: Build packing tool and thermo CLI
+        run: |
+          swift build -c release --package-path thermo --product ModulePack
+          swift build -c release --package-path thermo --product thermo
+      - name: WebAssembly text compiler
+        run: |
+          brew install wabt
+          # thermo dev build calls "<compiler> <in.wat> <out.wasm>"; wabt takes -o.
+          printf '#!/bin/sh\nexec wat2wasm "$1" -o "$2"\n' > "$RUNNER_TEMP/wat2wasm-shim"
+          chmod +x "$RUNNER_TEMP/wat2wasm-shim"
+          echo "THERMO_WAT2WASM=$RUNNER_TEMP/wat2wasm-shim" >> "$GITHUB_ENV"
+          echo "THERMO=$GITHUB_WORKSPACE/thermo/.build/release/thermo" >> "$GITHUB_ENV"
       - name: Build modules from source
         run: |
           set -euo pipefail

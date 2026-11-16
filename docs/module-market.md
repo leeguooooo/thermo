@@ -40,3 +40,7 @@ App 安装前会检查：
 ## 卸载
 
 先关闭模块，再把它的安装目录整体移到废纸篓，记入操作记录，可以撤销。WebAssembly 模块运行在纯计算沙盒里，没有自己的数据目录。
+
+## 模块仓库的构建
+
+模块仓库（leeguooooo/thermo-modules）的 CI 用 Thermo 源码构建 `thermo` 命令行和 `ModulePack`，再用 `thermo dev build` 把 WAT 编成 wasm。CI 的 Xcode 编不了 WasmKit，所以编译器用 wabt 的 `wat2wasm`，并且**只用默认特性**：`--enable-all` 会用 compact imports 编码导入段，WasmKit 不认，模块装上后会加载失败。
