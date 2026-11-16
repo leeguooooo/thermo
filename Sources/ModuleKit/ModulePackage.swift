@@ -110,9 +110,11 @@ public struct ModulePackage: Equatable, Sendable {
 
 /// Keys whose signatures Thermo accepts for module packages.
 public enum ModuleSigningKeys {
-    /// The production pipeline key. Empty until the real key pair is generated and its private half
-    /// stored as the registry's CI secret; until then no package installs in a release build.
-    public static let production: [String: Data] = [:]
+    /// The production pipeline key. Its private half is the secret THERMO_MODULE_SIGNING_KEY of
+    /// leeguooooo/thermo-modules (backed up in the vault as "Thermo module signing key (837732e103c46dad)").
+    public static let production: [String: Data] = [
+        "837732e103c46dad": Data(base64Encoded: "nUgGJOFtqevmyZqy6xOcXWnAoflxMdLdphANqEcd/84=")!,
+    ]
 }
 
 func packageHex<D: Sequence>(_ bytes: D) -> String where D.Element == UInt8 { bytes.map { String(format: "%02x", $0) }.joined() }

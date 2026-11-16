@@ -39,7 +39,7 @@ final class ModulePackageTests: XCTestCase {
         XCTAssertThrowsError(try foreign.verify(keys: TestSigningKeys.trusted)) { XCTAssertEqual($0 as? ModulePackage.Problem, .badSignature) }
         package.keyID = "someone-else"
         XCTAssertThrowsError(try package.verify(keys: TestSigningKeys.trusted)) { XCTAssertEqual($0 as? ModulePackage.Problem, .unknownKey("someone-else")) }
-        XCTAssertThrowsError(try ModulePackage.decode(try signed()).verify(keys: ModuleSigningKeys.production), "release builds trust no key yet")
+        XCTAssertThrowsError(try ModulePackage.decode(try signed()).verify(keys: ModuleSigningKeys.production), "release builds never trust the test key")
     }
 
     func testSignedButUnsafeContentsAreStillRefused() throws {

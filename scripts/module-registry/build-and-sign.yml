@@ -30,6 +30,7 @@ jobs:
       - name: Build modules from source
         run: |
           set -euo pipefail
+          shopt -s nullglob
           for dir in modules/*/; do
             (cd "$dir" && ./build.sh)
             test -f "$dir/module.wasm"
@@ -42,6 +43,9 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
+          shopt -s nullglob
+          dirs=(modules/*/)
+          if [ ${#dirs[@]} -eq 0 ]; then echo "no modules yet"; exit 0; fi
           pack=thermo/.build/release/ModulePack
           tag="modules-$(date -u +%Y%m%d%H%M%S)"
           mkdir -p out
