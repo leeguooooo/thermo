@@ -86,9 +86,8 @@ final class ModuleLifecycleTests: XCTestCase {
 
     func testRepeatedCrashesSuspendTheModuleUntilItIsSwitchedOnAgain() {
         var t = timing; t.suspendAfter = 3
-        var m = ModuleLifecycle(launch: .always, enabled: true, timing: t)
-        _ = m.handle(.tick, now: 0)
-        XCTAssertEqual(m.phase, .starting); _ = m.handle(.started, now: 0)
+        var m = ModuleLifecycle(launch: .always, enabled: false, timing: t)
+        XCTAssertEqual(m.handle(.enable, now: 0), [.start]); _ = m.handle(.started, now: 0)
         var now: TimeInterval = 1
         for _ in 0..<2 {
             XCTAssertEqual(m.handle(.exited, now: now), []); XCTAssertFalse(m.suspended)
