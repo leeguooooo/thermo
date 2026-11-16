@@ -136,7 +136,13 @@ import ThermoL10n
     /// Whether a module is on. A built-in feature is known at once; a module in its own process once it has been read.
     /// WebAssembly modules installed from the module market. Off until the person switches them on.
     @Published private(set) var marketModules: [ModuleManifest] = []
-    func reloadMarketModules(_ manifests: [ModuleManifest]) { marketModules = manifests; revision += 1 }
+    func reloadMarketModules(_ manifests: [ModuleManifest]) {
+        let changed = Set(manifests.map(\.id)) != Set(marketModules.map(\.id))
+        marketModules = manifests
+        // An installed, updated or removed package changes what gets drawn.
+        if changed || manifests.contains(where: { m in declarative.manifest(m.id)?.version != m.version }) { declarative.reload(defaults: defaults) }
+        revision += 1
+    }
 
     func isOn(_ id: String) -> Bool {
         if let builtin = NativeModules.manifest(id) { return Self.stored(builtin, in: defaults) }

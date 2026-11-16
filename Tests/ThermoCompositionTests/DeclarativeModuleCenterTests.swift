@@ -23,11 +23,25 @@ import XCTest
     }
     let page = ModuleManifest.Entry(id: "main", kind: .page, title: "Main", scene: "main")
 
-    func registry() -> DeclarativeModules {
-        DeclarativeModules { manifest, wasm in
+    func registry(market: [(manifest: ModuleManifest, wasm: Data)] = []) -> DeclarativeModules {
+        DeclarativeModules(make: { manifest, wasm in
             WasmHost(manifest: manifest, wasm: wasm, broker: CapabilityBroker(manifest: manifest, home: NSTemporaryDirectory(), log: ModuleAccessLog(home: NSTemporaryDirectory()), handlers: [:]),
                      launcher: .process(URL(fileURLWithPath: "/nonexistent")), supported: true)
-        }
+        }, marketPackages: { market })
+    }
+
+    func testModulesInstalledFromTheMarketGetPagesWhenSwitchedOn() throws {
+        let name = "thermo-market-pages-" + UUID().uuidString, defaults = UserDefaults(suiteName: name)!
+        defer { defaults.removePersistentDomain(forName: name) }
+        let id = "com.example.market-page"
+        let described = manifest(id, entries: [.init(id: "main", kind: .page, title: "Main", scene: "main")])
+        let registry = registry(market: [(described, Data([0x00, 0x61, 0x73, 0x6D, 1, 0, 0, 0]))])
+        registry.loadIfNeeded(defaults: defaults)
+        let center = ModuleCenter(defaults: defaults, declarative: registry)
+        XCTAssertTrue(center.isDeclarative(id), "a market package is drawn like a development module")
+        XCTAssertFalse(center.isOn(id)); XCTAssertNil(center.page(module: id, entry: "main"))
+        center.setEnabled(id, true)
+        XCTAssertNotNil(center.page(module: id, entry: "main"))
     }
 
     func testDeclarativeModulesAreOffUntilSwitchedOnThenShowTheirPages() throws {
