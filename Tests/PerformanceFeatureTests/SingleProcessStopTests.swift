@@ -52,8 +52,13 @@ final class SingleProcessStopTests: XCTestCase {
 
     func testProcessIgnoringTheRequestIsReportedThenForced() throws {
         let shell = try binary("/bin/dash", named: "stubborn")
-        let (process, identity) = try start(shell, ["-c", "trap '' TERM; while :; do /bin/sleep 1; done"])
-        usleep(300_000) // let the trap install
+        let ready = FileManager.default.temporaryDirectory.appendingPathComponent("stubborn-ready-" + UUID().uuidString)
+        defer { try? FileManager.default.removeItem(at: ready) }
+        let (process, identity) = try start(shell, ["-c", "trap '' TERM; : > \"$0\"; while :; do /bin/sleep 1; done", ready.path])
+        // Under a loaded machine the shell may not have installed the trap after a fixed delay; wait for it to say so.
+        let deadline = Date().addingTimeInterval(10)
+        while !FileManager.default.fileExists(atPath: ready.path) && Date() < deadline { usleep(20_000) }
+        XCTAssertTrue(FileManager.default.fileExists(atPath: ready.path), "the shell never installed its TERM trap")
         XCTAssertEqual(SystemPulse.perform(.init(identity: identity, name: "stubborn"), grace: 1), .stillRunning)
         XCTAssertTrue(process.isRunning)
         XCTAssertEqual(SystemPulse.perform(.init(identity: identity, name: "stubborn", force: true), grace: 5), .killed)
