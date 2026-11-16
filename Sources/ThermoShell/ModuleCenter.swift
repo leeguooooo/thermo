@@ -79,6 +79,12 @@ import ThermoL10n
         for status in now where !status.enabled && status.phase == .stopped && status.pid == nil {
             if stopProgress[status.manifest.id] == .waiting {stopProgress[status.manifest.id] = .processExited}
         }
+        for status in now where status.suspended && defaults.bool(forKey: Self.key(status.manifest.id)) {
+            // Remember it, so a relaunch does not start the crash loop again; other modules are untouched.
+            defaults.set(false, forKey: Self.key(status.manifest.id))
+            switchIssues[status.manifest.id] = tr("Switched off after crashing %1$@ times in a row. Switch it on again to retry.", String(status.crashes == 0 ? ModuleLifecycle.Timing().suspendAfter : status.crashes))
+            NSLog("Thermo module suspended after repeated crashes: %@", status.manifest.id)
+        }
         if now != statuses {
             statuses = now
             if updatesAppMenu, NSApp != nil { installStandardMenus(center: self) }

@@ -3,7 +3,7 @@ import XCTest
 
 final class ModuleLifecycleTests: XCTestCase {
     typealias Effect = ModuleLifecycle.Effect
-    let timing = ModuleLifecycle.Timing(idleTimeout: 120, firstBackoff: 1, longestBackoff: 60, stableRun: 30)
+    let timing = ModuleLifecycle.Timing(idleTimeout: 120, firstBackoff: 1, longestBackoff: 60, stableRun: 30, suspendAfter: 100)
 
     func machine(_ launch: ModuleManifest.Launch, enabled: Bool = true) -> ModuleLifecycle {
         ModuleLifecycle(launch: launch, enabled: enabled, timing: timing)
@@ -82,6 +82,23 @@ final class ModuleLifecycleTests: XCTestCase {
         XCTAssertEqual(m.handle(.exited, now: now + 31), [])
         XCTAssertEqual(m.crashes, 1)
         XCTAssertEqual(m.deadline, now + 32)
+    }
+
+    func testRepeatedCrashesSuspendTheModuleUntilItIsSwitchedOnAgain() {
+        var t = timing; t.suspendAfter = 3
+        var m = ModuleLifecycle(launch: .always, enabled: true, timing: t)
+        _ = m.handle(.tick, now: 0)
+        XCTAssertEqual(m.phase, .starting); _ = m.handle(.started, now: 0)
+        var now: TimeInterval = 1
+        for _ in 0..<2 {
+            XCTAssertEqual(m.handle(.exited, now: now), []); XCTAssertFalse(m.suspended)
+            let due = m.deadline!; XCTAssertEqual(m.handle(.tick, now: due), [.start]); _ = m.handle(.started, now: due); now = due + 1
+        }
+        XCTAssertEqual(m.handle(.exited, now: now), [])
+        XCTAssertTrue(m.suspended); XCTAssertFalse(m.enabled); XCTAssertEqual(m.phase, .stopped); XCTAssertNil(m.deadline)
+        XCTAssertEqual(m.handle(.tick, now: now + 1_000), [], "nothing restarts a suspended module")
+        XCTAssertEqual(m.handle(.enable, now: now + 2_000), [.start])
+        XCTAssertFalse(m.suspended); XCTAssertEqual(m.crashes, 0)
     }
 
     func testAFailedStartCountsAsACrash() {

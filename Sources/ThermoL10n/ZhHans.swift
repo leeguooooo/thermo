@@ -4568,6 +4568,7 @@ let zhHans: [String: String] = [
     "No separate module access is declared.": "未声明单独的模块访问能力。",
     "Confirmation required": "需确认",
     "Global shortcuts released": "全局快捷键已释放",
+    "Switched off after crashing %1$@ times in a row. Switch it on again to retry.": "连续崩溃 %1$@ 次，已自动关闭。重新开启即可再试。",
     "Login items removed": "登录项已移除",
     "No login items belong to this feature": "此功能没有登录项",
     "Preferences are kept, so switching it on again restores your setup.": "设置会保留，再次开启时恢复原来的配置。",

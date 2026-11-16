@@ -8,6 +8,8 @@ import Foundation
 /// - `prewarm` and `always` modules run whenever they are on.
 /// - A process that exits without being asked to is a crash: the next start waits, twice as long
 ///   after each crash in a row. A run of `stableRun` forgets the earlier crashes.
+/// - `suspendAfter` crashes in a row switch the module off and mark it `suspended`, so one broken module
+///   stops costing restarts; the person switches it on again once an update or a fix is in.
 /// - A module that is off has no process and nothing scheduled.
 public struct ModuleLifecycle: Sendable, Equatable {
     public enum Phase: String, Sendable {
@@ -47,8 +49,11 @@ public struct ModuleLifecycle: Sendable, Equatable {
         public var longestBackoff: TimeInterval
         /// A process that lived this long did not crash because of how it was started.
         public var stableRun: TimeInterval
-        public init(idleTimeout: TimeInterval = 120, firstBackoff: TimeInterval = 1, longestBackoff: TimeInterval = 300, stableRun: TimeInterval = 60) {
+        /// Crashes in a row after which the module is switched off.
+        public var suspendAfter: Int
+        public init(idleTimeout: TimeInterval = 120, firstBackoff: TimeInterval = 1, longestBackoff: TimeInterval = 300, stableRun: TimeInterval = 60, suspendAfter: Int = 5) {
             self.idleTimeout = idleTimeout; self.firstBackoff = firstBackoff; self.longestBackoff = longestBackoff; self.stableRun = stableRun
+            self.suspendAfter = max(1, suspendAfter)
         }
     }
 
@@ -60,6 +65,8 @@ public struct ModuleLifecycle: Sendable, Equatable {
     public private(set) var uses = 0
     /// Crashes in a row.
     public private(set) var crashes = 0
+    /// Switched off by `suspendAfter` crashes in a row rather than by the person. Cleared by `enable`.
+    public private(set) var suspended = false
     /// When the kernel must send `tick`, if at all. `nil` means nothing is scheduled.
     public private(set) var deadline: TimeInterval?
     private var startedAt: TimeInterval?
@@ -82,7 +89,7 @@ public struct ModuleLifecycle: Sendable, Equatable {
         switch event {
         case .enable:
             guard !enabled else { return [] }
-            enabled = true
+            enabled = true; suspended = false; crashes = 0
             return settle(now)
         case .disable:
             guard enabled else { return [] }
@@ -128,6 +135,10 @@ public struct ModuleLifecycle: Sendable, Equatable {
         // Switched off while it was starting or just before it died: nothing to hold against it.
         guard enabled else { crashes = 0; retryAt = nil; return settle(now) }
         crashes += 1
+        if crashes >= timing.suspendAfter {
+            enabled = false; suspended = true; retryAt = nil
+            return settle(now)
+        }
         retryAt = now + backoff(after: crashes)
         return settle(now)
     }
