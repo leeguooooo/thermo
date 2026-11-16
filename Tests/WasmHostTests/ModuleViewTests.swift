@@ -65,7 +65,8 @@ final class ModuleViewTests: XCTestCase {
         let first = await calls.all.first
         XCTAssertEqual(first?.0, "thermo_render")
         XCTAssertEqual(first.map { String(decoding: $0.1, as: UTF8.self) }, #"{"language":"zh-Hans","scene":"main"}"#)
-        XCTAssertNotNil(try await module.render(scene: "menu", language: "en").menuBarItem)
+        let menu = try await module.render(scene: "menu", language: "en")
+        XCTAssertNotNil(menu.menuBarItem)
         // An empty action output means "render again".
         _ = try await module.perform("save", values: ["n": .number(1)], scene: "main", language: "en")
         let names = await calls.all.map(\.0)
