@@ -30,6 +30,16 @@ for BIN in "$DIST/thermo" "$DIST/thermo-helper" "$APP/Contents/MacOS/Thermo" "$A
         test "$TARGET" = "$MINIMUM" || { echo "deployment target $TARGET differs from app minimum $MINIMUM: $BIN" >&2; exit 1; }
     done
 done
+# The WebAssembly runner targets macOS 15 on purpose (WasmKit); the app only starts it there.
+WASM_RUNNER="$APP/Contents/Helpers/ThermoWasmRunner"
+WASM_MINIMUM=15.0
+test -f "$WASM_RUNNER" || { echo "missing binary: $WASM_RUNNER" >&2; exit 1; }
+codesign --verify --strict "$WASM_RUNNER"
+codesign -d --verbose=2 "$WASM_RUNNER" 2>&1 | grep -q 'flags=.*runtime' || { echo "runner lacks the hardened runtime: $WASM_RUNNER" >&2; exit 1; }
+for ARCH in $ARCHS; do lipo "$WASM_RUNNER" -verify_arch "$ARCH"; done
+for TARGET in $(xcrun vtool -show-build "$WASM_RUNNER" | awk '$1 == "minos" {print $2}'); do
+    test "$TARGET" = "$WASM_MINIMUM" || { echo "runner deployment target $TARGET is not $WASM_MINIMUM" >&2; exit 1; }
+done
 for MODULE in "$APP"/Contents/Extensions/*.appex; do
     [ -d "$MODULE" ] || continue
     codesign --verify --strict "$MODULE"

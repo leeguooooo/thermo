@@ -4,6 +4,7 @@ import CleanKit
 import ModuleHost
 import ModuleKit
 import ThermoL10n
+import WasmHost
 
 /// What Thermo does for its modules. A module holds no grant of its own; every request it makes
 /// arrives here through its broker, is checked against its manifest, confirmed by the person where
@@ -13,6 +14,21 @@ package enum ModuleKernel {
 
     package static func make(for manifest: ModuleManifest) -> KernelXPC {
         BrokerKernel(broker: broker(for: manifest, log: log, confirm: { request in await confirm(request) }))
+    }
+
+    /// The WebAssembly runner inside this app, if it was packaged.
+    package static var wasmRunner: URL? {
+        let url = Bundle.main.bundleURL.appendingPathComponent("Contents/Helpers/ThermoWasmRunner")
+        return FileManager.default.isExecutableFile(atPath: url.path) ? url : nil
+    }
+
+    /// A third-party WebAssembly module, bound to the same broker, rules, confirmation and access log
+    /// as every other module. Nil when this Mac or this build can't run WebAssembly modules.
+    package static func wasmHost(for manifest: ModuleManifest, wasm: Data, runner: URL? = wasmRunner,
+                                 limits: WasmHost.Limits = .init()) -> WasmHost? {
+        guard WasmHost.isSupported, let runner else { return nil }
+        return WasmHost(manifest: manifest, wasm: wasm, broker: broker(for: manifest, log: log, confirm: { request in await confirm(request) }),
+                        limits: limits, launcher: .process(runner))
     }
 
     package static func broker(for manifest: ModuleManifest, log: ModuleAccessLog, home: String = NSHomeDirectory(),
