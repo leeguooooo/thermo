@@ -1,3 +1,5 @@
+import AgentCore
+import CleanKit
 import ModuleHost
 import ModuleKit
 import NativeFeatureAPI
@@ -65,5 +67,33 @@ import XCTest
         XCTAssertNotEqual(none,some)
         XCTAssertTrue(some.contains("2.2") || some.contains("2.3"))
         XCTAssertTrue(none.contains("0.5") && some.contains("0.5"))
+    }
+}
+
+final class FeatureDataCleanupTests:XCTestCase {
+    func testOnlyDeclaredDataIsMovedAndTheMoveIsUndoable() throws {
+        let home=FileManager.default.temporaryDirectory.appendingPathComponent("thermo-feature-data-"+UUID().uuidString).path
+        defer{try? FileManager.default.removeItem(atPath:home)}
+        let support=home+"/Library/Application Support/Thermo"
+        try FileManager.default.createDirectory(atPath:support+"/Search",withIntermediateDirectories:true)
+        try FileManager.default.createDirectory(atPath:home+"/.Trash",withIntermediateDirectories:true)
+        try Data(repeating:7,count:4096).write(to:URL(fileURLWithPath:support+"/Search/index.db"))
+        try Data("keep".utf8).write(to:URL(fileURLWithPath:support+"/operations-other.jsonl"))
+        let id=BuiltinModuleManifests.search.id
+        let found=FeatureDataCleanup.present(id,home:home)
+        XCTAssertEqual(found.map(\.path),[support+"/Search"]);XCTAssertGreaterThan(found[0].bytes,0)
+        XCTAssertTrue(FeatureDataCleanup.present(BuiltinModuleManifests.history.id,home:home).isEmpty)
+        var stray=found[0];stray.path=support+"/operations-other.jsonl"
+        let move:(String) throws->URL? = {path in
+            let destination=URL(fileURLWithPath:home+"/.Trash/"+(path as NSString).lastPathComponent)
+            try FileManager.default.moveItem(atPath:path,toPath:destination.path);return destination
+        }
+        let result=FeatureDataCleanup.trash(id,found+[stray],home:home,move:move)
+        XCTAssertEqual(result.moved,[support+"/Search"]);XCTAssertEqual(Array(result.failed.keys),[support+"/operations-other.jsonl"])
+        XCTAssertTrue(FileManager.default.fileExists(atPath:support+"/operations-other.jsonl"))
+        XCTAssertFalse(FileManager.default.fileExists(atPath:support+"/Search"))
+        let record=try XCTUnwrap(OperationJournal.read(home:home).first)
+        XCTAssertEqual(record.subject,id);XCTAssertEqual(record.undo?.kind,"trashBatch")
+        XCTAssertEqual(try TrashBatches.load(try XCTUnwrap(record.undo?.ref),home:home).entries.map(\.original),[support+"/Search"])
     }
 }

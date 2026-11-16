@@ -336,7 +336,7 @@ struct ModuleSwitches: View {
             }.padding(.horizontal, Theme.Space.m).padding(.vertical, 8)
                 DisclosureGroup(tr("Access and stop details"),isExpanded:Binding(get:{expanded.contains(status.manifest.id)},set:{if $0{expanded.insert(status.manifest.id)}else{expanded.remove(status.manifest.id)}})) {
                     ModuleCapabilityDetails(manifest:status.manifest,builtin:status.builtin).padding(.top,8)
-                    if let progress=center.stopProgress[status.manifest.id]{ModuleStopDetails(progress:progress).padding(.top,8)}
+                    if let progress=center.stopProgress[status.manifest.id]{ModuleStopDetails(center:center,id:status.manifest.id,progress:progress).padding(.top,8)}
                 }.font(Theme.secondary).foregroundStyle(Theme.textSecondary)
                     .accessibilityIdentifier("module-center-details-"+status.manifest.id)
                     .padding(.leading,46).padding(.trailing,Theme.Space.m).padding(.bottom,12)
