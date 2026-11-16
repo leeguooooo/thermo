@@ -13,3 +13,6 @@ HARNESS="$(swift build -c "$CONFIGURATION" --show-bin-path)/WasmHarness"
 # Same hardened runtime the app signs it with, so the sandbox call is tested under it too.
 codesign --force --options runtime -s - "$RUNNER"
 "$HARNESS" "$RUNNER" Runtimes/WasmRunner/Fixtures/probe.wasm
+# Declarative pages and menu bar items (#47) through the same runner.
+swift build -c "$CONFIGURATION" --product DeclarativeHarness
+"$(swift build -c "$CONFIGURATION" --show-bin-path)/DeclarativeHarness" "$RUNNER" Runtimes/WasmRunner/Fixtures/views.wasm
