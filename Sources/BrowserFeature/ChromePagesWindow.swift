@@ -100,7 +100,7 @@ final class ChromePagesModel: ObservableObject {
     /// Whether the running (or last) check measures pages, rather than only listing tabs.
     @Published private(set) var measuring = false
     /// Memory per page is possible (chrome-use or a debugging port).
-    var canMeasure: Bool { work.acceptsWork && ChromeInspector.endpoint(app: app) != nil }
+    var canMeasure: Bool { work.acceptsWork && ChromeInspector.endpoint(app: app, allowDirectPort: true) != nil }
 
     /// Without `measure`, only the tab list: nothing is attached. Measuring attaches to each page
     /// (Chrome shows "is being debugged" briefly), so it starts only from the user's button.

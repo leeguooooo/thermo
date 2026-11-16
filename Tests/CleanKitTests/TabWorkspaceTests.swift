@@ -105,6 +105,15 @@ final class TabWorkspaceTests: XCTestCase {
         XCTAssertEqual(Set(override.keys), ["_override"])
         XCTAssertEqual(override["_override"]?.port, 9999)
     }
+    func testBackgroundConnectionsNeverFallBackToTheBrowsersOwnDebuggingPort() throws {
+        let root = try home()
+        let chrome = root + "/Library/Application Support/Google/Chrome"
+        try FileManager.default.createDirectory(atPath: chrome, withIntermediateDirectories: true)
+        try "61809\n/devtools/browser/abc\n".write(toFile: chrome + "/DevToolsActivePort", atomically: true, encoding: .utf8)
+        XCTAssertTrue(TabWorkspace.connections(app: "Google Chrome", home: root, env: [:]).isEmpty,
+                      "without a chrome-use relay the periodic grouping must skip, not trigger Chrome's consent prompt")
+        XCTAssertNotNil(ChromeInspector.endpoint(app: "Google Chrome", home: root, env: [:], allowDirectPort: true))
+    }
     func testInventoryExportsActionableExactIDs() throws {
         let p = page("one")
         let data = try JSONEncoder().encode(p)

@@ -283,16 +283,19 @@ public enum ChromeInspector {
     // MARK: - Finding the browser
 
     /// Where to reach the browser's DevTools protocol: THERMO_CDP_URL, chrome-use's relay into the
-    /// user's own Chrome, or a browser started with --remote-debugging-port (DevToolsActivePort).
+    /// user's own Chrome, or — only with `allowDirectPort` — the browser's own DevToolsActivePort.
+    /// Chrome asks the person to grant full control on every direct connection to that port, so only
+    /// an action the person just started (Measure) may use it; background work never does.
     public static func endpoint(app: String = "Google Chrome", home: String = NSHomeDirectory(),
-                                env: [String: String] = ProcessInfo.processInfo.environment) -> URL? {
+                                env: [String: String] = ProcessInfo.processInfo.environment,
+                                allowDirectPort: Bool = false) -> URL? {
         if let s = env["THERMO_CDP_URL"], let u = URL(string: s) { return u }
         if app == "Google Chrome",
            let s = try? String(contentsOfFile: home + "/.chrome-use/relay-cdp-url", encoding: .utf8),
            let u = URL(string: s.trimmingCharacters(in: .whitespacesAndNewlines)), u.scheme?.hasPrefix("ws") == true {
             return u
         }
-        guard let dir = profileDirs[app],
+        guard allowDirectPort, let dir = profileDirs[app],
               let s = try? String(contentsOfFile: home + "/Library/Application Support/" + dir + "/DevToolsActivePort", encoding: .utf8)
         else { return nil }
         let lines = s.split(separator: "\n").map(String.init)
@@ -633,12 +636,12 @@ public enum ChromeInspector {
         }
         if Task.isCancelled { return stopped() }
         if !measure {
-            if endpoint(app: app, home: home) == nil {
+            if endpoint(app: app, home: home, allowDirectPort: true) == nil {
                 hint = app == "Google Chrome"
                     ? tr("To see memory per page (which one leaks), install chrome-use, which connects Thermo to your own Chrome: %1$@", chromeUseInstall)
                     : tr("To see memory per page, start %1$@ with --remote-debugging-port=9222.", app)
             }
-        } else if let url = endpoint(app: app, home: home) {
+        } else if let url = endpoint(app: app, home: home, allowDirectPort: true) {
             do {
                 let first = try await sample(url) { d, t in progress(.measuring(round: 1, done: d, total: t)) }
                 var report = diagnose(first)

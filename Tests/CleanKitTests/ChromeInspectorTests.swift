@@ -129,7 +129,9 @@ final class ChromeInspectorTests: XCTestCase {
         let edge = home + "/Library/Application Support/Microsoft Edge"
         try FileManager.default.createDirectory(atPath: edge, withIntermediateDirectories: true)
         try "9222\n/devtools/browser/xyz\n".write(toFile: edge + "/DevToolsActivePort", atomically: true, encoding: .utf8)
-        XCTAssertEqual(ChromeInspector.endpoint(app: "Microsoft Edge", home: home, env: [:])?.absoluteString, "ws://127.0.0.1:9222/devtools/browser/xyz")
+        // Chrome asks for full-control consent on every direct connection: only an explicit action may make one.
+        XCTAssertNil(ChromeInspector.endpoint(app: "Microsoft Edge", home: home, env: [:]))
+        XCTAssertEqual(ChromeInspector.endpoint(app: "Microsoft Edge", home: home, env: [:], allowDirectPort: true)?.absoluteString, "ws://127.0.0.1:9222/devtools/browser/xyz")
         XCTAssertEqual(ChromeInspector.endpoint(app: "Microsoft Edge", home: home, env: ["THERMO_CDP_URL": "ws://h:1/p"])?.absoluteString, "ws://h:1/p")
     }
 
