@@ -1,3 +1,4 @@
+import ModuleHost
 import ModuleKit
 import NativeFeatureAPI
 import XCTest
@@ -42,5 +43,27 @@ import XCTest
         let center=ModuleCenter(defaults:defaults,prepareBuiltinStop:{_ in throw NativeModules.StopRefused(description:"fixture is busy")})
         center.setEnabled(id,false)
         XCTAssertTrue(center.isOn(id));XCTAssertEqual(center.stopProgress[id],.refused("fixture is busy"));XCTAssertTrue(center.changing.isEmpty)
+    }
+
+    func testUsageNeverInventsAPerFeatureShareForBuiltinFeatures() {
+        let name="thermo-feature-usage-"+UUID().uuidString,defaults=UserDefaults(suiteName:name)!
+        defer{defaults.removePersistentDomain(forName:name)}
+        let id=BuiltinModuleManifests.performance.id
+        let center=ModuleCenter(defaults:defaults)
+        let sample=ModuleUsage(pid:getpid(),footprintBytes:200<<20,cpuSeconds:1.25,energyJoules:0)
+        defaults.set(false,forKey:ModulePreferences.key(id))
+        XCTAssertEqual(center.usage(id,builtin:true,read:{_ in sample}),.off)
+        defaults.set(true,forKey:ModulePreferences.key(id))
+        XCTAssertEqual(center.usage(id,builtin:true,read:{XCTAssertEqual($0,getpid());return sample}),.shared(thermo:sample))
+        XCTAssertTrue(ModuleUsageLine.text(.shared(thermo:sample)).contains(ModuleUsageLine.memory(200<<20)))
+        XCTAssertTrue(ModuleUsageLine.text(.shared(thermo:nil)).contains("Thermo"))
+        XCTAssertEqual(center.usage("dev.example.unloaded",builtin:false,read:{_ in sample}),.off)
+    }
+    func testIsolatedModuleUsageSaysWhenEnergyIsNotReported() {
+        let none=ModuleUsageLine.text(.process(.init(pid:1,footprintBytes:8<<20,cpuSeconds:0.5,energyJoules:0)))
+        let some=ModuleUsageLine.text(.process(.init(pid:1,footprintBytes:8<<20,cpuSeconds:0.5,energyJoules:2.25)))
+        XCTAssertNotEqual(none,some)
+        XCTAssertTrue(some.contains("2.2") || some.contains("2.3"))
+        XCTAssertTrue(none.contains("0.5") && some.contains("0.5"))
     }
 }

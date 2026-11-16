@@ -181,6 +181,21 @@ import ThermoL10n
         return .init(module: old.module, entry: old.entry, target: target, builtin: true)
     }
 
+    /// What a feature costs right now, as far as the system can tell it apart.
+    /// Built-in features run inside Thermo, so only Thermo's own total is real; an isolated module has its own process.
+    enum Usage: Equatable {
+        case off
+        case shared(thermo: ModuleUsage?)
+        case process(ModuleUsage)
+        case notRunning
+    }
+    func usage(_ id: String, builtin: Bool, read: (pid_t) -> ModuleUsage? = { ModuleUsage.read($0) }) -> Usage {
+        guard isOn(id) else { return .off }
+        if builtin { return .shared(thermo: read(getpid())) }
+        guard let pid = statuses.first(where: { $0.manifest.id == id })?.pid, let usage = read(pid) else { return .notRunning }
+        return .process(usage)
+    }
+
     func setEnabled(_ id: String, _ on: Bool) {
         guard !changing.contains(id) else { return }
         var finish: NativeModules.FinishStop?
@@ -305,6 +320,8 @@ struct ModuleSwitches: View {
                     }
                     if center.changing.contains(status.manifest.id) {
                         Text(tr("stopping…")).font(Theme.secondary).foregroundStyle(Theme.textSecondary)
+                    } else {
+                        ModuleUsageLine(center: center, id: status.manifest.id, builtin: status.builtin)
                     }
                 }
                 Spacer()

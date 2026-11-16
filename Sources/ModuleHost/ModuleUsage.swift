@@ -10,6 +10,10 @@ public struct ModuleUsage: Sendable, Equatable {
     public var cpuSeconds: Double
     public var energyJoules: Double
 
+    public init(pid: pid_t, footprintBytes: UInt64, cpuSeconds: Double, energyJoules: Double) {
+        self.pid = pid; self.footprintBytes = footprintBytes; self.cpuSeconds = cpuSeconds; self.energyJoules = energyJoules
+    }
+
     public static func read(_ pid: pid_t) -> ModuleUsage? {
         var info = rusage_info_v6()
         let ok = withUnsafeMutablePointer(to: &info) { p in
