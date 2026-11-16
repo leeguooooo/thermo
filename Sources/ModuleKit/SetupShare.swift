@@ -14,18 +14,20 @@ public enum SetupShare {
     }
     enum Kind { case bool, int, double, choice, shortcut }
 
-    /// Settings that describe a choice. Strings must be short identifiers; shortcuts are small key-combo blobs.
+    /// Settings that describe a choice and take effect from the stored value alone. Strings must be short
+    /// identifiers. Left out on purpose: settings applied through a flow of their own (charge limit and lid
+    /// guard go through the helper, menu bar management asks for Accessibility, global shortcuts have to be
+    /// registered and may replace Spotlight's), and anything holding a path, account, consent or history.
     static let settings: [String: Kind] = [
-        "alertsEnabled": .bool, "lidAwakeHeatGuard": .bool, "batteryChargeLimit80Enabled": .bool,
+        "alertsEnabled": .bool,
         "titleMetric": .choice, "menuLayout": .choice, "menuPresentation": .choice, "menuPrimary": .choice,
         "menuSecondary": .choice, "menuLeftClick": .choice, "menuRightClick": .choice,
         "computePage.sort": .choice, "apps.sort": .choice, "sensors.hottestFirst": .bool,
-        "menuBarManagementEnabled": .bool, "menuBarGlobalShortcutsEnabled": .bool, "menuBarAutoCollapseSeconds": .double,
+        "menuBarAutoCollapseSeconds": .double,
         "focus.focusMinutes": .int, "focus.shortBreakMinutes": .int, "focus.longBreakMinutes": .int,
         "focus.longBreakEvery": .int, "focus.autoStartFocusAfterBreak": .bool, "focus.showProgressIcon": .bool,
         "focus.startOnLaunch": .bool,
-        "dev.thermo.search.shortcut": .shortcut, "dev.thermo.search.switchToASCIIInput": .bool,
-        "dev.thermo.cleanScreen.shortcut": .shortcut, "dev.thermo.cleanScreen.duration": .double,
+        "dev.thermo.search.switchToASCIIInput": .bool, "dev.thermo.cleanScreen.duration": .double,
         "module.discovery.recommendations.enabled": .bool,
     ]
 

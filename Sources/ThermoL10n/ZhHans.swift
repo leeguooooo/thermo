@@ -4574,6 +4574,7 @@ let zhHans: [String: String] = [
     "This setup was exported by a newer Thermo. Update Thermo first.": "此配置来自更新版本的 Thermo，请先更新 Thermo。",
     "This is not a Thermo setup file.": "这不是 Thermo 配置文件。",
     "Import setup": "导入配置",
+    "Imported. Some settings take effect after Thermo restarts.": "已导入。部分设置在重启 Thermo 后生效。",
     "This setup matches yours. Nothing would change.": "此配置与当前一致，不会有改动。",
     "Features to switch on": "将开启的功能",
     "Features to switch off": "将关闭的功能",

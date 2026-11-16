@@ -50,6 +50,7 @@ struct SetupImportReview:View {
     @ObservedObject var center:ModuleCenter
     let review:SetupShare.Review
     let done:()->Void
+    @State private var applied=false
     private func name(_ id:String)->String {NativeModules.manifest(id).map{tr($0.name)} ?? id}
     var body:some View {
         VStack(alignment:.leading,spacing:Theme.Space.m){
@@ -73,6 +74,9 @@ struct SetupImportReview:View {
                     if !review.settings.isEmpty {
                         Text(tr("%1$@ settings will change.",String(review.settings.count))).foregroundStyle(Theme.textSecondary)
                     }
+                    if applied {
+                        Text(tr("Imported. Some settings take effect after Thermo restarts.")).foregroundStyle(Theme.caution)
+                    }
                     if !review.ignored.isEmpty {
                         Text(tr("%1$@ entries this version doesn't know are skipped.",String(review.ignored.count))).font(Theme.secondary).foregroundStyle(Theme.textTertiary)
                     }
@@ -80,13 +84,18 @@ struct SetupImportReview:View {
             }.frame(maxHeight:320)
             HStack{
                 Spacer()
-                Button(tr("Cancel"),role:.cancel){done()}.keyboardShortcut(.cancelAction)
-                Button(tr("Import")){
-                    SetupShare.applySettings(review,to:.standard)
-                    for id in review.switchOff {center.setEnabled(id,false)}
-                    for id in review.switchOn {center.setEnabled(id,true)}
-                    done()
-                }.keyboardShortcut(.defaultAction).disabled(review.isEmpty)
+                if !applied {Button(tr("Cancel"),role:.cancel){done()}.keyboardShortcut(.cancelAction)}
+                if applied {
+                    Button(tr("Later")){done()}
+                    Button(tr("Restart Thermo")){AppInstallationMonitor.shared.relaunch()}.keyboardShortcut(.defaultAction)
+                } else {
+                    Button(tr("Import")){
+                        SetupShare.applySettings(review,to:.standard)
+                        for id in review.switchOff {center.setEnabled(id,false)}
+                        for id in review.switchOn {center.setEnabled(id,true)}
+                        if review.settings.isEmpty {done()} else {applied=true}
+                    }.keyboardShortcut(.defaultAction).disabled(review.isEmpty)
+                }
             }
         }.padding(Theme.Space.l).frame(width:420)
     }

@@ -50,7 +50,13 @@ struct AppExecutableStamp: Equatable {
     }
 
     func restart() {
-        guard !restarting, needsRestart else { return }
+        guard needsRestart else { return }
+        relaunch()
+    }
+
+    /// Quits through the normal flow and opens Thermo again once it has really exited.
+    func relaunch() {
+        guard !restarting, Bundle.main.bundleURL.pathExtension == "app" else { return }
         let process = Process()
         process.executableURL = URL(fileURLWithPath: "/bin/sh")
         // The App's ordinary termination flow can cancel or defer. Only relaunch after it really exits.

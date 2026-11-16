@@ -9,7 +9,7 @@ final class SetupShareTests: XCTestCase {
 
     func testExportCarriesOnlyAllowListedChoicesAndNoPersonalData() throws {
         let (d, name) = defaults(); defer { d.removePersistentDomain(forName: name) }
-        d.set(true, forKey: "alertsEnabled"); d.set(25, forKey: "focus.focusMinutes"); d.set("cpu", forKey: "titleMetric")
+        d.set(true, forKey: "alertsEnabled"); d.set(true, forKey: "batteryChargeLimit80Enabled"); d.set(25, forKey: "focus.focusMinutes"); d.set("cpu", forKey: "titleMetric")
         d.set("/Users/someone/Pictures", forKey: "titleMetric.path")
         d.set(true, forKey: "localAI.consented"); d.set("secret", forKey: "bearer_token")
         d.set("/Users/someone/Desktop", forKey: "menuLayout")   // A path in an allow-listed key is still refused.
@@ -18,7 +18,7 @@ final class SetupShareTests: XCTestCase {
         XCTAssertEqual(doc.settings["alertsEnabled"], .bool(true))
         XCTAssertEqual(doc.settings["focus.focusMinutes"], .int(25))
         XCTAssertEqual(doc.settings["titleMetric"], .string("cpu"))
-        XCTAssertNil(doc.settings["menuLayout"]); XCTAssertNil(doc.settings["localAI.consented"]); XCTAssertNil(doc.settings["bearer_token"])
+        XCTAssertNil(doc.settings["menuLayout"]); XCTAssertNil(doc.settings["batteryChargeLimit80Enabled"]); XCTAssertNil(doc.settings["localAI.consented"]); XCTAssertNil(doc.settings["bearer_token"])
         XCTAssertEqual(doc.modules[BuiltinModuleManifests.capture.id], false)
         let text = String(decoding: try SetupShare.encode(doc), as: UTF8.self)
         XCTAssertFalse(text.contains("/Users")); XCTAssertFalse(text.contains("secret"))
