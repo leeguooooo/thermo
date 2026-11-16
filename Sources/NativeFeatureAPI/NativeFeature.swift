@@ -70,6 +70,7 @@ package struct NativeFeatureBusy:Error,LocalizedError,CustomStringConvertible {
 package struct NativeFeatureDefinition:Sendable {
     package let manifest:ModuleManifest
     package let runsInBackground:Bool
+    package let permissionDescriptions:[String]
     package let pageContracts:[NativePageContract]
     package let ui:NativeUIContributions
     package let menuShortcuts:[String:String]
@@ -80,8 +81,8 @@ package struct NativeFeatureDefinition:Sendable {
     let resolveLegacyLaunch:@Sendable ([String])->NativePresentationRequest?
     let invalidateColdState:@MainActor @Sendable ([String])->Void
     let makeSession:@MainActor @Sendable (FeatureAvailability)->any NativeFeatureSession
-    package init(manifest:ModuleManifest,runsInBackground:Bool = false,pageContracts:[NativePageContract] = [],ui:NativeUIContributions = .none,menuShortcuts:[String:String] = [:],legacyMenuEntries:[String:String] = [:],privateWorkers:Set<String> = [],retained:NativeRetainedContributions = .none,resolveLegacyPage:@escaping @Sendable (String)->NativeFeatureRoute? = {_ in nil},resolveLegacyLaunch:@escaping @Sendable ([String])->NativePresentationRequest? = {_ in nil},invalidateColdState:@escaping @MainActor @Sendable ([String])->Void = {_ in},makeSession:@escaping @MainActor @Sendable (FeatureAvailability)->any NativeFeatureSession) {
-        self.manifest=manifest;self.runsInBackground=runsInBackground;self.pageContracts=pageContracts;self.ui=ui;self.menuShortcuts=menuShortcuts;self.legacyMenuEntries=legacyMenuEntries;self.privateWorkers=privateWorkers;self.retained=retained;self.resolveLegacyPage=resolveLegacyPage;self.resolveLegacyLaunch=resolveLegacyLaunch;self.invalidateColdState=invalidateColdState;self.makeSession=makeSession
+    package init(manifest:ModuleManifest,runsInBackground:Bool = false,permissionDescriptions:[String] = [],pageContracts:[NativePageContract] = [],ui:NativeUIContributions = .none,menuShortcuts:[String:String] = [:],legacyMenuEntries:[String:String] = [:],privateWorkers:Set<String> = [],retained:NativeRetainedContributions = .none,resolveLegacyPage:@escaping @Sendable (String)->NativeFeatureRoute? = {_ in nil},resolveLegacyLaunch:@escaping @Sendable ([String])->NativePresentationRequest? = {_ in nil},invalidateColdState:@escaping @MainActor @Sendable ([String])->Void = {_ in},makeSession:@escaping @MainActor @Sendable (FeatureAvailability)->any NativeFeatureSession) {
+        self.manifest=manifest;self.runsInBackground=runsInBackground;self.permissionDescriptions=permissionDescriptions;self.pageContracts=pageContracts;self.ui=ui;self.menuShortcuts=menuShortcuts;self.legacyMenuEntries=legacyMenuEntries;self.privateWorkers=privateWorkers;self.retained=retained;self.resolveLegacyPage=resolveLegacyPage;self.resolveLegacyLaunch=resolveLegacyLaunch;self.invalidateColdState=invalidateColdState;self.makeSession=makeSession
     }
 }
 

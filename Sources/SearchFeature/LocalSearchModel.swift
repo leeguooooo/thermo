@@ -2,6 +2,7 @@ import AppKit
 import Combine
 import SearchCore
 import ModuleKit
+import NativeFeatureAPI
 import ThermoL10n
 import UniformTypeIdentifiers
 
@@ -11,6 +12,10 @@ import UniformTypeIdentifiers
     @Published private(set) var searching = false
     @Published private(set) var indexing = false
     @Published private(set) var directPath: String?
+    @Published private(set) var featureChoices:[FeatureDiscoveryItem]=[]
+    @Published var featureReview:FeatureDiscoveryItem?
+    @Published private(set) var featureNotice:String?
+    var discovery:any FeatureDiscoveryAccess=UnavailableFeatureDiscovery()
     @Published var selection: String?
     @Published var error: String?
     @Published var showSettings = false
@@ -93,6 +98,7 @@ import UniformTypeIdentifiers
         if let indexer { indexer.stop(); retiringIndexers.append(indexer); self.indexer = nil }
         searching = false; indexing = false; selection = nil; directPath = nil
         response = SearchResponse(query: query, items: [])
+        featureChoices=[];featureReview=nil;featureNotice=nil
         for observer in appObservers { NSWorkspace.shared.notificationCenter.removeObserver(observer); DistributedNotificationCenter.default().removeObserver(observer) }
         appObservers.removeAll()
     }
@@ -128,7 +134,9 @@ import UniformTypeIdentifiers
         open(selected, using: app)
     }
     func submit() {
-        guard featureOn, !suspended, let store else { return }
+        guard featureOn, !suspended else { return }
+        featureChoices=discovery.matches(query)
+        guard let store else{return}
         generation &+= 1
         let current = generation, term = query, oldSelection = selection
         directPath = nil
@@ -145,7 +153,8 @@ import UniformTypeIdentifiers
                 }.value
                 guard !Task.isCancelled, let self, current == self.generation else { return }
                 self.response = result; self.directPath = path; self.searching = false
-                self.selection = result.items.contains { $0.id == oldSelection } ? oldSelection : result.items.first?.id
+                let choices=self.choiceIDs
+                self.selection = oldSelection.flatMap{choices.contains($0) ? $0:nil} ?? choices.first
             } catch is CancellationError { }
             catch {
                 guard let self, current == self.generation else { return }
@@ -154,10 +163,24 @@ import UniformTypeIdentifiers
         }
         queries[taskID] = task; queryTask = task
     }
-    func move(_ delta: Int) {
-        guard response.query == query, !response.items.isEmpty else { return }
-        let index = response.items.firstIndex { $0.id == selection } ?? 0
-        selection = response.items[min(response.items.count - 1, max(0, index + delta))].id
+    private var choiceIDs:[String] {featureChoices.map{"feature:"+$0.id}+(response.query == query ? response.items.map(\.id):[])}
+    func move(_ delta:Int) {
+        let choices=choiceIDs
+        guard !choices.isEmpty else{return}
+        let index=choices.firstIndex(of:selection ?? "") ?? 0
+        selection=choices[min(choices.count-1,max(0,index+delta))]
+    }
+    func reviewFeature(_ item:FeatureDiscoveryItem) {
+        guard enabled,!presentingDialog,featureChoices.contains(where:{$0.id==item.id}) else{return}
+        featureReview=item;presentingDialog=true
+    }
+    func cancelFeatureReview(){featureReview=nil;presentingDialog=false}
+    func enableReviewedFeature() {
+        guard enabled,let item=featureReview else{return}
+        do {
+            try discovery.enable(item)
+            cancelFeatureReview();featureNotice=tr("%1$@ is on and ready to use.",item.name);submit()
+        } catch {self.error=error.localizedDescription;cancelFeatureReview()}
     }
     static let defaultFoldersKey = "dev.thermo.search.defaultFoldersApplied"
     /// Once per user: someone who has never added a folder gets Desktop, Documents and Downloads, so
@@ -218,7 +241,10 @@ import UniformTypeIdentifiers
         do { try store?.setAlias(alias, for: item.path); aliasTarget = nil; submit() } catch { self.error = String(describing: error) }
     }
     func clearHistory() { guard enabled else{return};do { try store?.clearHistory(); submit() } catch { self.error = String(describing: error) } }
-    func openSelected() { if let selected { open(selected) } }
+    func openSelected() {
+        if let item=featureChoices.first(where:{"feature:"+$0.id==selection}) {reviewFeature(item)}
+        else if let selected {open(selected)}
+    }
     func open(_ item: SearchItem, using application: URL? = nil) {
         guard enabled else{return}
         guard response.query == query, response.items.contains(where: { $0.id == item.id }) else { return }

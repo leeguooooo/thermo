@@ -29,6 +29,7 @@ import SystemServicesAPI
     static func bound(defaults:UserDefaults,services:AppSystemServices,store:@escaping ()->NativeFeatureStore?)->ShellFeatureEnvironment {
         .init(defaults:{defaults},telemetry:{services.telemetry},administration:{services.helper},fanFactory:{services.helper},store:store)
     }
+    package var discovery:any FeatureDiscoveryAccess {FeatureDiscoveryService(center:.shared,defaults:readDefaults(),catalog:ShellNativeCatalog.catalog)}
     package var defaults:UserDefaults {readDefaults()}
     package var telemetry:any TelemetryReadService {readTelemetry()}
     package var administration:any HelperAdministration {readAdministration()}

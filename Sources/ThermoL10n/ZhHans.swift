@@ -4598,4 +4598,24 @@ let zhHans: [String: String] = [
     "Access records for %1$@": "%1$@ 的访问记录",
     "%1$@ targets in this request": "本次请求涉及 %1$@ 个目标",
 
+
+    // Feature discovery
+    "Feature discovery is unavailable.": "功能发现暂不可用。",
+    "Screen Recording for screenshots and recording.": "截图和录屏需要「屏幕录制」权限。",
+    "Accessibility for scrolling capture (optional).": "滚动截图使用「辅助功能」权限（可选）。",
+    "Input Monitoring for recording keyboard events (optional).": "录制键盘事件使用「输入监控」权限（可选）。",
+    "Camera and microphone for recording those inputs (optional).": "录制摄像头或麦克风时使用对应权限（可选）。",
+    "Built into Thermo · no additional download": "已内置于 Thermo · 无需额外下载",
+    "Already installed · no additional download": "已安装 · 无需额外下载",
+    "This feature is no longer available.": "这项功能已不可用。",
+    "Wait for this feature to finish switching off.": "请等待这项功能完成停用。",
+    "This feature could not be enabled.": "未能开启这项功能。",
+    "Feature access changed. Review it again before enabling.": "功能的访问范围已更改，请重新确认后再开启。",
+    "Enable %1$@?": "开启「%1$@」？",
+    "Permissions and access": "权限与访问范围",
+    "Enabling makes the feature available. System permission prompts appear only when a tool needs them.": "开启后即可使用。工具需要系统权限时，才会弹出授权提示。",
+    "%1$@ is on and ready to use.": "「%1$@」已开启，可以使用。",
+    "Dismiss feature suggestion": "关闭这条功能建议",
+    "Suggest features for check-up findings": "根据体检结果推荐功能",
+
 ]

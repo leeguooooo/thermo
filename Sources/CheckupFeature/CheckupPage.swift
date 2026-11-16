@@ -33,6 +33,33 @@ import ThermoL10n
         set {guard work.acceptsWork else{return};consent.allowed=newValue; objectWillChange.send()}
     }
 
+    var discovery:any FeatureDiscoveryAccess=UnavailableFeatureDiscovery()
+    @Published private(set) var featureSuggestions:[FeatureDiscoveryItem]=[]
+    @Published var featureReview:FeatureDiscoveryItem?
+    @Published private(set) var featureIssue:String?
+    private var suggestionReport:Date?
+    private var suggestionModules:[String]=[]
+    var recommendationsEnabled:Bool {
+        get {discovery.recommendationsEnabled}
+        set {guard work.acceptsWork else{return};objectWillChange.send();discovery.recommendationsEnabled=newValue
+            featureSuggestions=newValue ? suggestionModules.compactMap{discovery.claimRecommendation($0)}:[]}
+    }
+    func refreshSuggestions(modules:[String]) {
+        guard work.acceptsWork,let report,suggestionReport != report.made else{return}
+        suggestionReport=report.made
+        var seen=Set<String>();suggestionModules=modules.filter{seen.insert($0).inserted}
+        featureSuggestions=suggestionModules.compactMap{discovery.claimRecommendation($0)}
+    }
+    func dismissSuggestion(_ id:String){featureSuggestions.removeAll{$0.id==id}}
+    func reviewFeature(_ item:FeatureDiscoveryItem){guard work.acceptsWork,featureReview==nil else{return};featureReview=item}
+    func cancelFeatureReview(){featureReview=nil}
+    func enableReviewedFeature() {
+        guard work.acceptsWork,let item=featureReview else{return}
+        do {try discovery.enable(item);dismissSuggestion(item.id);featureIssue=nil}
+        catch {featureIssue=error.localizedDescription}
+        featureReview=nil
+    }
+
     var busy: Bool { phase == .measuring || phase == .asking }
 
     /// Measures now (a 2 s process sample plus the live readings), then asks — after the preview the first time.
@@ -92,9 +119,9 @@ import ThermoL10n
             catch {phase = .failed(error.localizedDescription)}
         }
     }
-    var canStopFeature:Bool {phase != .asking}
+    var canStopFeature:Bool {phase != .asking && featureReview==nil}
     func stopFeature() {work.stop()}
-    func finishFeatureStop() async {await work.finish();phase = .idle;report=nil;snapshot=nil}
+    func finishFeatureStop() async {await work.finish();phase = .idle;report=nil;snapshot=nil;featureSuggestions=[];featureReview=nil}
 
 }
 
@@ -121,9 +148,30 @@ struct CheckupPage: View {
                 }
                 if let r = model.report { report(r) }
                 else if ai.backend != nil, model.phase == .idle { scope }
+                if let issue=model.featureIssue {Text(issue).font(Theme.secondary).foregroundStyle(Theme.caution)}
+                ForEach(model.featureSuggestions){item in
+                    VStack(alignment:.leading,spacing:Theme.Space.s){
+                        HStack {Label(item.name,systemImage:item.symbol).font(Theme.sectionTitle);Spacer()
+                            Button(tr("Enable…")){model.reviewFeature(item)}.buttonStyle(PillButtonStyle())
+                            Button{model.dismissSuggestion(item.id)}label:{Image(systemName:"xmark")}.buttonStyle(.plain).accessibilityLabel(tr("Dismiss feature suggestion"))}
+                        Text(item.summary).font(Theme.secondary).foregroundStyle(Theme.textSecondary)
+                        Text(item.storage).font(Theme.caption).foregroundStyle(Theme.textTertiary)
+                    }.padding(Theme.Space.m).glass()
+                }
+                Toggle(tr("Suggest features for check-up findings"),isOn:Binding(get:{model.recommendationsEnabled},set:{model.recommendationsEnabled=$0}))
+                    .font(Theme.secondary).toggleStyle(.switch).controlSize(.small)
             }
         }
-        .onAppear { ai.discover() }
+        .onAppear {ai.discover();refreshSuggestions()}
+        .onChange(of:model.report){_ in refreshSuggestions()}
+        .sheet(item:$model.featureReview){item in
+            FeatureEnableReview(name:item.name,summary:item.summary,storage:item.storage,permissions:item.permissions,enable:model.enableReviewedFeature,cancel:model.cancelFeatureReview)
+        }
+    }
+
+    private func refreshSuggestions() {
+        let modules=(model.report?.findings ?? []).filter{$0.severity != .low}.compactMap{Self.destination($0)?.1.module}
+        model.refreshSuggestions(modules:modules)
     }
 
     /// Before the first run: what the AI will look at, so the button is not a leap in the dark.
