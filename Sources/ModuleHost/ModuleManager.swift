@@ -31,6 +31,8 @@ public enum ModuleError: Error, CustomStringConvertible, Equatable {
         /// Whether the kernel has a wake-up pending for this module.
         public var scheduled: Bool
         public var uses: Int
+        /// Switched off by the kernel after crashing again and again; the person has to switch it on.
+        public var suspended: Bool = false
     }
 
     /// One module scene embedded in the kernel's window. Keeps the module running while attached and
@@ -174,7 +176,7 @@ public enum ModuleError: Error, CustomStringConvertible, Equatable {
         guard let slot = slots[id] else { return nil }
         let l = slot.lifecycle
         return Status(manifest: slot.module.manifest, enabled: l.enabled, phase: l.phase, pid: slot.pid, crashes: l.crashes,
-                      scheduled: slot.wake != nil, uses: l.uses)
+                      scheduled: slot.wake != nil, uses: l.uses, suspended: l.suspended)
     }
 
     /// The entries the kernel shows: those of modules that are on. A module that is off has none.
@@ -313,7 +315,13 @@ public enum ModuleError: Error, CustomStringConvertible, Equatable {
     // MARK: Lifecycle
 
     private func send(_ event: ModuleLifecycle.Event, to slot: Slot) {
+        let wasSuspended = slot.lifecycle.suspended
         let effects = slot.lifecycle.handle(event, now: ProcessInfo.processInfo.systemUptime)
+        if slot.lifecycle.suspended, !wasSuspended {
+            // Same as being switched off: nothing keeps waiting on a module that will not come back by itself.
+            for scene in slot.scenes { scene.controller.configuration = nil }
+            fail(slot, .off(slot.module.manifest.id))
+        }
         for effect in effects {
             switch effect {
             case .start: start(slot)

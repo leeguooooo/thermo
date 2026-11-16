@@ -79,6 +79,12 @@ import ThermoL10n
         for status in now where !status.enabled && status.phase == .stopped && status.pid == nil {
             if stopProgress[status.manifest.id] == .waiting {stopProgress[status.manifest.id] = .processExited}
         }
+        for status in now where status.suspended && Self.stored(status.manifest, in: defaults) {
+            // Remember it, so a relaunch does not start the crash loop again; other modules are untouched.
+            defaults.set(false, forKey: Self.key(status.manifest.id))
+            switchIssues[status.manifest.id] = tr("Switched off after crashing %1$@ times in a row. Switch it on again to retry.", String(status.crashes == 0 ? ModuleLifecycle.Timing().suspendAfter : status.crashes))
+            NSLog("Thermo module suspended after repeated crashes: %@", status.manifest.id)
+        }
         if now != statuses {
             statuses = now
             if updatesAppMenu, NSApp != nil { installStandardMenus(center: self) }
@@ -179,6 +185,21 @@ import ThermoL10n
     func legacyMenuPage(_ key: String) -> NavigationPage? {
         guard let old = NativeModules.legacyMenuEntry(key), isOn(old.module.id), let target = old.target else { return nil }
         return .init(module: old.module, entry: old.entry, target: target, builtin: true)
+    }
+
+    /// What a feature costs right now, as far as the system can tell it apart.
+    /// Built-in features run inside Thermo, so only Thermo's own total is real; an isolated module has its own process.
+    enum Usage: Equatable {
+        case off
+        case shared(thermo: ModuleUsage?)
+        case process(ModuleUsage)
+        case notRunning
+    }
+    func usage(_ id: String, builtin: Bool, read: (pid_t) -> ModuleUsage? = { ModuleUsage.read($0) }) -> Usage {
+        guard isOn(id) else { return .off }
+        if builtin { return .shared(thermo: read(getpid())) }
+        guard let pid = statuses.first(where: { $0.manifest.id == id })?.pid, let usage = read(pid) else { return .notRunning }
+        return .process(usage)
     }
 
     func setEnabled(_ id: String, _ on: Bool) {
@@ -305,6 +326,8 @@ struct ModuleSwitches: View {
                     }
                     if center.changing.contains(status.manifest.id) {
                         Text(tr("stopping…")).font(Theme.secondary).foregroundStyle(Theme.textSecondary)
+                    } else {
+                        ModuleUsageLine(center: center, id: status.manifest.id, builtin: status.builtin)
                     }
                 }
                 Spacer()
@@ -319,7 +342,7 @@ struct ModuleSwitches: View {
             }.padding(.horizontal, Theme.Space.m).padding(.vertical, 8)
                 DisclosureGroup(tr("Access and stop details"),isExpanded:Binding(get:{expanded.contains(status.manifest.id)},set:{if $0{expanded.insert(status.manifest.id)}else{expanded.remove(status.manifest.id)}})) {
                     ModuleCapabilityDetails(manifest:status.manifest,builtin:status.builtin).padding(.top,8)
-                    if let progress=center.stopProgress[status.manifest.id]{ModuleStopDetails(progress:progress).padding(.top,8)}
+                    if let progress=center.stopProgress[status.manifest.id]{ModuleStopDetails(center:center,id:status.manifest.id,progress:progress).padding(.top,8)}
                 }.font(Theme.secondary).foregroundStyle(Theme.textSecondary)
                     .accessibilityIdentifier("module-center-details-"+status.manifest.id)
                     .padding(.leading,46).padding(.trailing,Theme.Space.m).padding(.bottom,12)
