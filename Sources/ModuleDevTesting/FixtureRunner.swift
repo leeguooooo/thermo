@@ -114,7 +114,7 @@ public enum FixtureRunner {
 
     /// Share of pixels that differ by more than `tolerance` in any channel, or nil when sizes differ.
     /// Fonts and antialiasing vary a little between Macs; compare against a threshold, not equality.
-    public static func difference(_ a: Data, _ b: Data, tolerance: Int = 24) -> Double? {
+    nonisolated public static func difference(_ a: Data, _ b: Data, tolerance: Int = 24) -> Double? {
         guard let x = NSBitmapImageRep(data: a), let y = NSBitmapImageRep(data: b),
               x.pixelsWide == y.pixelsWide, x.pixelsHigh == y.pixelsHigh else { return nil }
         var differing = 0
