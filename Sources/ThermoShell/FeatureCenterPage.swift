@@ -13,6 +13,7 @@ struct FeatureCenterPage:View {
                 Text(tr("%1$@ of %2$@ features are on.",String(center.switches.filter{$0.enabled}.count),String(center.switches.count)))
                     .font(Theme.secondary).foregroundStyle(Theme.textSecondary)
                 Spacer()
+                SetupShareControls(center:center)
                 Button(tr("All operation history")){MainWindow.show(.native(.init(BuiltinModuleManifests.history.id,"home")))}
                     .buttonStyle(PillButtonStyle())
             }
