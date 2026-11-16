@@ -158,6 +158,29 @@ final class BrokerTests: XCTestCase {
         XCTAssertEqual(plain.outcome, .failed)
     }
 
+    func testEgressRefusesPortsCredentialsAddressesAndLocalNamesEvenWhenDeclared() async {
+        for (url, fragment) in [("https://api.example.com:8443/", "port 8443"), ("https://user:pw@api.example.com/", "credentials"),
+                                ("https://127.0.0.1/", "IP address"), ("https://[::1]/", "IP address"), ("https://2130706433/", "IP address"),
+                                ("https://0x7f.1/", "IP address"), ("https://printer.local/", "local network"), ("https://intranet/", "local network")] {
+            XCTAssertTrue(KernelServices.egressRefusal(URL(string: url)!)?.contains(fragment) == true, url)
+        }
+        XCTAssertNil(KernelServices.egressRefusal(URL(string: "https://api.example.com/v1?q=1")!))
+        XCTAssertNil(KernelServices.egressRefusal(URL(string: "https://api.example.com:443/")!))
+        // Declared host, but a non-default port: refused before anything is sent.
+        let real = broker(["network.connect:api.example.com"], handlers: [.networkConnect: KernelServices.networkConnect()])
+        denied(await real.request("network.connect:api.example.com", payload: payload(["op": "fetch", "url": "https://api.example.com:8443/"])), "port 8443")
+        // An address can't be declared in the first place.
+        func manifest(_ scope: String) -> ModuleManifest {
+            ModuleManifest(id: "com.example.net", name: "Net", summary: "Fetches.", symbol: "network", version: "1.0.0",
+                           capabilities: [Capability(.networkConnect, scope: scope)])
+        }
+        XCTAssertEqual(manifest("api.example.com").problems(), [])
+        XCTAssertEqual(manifest("*.example.com").problems(), [])
+        for scope in ["10.0.0.1", "localhost", "nas.local", "*.local", "[::1]", "api.example.com:8443"] {
+            XCTAssertFalse(manifest(scope).problems().isEmpty, scope)
+        }
+    }
+
     func testReadRotationCannotEvictChangesAndCopiesDoNotCountTwice() {
         let change = ModuleAccessRecord(module: id, capability: "files.delete", operation: "trash", targets: ["/owned/deleted"], outcome: .allowed)
         log.record(change)

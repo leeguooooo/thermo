@@ -69,6 +69,22 @@ public struct Capability: Hashable, Sendable, Codable, CustomStringConvertible {
         return "/" + parts.joined(separator: "/")
     }
 
+    /// `1.2.3.4`, `[::1]`, `::1`, and the decimal / hex forms resolvers also accept (`2130706433`, `0x7f.1`).
+    public static func isIPLiteral(_ host: String) -> Bool {
+        let h = host.trimmingCharacters(in: CharacterSet(charactersIn: "[]"))
+        if h.contains(":") { return true }
+        let labels = h.split(separator: ".", omittingEmptySubsequences: false)
+        return labels.allSatisfy { label in
+            !label.isEmpty && (label.allSatisfy(\.isNumber) || (label.lowercased().hasPrefix("0x") && label.dropFirst(2).allSatisfy(\.isHexDigit)))
+        }
+    }
+    /// Names that reach this Mac or the local network rather than the internet.
+    public static func isLocalHost(_ host: String) -> Bool {
+        let h = host.lowercased().trimmingCharacters(in: CharacterSet(charactersIn: "."))
+        return h == "localhost" || h.hasSuffix(".localhost") || h.hasSuffix(".local") || h.hasSuffix(".internal")
+            || h.hasSuffix(".home.arpa") || h.hasSuffix(".lan") || !h.contains(".")
+    }
+
     /// `api.example.com` matches itself; `*.example.com` matches any subdomain but not `example.com`.
     static func host(_ pattern: String, covers host: String) -> Bool {
         let pattern = pattern.lowercased(), host = host.lowercased()

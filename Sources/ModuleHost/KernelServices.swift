@@ -169,6 +169,7 @@ public enum KernelServices {
             guard request.targets.count == 1, let text = request.payload["url"]?.string, let url = URL(string: text),
                   url.scheme?.lowercased() == "https", let host = url.host?.lowercased() else { throw bad("fetch takes one host and an https url") }
             guard host == request.targets[0] else { throw BrokerError(.denied, "the url goes to \(host), not \(request.targets[0])") }
+            if let refusal = Self.egressRefusal(url) { throw BrokerError(.denied, refusal) }
             var call = URLRequest(url: url, timeoutInterval: 30)
             call.httpMethod = request.payload["method"]?.string ?? "GET"
             if case let .object(headers)? = request.payload["headers"] {
@@ -187,6 +188,17 @@ public enum KernelServices {
         }
     }
 
+    /// Rules every outgoing module request follows, whatever the manifest says: the default HTTPS port,
+    /// a DNS name rather than an IP literal, no credentials in the URL, nothing on this Mac or the local network.
+    public static func egressRefusal(_ url: URL) -> String? {
+        guard let host = url.host?.lowercased(), !host.isEmpty else { return "the url has no host" }
+        if let port = url.port, port != 443 { return "port \(port) is not allowed; modules connect on 443 only" }
+        if url.user != nil || url.password != nil { return "credentials in the url are not allowed" }
+        if Capability.isIPLiteral(host) { return "\(host) is an IP address; modules connect to declared host names only" }
+        if Capability.isLocalHost(host) { return "\(host) is on this Mac or the local network" }
+        return nil
+    }
+
     private final class RedirectGuard: NSObject, URLSessionTaskDelegate, @unchecked Sendable {
         let manifest: ModuleManifest
         var refused: String?
@@ -194,7 +206,7 @@ public enum KernelServices {
         func urlSession(_ session: URLSession, task: URLSessionTask, willPerformHTTPRedirection response: HTTPURLResponse,
                         newRequest request: URLRequest, completionHandler: @escaping (URLRequest?) -> Void) {
             let host = request.url?.host?.lowercased() ?? ""
-            let allowed = request.url?.scheme?.lowercased() == "https"
+            let allowed = request.url?.scheme?.lowercased() == "https" && request.url.map { KernelServices.egressRefusal($0) == nil } == true
                 && manifest.capabilities.contains { $0.covers(Capability(.networkConnect, scope: host), home: "/") }
             if !allowed { refused = host }
             completionHandler(allowed ? request : nil)

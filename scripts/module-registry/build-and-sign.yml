@@ -1,0 +1,64 @@
+# Workflow for the module registry repository (not this repo). Copy to
+# <registry>/.github/workflows/build-and-sign.yml once that repository exists.
+#
+# Layout of the registry repo:
+#   modules/<module id>/source/        module source, reviewed in the pull request that adds or bumps it
+#   modules/<module id>/module.json    manifest; its capabilities are what the review approves
+#   modules/<module id>/build.sh       builds source/ into module.wasm with a pinned toolchain
+#   registry.json                      generated; never edited by hand
+#
+# Pull requests only build and check. Merges to main build again from source, sign with the
+# pipeline key (secret THERMO_MODULE_SIGNING_KEY), attach packages to a release and regenerate
+# registry.json. The app trusts only the public half of that key.
+name: build-and-sign
+on:
+  pull_request:
+  push:
+    branches: [main]
+permissions:
+  contents: write
+jobs:
+  modules:
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check out Thermo for the packing tool
+        uses: actions/checkout@v4
+        with: { repository: leeguooooo/thermo, path: thermo }
+      - name: Build packing tool
+        run: swift build -c release --package-path thermo --product ModulePack
+      - name: Build modules from source
+        run: |
+          set -euo pipefail
+          for dir in modules/*/; do
+            (cd "$dir" && ./build.sh)
+            test -f "$dir/module.wasm"
+          done
+      - name: Sign and publish
+        if: github.event_name == 'push'
+        env:
+          THERMO_MODULE_SIGNING_KEY: ${{ secrets.THERMO_MODULE_SIGNING_KEY }}
+          KEY_ID: ${{ vars.THERMO_MODULE_KEY_ID }}
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          pack=thermo/.build/release/ModulePack
+          tag="modules-$(date -u +%Y%m%d%H%M%S)"
+          mkdir -p out
+          for dir in modules/*/; do
+            id=$(basename "$dir")
+            printf '%s' "$THERMO_MODULE_SIGNING_KEY" | "$pack" pack "$dir/module.json" "$dir/module.wasm" "$KEY_ID" "out/$id.thermomodule"
+          done
+          gh release create "$tag" out/*.thermomodule --title "$tag" --notes "Signed module packages"
+          python3 - "$tag" <<'PY'
+          import json, subprocess, sys, glob, os
+          tag = sys.argv[1]; repo = os.environ["GITHUB_REPOSITORY"]
+          modules = []
+          for path in sorted(glob.glob("out/*.thermomodule")):
+              url = f"https://github.com/{repo}/releases/download/{tag}/{os.path.basename(path)}"
+              out = subprocess.check_output(["thermo/.build/release/ModulePack", "listing", path, url])
+              modules.append(json.loads(out))
+          json.dump({"format": "dev.thermo.module-registry", "modules": modules}, open("registry.json", "w"), indent=2, sort_keys=True)
+          PY
+          git config user.name "module-pipeline"; git config user.email "module-pipeline@users.noreply.github.com"
+          git add registry.json && git commit -m "registry: $tag" && git push

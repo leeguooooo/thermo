@@ -63,6 +63,7 @@ import ThermoL10n
         if prewarmBuiltins {
             for manifest in NativeModules.all where isOn(manifest.id) { startBuiltin(manifest.id) }
         }
+        marketModules = ModuleMarketStore(root: ModuleMarketStore.defaultRoot(), keys: ModuleSigningKeys.production).installed().map(\.manifest)
         manager.onChange = { [weak self] _ in self?.refresh() }
         manager.kernel = { ModuleKernel.make(for: $0) }
         Task { @MainActor in
@@ -118,8 +119,13 @@ import ThermoL10n
     }
 
     /// Whether a module is on. A built-in feature is known at once; a module in its own process once it has been read.
+    /// WebAssembly modules installed from the module market. Off until the person switches them on.
+    @Published private(set) var marketModules: [ModuleManifest] = []
+    func reloadMarketModules(_ manifests: [ModuleManifest]) { marketModules = manifests; revision += 1 }
+
     func isOn(_ id: String) -> Bool {
         if let builtin = NativeModules.manifest(id) { return Self.stored(builtin, in: defaults) }
+        if let market = marketModules.first(where: { $0.id == id }) { return Self.stored(market, in: defaults) }
         return statuses.first { $0.manifest.id == id }?.enabled ?? false
     }
 
@@ -132,6 +138,7 @@ import ThermoL10n
     /// Every module with its switch, built-in features first.
     var switches: [(manifest: ModuleManifest, enabled: Bool, builtin: Bool)] {
         NativeModules.all.map { ($0, isOn($0.id), true) } + visibleStatuses.map { ($0.manifest, $0.enabled, false) }
+            + marketModules.map { ($0, isOn($0.id), false) }
     }
 
     struct NavigationPage: Identifiable {
@@ -232,6 +239,10 @@ import ThermoL10n
             revision += 1
             // The View menu and its shortcuts list pages too.
             if updatesAppMenu, NSApp != nil { installStandardMenus(center: self) }
+        } else if marketModules.contains(where: { $0.id == id }) {
+            // A WebAssembly module runs only for the length of a call, so nothing is left running.
+            revision += 1
+            if !on { stopProgress[id] = .processExited }
         } else {
             manager.setEnabled(id,on)
             if !on,let status=manager.modules.first(where:{$0.manifest.id==id}),status.phase == .stopped,status.pid == nil {stopProgress[id] = .processExited}
