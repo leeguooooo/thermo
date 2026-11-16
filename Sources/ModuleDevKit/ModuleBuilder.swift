@@ -47,7 +47,8 @@ public struct ModuleBuilder: Sendable {
         try FileManager.default.createDirectory(at: staging, withIntermediateDirectories: true)
         try FileManager.default.copyItem(at: source.manifestURL, to: staging.appendingPathComponent("module.json"))
         try wasm.write(to: staging.appendingPathComponent("module.wasm"))
-        for old in (try? FileManager.default.contentsOfDirectory(at: out, includingPropertiesForKeys: nil)) ?? [] where old != staging {
+        for old in (try? FileManager.default.contentsOfDirectory(at: out, includingPropertiesForKeys: nil)) ?? []
+            where old.lastPathComponent != staging.lastPathComponent {
             try? FileManager.default.removeItem(at: old)
         }
         try FileManager.default.moveItem(at: staging, to: folder)
