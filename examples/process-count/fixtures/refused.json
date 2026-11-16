@@ -1,0 +1,1 @@
+{"scene": "main", "answers": {"processes.read": "denied"}, "expect": ["Thermo refused processes.read"]}

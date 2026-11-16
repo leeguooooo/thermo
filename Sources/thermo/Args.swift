@@ -25,7 +25,8 @@ struct Args {
         "protocol", // explicit MCP inspection lifecycle; never inferred from a version label
         "code", "file", "control-directory",
         "log-file", // agents usage: one explicitly selected session
-        "watch", "app", "title", "ids", "group", "name", "window", "color"]).union(BuiltinModuleManifests.all.flatMap(\.commands).flatMap(\.parameters).filter { $0.kind != .boolean }.map(\.name))  // pulse chrome
+        "watch", "app", "title", "ids", "group", "name", "window", "color",
+        "dir"]).union(BuiltinModuleManifests.all.flatMap(\.commands).flatMap(\.parameters).filter { $0.kind != .boolean }.map(\.name))  // pulse chrome
     static let aliases: [String: String] = [
         "i": "interval", "n": "count", "s": "sensor", "a": "all", "j": "json",
         "h": "help", "v": "version", "f": "format", "y": "yes",
@@ -38,7 +39,8 @@ struct Args {
         "rescan",  // rescan: clean run ignores the saved scan
         "remove-local", "inactive-development",
         "measure", "all-windows", "by-site", "tail",
-        "no-heat-guard", "probe"]  // awake / read-only AWDL interface probe
+        "no-heat-guard", "probe",
+        "update"]  # dev test: rewrite snapshot references  // awake / read-only AWDL interface probe
 
     init(_ argv: [String]) throws {
         var i = 0

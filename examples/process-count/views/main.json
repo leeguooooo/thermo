@@ -1,0 +1,14 @@
+{
+  "version": 1,
+  "title": "Processes",
+  "subtitle": "An example Thermo module: one declared capability, one action, no other access.",
+  "sections": [
+    {"type": "card", "title": "Running processes", "value": "{{n}}", "caption": "Counted from what processes.read returned", "symbol": "cpu",
+     "actions": [{"action": "refresh", "title": "Refresh"}]},
+    {"type": "detail", "title": "How it works", "fields": [
+      {"label": "Capability", "value": "processes.read"},
+      {"label": "Runs in", "value": "A sandboxed WebAssembly runner"},
+      {"label": "Source", "value": "examples/process-count/src/module.wat"}
+    ]}
+  ]
+}

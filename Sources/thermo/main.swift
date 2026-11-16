@@ -119,6 +119,7 @@ struct App {
         case "privacy": try PrivacyCommand(app: self).run(rest)
         case "claude-reset": try ClaudeResetCommand(app: self).run(rest)
         case "app-control", "screen", "permissions", "integration", "keep-awake": try AppControlCommand(app: self).run(command: cmd, rest: rest)
+        case "dev": try DevCommand(app: self).run(rest)
         case "capabilities": print(Export.json(CommandHelp.inventory))
         default: throw CLIError("unknown command '\(cmd)' (see thermo --help)")
         }

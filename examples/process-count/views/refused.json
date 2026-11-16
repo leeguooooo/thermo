@@ -1,0 +1,9 @@
+{
+  "version": 1,
+  "title": "Processes",
+  "sections": [
+    {"type": "detail", "title": "Thermo refused processes.read", "fields": [
+      {"label": "What to do", "value": "Check that module.json declares processes.read"}
+    ]}
+  ]
+}
