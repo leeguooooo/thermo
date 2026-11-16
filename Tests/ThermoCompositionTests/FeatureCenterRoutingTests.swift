@@ -57,8 +57,8 @@ import XCTest
         XCTAssertEqual(center.usage(id,builtin:true,read:{_ in sample}),.off)
         defaults.set(true,forKey:ModulePreferences.key(id))
         XCTAssertEqual(center.usage(id,builtin:true,read:{XCTAssertEqual($0,getpid());return sample}),.shared(thermo:sample))
-        XCTAssertTrue(ModuleUsageLine.text(.shared(thermo:sample)).contains(ModuleUsageLine.memory(200<<20)))
-        XCTAssertTrue(ModuleUsageLine.text(.shared(thermo:nil)).contains("Thermo"))
+        XCTAssertTrue(ModuleUsageLine.text(.shared(thermo:sample)).contains("Thermo"))
+        XCTAssertFalse(ModuleUsageLine.text(.shared(thermo:sample)).contains(ModuleUsageLine.memory(200<<20)), "the shared total is shown once above the list, not per feature")
         XCTAssertEqual(center.usage("dev.example.unloaded",builtin:false,read:{_ in sample}),.off)
     }
     func testIsolatedModuleUsageSaysWhenEnergyIsNotReported() {
@@ -95,5 +95,13 @@ final class FeatureDataCleanupTests:XCTestCase {
         let record=try XCTUnwrap(OperationJournal.read(home:home).first)
         XCTAssertEqual(record.subject,id);XCTAssertEqual(record.undo?.kind,"trashBatch")
         XCTAssertEqual(try TrashBatches.load(try XCTUnwrap(record.undo?.ref),home:home).entries.map(\.original),[support+"/Search"])
+    }
+}
+
+final class FeatureTrashMessageTests:XCTestCase {
+    func testConfirmationNamesEveryItemAndItsSize() {
+        let items=[FeatureDataCleanup.Item(data:.init("a","Search index"),path:"/x/a",bytes:2_000_000)]
+        let text=FeatureStopChecklist.trashMessage(items)
+        XCTAssertTrue(text.contains(ByteCountFormatter.string(fromByteCount:2_000_000,countStyle:.file)))
     }
 }
