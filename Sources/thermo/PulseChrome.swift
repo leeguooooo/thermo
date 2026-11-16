@@ -24,7 +24,7 @@ extension PulseCommand {
         let seconds = watch
         // Measuring attaches to every page (Chrome shows "is being debugged" for a moment): only on request.
         let measure = watch != nil || app.args.has("measure")
-        if measure && !structured && ChromeInspector.endpoint(app: browser) != nil {
+        if measure && !structured && ChromeInspector.endpoint(app: browser, allowDirectPort: true) != nil {
             FileHandle.standardError.write(Data((ChromeInspector.debuggingBarNote + "\n").utf8))
         }
         let done = DispatchSemaphore(value: 0)
@@ -103,7 +103,7 @@ extension PulseCommand {
             let windows = Dictionary(grouping: tabs, by: \.window)
             guard !tabs.isEmpty else { print(tr("%1$@ is not running.", browser)); return }
             lines.append(style.bold(tr("%1$@: %2$@ tabs in %3$@ windows", browser, String(tabs.count), String(windows.count))))
-            if d.hint == nil && ChromeInspector.endpoint(app: browser) != nil && !measure {
+            if d.hint == nil && ChromeInspector.endpoint(app: browser, allowDirectPort: true) != nil && !measure {
                 lines.append(style.dim("  " + tr("Add --watch 60 to measure memory per page and see which pages grow.")))
             }
             // Only worth a line when some window is crowded.
