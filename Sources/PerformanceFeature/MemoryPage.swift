@@ -25,6 +25,8 @@ struct MemoryPage: View {
     @State private var search = ""
     @State private var expandedContexts: Set<String> = []
     @State private var sortByResident = false
+    /// One process picked by hand, waiting for its confirmation.
+    @State private var stopping: SystemPulse.SingleStop?
 
     var body: some View {
         ScrollView {
@@ -69,6 +71,16 @@ struct MemoryPage: View {
                          footnote: tr("Thermo never stops system processes, AI agent sessions or itself."),
                          confirmTitle: h.app != nil ? tr("Quit") : tr("End"),
                          confirm: { confirming = nil; pulse.quit(h); resample() }, cancel: { confirming = nil })
+        }
+        .sheet(item: $stopping) { s in
+            ConfirmSheet(title: s.force ? tr("Force end %1$@ (PID %2$@)?", s.name, String(s.identity.pid))
+                                        : tr("End %1$@ (PID %2$@)?", s.name, String(s.identity.pid)),
+                         summary: stopSummary(s), destructive: true, heading: tr("What will run"),
+                         lines: ["kill -\(s.force ? "KILL" : "TERM") \(s.identity.pid)"],
+                         footnote: s.agentSession ? tr("Only this one session is ended. Freeing memory in one click never ends AI agent sessions.")
+                                                  : tr("Thermo never stops system processes or itself."),
+                         confirmTitle: s.force ? tr("Force end") : tr("End"),
+                         confirm: { stopping = nil; pulse.end(s); resample() }, cancel: { stopping = nil })
         }
         .sheet(item: $restartTarget) { h in
             ConfirmSheet(title: tr("Restart %1$@?", h.name),
@@ -301,6 +313,7 @@ struct MemoryPage: View {
                 ThermoTabs(selection: $sortByResident, options: [(false, tr("Memory footprint")), (true, tr("Resident memory"))],
                            size: .small, label: tr("Sort by"))
             }
+            actionNotices
             if !model.inventoryAvailable {
                 Text(tr("Process readings unavailable. Try refreshing.")).font(Theme.caption).foregroundStyle(Theme.caution)
             }
@@ -334,9 +347,21 @@ struct MemoryPage: View {
                 Text(tr("%1$@ processes have no footprint reading; resident estimates and missing values are marked.", String(model.unreadableCount)))
                     .font(Theme.caption).foregroundStyle(Theme.caution)
             }
-            ForEach([pulse.quitProblem, pulse.restartProblem, pulse.actionFeedback].compactMap { $0 }, id: \.self) { t in
-                NoticeBanner(text: t)
+        }
+    }
+
+    /// What the last action did, shown above the list so it is visible from any row.
+    @ViewBuilder var actionNotices: some View {
+        if let u = pulse.unresponsive {
+            HStack(spacing: 10) {
+                NoticeBanner(text: tr("%1$@ (PID %2$@) was asked to stop and is still running.", u.name, String(u.identity.pid)),
+                             dismiss: { pulse.dismissUnresponsive() })
+                Button(tr("Force end…")) { var forced = u; forced.force = true; stopping = forced }
+                    .buttonStyle(PillButtonStyle(prominent: true, color: Theme.danger)).controlSize(.small)
             }
+        }
+        ForEach([pulse.quitProblem, pulse.restartProblem, pulse.actionFeedback].compactMap { $0 }, id: \.self) { t in
+            NoticeBanner(text: t)
         }
     }
 
@@ -352,7 +377,7 @@ struct MemoryPage: View {
     }
 
     func programRow(_ program: MemoryProgram, top: Double) -> some View {
-        let isOpen = expanded.contains(program.id)
+        let isOpen = expanded.contains(program.id) || program.contexts.contains(where: matchesPID)
         return VStack(alignment: .leading, spacing: 8) {
             ViewThatFits(in: .horizontal) {
             HStack(spacing: 10) {
@@ -409,6 +434,7 @@ struct MemoryPage: View {
             }.font(Theme.secondary.monospacedDigit())
             .contentShape(Rectangle())
             .onTapGesture { toggleProgram(program.id) }
+            .contextMenu { if let target = program.actionTarget { rowMenu(target) } }
             if isOpen {
                 VStack(alignment: .leading, spacing: 8) {
                     programTrend(program)
@@ -446,7 +472,7 @@ struct MemoryPage: View {
     }
 
     func contextRow(_ h: MachinePulse.Hog, showActions: Bool) -> some View {
-        let isOpen = expandedContexts.contains(h.id)
+        let isOpen = expandedContexts.contains(h.id) || matchesPID(h)
         return VStack(alignment: .leading, spacing: 6) {
             ViewThatFits(in: .horizontal) {
             HStack(spacing: 10) {
@@ -482,25 +508,110 @@ struct MemoryPage: View {
                 }
             }
             if isOpen, let parts = h.parts {
-                ForEach(parts, id: \.pid) { p in
-                    ViewThatFits(in: .horizontal) {
-                    HStack {
-                        Text("\(MachinePulse.roleName(p.role)) · PID \(p.pid)").frame(maxWidth: .infinity, alignment: .leading)
-                        Text(metric(p.memoryKB, p.memoryMetric)).frame(width: 84, alignment: .trailing)
-                        Text(p.residentKB.map { MemoryFormat.string(kibibytes: $0) } ?? "—").frame(width: 84, alignment: .trailing)
-                        Spacer().frame(width: 190)
-                    }.frame(minWidth: 600)
-                        VStack(alignment: .leading, spacing: 2) {
-                            Text("\(MachinePulse.roleName(p.role)) · PID \(p.pid)")
-                            let footprint = metric(p.memoryKB, p.memoryMetric)
-                            let resident = p.residentKB.map { MemoryFormat.string(kibibytes: $0) } ?? "—"
-                            let detail = "\(tr("Memory footprint")): \(footprint) · \(tr("Resident memory")): \(resident)"
-                            Text(detail)
-                        }
-                    }.foregroundStyle(Theme.textSecondary).padding(.leading, 20)
-                }
+                ForEach(parts, id: \.pid) { p in partRow(h, p) }
             }
         }.font(Theme.caption.monospacedDigit()).padding(.leading, 32)
+        .contextMenu { if showActions { rowMenu(h) } }
+    }
+
+    /// One process. It carries its own End, so a single process can go without its whole row.
+    func partRow(_ h: MachinePulse.Hog, _ p: MachinePulse.Hog.Part) -> some View {
+        let target = singleStop(h, p)
+        // Verbatim: a PID is an identifier, not a quantity, so no thousands separator.
+        let title = [MachinePulse.roleName(p.role), "PID \(p.pid)", p.uptime.map { MemorySuspects.duration($0) }]
+            .compactMap { $0 }.joined(separator: " · ")
+        let footprint = metric(p.memoryKB, p.memoryMetric)
+        let resident = p.residentKB.map { MemoryFormat.string(kibibytes: $0) } ?? "—"
+        return ViewThatFits(in: .horizontal) {
+            HStack(spacing: 10) {
+                Text(verbatim: title).textSelection(.enabled).frame(maxWidth: .infinity, alignment: .leading)
+                Text(footprint).frame(width: 84, alignment: .trailing)
+                Text(resident).frame(width: 84, alignment: .trailing)
+                Group { if let target { endButton(target) } else { Color.clear.frame(height: 1) } }
+                    .frame(width: 190, alignment: .trailing)
+            }.frame(minWidth: 600)
+            HStack(alignment: .top) {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(verbatim: title)
+                    Text("\(tr("Memory footprint")): \(footprint) · \(tr("Resident memory")): \(resident)")
+                }
+                Spacer(minLength: 4)
+                if let target { endButton(target) }
+            }
+        }
+        .foregroundStyle(Theme.textSecondary).padding(.leading, 20)
+        .contentShape(Rectangle())
+        .contextMenu {
+            if let target {
+                Button(tr("End…")) { stopping = target }
+                Button(tr("Force end…")) { var forced = target; forced.force = true; stopping = forced }
+            } else if let forced = singleStop(h, p, force: true) {
+                Button(tr("Force quit…")) { stopping = forced }
+            }
+            Button(tr("Copy PID")) { copy(String(p.pid)) }
+        }
+    }
+
+    func endButton(_ target: SystemPulse.SingleStop) -> some View {
+        let busy = pulse.ending.contains(target.identity.pid)
+        return Button(busy ? tr("Stopping…") : tr("End")) { stopping = target }
+            .buttonStyle(PillButtonStyle()).controlSize(.small).disabled(busy)
+            .accessibilityLabel(tr("End %1$@ (PID %2$@)?", target.name, String(target.identity.pid)))
+    }
+
+    /// The hand-picked action for one process, or nil when it has none: system processes and
+    /// Thermo are never stopped, and an app's own process leaves through Quit unless forced.
+    func singleStop(_ h: MachinePulse.Hog, _ p: MachinePulse.Hog.Part, force: Bool = false) -> SystemPulse.SingleStop? {
+        guard let kind = p.stop, let identity = h.processIdentities?.first(where: { $0.pid == p.pid }) else { return nil }
+        let appMain = h.app != nil && (p.role == "main" || h.applicationIdentity?.pid == p.pid)
+        if appMain && !force { return nil }
+        let name: String
+        if h.app != nil { name = appMain ? h.name : "\(h.name) · \(MachinePulse.roleName(p.role))" }
+        else { name = [h.name, h.project].compactMap { $0 }.joined(separator: " · ") }
+        return SystemPulse.SingleStop(identity: identity, name: name, application: h.app != nil,
+                                      agentSession: kind == .agentSession, force: force, memoryKB: p.memoryKB)
+    }
+
+    func stopSummary(_ s: SystemPulse.SingleStop) -> String {
+        if s.agentSession {
+            return MachinePulse.sentences(
+                s.force ? tr("This AI agent session is stopped at once (SIGKILL), without a chance to finish what it is writing.")
+                        : tr("This ends one AI agent session. Whatever it is doing stops, and commands it started may stop with it."),
+                tr("Its saved conversation stays on the disk; reopen it from the agent's session list (Claude Code: run claude --resume in the same folder)."))
+        }
+        if s.force {
+            return s.application ? tr("It is stopped at once (SIGKILL), the same as Force Quit. Unsaved work in it is lost.")
+                                 : tr("The process is stopped at once (SIGKILL); it cannot save anything first.")
+        }
+        return s.application ? tr("This one helper process of the app is asked to stop (SIGTERM). The page, extension or task it runs closes or reloads; the app stays open.")
+                             : tr("The process is asked to stop (SIGTERM). If it is still running after 5 seconds, Thermo offers to force it. Unsaved work in it may be lost.")
+    }
+
+    /// Search that is all digits is a PID search: rows holding a match open by themselves.
+    func matchesPID(_ h: MachinePulse.Hog) -> Bool {
+        guard search.count >= 2, search.allSatisfy(\.isNumber) else { return false }
+        return h.pids.contains { String($0).contains(search) }
+    }
+
+    func copy(_ text: String) {
+        NSPasteboard.general.clearContents()
+        NSPasteboard.general.setString(text, forType: .string)
+    }
+
+    @ViewBuilder func rowMenu(_ h: MachinePulse.Hog) -> some View {
+        if h.quittable { Button(h.app != nil ? tr("Quit %1$@…", h.name) : tr("End %1$@…", h.name)) { confirming = h } }
+        if h.app != nil, let main = h.parts?.first(where: { $0.role == "main" || $0.pid == h.applicationIdentity?.pid }),
+           let forced = singleStop(h, main, force: true) {
+            Button(tr("Force quit…")) { stopping = forced }
+        }
+        Button(h.pids.count == 1 ? tr("Copy PID") : tr("Copy PIDs")) { copy(h.pids.map { String($0) }.joined(separator: " ")) }
+    }
+
+    func openProcesses(of h: MachinePulse.Hog) {
+        withAnimation(Theme.standard.unlessReduced(reduceMotion)) {
+            expanded.insert((h.app == nil ? "program:cmd:" : "program:app:") + h.name.lowercased())
+            expandedContexts.insert(h.id)
+        }
     }
 
     /// "Expand for processes" only while there is something to expand to.
@@ -514,7 +625,17 @@ struct MemoryPage: View {
         var parts = [tr("%1$@ processes", String(h.pids.count))]
         if let o = h.owner { parts.append(tr("started by %1$@", o)) }
         if let up = h.uptime { parts.append(tr("oldest process: %1$@", MemorySuspects.duration(up))) }
-        if !h.quittable { parts.append(tr("Protected from stop actions")) }
+        if !h.quittable {
+            let processes = h.parts ?? []
+            let choosable = processes.filter { singleStop(h, $0) != nil }.count
+            if processes.contains(where: { $0.stop == .agentSession }) {
+                parts.append(processes.count == 1 ? tr("AI agent session") : tr("AI agent sessions, ended one at a time"))
+            } else if choosable > 0 {
+                parts.append(tr("some of its processes are protected"))
+            } else {
+                parts.append(tr("system process, cannot be ended"))
+            }
+        }
         return parts.joined(separator: " · ")
     }
 
@@ -535,6 +656,13 @@ struct MemoryPage: View {
                 Button(pulse.quitting.contains(h.id) ? tr("Stopping…") : h.app != nil ? tr("Quit") : tr("End")) { confirming = h }
                     .buttonStyle(PillButtonStyle()).controlSize(.small)
                     .disabled(pulse.quitting.contains(h.id) || pulse.restarting == h.name)
+            } else if let processes = h.parts, processes.count == 1, let only = singleStop(h, processes[0]) {
+                // A row that is one process: its End is the row's End.
+                endButton(only)
+            } else if h.parts?.contains(where: { singleStop(h, $0) != nil }) == true {
+                Button(tr("Choose a process")) { openProcesses(of: h) }
+                    .buttonStyle(PillButtonStyle()).controlSize(.small)
+                    .help(tr("Its processes are ended one at a time."))
             }
         }
     }

@@ -281,6 +281,11 @@ struct MemoryReliefCard: View {
         case .manual:
             if c.kind != .agentSessions, let program = c.program ?? c.name.components(separatedBy: " ").first {
                 Button(tr("Show processes")) { inspect(program) }.buttonStyle(PillButtonStyle()).controlSize(.small)
+            } else if c.kind == .agentSessions, let program = programs.first(where: { p in
+                p.contexts.contains { h in h.pids.contains { c.pids.contains($0) } }
+            }) {
+                // Sessions are ended one at a time, by hand, in the list below.
+                Button(tr("Show processes")) { inspect(program.name) }.buttonStyle(PillButtonStyle()).controlSize(.small)
             } else if let command = c.command {
                 Button(tr("Copy command")) {
                     NSPasteboard.general.clearContents(); NSPasteboard.general.setString(command, forType: .string)

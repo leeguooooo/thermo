@@ -46,6 +46,33 @@ final class ProcessActionGateTests:XCTestCase {
         }
         XCTAssertEqual(requests,0)
     }
+    func testManualAgentSessionCapabilityOpensOnlyAgentSessions() {
+        let agents:[(String,[String])]=[
+            ("/Users/fixture/.local/share/claude/versions/2.0.0",["claude"]),
+            ("/opt/homebrew/bin/node",["node","/fixture/node_modules/@openai/codex/bin/codex.js"])
+        ]
+        var requests=0
+        for (path,args) in agents {
+            let expected=identity(path)
+            XCTAssertEqual(ProcessActionGate.attempt(expected,allowApplication:false,allowAgentSession:true,uid:501,me:99,
+                identity:{_ in expected},details:{_ in .init(executable:path,argv:args)}){_ in requests+=1;return true},.requested,path)
+        }
+        XCTAssertEqual(requests,agents.count)
+        // The capability is about agent sessions only: system, Thermo, other users and apps stay closed.
+        for path in ["/System/Library/CoreServices/Finder.app/Contents/MacOS/Finder","/usr/libexec/helper",
+                     "/Library/PrivilegedHelperTools/dev.thermo.helper","/Applications/Thermo.app/Contents/MacOS/Thermo",
+                     "/Applications/Example.app/Contents/MacOS/Example"] {
+            let expected=identity(path)
+            XCTAssertEqual(ProcessActionGate.attempt(expected,allowApplication:false,allowAgentSession:true,uid:501,me:99,
+                identity:{_ in expected},details:{_ in .init(executable:path)}){_ in requests+=1;return true},.protected,path)
+        }
+        let other=identity("/fixture/claude")
+        XCTAssertEqual(ProcessActionGate.attempt(other,allowApplication:false,allowAgentSession:true,uid:502,me:99,
+            identity:{_ in other},details:{_ in .init(executable:other.executable)}){_ in requests+=1;return true},.protected)
+        XCTAssertEqual(ProcessActionGate.attempt(other,allowApplication:false,allowAgentSession:true,uid:501,me:42,
+            identity:{_ in other},details:{_ in .init(executable:other.executable)}){_ in requests+=1;return true},.protected)
+        XCTAssertEqual(requests,agents.count)
+    }
     func testProtectedUIDSystemAndOwnBundleChildrenNeverReachSender() {
         let paths=["/System/Library/CoreServices/Finder.app/Contents/MacOS/Finder","/usr/libexec/helper",
                    "/Library/PrivilegedHelperTools/dev.thermo.helper","/Applications/Thermo.app/Contents/Extensions/Other.appex/Contents/MacOS/Other"]

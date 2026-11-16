@@ -218,6 +218,85 @@ final class SystemPulse: ObservableObject {
         }
     }
 
+    /// One process the user picked by hand on the Memory page. Unlike `quit`, which acts on a
+    /// whole row, this never widens beyond the single checked identity.
+    struct SingleStop: Identifiable, Equatable {
+        var identity: ProcessIdentity
+        var name: String
+        /// The process belongs to an app bundle (a helper, or with `force` the app itself).
+        var application = false
+        /// An AI agent session: allowed here only because the user chose this one process.
+        var agentSession = false
+        /// SIGKILL straight away instead of SIGTERM.
+        var force = false
+        var memoryKB = 0
+        var id: String { "\(identity.pid)|\(force)" }
+    }
+    enum SingleStopResult: Equatable { case stopped, killed, stillRunning, changed, protected, notDelivered }
+
+    /// PIDs being ended right now, so their rows show progress instead of a second button.
+    @Published private(set) var ending: Set<Int32> = []
+    /// Asked to stop and still running after the wait: the page offers to force it.
+    @Published private(set) var unresponsive: SingleStop?
+
+    @MainActor func dismissUnresponsive() { unresponsive = nil }
+
+    @MainActor func end(_ stop: SingleStop, grace: TimeInterval = 5) {
+        guard samplingAllowed(), actionsAllowed() else { return }
+        let pid = stop.identity.pid
+        guard !ending.contains(pid) else { return }
+        quitProblem = nil; actionFeedback = nil; unresponsive = nil
+        ending.insert(pid)
+        DispatchQueue.global(qos: .userInitiated).async { [weak self] in
+            let result = Self.perform(stop, grace: grace)
+            Self.record(stop, result)
+            DispatchQueue.main.async {
+                guard let self else { return }
+                self.ending.remove(pid)
+                let freed = MemoryFormat.string(kibibytes: stop.memoryKB)
+                switch result {
+                case .stopped: self.actionFeedback = tr("%1$@ (PID %2$@) stopped after being asked; about %3$@ freed.", stop.name, String(pid), freed)
+                case .killed: self.actionFeedback = tr("%1$@ (PID %2$@) was forced to quit; about %3$@ freed.", stop.name, String(pid), freed)
+                case .stillRunning:
+                    if stop.force { self.quitProblem = tr("%1$@ (PID %2$@) is still running.", stop.name, String(pid)) }
+                    else { self.unresponsive = stop }
+                case .changed: self.quitProblem = tr("PID %1$@ is no longer the process that was checked; nothing was sent.", String(pid))
+                case .protected: self.quitProblem = tr("System processes and Thermo itself cannot be stopped.")
+                case .notDelivered: self.quitProblem = tr("The signal could not be delivered to PID %1$@.", String(pid))
+                }
+            }
+            self?.queue.async { self?.sample() }
+        }
+    }
+
+    /// Rechecks the identity, sends one signal through the gate and waits for the process to go.
+    nonisolated static func perform(_ stop: SingleStop, grace: TimeInterval,
+                                    signal: (Int32, Int32) -> Bool = { kill($0, $1) == 0 }) -> SingleStopResult {
+        let identity = stop.identity
+        let outcome = ProcessActionGate.attempt(identity, allowApplication: stop.application, allowAgentSession: stop.agentSession) { value in
+            signal(value.pid, stop.force ? SIGKILL : SIGTERM)
+        }
+        switch outcome {
+        case .requested: break
+        case .declined: return .notDelivered
+        case .protected: return .protected
+        case .changed, .unavailable: return .changed
+        }
+        let deadline = Date().addingTimeInterval(stop.force ? min(grace, 3) : grace)
+        while Date() < deadline, ProcessTable.identity(identity.pid) == identity { usleep(100_000) }
+        if ProcessTable.identity(identity.pid) == identity { return .stillRunning }
+        return stop.force ? .killed : .stopped
+    }
+
+    nonisolated static func record(_ stop: SingleStop, _ result: SingleStopResult) {
+        guard result != .changed, result != .protected else { return }
+        let done = result == .stopped || result == .killed
+        OperationJournal.record(OperationRecord(feature: "pulse", action: "end", subject: stop.name,
+                                                items: [.init(target: "\(stop.name) · PID \(stop.identity.pid)",
+                                                              bytes: done ? Int64(stop.memoryKB) * 1024 : 0,
+                                                              status: done ? "done" : "failed", detail: "\(result)")]))
+    }
+
     static func canSignal(_ expected: ProcessIdentity, current: ProcessIdentity?, uid: UInt32 = getuid(), me: Int32 = getpid()) -> Bool {
         ProcessActionGate.identityAllows(expected,current:current,uid:uid,me:me)
     }

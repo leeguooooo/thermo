@@ -86,7 +86,14 @@ public struct MachinePulse: Codable, Sendable, Equatable {
         public var ppid: Int32? = nil
         public var owner: String? = nil
         public var project: String? = nil
+        /// How this one process may be stopped by hand; nil for system processes, other users'
+        /// processes and Thermo itself, which are never stopped.
+        public var stop: Stop? = nil
     }
+
+    /// `agentSession` is offered only on the Memory page, one process at a time, after a
+    /// confirmation that names what is lost. Nothing automatic ends an agent session.
+    public enum Stop: String, Codable, Sendable { case end, agentSession }
 
     public struct Advice: Codable, Sendable, Equatable {
         /// "restart": quit and reopen the app; it restores its windows and frees what it piled up.
@@ -331,7 +338,9 @@ public struct MachinePulse: Codable, Sendable, Equatable {
             var project: String?
             if app == nil, let cwd = p.details.cwd, cwd != "/" { project = tilde(cwd) }
             let agent = ProcessTable.agentNames.contains(name.lowercased()) || exe.contains("/claude/versions/")
-            let quittable = p.pid != me && p.uid == getuid() && !agent && !exe.hasPrefix("/System/") && !exe.hasPrefix("/usr/")
+            let own = p.pid != me && p.uid == getuid() && !exe.hasPrefix("/System/") && !exe.hasPrefix("/usr/")
+            let quittable = own && !agent
+            let stop: Stop? = !own ? nil : agent ? .agentSession : .end
             // In place: copying the row out and back would copy its pids and parts for every process.
             func add(_ h: inout Hog) {
                 if app == nil, !h.pids.isEmpty, h.owner != p.owner || h.owners != nil {
@@ -357,7 +366,7 @@ public struct MachinePulse: Codable, Sendable, Equatable {
                     if h.parts == nil { h.parts = [] }
                     h.parts!.append(Part(pid: p.pid, role: role(p.details.argv), memoryKB: p.memoryKB, residentKB: p.residentKB,
                                       memoryMetric: p.memoryMetric, cpu: p.cpu, uptime: p.uptime,
-                                      ppid: p.ppid, owner: p.owner, project: project))
+                                      ppid: p.ppid, owner: p.owner, project: project, stop: stop))
                 }
             }
             add(&byKey[key, default: Hog(id: key, name: name, cpu: 0, memoryKB: 0, pids: [], app: app, quittable: quittable,

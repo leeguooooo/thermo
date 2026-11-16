@@ -58,6 +58,21 @@ final class MemoryInventoryTests: XCTestCase {
         XCTAssertEqual(h.memoryKB, 300)
     }
 
+    func testEachProcessCarriesItsOwnStopEligibility() throws {
+        let contexts = MachinePulse.group([AgentProcess(pid: 10, name: "claude", argv: ["claude"], cwd: "/p"),
+                                           AgentProcess(pid: 11, name: "node", executable: "/opt/homebrew/bin/node", argv: ["node"], cwd: "/p"),
+                                           AgentProcess(pid: 12, name: "syslogd", executable: "/usr/sbin/syslogd", argv: ["syslogd"], cwd: "/p")],
+                                          me: 99, limit: nil)
+        func stop(_ pid: Int32) throws -> MachinePulse.Stop? {
+            try XCTUnwrap(contexts.flatMap { $0.parts ?? [] }.first { $0.pid == pid }).stop
+        }
+        // Row-level actions still never include an agent session; only the single process says it may be picked.
+        XCTAssertEqual(try stop(10), .agentSession)
+        XCTAssertEqual(try stop(11), .end)
+        XCTAssertNil(try stop(12))
+        XCTAssertFalse(try XCTUnwrap(contexts.first { $0.pids == [10] }).quittable)
+    }
+
     func testAgentsStayProtectedInsideMergedGroups() {
         let contexts = MachinePulse.group([AgentProcess(pid: 10, name: "claude", argv: ["claude"], cwd: "/p"),
                                            AgentProcess(pid: 11, name: "claude", argv: ["claude"], cwd: "/q")], limit: nil)

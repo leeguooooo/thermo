@@ -514,7 +514,7 @@ public struct SlowdownDiagnosis: Codable, Sendable {
                     children: nil, elapsed: nil,
                     evidence: tr("%1$@ agent sessions are open using %2$@ with their tools; %3$@ of them are idle.",
                                  String(rows.count), gb(totalKB), String(idle.count)),
-                    guidance: tr("Close the sessions you are done with in their terminal (each one also runs its own MCP servers). Thermo does not end agent sessions."),
+                    guidance: tr("Close the sessions you are done with in their terminal, or end them one at a time in the list on the Memory page (each one also runs its own MCP servers). Thermo never ends agent sessions by itself."),
                     command: "thermo agents", sessions: idle.prefix(20).map { s, kb in
                         "\(friendlyName(s)) · PID \(s.pid) · \(gb(kb))" + (tilde(s.cwd).map { " · " + $0 } ?? "")
                     }, score: score(cpu: 0, freesKB: idleKB, certain: false) * 0.15,
