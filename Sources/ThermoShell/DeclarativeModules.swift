@@ -30,7 +30,22 @@ import WasmHost
     private var loaded = false
     private let make: (ModuleManifest, Data) -> WasmHost?
 
-    init(make: @escaping (ModuleManifest, Data) -> WasmHost? = { ModuleKernel.wasmHost(for: $0, wasm: $1) }) { self.make = make }
+    /// Signed packages installed from the module market; already verified against the app's keys.
+    private let marketPackages: () -> [(manifest: ModuleManifest, wasm: Data)]
+
+    init(make: @escaping (ModuleManifest, Data) -> WasmHost? = { ModuleKernel.wasmHost(for: $0, wasm: $1) },
+         marketPackages: @escaping () -> [(manifest: ModuleManifest, wasm: Data)] = DeclarativeModules.installedMarketPackages) {
+        self.make = make; self.marketPackages = marketPackages
+    }
+
+    static func installedMarketPackages() -> [(manifest: ModuleManifest, wasm: Data)] {
+        let store = ModuleMarketStore(root: ModuleMarketStore.defaultRoot(), keys: ModuleSigningKeys.production)
+        return store.installed().compactMap { item in
+            guard let data = try? Data(contentsOf: item.packageURL), let package = try? ModulePackage.decode(data),
+                  (try? package.verify(keys: ModuleSigningKeys.production))?.id == item.manifest.id else { return nil }
+            return (item.manifest, package.wasm)
+        }
+    }
 
     var manifests: [ModuleManifest] { installed.map(\.manifest) }
     func manifest(_ id: String) -> ModuleManifest? { installed.first { $0.manifest.id == id }?.manifest }
@@ -39,8 +54,23 @@ import WasmHost
     func loadIfNeeded(defaults: UserDefaults = .standard) {
         guard !loaded else { return }
         loaded = true
-        guard let path = defaults.string(forKey: Self.directoryKey), !path.isEmpty else { return }
-        load(from: URL(fileURLWithPath: (path as NSString).expandingTildeInPath, isDirectory: true))
+        if let path = defaults.string(forKey: Self.directoryKey), !path.isEmpty {
+            load(from: URL(fileURLWithPath: (path as NSString).expandingTildeInPath, isDirectory: true))
+        }
+        addMarketPackages()
+    }
+
+    /// Market modules are drawn the same way as development ones. A development copy with the same id wins.
+    func addMarketPackages(builtinIDs: Set<String> = Set(BuiltinModuleManifests.all.map(\.id))) {
+        var found = installed, issues = problems
+        for (manifest, wasm) in marketPackages() where !builtinIDs.contains(manifest.id) && !found.contains(where: { $0.manifest.id == manifest.id }) {
+            guard manifest.entries.allSatisfy({ !$0.kind.showsUI || (($0.kind == .page || $0.kind == .menuBarItem) && $0.scene != nil) }) else {
+                issues.append("\(manifest.id): only pages and menu bar items with a scene can be described"); continue
+            }
+            guard let host = make(manifest, wasm) else { issues.append("\(manifest.id): WebAssembly modules need macOS 15 and the runner"); continue }
+            found.append(.init(manifest: manifest, host: host, module: DeclarativeModule(host: host)))
+        }
+        installed = found; problems = issues
     }
 
     func load(from directory: URL, builtinIDs: Set<String> = Set(BuiltinModuleManifests.all.map(\.id))) {
