@@ -78,7 +78,7 @@ struct MemoryPage: View {
             ConfirmSheet(title: s.force ? tr("Force end %1$@ (PID %2$@)?", s.name, String(s.identity.pid))
                                         : tr("End %1$@ (PID %2$@)?", s.name, String(s.identity.pid)),
                          summary: stopSummary(s), destructive: true, heading: tr("What will run"),
-                         lines: ["kill -\(s.force ? "KILL" : "TERM") \(s.identity.pid)"],
+                         lines: ["kill -\(s.force ? "KILL" : "TERM") \(s.identity.pid)" + (s.folder.map { "   # " + $0 } ?? "")],
                          footnote: s.agentSession ? tr("Only this one process is ended. Freeing memory in one click never ends AI agent sessions.")
                                                   : tr("Thermo never stops system processes or itself."),
                          confirmTitle: s.force ? tr("Force end") : tr("End"),
@@ -579,6 +579,7 @@ struct MemoryPage: View {
         return Button(busy ? tr("Stopping…") : tr("End all")) { stoppingProgram = all }
             .buttonStyle(PillButtonStyle()).controlSize(.small).disabled(busy)
             .help(tr("End all %1$@ %2$@ processes?", String(all.identities.count), all.name))
+            .accessibilityLabel(tr("End all %1$@ %2$@ processes?", String(all.identities.count), all.name))
     }
 
     /// The program-wide End for a command-line program spread over several project rows. It is the
@@ -614,8 +615,9 @@ struct MemoryPage: View {
         if appMain && !force { return nil }
         let name: String
         if h.app != nil { name = appMain ? h.name : "\(h.name) · \(MachinePulse.roleName(p.role))" }
-        else { name = [h.name, h.project].compactMap { $0 }.joined(separator: " · ") }
-        return SystemPulse.SingleStop(identity: identity, name: name, application: h.app != nil,
+        else { name = h.name }
+        // The folder goes beside the command, not into the name: a long path pushed the PID out of the title.
+        return SystemPulse.SingleStop(identity: identity, name: name, folder: h.app == nil ? h.project : nil, application: h.app != nil,
                                       agentSession: kind == .agentSession, force: force, memoryKB: p.memoryKB)
     }
 
@@ -702,13 +704,13 @@ struct MemoryPage: View {
                     .buttonStyle(PillButtonStyle(prominent: emphasizeRestart, color: Theme.caution)).controlSize(.small)
                     .disabled(pulse.restarting != nil || pulse.quitting.contains(h.id))
             }
-            if h.quittable {
+            if h.app == nil, let processes = h.parts, processes.count == 1, let only = singleStop(h, processes[0]) {
+                // A row that is one process: its End is the row's End, with the offer to force it.
+                endButton(only)
+            } else if h.quittable {
                 Button(pulse.quitting.contains(h.id) ? tr("Stopping…") : h.app != nil ? tr("Quit") : tr("End")) { confirming = h }
                     .buttonStyle(PillButtonStyle()).controlSize(.small)
                     .disabled(pulse.quitting.contains(h.id) || pulse.restarting == h.name)
-            } else if let processes = h.parts, processes.count == 1, let only = singleStop(h, processes[0]) {
-                // A row that is one process: its End is the row's End.
-                endButton(only)
             } else if h.parts?.contains(where: { singleStop(h, $0) != nil }) == true {
                 Button(tr("Choose a process")) { openProcesses(of: h) }
                     .buttonStyle(PillButtonStyle()).controlSize(.small)

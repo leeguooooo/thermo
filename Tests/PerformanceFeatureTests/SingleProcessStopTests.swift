@@ -90,6 +90,7 @@ final class SingleProcessStopTests: XCTestCase {
         pulse.end(fixture(), perform: { _, _ in calls.perform(); return .stopped }, record: { _, r in calls.record(r) })
         XCTAssertTrue(pulse.ending.isEmpty)
         XCTAssertEqual(calls.counts.0, 0)
+        XCTAssertNotNil(pulse.quitProblem, "a confirmed action that does nothing has to say why")
     }
 
     @MainActor func testStoppedProcessReportsWhatWasFreedAndIsRecorded() async {

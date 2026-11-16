@@ -223,6 +223,8 @@ final class SystemPulse: ObservableObject {
     struct SingleStop: Identifiable, Equatable {
         var identity: ProcessIdentity
         var name: String
+        /// Where a command-line process runs, shown beside the command in the confirmation.
+        var folder: String? = nil
         /// The process belongs to an app bundle (a helper, or with `force` the app itself).
         var application = false
         /// An AI agent session: allowed here only because the user chose this one process.
@@ -244,7 +246,8 @@ final class SystemPulse: ObservableObject {
     @MainActor func end(_ stop: SingleStop, grace: TimeInterval = 5,
                         perform: @escaping @Sendable (SingleStop, TimeInterval) -> SingleStopResult = { SystemPulse.perform($0, grace: $1) },
                         record: @escaping @Sendable (SingleStop, SingleStopResult) -> Void = { SystemPulse.record($0, $1) }) {
-        guard samplingAllowed(), actionsAllowed() else { return }
+        // Say so: a confirmed action that silently does nothing looks like a broken button.
+        guard samplingAllowed(), actionsAllowed() else { quitProblem = tr("This feature is switched off."); return }
         let pid = stop.identity.pid
         guard !ending.contains(pid) else { return }
         quitProblem = nil; actionFeedback = nil; unresponsive = nil
@@ -290,7 +293,8 @@ final class SystemPulse: ObservableObject {
     @MainActor func endAll(_ stop: ProgramStop, grace: TimeInterval = 5,
                            perform: @escaping @Sendable (ProgramStop, TimeInterval) -> ProgramStopResult = { SystemPulse.perform($0, grace: $1) },
                            record: @escaping @Sendable (ProgramStop, ProgramStopResult) -> Void = { SystemPulse.record($0, $1) }) {
-        guard samplingAllowed(), actionsAllowed(), !endingPrograms.contains(stop.id), !stop.identities.isEmpty else { return }
+        guard samplingAllowed(), actionsAllowed() else { quitProblem = tr("This feature is switched off."); return }
+        guard !endingPrograms.contains(stop.id), !stop.identities.isEmpty else { return }
         quitProblem = nil; actionFeedback = nil; unresponsive = nil
         endingPrograms.insert(stop.id)
         DispatchQueue.global(qos: .userInitiated).async { [weak self] in
