@@ -61,7 +61,9 @@ final class MemoryInventoryTests: XCTestCase {
     func testEachProcessCarriesItsOwnStopEligibility() throws {
         let contexts = MachinePulse.group([AgentProcess(pid: 10, name: "claude", argv: ["claude"], cwd: "/p"),
                                            AgentProcess(pid: 11, name: "node", executable: "/opt/homebrew/bin/node", argv: ["node"], cwd: "/p"),
-                                           AgentProcess(pid: 12, name: "syslogd", executable: "/usr/sbin/syslogd", argv: ["syslogd"], cwd: "/p")],
+                                           AgentProcess(pid: 12, name: "syslogd", executable: "/usr/sbin/syslogd", argv: ["syslogd"], cwd: "/p"),
+                                           AgentProcess(pid: 13, name: "node", executable: "/opt/homebrew/bin/node",
+                                                        argv: ["node", "/fixture/node_modules/@openai/codex/bin/codex.js"], cwd: "/q")],
                                           me: 99, limit: nil)
         func stop(_ pid: Int32) throws -> MachinePulse.Stop? {
             try XCTUnwrap(contexts.flatMap { $0.parts ?? [] }.first { $0.pid == pid }).stop
@@ -70,6 +72,8 @@ final class MemoryInventoryTests: XCTestCase {
         XCTAssertEqual(try stop(10), .agentSession)
         XCTAssertEqual(try stop(11), .end)
         XCTAssertNil(try stop(12))
+        // An agent started through an interpreter is one too, as the action gate sees it.
+        XCTAssertEqual(try stop(13), .agentSession)
         XCTAssertFalse(try XCTUnwrap(contexts.first { $0.pids == [10] }).quittable)
     }
 

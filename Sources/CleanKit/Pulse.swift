@@ -337,7 +337,11 @@ public struct MachinePulse: Codable, Sendable, Equatable {
             let exe = p.details.executable ?? ""
             var project: String?
             if app == nil, let cwd = p.details.cwd, cwd != "/" { project = tilde(cwd) }
+            // The same rule the action gate applies, so a row never offers what the gate would refuse
+            // (an agent started through an interpreter, for example).
             let agent = ProcessTable.agentNames.contains(name.lowercased()) || exe.contains("/claude/versions/")
+                || ProcessActionGate.isAgent(.init(pid: p.pid, ppid: 1, uid: p.uid, name: name, executable: p.details.executable,
+                                                   argv: p.details.argv, cwd: nil, started: nil))
             let own = p.pid != me && p.uid == getuid() && !exe.hasPrefix("/System/") && !exe.hasPrefix("/usr/")
             let quittable = own && !agent
             let stop: Stop? = !own ? nil : agent ? .agentSession : .end
