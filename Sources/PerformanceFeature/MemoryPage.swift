@@ -482,8 +482,9 @@ struct MemoryPage: View {
                 }.buttonStyle(.plain)
                 VStack(alignment: .leading, spacing: 2) {
                     Text(h.project ?? h.app ?? tr("Unknown project")).lineLimit(1).truncationMode(.middle).help(h.project ?? h.app ?? "")
-                    Text(detail(h)).font(Theme.caption).foregroundStyle(Theme.textSecondary)
-                }.frame(maxWidth: .infinity, alignment: .leading)
+                    Text(detail(h)).font(Theme.caption).foregroundStyle(Theme.textSecondary).lineLimit(2)
+                // A long detail line wraps instead of pushing the whole row into the narrow layout.
+                }.frame(idealWidth: 220, maxWidth: .infinity, alignment: .leading)
                 Text(metric(h.memoryKB, h.memoryMetric)).frame(width: 84, alignment: .trailing)
                 Text(h.residentKB.map { MemoryFormat.string(kibibytes: $0) } ?? "—").foregroundStyle(Theme.textSecondary).frame(width: 84, alignment: .trailing)
                 Group { if showActions { actions(h, emphasizeRestart: false) } else { Color.clear.frame(height: 1) } }
@@ -638,7 +639,7 @@ struct MemoryPage: View {
             let processes = h.parts ?? []
             let choosable = processes.filter { singleStop(h, $0) != nil }.count
             if processes.contains(where: { $0.stop == .agentSession }) {
-                parts.append(processes.count == 1 ? tr("AI agent session") : tr("AI agent sessions, ended one at a time"))
+                parts.append(processes.count == 1 ? tr("AI agent session") : tr("AI agent sessions"))
             } else if choosable > 0 {
                 parts.append(tr("some of its processes are protected"))
             } else {

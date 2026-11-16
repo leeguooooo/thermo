@@ -2601,7 +2601,6 @@ let zhHans: [String: String] = [
     "Inspect %1$@": "查看 %1$@ 的详情",
     "oldest process: %1$@": "最早启动的进程：%1$@",
     "AI agent session": "AI agent 会话",
-    "AI agent sessions, ended one at a time": "AI agent 会话，需逐个结束",
     "some of its processes are protected": "部分进程受保护",
     "system process, cannot be ended": "系统进程，不能结束",
     "Choose a process": "选择进程",
