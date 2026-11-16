@@ -83,7 +83,10 @@ let package = Package(
         .target(name:"SystemServicesAPI",dependencies:["ThermoKit","ThermoL10n"]),
         .target(name:"PerformanceFeature",dependencies:["NativeFeatureAPI","SystemServicesAPI","ThermoUI","ThermoL10n","ModuleKit","ThermoKit","CleanKit","AgentCore","AgentDoctor","LocalAIUI"]),
         .target(name:"ThermoKernel",dependencies:["SystemServicesAPI","NativeFeatureAPI","ThermoKit","CleanKit","AgentCore","ThermoL10n"]),
-        .target(name: "ModuleKernelCore", dependencies: ["ModuleHost", "ModuleKit", "AgentCore", "CleanKit", "ThermoUI", "ThermoL10n"]),
+        .target(name: "ModuleKernelCore", dependencies: ["ModuleHost", "ModuleKit", "WasmHost", "AgentCore", "CleanKit", "ThermoUI", "ThermoL10n"]),
+        // Third-party WebAssembly modules (#46): the kernel side. The runner is Runtimes/WasmRunner (macOS 15).
+        .target(name: "WasmHost", dependencies: ["ModuleKit", "ModuleHost"]),
+        .executableTarget(name: "WasmHarness", dependencies: ["WasmHost", "ModuleKit"]),
         .executableTarget(name: "PermissionUIHarness", dependencies: ["ModuleKernelCore", "ModuleKit", "AgentCore", "CleanKit", "ThermoL10n"]),
         .target(name:"DiskFeature",dependencies:["NativeFeatureAPI","LocalAIUI","ThermoUI","ThermoL10n","ModuleKit","AgentCore","CleanKit"]),
         .target(name:"AgentDiagnosticsFeature",dependencies:["NativeFeatureAPI","ThermoUI","ThermoL10n","ModuleKit","AgentDoctor","AgentCore","CleanKit"]),
@@ -158,6 +161,7 @@ let package = Package(
         .testTarget(name: "VideoKitTests", dependencies: ["VideoKit"]),
         .testTarget(name: "PreviewCoreTests", dependencies: ["PreviewCore"]),
         .testTarget(name: "ModuleKitTests", dependencies: ["ModuleKit", "ModuleLeaseProbe"]),
+        .testTarget(name: "WasmHostTests", dependencies: ["WasmHost", "ModuleKit"]),
         .testTarget(name: "ModuleHostTests", dependencies: ["ModuleHost", "ModuleKit"]),
     ],
     swiftLanguageVersions: [.v5]
