@@ -132,7 +132,12 @@ struct SettingsView: View {
                     if let issue = installation.issue { Text(issue).foregroundStyle(Theme.caution) }
                 }.padding().background(Theme.caution.opacity(0.1)).cornerRadius(Theme.radius)
             }
-            section(tr("Features")) { ModuleSwitches(center: modules) }
+            section(tr("Features")) {
+                Button{MainWindow.show(.features)}label:{
+                    HStack(spacing:Theme.Space.m){Image(systemName:"puzzlepiece.extension").frame(width:22);Text(tr("Open Feature Center"));Spacer();Image(systemName:"chevron.right")}
+                        .font(Theme.body).foregroundStyle(Theme.textPrimary).padding(Theme.Space.m)
+                }.buttonStyle(.plain)
+            }
             // Features with their own panel: one group of rows, each opening its panel.
             section(tr("Tools")) {
                 CleanScreenButton()

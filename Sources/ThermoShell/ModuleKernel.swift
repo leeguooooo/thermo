@@ -9,6 +9,6 @@ struct ModuleActivityView:View {
     var body:some View {
         let name=NativeModules.manifest(manifest.id)==nil ? manifest.name:tr(manifest.name)
         let ids=[manifest.id]+ShellNativeCatalog.catalog.privateWorkers(manifest.id).sorted()
-        return ModuleActivityPanel(name:name,load:{ModuleKernel.log.summary(modules:ids)},close:close)
+        return ModuleActivityPanel(name:name,load:{ModuleKernel.log.summary(modules:ids)},recent:{ModuleKernel.log.recent(modules:ids)},close:close)
     }
 }
