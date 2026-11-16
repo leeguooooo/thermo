@@ -5,23 +5,24 @@ import ThermoKit
 import ThermoL10n
 
 package enum CheckupFeature {
-    package static func registration(reading:@escaping @MainActor ()->Snapshot?,navigate:@escaping @MainActor (NativeFeatureRoute)->Void)->NativeFeatureDefinition {
-        .init(manifest:BuiltinModuleManifests.checkup,ui:.init(sidebarLocations:[.overview]),resolveLegacyPage:{argument in argument=="checkup" ? .init(BuiltinModuleManifests.checkup.id,"home"):nil},makeSession:{CheckupSession(availability:$0,reading:reading,navigate:navigate)})
+    package static func registration(discovery:@escaping @MainActor ()->any FeatureDiscoveryAccess = {UnavailableFeatureDiscovery()},reading:@escaping @MainActor ()->Snapshot?,navigate:@escaping @MainActor (NativeFeatureRoute)->Void)->NativeFeatureDefinition {
+        .init(manifest:BuiltinModuleManifests.checkup,ui:.init(sidebarLocations:[.overview]),resolveLegacyPage:{argument in argument=="checkup" ? .init(BuiltinModuleManifests.checkup.id,"home"):nil},makeSession:{CheckupSession(availability:$0,reading:reading,navigate:navigate,discovery:discovery)})
     }
 }
 @MainActor final class CheckupSession:NativeFeatureSession {
     private let availability:FeatureAvailability
     private let reading:()->Snapshot?
     private let navigate:(NativeFeatureRoute)->Void
+    private let discovery:()->any FeatureDiscoveryAccess
     private let makeModel:@MainActor (@escaping ()->Bool)->CheckupModel
     private var storedModel:CheckupModel?
     init(availability:FeatureAvailability,reading:@escaping ()->Snapshot?,navigate:@escaping (NativeFeatureRoute)->Void,
-         makeModel:@escaping @MainActor (@escaping ()->Bool)->CheckupModel = {CheckupModel(enabled:$0)}) {
-        self.availability=availability;self.reading=reading;self.navigate=navigate;self.makeModel=makeModel
+         makeModel:@escaping @MainActor (@escaping ()->Bool)->CheckupModel = {CheckupModel(enabled:$0)},discovery:@escaping @MainActor ()->any FeatureDiscoveryAccess = {UnavailableFeatureDiscovery()}) {
+        self.availability=availability;self.reading=reading;self.navigate=navigate;self.makeModel=makeModel;self.discovery=discovery
     }
     private var model:CheckupModel {
         if let storedModel{return storedModel}
-        let availability=availability,model=makeModel {availability.acceptsWork};storedModel=model;return model
+        let availability=availability,model=makeModel {availability.acceptsWork};model.discovery=discovery();storedModel=model;return model
     }
     func ui(_ surface:NativeUISurface,navigation:NativeNavigation)->AnyView? {
         guard availability.acceptsWork,case let .sidebar(location,_,rows)=surface,location == .overview else{return nil}

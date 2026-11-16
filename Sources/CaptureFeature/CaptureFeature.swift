@@ -14,7 +14,7 @@ package enum CaptureFeature {
     package static func registration()->CaptureRegistration {makeRegistration()}
     static func makeRegistration(makeWorkspace:@escaping CaptureSession.WorkspaceFactory = {availability in CaptureWorkspace(featureEnabled:{availability.acceptsWork})})->CaptureRegistration {
         let hub=CaptureControlHub()
-        let definition=NativeFeatureDefinition(manifest:BuiltinModuleManifests.capture,runsInBackground:true,ui:.init(hasMenuContent:true),makeSession:{availability in
+        let definition=NativeFeatureDefinition(manifest:BuiltinModuleManifests.capture,runsInBackground:true,permissionDescriptions:["Screen Recording for screenshots and recording.","Accessibility for scrolling capture (optional).","Input Monitoring for recording keyboard events (optional).","Camera and microphone for recording those inputs (optional)."],ui:.init(hasMenuContent:true),makeSession:{availability in
             let session=CaptureSession(availability:availability,hub:hub,makeWorkspace:makeWorkspace);hub.current=session;return session
         })
         return .init(definition:definition,makeControl:{CaptureControlAccess(store:$0,hub:hub)})

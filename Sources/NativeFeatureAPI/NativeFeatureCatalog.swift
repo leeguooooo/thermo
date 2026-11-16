@@ -105,6 +105,7 @@ package struct NativeFeatureCatalog: Sendable {
         }
     }
     package func manifest(_ id:String)->ModuleManifest? {definitions[id]?.manifest}
+    package func permissionDescriptions(_ module:String)->[String] {definitions[module]?.permissionDescriptions ?? []}
     package var manifests:[ModuleManifest] {order.compactMap{definitions[$0]?.manifest}}
     package var backgroundFeatures:[String] {order.filter{definitions[$0]?.runsInBackground == true}}
     package func privateWorkers(_ id:String)->Set<String> {definitions[id]?.privateWorkers ?? []}

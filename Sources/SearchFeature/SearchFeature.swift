@@ -13,15 +13,15 @@ package struct SearchRegistration:Sendable {
 }
 package enum SearchFeature {
     package static let previewWorkerID="dev.thermo.search-preview"
-    package static func registration(preview:@escaping @MainActor @Sendable ()->any DocumentPreviewService)->SearchRegistration {
-        makeRegistration(preview:preview)
+    package static func registration(discovery:@escaping @MainActor @Sendable ()->any FeatureDiscoveryAccess = {UnavailableFeatureDiscovery()},preview:@escaping @MainActor @Sendable ()->any DocumentPreviewService)->SearchRegistration {
+        makeRegistration(discovery:discovery,preview:preview)
     }
-    static func makeRegistration(preview:@escaping @MainActor @Sendable ()->any DocumentPreviewService,
+    static func makeRegistration(discovery:@escaping @MainActor @Sendable ()->any FeatureDiscoveryAccess = {UnavailableFeatureDiscovery()},preview:@escaping @MainActor @Sendable ()->any DocumentPreviewService,
                                  makeModel:@escaping SearchSession.ModelFactory = {LocalSearchModel(module:BuiltinModuleManifests.search,enabled:$0)},
                                  makeShortcut:@escaping SearchShortcutAuthority.Factory = {LocalSearchShortcut(module:BuiltinModuleManifests.search,action:$0)}) -> SearchRegistration {
         let authority=SearchShortcutAuthority(makeShortcut:makeShortcut)
         let definition=NativeFeatureDefinition(manifest:BuiltinModuleManifests.search,runsInBackground:true,privateWorkers:[previewWorkerID],makeSession:{availability in
-            let session=SearchSession(availability:availability,authority:authority,makeModel:makeModel,preview:preview)
+            let session=SearchSession(availability:availability,authority:authority,makeModel:makeModel,preview:preview,discovery:discovery)
             authority.current=session;return session
         })
         return .init(definition:definition,makeAccess:{SearchAccess(store:$0,authority:authority)})
@@ -68,16 +68,17 @@ final class SearchShortcutAuthority:@unchecked Sendable {
     let availability:FeatureAvailability
     private let authority:SearchShortcutAuthority
     private let makeModel:ModelFactory
+    private let discoveryService:@MainActor ()->any FeatureDiscoveryAccess
     private let previewService:@MainActor ()->any DocumentPreviewService
     private(set) var storedModel:LocalSearchModel?
     private var storedPanel:LocalSearchPanel?
     private var storedPreview:(any DocumentPreviewPresentation)?
-    init(availability:FeatureAvailability,authority:SearchShortcutAuthority,makeModel:@escaping ModelFactory,preview:@escaping @MainActor ()->any DocumentPreviewService) {
-        self.availability=availability;self.authority=authority;self.makeModel=makeModel;self.previewService=preview
+    init(availability:FeatureAvailability,authority:SearchShortcutAuthority,makeModel:@escaping ModelFactory,preview:@escaping @MainActor ()->any DocumentPreviewService,discovery:@escaping @MainActor ()->any FeatureDiscoveryAccess = {UnavailableFeatureDiscovery()}) {
+        self.availability=availability;self.authority=authority;self.makeModel=makeModel;self.previewService=preview;self.discoveryService=discovery
     }
     var model:LocalSearchModel {
         if let storedModel{return storedModel}
-        let availability=availability,value=makeModel{availability.acceptsWork};storedModel=value;return value
+        let availability=availability,value=makeModel{availability.acceptsWork};value.discovery=discoveryService();storedModel=value;return value
     }
     private var preview:any DocumentPreviewPresentation {
         if let storedPreview{return storedPreview}

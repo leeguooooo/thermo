@@ -147,10 +147,28 @@ struct LocalSearchView: View {
                     Button { model.error = nil } label: { Image(systemName: "xmark") }.buttonStyle(.plain).accessibilityLabel(tr("Dismiss"))
                 }.padding(12).background(Theme.surface)
             }
+            if let notice=model.featureNotice {
+                Text(notice).font(Theme.secondary).foregroundStyle(Theme.good).frame(maxWidth:.infinity,alignment:.leading).padding(12)
+            }
             ScrollViewReader { proxy in
                 ScrollView {
                     LazyVStack(spacing: 2) {
-                        if model.response.items.isEmpty && !model.searching {
+                        ForEach(model.featureChoices){item in
+                            Button {model.selection="feature:"+item.id;model.reviewFeature(item)} label: {
+                                HStack(alignment:.top,spacing:12){
+                                    Image(systemName:item.symbol).font(.system(size:22)).frame(width:30)
+                                    VStack(alignment:.leading,spacing:4){
+                                        Text(item.name).font(Theme.rowTitle)
+                                        Text(item.summary).font(Theme.secondary).foregroundStyle(Theme.textSecondary).lineLimit(2)
+                                        Text(item.storage).font(Theme.caption).foregroundStyle(Theme.textTertiary)
+                                        ForEach(Array(item.permissions.enumerated()),id:\.offset){_,permission in Text(permission).font(Theme.caption).foregroundStyle(Theme.textSecondary)}
+                                    }
+                                    Spacer();Text(tr("Enable…")).font(Theme.label).foregroundStyle(Theme.accent)
+                                }.padding(12).frame(maxWidth:.infinity,alignment:.leading)
+                                    .background(model.selection == "feature:"+item.id ? Theme.surfaceActive:Color.clear).clipShape(RoundedRectangle(cornerRadius:8))
+                            }.buttonStyle(.plain).id("feature:"+item.id).accessibilityIdentifier("feature-discovery-"+item.id)
+                        }
+                        if model.response.items.isEmpty && model.featureChoices.isEmpty && !model.searching {
                             VStack(alignment: .leading, spacing: 10) {
                                 Text(model.directPath != nil ? tr("This path is unavailable") : model.query.isEmpty ? tr("Your apps, one shortcut away") : tr("No matching apps or files")).font(Theme.heading)
                                 if let path = model.directPath {
@@ -242,6 +260,9 @@ struct LocalSearchView: View {
             }.font(Theme.caption).foregroundStyle(Theme.textTertiary).lineLimit(1).padding(.horizontal, 20).padding(.vertical, 10)
 
         }.foregroundStyle(Theme.textPrimary).background(Theme.canvas)
+            .sheet(item:$model.featureReview,onDismiss:{model.cancelFeatureReview()}) {item in
+                FeatureEnableReview(name:item.name,summary:item.summary,storage:item.storage,permissions:item.permissions,enable:model.enableReviewedFeature,cancel:model.cancelFeatureReview)
+            }
             .sheet(isPresented: $model.showSettings) { LocalSearchSettings(model:model,shortcut:shortcut) }
             .alert(tr("Use ⌘Space for Thermo search?"), isPresented: $confirmingSpotlight) {
                 Button(tr("Cancel"), role: .cancel) { model.presentingDialog = false }
