@@ -11,7 +11,10 @@ import ModuleKit
 //   ModulePack listing <package> <https url of the package>   prints a registry entry (JSON)
 
 func fail(_ message: String) -> Never { FileHandle.standardError.write(Data((message + "\n").utf8)); exit(1) }
-func read(_ path: String) -> Data { (try? Data(contentsOf: URL(fileURLWithPath: path))) ?? fail("cannot read \(path)") }
+func read(_ path: String) -> Data {
+    guard let data = try? Data(contentsOf: URL(fileURLWithPath: path)) else { fail("cannot read \(path)") }
+    return data
+}
 let args = Array(CommandLine.arguments.dropFirst())
 
 switch args.first {
