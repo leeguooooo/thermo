@@ -75,7 +75,7 @@ public final class ModuleRunner {
                        Function(store: store, parameters: [.i32, .i32], results: [.i32]) { caller, args in
             guard let runner = box.runner, let memory = caller.instance?.exports[memory: "memory"] else { return [.i32(0)] }
             let count = min(Int(args[1].i32), runner.lastAnswer.count)
-            try Self.write(memory, at: args[0], Array(runner.lastAnswer.prefix(count)))
+            try Self.write(memory, at: args[0].i32, Array(runner.lastAnswer.prefix(count)))
             return [.i32(UInt32(count))]
         })
         imports.define(module: "thermo", name: "output",
