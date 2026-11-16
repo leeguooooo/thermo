@@ -75,7 +75,8 @@ import XCTest
                                           scene: "main", language: { "en" })
         await model.load()
         XCTAssertNotNil(model.view); XCTAssertNil(model.problem)
-        XCTAssertEqual(model.values["f"]?["t"], .text("")); XCTAssertEqual(model.values["f"]?["c"], .text("x")); XCTAssertEqual(model.values["f"]?["b"], .toggle(true))
+        XCTAssertEqual(model.values["f"]?["t"], ModuleView.Value.text("")); XCTAssertEqual(model.values["f"]?["c"], ModuleView.Value.text("x"))
+        XCTAssertEqual(model.values["f"]?["b"], ModuleView.Value.toggle(true))
         await model.perform("save", form: "f")
         XCTAssertNotNil(model.view, "a bad answer keeps the last good view"); XCTAssertNotNil(model.problem)
     }

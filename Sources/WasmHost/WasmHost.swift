@@ -63,6 +63,7 @@ public actor WasmHost {
     public struct Result: Sendable, Equatable {
         public var status: Int
         public var output: Data
+        public init(status: Int, output: Data) { self.status = status; self.output = output }
     }
 
     public static var isSupported: Bool {
