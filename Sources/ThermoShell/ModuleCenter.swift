@@ -10,7 +10,7 @@ import ThermoL10n
 /// The app's one module manager and what the UI is built from: the pages of the modules that are on.
 /// Which modules are on is remembered per module; builtin defaults also follow the installation cohort.
 @MainActor final class ModuleCenter: ObservableObject {
-    static let shared = ModuleCenter(startBuiltin: NativeModules.start, updatesAppMenu: true, commandHome:NSHomeDirectory())
+    static let shared = ModuleCenter(startBuiltin: NativeModules.start, updatesAppMenu: true, commandHome:NSHomeDirectory(), declarative: .shared)
 
     struct Page: Identifiable, Equatable {
         var module: ModuleManifest
@@ -41,8 +41,9 @@ import ThermoL10n
     init(manager: ModuleManager? = nil, defaults: UserDefaults = .standard,
          prepareBuiltinStop: @escaping @MainActor (String) throws -> NativeModules.FinishStop? = {try NativeModules.prepareStop($0)},
          startBuiltin: @escaping @MainActor (String) -> Void = { _ in },
-         updatesAppMenu: Bool = false, commandHome:String? = nil) {
+         updatesAppMenu: Bool = false, commandHome:String? = nil, declarative: DeclarativeModules? = nil) {
         self.manager = manager ?? ModuleManager(); self.defaults = defaults
+        self.declarative = declarative ?? DeclarativeModules()
         self.prepareBuiltinStop = prepareBuiltinStop
         self.startBuiltin = startBuiltin
         self.updatesAppMenu = updatesAppMenu;self.commandHome=commandHome
@@ -64,6 +65,8 @@ import ThermoL10n
             for manifest in NativeModules.all where isOn(manifest.id) { startBuiltin(manifest.id) }
         }
         marketModules = ModuleMarketStore(root: ModuleMarketStore.defaultRoot(), keys: ModuleSigningKeys.production).installed().map(\.manifest)
+        declarative.loadIfNeeded(defaults: defaults)
+        if !declarative.installed.isEmpty { revision += 1 }
         manager.onChange = { [weak self] _ in self?.refresh() }
         manager.kernel = { ModuleKernel.make(for: $0) }
         Task { @MainActor in
@@ -94,11 +97,15 @@ import ThermoL10n
 
     /// The sidebar's module rows: page entries of the modules that are on, in bundle order.
     var pages: [Page] {
-        visibleStatuses.filter(\.enabled).flatMap { status in
-            let shown = status.manifest.localized(L10n.current.rawValue)
+        (visibleStatuses.filter(\.enabled).map(\.manifest) + declarative.manifests.filter { isOn($0.id) }).flatMap { manifest in
+            let shown = manifest.localized(L10n.current.rawValue)
             return shown.entries.filter { $0.kind == .page }.map { Page(module: shown, entry: $0) }
         }
     }
+
+    /// Third-party modules described as data (#47); off until the person switches them on.
+    let declarative: DeclarativeModules
+    func isDeclarative(_ id: String) -> Bool { declarative.manifest(id) != nil }
 
     struct PageGroup: Identifiable {
         let module: ModuleManifest
@@ -106,8 +113,8 @@ import ThermoL10n
         var id: String { module.id }
     }
     var pageGroups: [PageGroup] {
-        visibleStatuses.filter(\.enabled).compactMap { status in
-            let manifest = status.manifest.localized(L10n.current.rawValue)
+        (visibleStatuses.filter(\.enabled).map(\.manifest) + declarative.manifests.filter { isOn($0.id) }).compactMap { original in
+            let manifest = original.localized(L10n.current.rawValue)
             let entries = pages.filter { $0.module.id == manifest.id }
             return entries.isEmpty ? nil : .init(module: manifest, pages: entries)
         }
@@ -126,6 +133,7 @@ import ThermoL10n
     func isOn(_ id: String) -> Bool {
         if let builtin = NativeModules.manifest(id) { return Self.stored(builtin, in: defaults) }
         if let market = marketModules.first(where: { $0.id == id }) { return Self.stored(market, in: defaults) }
+        if let described = declarative.manifest(id) { return Self.stored(described, in: defaults) }
         return statuses.first { $0.manifest.id == id }?.enabled ?? false
     }
 
@@ -139,6 +147,7 @@ import ThermoL10n
     var switches: [(manifest: ModuleManifest, enabled: Bool, builtin: Bool)] {
         NativeModules.all.map { ($0, isOn($0.id), true) } + visibleStatuses.map { ($0.manifest, $0.enabled, false) }
             + marketModules.map { ($0, isOn($0.id), false) }
+            + declarative.manifests.filter { described in !marketModules.contains { $0.id == described.id } }.map { ($0, isOn($0.id), false) }
     }
 
     struct NavigationPage: Identifiable {
@@ -155,7 +164,7 @@ import ThermoL10n
         var symbol: String { entry.symbol ?? module.symbol }
     }
     var activeManifests: [ModuleManifest] {
-        NativeModules.all.filter { isOn($0.id) } + visibleStatuses.filter(\.enabled).map(\.manifest)
+        NativeModules.all.filter { isOn($0.id) } + visibleStatuses.filter(\.enabled).map(\.manifest) + declarative.manifests.filter { isOn($0.id) }
     }
     var navigationConflicts: [ModuleNavigation.Conflict] { ModuleNavigation.conflicts(activeManifests) }
     func navigationIssue(_ id: String) -> String? {
@@ -239,6 +248,10 @@ import ThermoL10n
             revision += 1
             // The View menu and its shortcuts list pages too.
             if updatesAppMenu, NSApp != nil { installStandardMenus(center: self) }
+        } else if isDeclarative(id) {
+            if !on { declarative.stop(id); stopProgress[id] = .processExited }
+            revision += 1
+            if updatesAppMenu, NSApp != nil { installStandardMenus(center: self) }
         } else if marketModules.contains(where: { $0.id == id }) {
             // A WebAssembly module runs only for the length of a call, so nothing is left running.
             revision += 1
@@ -271,6 +284,9 @@ struct ModulePageView: View {
     var body: some View {
         if !center.loaded {
             ProgressView().frame(maxWidth: .infinity, maxHeight: .infinity)
+        } else if let page = center.page(module: module, entry: entry), let scene = page.entry.scene,
+                  center.isDeclarative(module), let model = center.declarative.model(module: module, scene: scene) {
+            DeclarativePageView(model: model, fallbackTitle: page.entry.title).id(page.id)
         } else if let page = center.page(module: module, entry: entry), let scene = page.entry.scene {
             ModuleSceneView(manager: center.manager, module: module, scene: scene).id(page.id)
                 .padding(.top, 28)   // Clear of the window's title bar buttons.

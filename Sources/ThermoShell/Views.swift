@@ -30,6 +30,7 @@ struct PopoverView: View {
                     .overlay(RoundedRectangle(cornerRadius: Theme.radiusSmall, style: .continuous).strokeBorder(Theme.hairline))
                 }.environment(\.featureRowCompact, true)
             }
+            DeclarativeMenuBarItems()
             footer
         }
         .padding(Theme.Space.m).frame(width: 372)

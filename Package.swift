@@ -87,6 +87,7 @@ let package = Package(
         // Third-party WebAssembly modules (#46): the kernel side. The runner is Runtimes/WasmRunner (macOS 15).
         .target(name: "WasmHost", dependencies: ["ModuleKit", "ModuleHost"]),
         .executableTarget(name: "WasmHarness", dependencies: ["WasmHost", "ModuleKit"]),
+        .executableTarget(name: "DeclarativeHarness", dependencies: ["WasmHost", "ModuleKit"]),
         .executableTarget(name: "PermissionUIHarness", dependencies: ["ModuleKernelCore", "ModuleKit", "AgentCore", "CleanKit", "ThermoL10n"]),
         .target(name:"DiskFeature",dependencies:["NativeFeatureAPI","LocalAIUI","ThermoUI","ThermoL10n","ModuleKit","AgentCore","CleanKit"]),
         .target(name:"AgentDiagnosticsFeature",dependencies:["NativeFeatureAPI","ThermoUI","ThermoL10n","ModuleKit","AgentDoctor","AgentCore","CleanKit"]),
@@ -122,7 +123,7 @@ let package = Package(
         .executableTarget(name: "ModulePack", dependencies: ["ModuleKit"]),
         .executableTarget(name: "thermo", dependencies: ["CaptureScriptCore", "ThermoKit", "AgentCore", "AgentDoctor", "CleanKit", "ThermoL10n", "SearchCore", "ModuleKit", .product(name: "MCP", package: "swift-sdk")]),
         .executableTarget(name: "ThermoHelper", dependencies: ["ThermoKit"]),
-        .target(name:"ThermoShell",dependencies:["SearchControlAPI","CaptureControlAPI","CaptureControlAdapter","ThermoKernel","SystemServicesAPI","NativeFeatureAPI","ThermoUI","ThermoL10n","ModuleKit","ModuleHost","ModuleKernelCore","ThermoKit","CleanKit","AgentCore","DocumentPreviewAPI","DocumentPreviewHost","HotkeyCore",.product(name:"Sparkle",package:"Sparkle")],
+        .target(name:"ThermoShell",dependencies:["WasmHost","SearchControlAPI","CaptureControlAPI","CaptureControlAdapter","ThermoKernel","SystemServicesAPI","NativeFeatureAPI","ThermoUI","ThermoL10n","ModuleKit","ModuleHost","ModuleKernelCore","ThermoKit","CleanKit","AgentCore","DocumentPreviewAPI","DocumentPreviewHost","HotkeyCore",.product(name:"Sparkle",package:"Sparkle")],
             linkerSettings: [.linkedFramework("AppKit"), .linkedFramework("SwiftUI"), .linkedFramework("Charts"), .linkedFramework("AVKit"), .linkedFramework("WebKit"), .linkedFramework("Quartz"), .linkedFramework("CoreAudio"), .linkedFramework("AudioToolbox")]
         ),
         .target(name:"ThermoComposition",dependencies:["ThermoShell","SearchControlAPI","CaptureControlAPI","SystemServicesAPI","NativeFeatureAPI","ModuleKit","CleanKit","ThermoL10n","PerformanceFeature","MenuBarFeature","CaptureFeature","SearchFeature","DiskFeature","AgentDiagnosticsFeature","SpaceFeature","AppsFeature","BrowserFeature","DownloadFeature","HistoryFeature","ConnectionsFeature","ClaudeFeature","CheckupFeature","PluginsFeature"]),

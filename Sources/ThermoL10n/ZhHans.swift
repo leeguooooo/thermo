@@ -1987,6 +1987,7 @@ let zhHans: [String: String] = [
     "Thermo still won't remove it: %1$@": "Thermo 仍不会删除它：%1$@",
     "AI can be wrong. Nothing is ticked or removed for you.": "AI 也会出错，不会替你勾选或删除任何东西。",
     "Try again": "重试",
+    "Nothing to show.": "没有可显示的内容。",
     "Can delete": "可以删",
     "Check first": "先确认",
     "Keep": "保留",
