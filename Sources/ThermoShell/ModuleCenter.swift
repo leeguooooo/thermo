@@ -3,6 +3,7 @@ import ThermoUI
 import AppKit
 import ExtensionKit
 import ModuleHost
+import ModuleDevKit
 import ModuleKit
 import SwiftUI
 import ThermoL10n
@@ -67,6 +68,13 @@ import ThermoL10n
         marketModules = ModuleMarketStore(root: ModuleMarketStore.defaultRoot(), keys: ModuleSigningKeys.production).installed().map(\.manifest)
         declarative.loadIfNeeded(defaults: defaults)
         if !declarative.installed.isEmpty { revision += 1 }
+        // `thermo dev run` (#48) rebuilt a module in the development directory: read that directory again.
+        // The notification carries nothing; only the folder the person configured is ever read.
+        if updatesAppMenu {
+            developmentReload = DistributedNotificationCenter.default().addObserver(forName: DevReload.notification, object: nil, queue: .main) { [weak self] _ in
+                MainActor.assumeIsolated { self?.reloadDevelopmentModules() }
+            }
+        }
         manager.onChange = { [weak self] _ in self?.refresh() }
         manager.kernel = { ModuleKernel.make(for: $0) }
         Task { @MainActor in
@@ -218,6 +226,16 @@ import ThermoL10n
         return .process(usage)
     }
 
+    private var developmentReload: NSObjectProtocol?
+
+    /// Re-reads the development directory and redraws pages of the reloaded modules.
+    func reloadDevelopmentModules() {
+        defaults.synchronize()
+        declarative.reload(defaults: defaults)
+        revision += 1
+        if updatesAppMenu, NSApp != nil { installStandardMenus(center: self) }
+    }
+
     func setEnabled(_ id: String, _ on: Bool) {
         guard !changing.contains(id) else { return }
         var finish: NativeModules.FinishStop?
@@ -286,7 +304,7 @@ struct ModulePageView: View {
             ProgressView().frame(maxWidth: .infinity, maxHeight: .infinity)
         } else if let page = center.page(module: module, entry: entry), let scene = page.entry.scene,
                   center.isDeclarative(module), let model = center.declarative.model(module: module, scene: scene) {
-            DeclarativePageView(model: model, fallbackTitle: page.entry.title).id(page.id)
+            DeclarativePageView(model: model, fallbackTitle: page.entry.title).id(page.id + "#\(center.declarative.generation)")
         } else if let page = center.page(module: module, entry: entry), let scene = page.entry.scene {
             ModuleSceneView(manager: center.manager, module: module, scene: scene).id(page.id)
                 .padding(.top, 28)   // Clear of the window's title bar buttons.

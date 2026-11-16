@@ -1,0 +1,19 @@
+{
+  "capabilities" : ["processes.read"],
+  "commands" : [],
+  "enabledByDefault" : false,
+  "entries" : [
+    {"id" : "main", "kind" : "page", "scene" : "main", "title" : "Processes"},
+    {"id" : "menu", "kind" : "menuBarItem", "scene" : "menu", "title" : "Processes"}
+  ],
+  "id" : "com.example.process-count",
+  "interface" : 1,
+  "launch" : "onDemand",
+  "localizations" : {
+    "zh-Hans" : {"entry.main.title" : "进程", "entry.menu.title" : "进程", "name" : "进程数", "summary" : "示例模块：通过 processes.read 统计正在运行的进程。"}
+  },
+  "name" : "Process count",
+  "summary" : "Example module: counts running processes through processes.read.",
+  "symbol" : "cpu",
+  "version" : "1.0.0"
+}

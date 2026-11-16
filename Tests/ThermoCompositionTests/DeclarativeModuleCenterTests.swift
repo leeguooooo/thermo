@@ -1,3 +1,4 @@
+import ModuleDevKit
 import ModuleKernelCore
 import ModuleKit
 @testable import ThermoL10n
@@ -63,6 +64,27 @@ import XCTest
         XCTAssertTrue(registry.problems.contains { $0.contains("has no scene") })
     }
 
+    func testDevRunReloadReadsTheFolderAgainAndRedrawsPages() throws {
+        let root = try folder(["views": manifest("dev.example.views", entries: [page])])
+        defer { try? FileManager.default.removeItem(at: root) }
+        let name = "thermo-declarative-reload-" + UUID().uuidString, defaults = UserDefaults(suiteName: name)!
+        defer { defaults.removePersistentDomain(forName: name) }
+        defaults.set(root.path, forKey: DeclarativeModules.directoryKey)
+        let registry = registry()
+        let center = ModuleCenter(defaults: defaults, declarative: registry)
+        registry.loadIfNeeded(defaults: defaults)
+        XCTAssertEqual(registry.manifests.map(\.id), ["dev.example.views"])
+        let before = registry.generation, revision = center.revision
+        // thermo dev run rebuilt the folder under a new id and posted the reload.
+        try FileManager.default.removeItem(at: root.appendingPathComponent("views"))
+        let next = try folder(["renamed": manifest("dev.example.renamed", entries: [page])])
+        defer { try? FileManager.default.removeItem(at: next) }
+        defaults.set(next.path, forKey: DeclarativeModules.directoryKey)
+        center.reloadDevelopmentModules()
+        XCTAssertEqual(registry.manifests.map(\.id), ["dev.example.renamed"])
+        XCTAssertGreaterThan(registry.generation, before); XCTAssertGreaterThan(center.revision, revision)
+        XCTAssertEqual(DevReload.directoryKey, DeclarativeModules.directoryKey, "the CLI writes the key the app reads")
+    }
     func testNothingLoadsWithoutTheDevelopmentFolderSetting() {
         let name = "thermo-declarative-unset-" + UUID().uuidString, defaults = UserDefaults(suiteName: name)!
         defer { defaults.removePersistentDomain(forName: name) }

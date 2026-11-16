@@ -1,0 +1,2 @@
+{"scene": "main", "answers": {"processes.read": {"processes": [{"pid": 1, "name": "launchd"}, {"pid": 88, "name": "Finder"}, {"pid": 412, "name": "Thermo"}]}},
+ "expect": ["Running processes", "\"value\":\"3\""], "snapshot": true}

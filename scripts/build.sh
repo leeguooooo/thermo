@@ -60,6 +60,9 @@ BIN="$(swift build -c "$CONFIGURATION" $arch_flags "$@" --show-bin-path)"
 # starts the runner on 15 and later.
 # shellcheck disable=SC2086
 swift build -c "$CONFIGURATION" $arch_flags "$@" --package-path Runtimes/WasmRunner --product ThermoWasmRunner
+# `thermo dev build` (#48) assembles module source with it; same macOS 15 package as the runner.
+# shellcheck disable=SC2086
+swift build -c "$CONFIGURATION" $arch_flags "$@" --package-path Runtimes/WasmRunner --product thermo-wat2wasm
 # shellcheck disable=SC2086
 WASM_BIN="$(swift build -c "$CONFIGURATION" $arch_flags "$@" --package-path Runtimes/WasmRunner --show-bin-path)"
 
@@ -86,7 +89,7 @@ C="$APP/Contents"
 mkdir -p "$C/MacOS" "$C/Helpers" "$C/Resources" "$C/Frameworks" "$C/Library/LaunchDaemons"
 cp "$BIN/ThermoApp" "$C/MacOS/Thermo"
 cp "$BIN/thermo-helper" "$BIN/thermo" "$BIN/thermo-capture-script" "$C/Helpers/"
-cp "$WASM_BIN/ThermoWasmRunner" "$C/Helpers/"
+cp "$WASM_BIN/ThermoWasmRunner" "$WASM_BIN/thermo-wat2wasm" "$C/Helpers/"
 cp Resources/dev.thermo.helper.plist "$C/Library/LaunchDaemons/"
 cp Resources/AppIcon.icns "$C/Resources/"
 python3 scripts/math-renderer/verify.py
@@ -138,7 +141,9 @@ if [ "$CONFIGURATION" = release ]; then
     dsymutil "$C/Helpers/thermo-helper" -o "$DIST/symbols/thermo-helper.dSYM"
     dsymutil "$C/Helpers/thermo-capture-script" -o "$DIST/symbols/thermo-capture-script.dSYM"
     dsymutil "$C/Helpers/ThermoWasmRunner" -o "$DIST/symbols/ThermoWasmRunner.dSYM"
-    strip "$C/MacOS/Thermo" "$C/Helpers/thermo" "$C/Helpers/thermo-helper" "$C/Helpers/thermo-capture-script" "$C/Helpers/ThermoWasmRunner"
+    dsymutil "$C/Helpers/thermo-wat2wasm" -o "$DIST/symbols/thermo-wat2wasm.dSYM"
+    strip "$C/MacOS/Thermo" "$C/Helpers/thermo" "$C/Helpers/thermo-helper" "$C/Helpers/thermo-capture-script" "$C/Helpers/ThermoWasmRunner" \
+        "$C/Helpers/thermo-wat2wasm"
     for module in "$C"/Extensions/*.appex; do
         [ -d "$module" ] || continue
         name="$(basename "$module" .appex)"
@@ -178,6 +183,7 @@ sign -i dev.thermo.helper "$C/Helpers/thermo-helper"
 sign -i dev.thermo.capture-script "$C/Helpers/thermo-capture-script"
 # No entitlements: it drops to the pure-computation sandbox itself after reading the module.
 sign -i dev.thermo.wasm-runner "$C/Helpers/ThermoWasmRunner"
+sign -i dev.thermo.wat2wasm "$C/Helpers/thermo-wat2wasm"
 for module in "$C"/Extensions/*.appex; do
     [ -d "$module" ] || continue
     # The sandbox comes from the module's own manifest: sandboxed, read-only where it declared reads.

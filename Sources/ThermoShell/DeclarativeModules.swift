@@ -24,6 +24,8 @@ import WasmHost
 
     @Published private(set) var installed: [Installed] = []
     @Published private(set) var problems: [String] = []
+    /// Bumped by every reload, so pages and menu bar items made from an older build are drawn anew.
+    @Published private(set) var generation = 0
     private var models: [String: DeclarativeSceneModel] = [:]
     private var loaded = false
     private let make: (ModuleManifest, Data) -> WasmHost?
@@ -65,6 +67,14 @@ import WasmHost
         for issue in issues { NSLog("Thermo declarative module refused: %@", issue) }
     }
 
+    /// Drops every loaded module (their runners exit) and reads the development folder again.
+    func reload(defaults: UserDefaults = .standard) {
+        for item in installed { Task { await item.host.stop() } }
+        models.removeAll(); installed = []; problems = []; loaded = false
+        loadIfNeeded(defaults: defaults)
+        generation += 1
+    }
+
     /// One model per scene, kept while the app runs so a page reopens on its last view.
     func model(module id: String, scene: String) -> DeclarativeSceneModel? {
         guard let item = installed.first(where: { $0.manifest.id == id }) else { return nil }
@@ -97,7 +107,7 @@ struct DeclarativeMenuBarItems: View {
                     if let scene = entry.scene, let model = center.declarative.model(module: manifest.id, scene: scene) {
                         DeclarativeMenuBarItemView(model: model, fallbackTitle: entry.title) {
                             if let page = center.rootPage(manifest.id) { MainWindow.show(page) }
-                        }
+                        }.id(manifest.id + ":" + entry.id + "#\(center.declarative.generation)")
                     }
                 }
             }

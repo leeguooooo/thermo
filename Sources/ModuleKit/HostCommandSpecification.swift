@@ -125,6 +125,10 @@ public enum HostCommandSpecification {
     integration|integration [status|link|claude|codex] [--dry-run] [--yes] [--json]|app
     mcp|mcp|stdio-mcp
     capabilities|capabilities [--json]|cli
+    dev new|dev new ID [--dir DIR] [--name NAME]|cli
+    dev build|dev build [FOLDER]|cli
+    dev run|dev run [FOLDER]|cli
+    dev test|dev test [FOLDER] [--update]|cli
     """
     public static let aliases = ["temp":"temps","t":"temps","f":"fans","p":"power","b":"battery","w":"watch","ls":"list","agent":"agents","doctor":"agents","app":"apps","config":"settings","status":"pulse"]
     public static var roots: Set<String> {
