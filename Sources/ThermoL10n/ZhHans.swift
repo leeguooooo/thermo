@@ -2605,6 +2605,7 @@ let zhHans: [String: String] = [
     "some of its processes are protected": "部分进程受保护",
     "system process, cannot be ended": "系统进程，不能结束",
     "Choose a process": "选择进程",
+    "running for %1$@": "已运行 %1$@",
     "Its processes are ended one at a time.": "这一行的进程需要逐个结束。",
     "End %1$@ (PID %2$@)?": "结束 %1$@（PID %2$@）？",
     "Force end %1$@ (PID %2$@)?": "强制结束 %1$@（PID %2$@）？",

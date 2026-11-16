@@ -392,12 +392,13 @@ struct MemoryPage: View {
                 }
                 VStack(alignment: .leading, spacing: 2) {
                     HStack(spacing: 4) {
-                        Text(program.name).font(Theme.rowTitle).foregroundStyle(Theme.textPrimary).lineLimit(1)
+                        Text(program.name).font(Theme.rowTitle).foregroundStyle(Theme.textPrimary).lineLimit(1).truncationMode(.middle)
+                            .help(program.name)
                         Text("×\(program.processCount)").font(Theme.caption.monospacedDigit()).foregroundStyle(Theme.textTertiary)
                     }
                     Text(programSubtitle(program, open: isOpen))
                         .font(Theme.caption).foregroundStyle(Theme.textTertiary)
-                }.frame(maxWidth: .infinity, alignment: .leading)
+                }.frame(idealWidth: 200, maxWidth: .infinity, alignment: .leading)
                 GeometryReader { g in
                     ZStack(alignment: .leading) {
                         Capsule().fill(Color.white.opacity(0.07))
@@ -472,7 +473,7 @@ struct MemoryPage: View {
     }
 
     func contextRow(_ h: MachinePulse.Hog, showActions: Bool) -> some View {
-        let isOpen = expandedContexts.contains(h.id) || matchesPID(h)
+        let isOpen = expandedContexts.contains(h.id) || matchesPID(h) || Self.reviewOpensProcesses
         return VStack(alignment: .leading, spacing: 6) {
             ViewThatFits(in: .horizontal) {
             HStack(spacing: 10) {
@@ -517,8 +518,10 @@ struct MemoryPage: View {
     /// One process. It carries its own End, so a single process can go without its whole row.
     func partRow(_ h: MachinePulse.Hog, _ p: MachinePulse.Part) -> some View {
         let target = singleStop(h, p)
+        // A row that is this one process already carries the End; here it stays in the context menu.
+        let button = h.pids.count > 1 ? target : nil
         // Verbatim: a PID is an identifier, not a quantity, so no thousands separator.
-        let title = [MachinePulse.roleName(p.role), "PID \(p.pid)", p.uptime.map { MemorySuspects.duration($0) }]
+        let title = [MachinePulse.roleName(p.role), "PID \(p.pid)", p.uptime.map { tr("running for %1$@", MemorySuspects.duration($0)) }]
             .compactMap { $0 }.joined(separator: " · ")
         let footprint = metric(p.memoryKB, p.memoryMetric)
         let resident = p.residentKB.map { MemoryFormat.string(kibibytes: $0) } ?? "—"
@@ -527,7 +530,7 @@ struct MemoryPage: View {
                 Text(verbatim: title).textSelection(.enabled).frame(maxWidth: .infinity, alignment: .leading)
                 Text(footprint).frame(width: 84, alignment: .trailing)
                 Text(resident).frame(width: 84, alignment: .trailing)
-                Group { if let target { endButton(target) } else { Color.clear.frame(height: 1) } }
+                Group { if let button { endButton(button) } else { Color.clear.frame(height: 1) } }
                     .frame(width: 190, alignment: .trailing)
             }.frame(minWidth: 600)
             HStack(alignment: .top) {
@@ -536,7 +539,7 @@ struct MemoryPage: View {
                     Text("\(tr("Memory footprint")): \(footprint) · \(tr("Resident memory")): \(resident)")
                 }
                 Spacer(minLength: 4)
-                if let target { endButton(target) }
+                if let button { endButton(button) }
             }
         }
         .foregroundStyle(Theme.textSecondary).padding(.leading, 20)
@@ -586,6 +589,9 @@ struct MemoryPage: View {
         return s.application ? tr("This one helper process of the app is asked to stop (SIGTERM). The page, extension or task it runs closes or reloads; the app stays open.")
                              : tr("The process is asked to stop (SIGTERM). If it is still running after 5 seconds, Thermo offers to force it. Unsaved work in it may be lost.")
     }
+
+    /// `--inspect-processes` (offscreen review only): project rows start open, down to their processes.
+    static let reviewOpensProcesses = CommandLine.arguments.contains("--main") && CommandLine.arguments.contains("--inspect-processes")
 
     /// Search that is all digits is a PID search: rows holding a match open by themselves.
     func matchesPID(_ h: MachinePulse.Hog) -> Bool {
