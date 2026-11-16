@@ -68,7 +68,9 @@ public enum FixtureRunner {
             } else {
                 view = try await module.render(scene: fixture.scene, language: language)
             }
-            let text = String(decoding: try JSONEncoder().encode(view), as: UTF8.self)
+            // As the view's JSON, without escaped slashes, so an expected path or "a/b" matches as written.
+            let encoder = JSONEncoder(); encoder.outputFormatting = [.sortedKeys, .withoutEscapingSlashes]
+            let text = String(decoding: try encoder.encode(view), as: UTF8.self)
             let missing = (fixture.expect ?? []).filter { !text.contains($0) }
             return FixtureResult(name: name, problems: missing.map { "expected text not shown: \($0)" }, view: view)
         } catch {

@@ -116,9 +116,9 @@ final class ModuleDevTests: XCTestCase {
         if case .success = await broker.request("files.read:/tmp", payload: Data()) { XCTFail("undeclared capability stays refused") }
         XCTAssertThrowsError(try FixtureRunner.handlers(["no.such": .null]))
 
-        let view = Data(#"{"version":1,"title":"F","sections":[{"type":"card","title":"Count","value":"3"}]}"#.utf8)
+        let view = Data(#"{"version":1,"title":"F","sections":[{"type":"card","title":"Count","value":"3","caption":"a/b"}]}"#.utf8)
         let module = DeclarativeModule(manifest: manifest) { _, _ in WasmHost.Result(status: 0, output: view) }
-        let fixture = ModuleFixture(scene: "main", expect: ["Count", "\"value\":\"3\""])
+        let fixture = ModuleFixture(scene: "main", expect: ["Count", "\"value\":\"3\"", "a/b"])
         let ok = await FixtureRunner.run("main", fixture, module: module)
         XCTAssertTrue(ok.passed, "\(ok.problems)")
         var missing = fixture; missing.expect = ["Absent"]
