@@ -271,6 +271,72 @@ final class SystemPulse: ObservableObject {
         }
     }
 
+    /// Every process of one command-line program, across its project rows. Built only from rows
+    /// that could be ended on their own: agent sessions, apps and protected rows are never in it.
+    struct ProgramStop: Identifiable, Equatable {
+        struct Row: Equatable { var project: String?; var identities: [ProcessIdentity] }
+        var id: String
+        var name: String
+        var rows: [Row]
+        /// Processes of the same program that stay because their row is protected or an agent session.
+        var leftAlone = 0
+        var memoryKB = 0
+        var identities: [ProcessIdentity] { rows.flatMap(\.identities) }
+    }
+    struct ProgramStopResult: Equatable { var ended = 0, stillRunning = 0, skipped = 0 }
+
+    @Published private(set) var endingPrograms: Set<String> = []
+
+    @MainActor func endAll(_ stop: ProgramStop, grace: TimeInterval = 5,
+                           perform: @escaping @Sendable (ProgramStop, TimeInterval) -> ProgramStopResult = { SystemPulse.perform($0, grace: $1) },
+                           record: @escaping @Sendable (ProgramStop, ProgramStopResult) -> Void = { SystemPulse.record($0, $1) }) {
+        guard samplingAllowed(), actionsAllowed(), !endingPrograms.contains(stop.id), !stop.identities.isEmpty else { return }
+        quitProblem = nil; actionFeedback = nil; unresponsive = nil
+        endingPrograms.insert(stop.id)
+        DispatchQueue.global(qos: .userInitiated).async { [weak self] in
+            let result = perform(stop, grace)
+            record(stop, result)
+            DispatchQueue.main.async {
+                guard let self else { return }
+                self.endingPrograms.remove(stop.id)
+                if result.ended > 0 {
+                    self.actionFeedback = tr("%1$@ of %2$@ %3$@ processes stopped after being asked.",
+                                             String(result.ended), String(stop.identities.count), stop.name)
+                }
+                var problems: [String] = []
+                if result.stillRunning > 0 { problems.append(tr("%1$@ are still running; end them one at a time to force them.", String(result.stillRunning))) }
+                if result.skipped > 0 { problems.append(tr("%1$@ changed or exited since the reading and were not signalled.", String(result.skipped))) }
+                if !problems.isEmpty { self.quitProblem = problems.joined(separator: " ") }
+            }
+            self?.queue.async { self?.sample() }
+        }
+    }
+
+    /// Each identity goes through the gate by itself, with no agent or application capability.
+    nonisolated static func perform(_ stop: ProgramStop, grace: TimeInterval,
+                                    signal: (Int32, Int32) -> Bool = { kill($0, $1) == 0 }) -> ProgramStopResult {
+        var result = ProgramStopResult()
+        var asked: [ProcessIdentity] = []
+        for identity in stop.identities {
+            if ProcessActionGate.attempt(identity, allowApplication: false, request: { signal($0.pid, SIGTERM) }) == .requested { asked.append(identity) }
+            else { result.skipped += 1 }
+        }
+        let deadline = Date().addingTimeInterval(grace)
+        func alive() -> Int { asked.filter { ProcessTable.identity($0.pid) == $0 }.count }
+        while Date() < deadline, alive() > 0 { usleep(100_000) }
+        result.stillRunning = alive()
+        result.ended = asked.count - result.stillRunning
+        return result
+    }
+
+    nonisolated static func record(_ stop: ProgramStop, _ result: ProgramStopResult) {
+        guard result.ended + result.stillRunning > 0 else { return }
+        OperationJournal.record(OperationRecord(feature: "pulse", action: "end", subject: stop.name,
+                                                items: [.init(target: "\(stop.name) · \(stop.identities.count) PIDs",
+                                                              bytes: 0, status: result.stillRunning == 0 && result.skipped == 0 ? "done" : "failed",
+                                                              detail: "ended \(result.ended), stillRunning \(result.stillRunning), skipped \(result.skipped)")]))
+    }
+
     /// Rechecks the identity, sends one signal through the gate and waits for the process to go.
     nonisolated static func perform(_ stop: SingleStop, grace: TimeInterval,
                                     signal: (Int32, Int32) -> Bool = { kill($0, $1) == 0 }) -> SingleStopResult {

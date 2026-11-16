@@ -112,6 +112,21 @@ final class SingleProcessStopTests: XCTestCase {
         XCTAssertNotNil(pulse.quitProblem); XCTAssertNil(pulse.actionFeedback)
     }
 
+    func testEndingAWholeProgramSkipsAgentsAndChangedIdentities() throws {
+        let worker = try binary("/bin/sleep", named: "worker")
+        let (first, a) = try start(worker, ["60"]), (second, b) = try start(worker, ["60"])
+        let (agent, c) = try start(try binary("/bin/sleep", named: "claude"), ["60"])
+        var stale = b; stale.started = b.started.addingTimeInterval(-60)
+        // Even if an agent identity were handed in, this path has no capability to end it.
+        let stop = SystemPulse.ProgramStop(id: "program:cmd:worker", name: "worker",
+                                           rows: [.init(project: "~/a", identities: [a]), .init(project: "~/b", identities: [stale, c])])
+        let result = SystemPulse.perform(stop, grace: 5)
+        XCTAssertEqual(result, .init(ended: 1, stillRunning: 0, skipped: 2))
+        first.waitUntilExit()
+        XCTAssertEqual(first.terminationStatus, SIGTERM)
+        XCTAssertTrue(second.isRunning); XCTAssertTrue(agent.isRunning)
+    }
+
     func testReusedOrExitedPIDSendsNothing() throws {
         let (process, identity) = try start(try binary("/bin/sleep", named: "worker"), ["60"])
         var stale = identity; stale.started = identity.started.addingTimeInterval(-60)

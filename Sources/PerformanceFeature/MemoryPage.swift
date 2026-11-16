@@ -27,6 +27,8 @@ struct MemoryPage: View {
     @State private var sortByResident = false
     /// One process picked by hand, waiting for its confirmation.
     @State private var stopping: SystemPulse.SingleStop?
+    /// Every process of one command-line program, waiting for its confirmation.
+    @State private var stoppingProgram: SystemPulse.ProgramStop?
 
     var body: some View {
         ScrollView {
@@ -81,6 +83,19 @@ struct MemoryPage: View {
                                                   : tr("Thermo never stops system processes or itself."),
                          confirmTitle: s.force ? tr("Force end") : tr("End"),
                          confirm: { stopping = nil; pulse.end(s); resample() }, cancel: { stopping = nil })
+        }
+        .sheet(item: $stoppingProgram) { s in
+            ConfirmSheet(title: tr("End all %1$@ %2$@ processes?", String(s.identities.count), s.name),
+                         summary: MachinePulse.sentences(
+                            tr("Each process is asked to stop (SIGTERM). Unsaved work in them may be lost; a program that needs one again starts a new copy."),
+                            s.leftAlone > 0 ? tr("%1$@ more are protected or AI agent sessions and are left running.", String(s.leftAlone)) : ""),
+                         destructive: true, heading: tr("What will run"),
+                         lines: s.rows.map { row in
+                             "kill -TERM " + row.identities.map { String($0.pid) }.joined(separator: " ") + (row.project.map { "   # " + $0 } ?? "")
+                         },
+                         footnote: tr("Thermo never stops system processes or itself."),
+                         confirmTitle: tr("End all"),
+                         confirm: { stoppingProgram = nil; pulse.endAll(s); resample() }, cancel: { stoppingProgram = nil })
         }
         .sheet(item: $restartTarget) { h in
             ConfirmSheet(title: tr("Restart %1$@?", h.name),
@@ -409,7 +424,9 @@ struct MemoryPage: View {
                     .contentTransition(.numericText())
                 Text(program.residentKB.map { MemoryFormat.string(kibibytes: $0) } ?? "—").foregroundStyle(Theme.textTertiary).frame(width: 84, alignment: .trailing)
                 Group {
-                    if let target = program.actionTarget { actions(target, emphasizeRestart: false) } else { Color.clear.frame(height: 1) }
+                    if let target = program.actionTarget { actions(target, emphasizeRestart: false) }
+                    else if let all = programStop(program) { endAllButton(all) }
+                    else { Color.clear.frame(height: 1) }
                 }.frame(width: 190, alignment: .trailing)
             }.frame(minWidth: 640)
                 VStack(alignment: .leading, spacing: 6) {
@@ -430,6 +447,7 @@ struct MemoryPage: View {
                         }.font(Theme.caption).foregroundStyle(Theme.textSecondary)
                         Spacer(minLength: 4)
                         if let target = program.actionTarget { actions(target, emphasizeRestart: false) }
+                        else if let all = programStop(program) { endAllButton(all) }
                     }
                 }
             }.font(Theme.secondary.monospacedDigit())
@@ -554,6 +572,28 @@ struct MemoryPage: View {
             }
             Button(tr("Copy PID")) { copy(String(p.pid)) }
         }
+    }
+
+    func endAllButton(_ all: SystemPulse.ProgramStop) -> some View {
+        let busy = pulse.endingPrograms.contains(all.id)
+        return Button(busy ? tr("Stopping…") : tr("End all")) { stoppingProgram = all }
+            .buttonStyle(PillButtonStyle()).controlSize(.small).disabled(busy)
+            .help(tr("End all %1$@ %2$@ processes?", String(all.identities.count), all.name))
+    }
+
+    /// The program-wide End for a command-line program spread over several project rows. It is the
+    /// sum of rows that each offer End themselves, with the identities each row was read with;
+    /// a row that is protected or an agent session is counted as left alone, never added.
+    func programStop(_ program: MemoryProgram) -> SystemPulse.ProgramStop? {
+        guard program.contexts.count > 1 else { return nil }
+        let endable = program.contexts.filter { h in
+            h.app == nil && h.quittable && (h.processIdentities?.count ?? 0) == h.pids.count && !h.pids.isEmpty
+        }
+        guard !endable.isEmpty else { return nil }
+        return SystemPulse.ProgramStop(id: program.id, name: program.name,
+                                       rows: endable.map { .init(project: $0.project, identities: $0.processIdentities ?? []) },
+                                       leftAlone: program.processCount - endable.reduce(0) { $0 + $1.pids.count },
+                                       memoryKB: endable.reduce(0) { $0 + $1.memoryKB })
     }
 
     func endButton(_ target: SystemPulse.SingleStop) -> some View {
