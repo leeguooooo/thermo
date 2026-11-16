@@ -1,3 +1,4 @@
+import Combine
 import Foundation
 import XCTest
 @testable import CleanKit
@@ -58,6 +59,57 @@ final class SingleProcessStopTests: XCTestCase {
         XCTAssertEqual(SystemPulse.perform(.init(identity: identity, name: "stubborn", force: true), grace: 5), .killed)
         process.waitUntilExit()
         XCTAssertEqual(process.terminationStatus, SIGKILL)
+    }
+
+    final class Calls: @unchecked Sendable {
+        private let lock = NSLock(); private var performed = 0, recorded: [SystemPulse.SingleStopResult] = []
+        func perform() { lock.lock(); performed += 1; lock.unlock() }
+        func record(_ r: SystemPulse.SingleStopResult) { lock.lock(); recorded.append(r); lock.unlock() }
+        var counts: (Int, [SystemPulse.SingleStopResult]) { lock.lock(); defer { lock.unlock() }; return (performed, recorded) }
+    }
+    private func fixture(force: Bool = false) -> SystemPulse.SingleStop {
+        .init(identity: .init(pid: 4242, uid: getuid(), started: Date(timeIntervalSince1970: 100), executable: "/fixture/worker"),
+              name: "worker", force: force, memoryKB: 2048)
+    }
+    /// Runs `end` with a stand-in for the signal and waits until the row is no longer marked busy.
+    @MainActor private func run(_ pulse: SystemPulse, _ stop: SystemPulse.SingleStop, result: SystemPulse.SingleStopResult, calls: Calls) async {
+        let finished = expectation(description: "end finished")
+        var seenBusy = false
+        let observation = pulse.$ending.sink { ending in
+            if ending.contains(stop.identity.pid) { seenBusy = true } else if seenBusy { finished.fulfill(); seenBusy = false }
+        }
+        pulse.end(stop, grace: 0, perform: { _, _ in calls.perform(); return result }, record: { _, r in calls.record(r) })
+        XCTAssertTrue(pulse.ending.contains(stop.identity.pid), "the row shows progress as soon as the action starts")
+        await fulfillment(of: [finished], timeout: 10)
+        observation.cancel()
+    }
+
+    @MainActor func testSwitchedOffFeatureSendsNothing() {
+        let calls = Calls()
+        let pulse = SystemPulse(actionsAllowed: { false })
+        pulse.end(fixture(), perform: { _, _ in calls.perform(); return .stopped }, record: { _, r in calls.record(r) })
+        XCTAssertTrue(pulse.ending.isEmpty)
+        XCTAssertEqual(calls.counts.0, 0)
+    }
+
+    @MainActor func testStoppedProcessReportsWhatWasFreedAndIsRecorded() async {
+        let calls = Calls(), pulse = SystemPulse()
+        await run(pulse, fixture(), result: .stopped, calls: calls)
+        XCTAssertEqual(calls.counts.0, 1); XCTAssertEqual(calls.counts.1, [.stopped])
+        XCTAssertNil(pulse.unresponsive); XCTAssertNil(pulse.quitProblem)
+        XCTAssertEqual(pulse.actionFeedback?.contains("4242"), true)
+    }
+
+    @MainActor func testUnresponsiveProcessOffersForceAndAFailedForceIsAProblem() async {
+        let calls = Calls(), pulse = SystemPulse()
+        await run(pulse, fixture(), result: .stillRunning, calls: calls)
+        XCTAssertEqual(pulse.unresponsive, fixture())
+        XCTAssertNil(pulse.actionFeedback)
+        await run(pulse, fixture(force: true), result: .stillRunning, calls: calls)
+        XCTAssertNil(pulse.unresponsive, "a new attempt clears the earlier offer")
+        XCTAssertEqual(pulse.quitProblem?.contains("4242"), true)
+        await run(pulse, fixture(), result: .protected, calls: calls)
+        XCTAssertNotNil(pulse.quitProblem); XCTAssertNil(pulse.actionFeedback)
     }
 
     func testReusedOrExitedPIDSendsNothing() throws {

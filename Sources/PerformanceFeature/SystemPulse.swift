@@ -241,15 +241,17 @@ final class SystemPulse: ObservableObject {
 
     @MainActor func dismissUnresponsive() { unresponsive = nil }
 
-    @MainActor func end(_ stop: SingleStop, grace: TimeInterval = 5) {
+    @MainActor func end(_ stop: SingleStop, grace: TimeInterval = 5,
+                        perform: @escaping @Sendable (SingleStop, TimeInterval) -> SingleStopResult = { SystemPulse.perform($0, grace: $1) },
+                        record: @escaping @Sendable (SingleStop, SingleStopResult) -> Void = { SystemPulse.record($0, $1) }) {
         guard samplingAllowed(), actionsAllowed() else { return }
         let pid = stop.identity.pid
         guard !ending.contains(pid) else { return }
         quitProblem = nil; actionFeedback = nil; unresponsive = nil
         ending.insert(pid)
         DispatchQueue.global(qos: .userInitiated).async { [weak self] in
-            let result = Self.perform(stop, grace: grace)
-            Self.record(stop, result)
+            let result = perform(stop, grace)
+            record(stop, result)
             DispatchQueue.main.async {
                 guard let self else { return }
                 self.ending.remove(pid)

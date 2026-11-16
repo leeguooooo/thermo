@@ -17,8 +17,8 @@ public struct MachinePulse: Codable, Sendable, Equatable {
         public var pids: [Int32]
         /// The .app for GUI programs; quitting goes through the app so it can save its work.
         public var app: String?
-        /// False for anything Thermo never offers to stop: other users' or system processes,
-        /// AI agent sessions, Thermo itself.
+        /// False for anything no whole-row action stops: other users' or system processes,
+        /// AI agent sessions, Thermo itself. One agent process can still be ended by hand; see `Part.stop`.
         public var quittable: Bool
         /// Where a command-line program runs (its working directory, `~/…`), e.g. the project a test runner belongs to.
         public var project: String? = nil

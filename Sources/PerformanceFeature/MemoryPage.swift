@@ -68,7 +68,7 @@ struct MemoryPage: View {
                                                      : tr("The process is asked to stop (SIGTERM). Unsaved work in it may be lost."),
                          destructive: h.app == nil, heading: tr("What will run"),
                          lines: h.app != nil ? [tr("quit %1$@", h.app!)] : h.pids.map { "kill -TERM \($0)" },
-                         footnote: tr("Thermo never stops system processes, AI agent sessions or itself."),
+                         footnote: tr("Thermo never stops system processes or itself."),
                          confirmTitle: h.app != nil ? tr("Quit") : tr("End"),
                          confirm: { confirming = nil; pulse.quit(h); resample() }, cancel: { confirming = nil })
         }
@@ -77,7 +77,7 @@ struct MemoryPage: View {
                                         : tr("End %1$@ (PID %2$@)?", s.name, String(s.identity.pid)),
                          summary: stopSummary(s), destructive: true, heading: tr("What will run"),
                          lines: ["kill -\(s.force ? "KILL" : "TERM") \(s.identity.pid)"],
-                         footnote: s.agentSession ? tr("Only this one session is ended. Freeing memory in one click never ends AI agent sessions.")
+                         footnote: s.agentSession ? tr("Only this one process is ended. Freeing memory in one click never ends AI agent sessions.")
                                                   : tr("Thermo never stops system processes or itself."),
                          confirmTitle: s.force ? tr("Force end") : tr("End"),
                          confirm: { stopping = nil; pulse.end(s); resample() }, cancel: { stopping = nil })
@@ -566,7 +566,10 @@ struct MemoryPage: View {
     /// Thermo are never stopped, and an app's own process leaves through Quit unless forced.
     func singleStop(_ h: MachinePulse.Hog, _ p: MachinePulse.Part, force: Bool = false) -> SystemPulse.SingleStop? {
         guard let kind = p.stop, let identity = h.processIdentities?.first(where: { $0.pid == p.pid }) else { return nil }
-        let appMain = h.app != nil && (p.role == "main" || h.applicationIdentity?.pid == p.pid)
+        // Only the checked application identity says which process is the app itself; a role of
+        // "main" is also what every helper without a Chromium type reports.
+        if h.app != nil && h.applicationIdentity == nil { return nil }
+        let appMain = h.app != nil && h.applicationIdentity?.pid == p.pid
         if appMain && !force { return nil }
         let name: String
         if h.app != nil { name = appMain ? h.name : "\(h.name) · \(MachinePulse.roleName(p.role))" }
@@ -578,9 +581,9 @@ struct MemoryPage: View {
     func stopSummary(_ s: SystemPulse.SingleStop) -> String {
         if s.agentSession {
             return MachinePulse.sentences(
-                s.force ? tr("This AI agent session is stopped at once (SIGKILL), without a chance to finish what it is writing.")
-                        : tr("This ends one AI agent session. Whatever it is doing stops, and commands it started may stop with it."),
-                tr("Its saved conversation stays on the disk; reopen it from the agent's session list (Claude Code: run claude --resume in the same folder)."))
+                s.force ? tr("This AI agent process is stopped at once (SIGKILL), without a chance to finish what it is writing.")
+                        : tr("This ends one AI agent process. Every task it is running stops, and commands it started may stop with it."),
+                tr("Saved conversations stay on the disk; reopen one from the agent's session list (Claude Code: run claude --resume in the same folder)."))
         }
         if s.force {
             return s.application ? tr("It is stopped at once (SIGKILL), the same as Force Quit. Unsaved work in it is lost.")
@@ -606,7 +609,7 @@ struct MemoryPage: View {
 
     @ViewBuilder func rowMenu(_ h: MachinePulse.Hog) -> some View {
         if h.quittable { Button(h.app != nil ? tr("Quit %1$@…", h.name) : tr("End %1$@…", h.name)) { confirming = h } }
-        if h.app != nil, let main = h.parts?.first(where: { $0.role == "main" || $0.pid == h.applicationIdentity?.pid }),
+        if h.app != nil, let pid = h.applicationIdentity?.pid, let main = h.parts?.first(where: { $0.pid == pid }),
            let forced = singleStop(h, main, force: true) {
             Button(tr("Force quit…")) { stopping = forced }
         }
