@@ -47,8 +47,8 @@ cat > "$APP/Contents/Info.plist" <<P
 P
 cp Resources/Modules/dev.thermo.module.appextensionpoint "$APP/Contents/Extensions/"
 if [ "$SIGN_ID" = "-" ]; then TS="--timestamp=none"; else TS="--timestamp"; fi
-for which in a b; do
-    case "$which" in a) launch=onDemand ;; b) launch=always ;; esac
+for which in a other; do
+    case "$which" in a) launch=onDemand ;; other) launch=always ;; esac
     sed -e "s/dev\.thermo\.probe\.a/$PROBE_PREFIX.$which/" -e "s/\"onDemand\"/\"$launch\"/" Sources/ProbeModule/module.json |
         python3 -c 'import json,sys
 m=json.load(sys.stdin)

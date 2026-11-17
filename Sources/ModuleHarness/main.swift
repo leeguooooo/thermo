@@ -9,7 +9,8 @@ import ModuleKit
 setvbuf(stdout, nil, _IOLBF, 0)
 let runTag=ProcessInfo.processInfo.environment["THERMO_HARNESS_RUN"]
 let probePrefix=runTag.map{"dev.thermo.probe-r"+$0} ?? "dev.thermo.probe"
-let a = probePrefix+".a", b = probePrefix+".b"
+// "b" alone is a reserved command name (alias of battery), so the second copy is called "other".
+let a = probePrefix+".a", b = probePrefix+".other"
 var failures = 0
 func check(_ ok: Bool, _ what: String) { print((ok ? "ok    " : "FAIL  ") + what); if !ok { failures += 1 } }
 func note(_ what: String) { print("      " + what) }
