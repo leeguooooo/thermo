@@ -97,8 +97,11 @@ package enum ToolsFeature {
         case .cleanScreen: CleanScreenShortcutModel.enableLive()
         case .batteryCare: BatteryCareModel.shared.restoreSavedPreference()
         case .focus:
-            FocusStatusItem.shared.start()
-            if !launched { launched = true; FocusTimerModel.shared.launch() }
+            // After the launch that started it, so the countdown item sits left of Thermo's own item as before.
+            Task { @MainActor in
+                FocusStatusItem.shared.start()
+                if !launched { launched = true; FocusTimerModel.shared.launch() }
+            }
         case .keepAwake, .lowLatency: break
         }
     }, stop: { tool in
