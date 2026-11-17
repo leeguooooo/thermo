@@ -2,6 +2,7 @@ import ThermoUI
 // Owned native acceptance. No permission request or TCC change. Starting is a
 // deliberate UI action; an independent QA timer ends any active mode after 20 s.
 @testable import ThermoShell
+@testable import ToolsFeature
 import ApplicationServices
 import AppKit
 import SwiftUI

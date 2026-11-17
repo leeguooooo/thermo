@@ -35,7 +35,7 @@ private struct DiskReviewFactory:ShellFeatureFactory {
             })
         })
         return .init(definitions:base.definitions.map{$0.manifest.id==BuiltinModuleManifests.disk.id ? definition:$0},
-                     makeSearchAccess:base.makeSearchAccess,makeCaptureControl:base.makeCaptureControl)
+                     makeSearchAccess:base.makeSearchAccess,makeCaptureControl:base.makeCaptureControl,makeTools:base.makeTools)
     }
 }
 @MainActor private final class DiskReviewDelegate:NSObject,NSApplicationDelegate {

@@ -1,6 +1,7 @@
 import ThermoUI
 // Production panel/model/coordinator; simulated SMC and private recovery/prefs only.
 @testable import ThermoShell
+@testable import ToolsFeature
 import AppKit
 import SwiftUI
 @testable import ThermoKit
