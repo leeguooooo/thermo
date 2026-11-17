@@ -96,6 +96,13 @@ import ThermoL10n
         if !down { receive(binding,down:false) }
         else if !repeated, flags == binding.modifiers { receive(binding,down:true) }
     }
+    /// The feature was switched off: release the system shortcut but keep the saved one, so switching
+    /// the feature on again registers the same shortcut.
+    func deactivate() {
+        shutdown()
+        activated=false;uncertain=false;issue=nil
+        if Self.shared === self { CleanScreenModel.shared.shortcutInput = nil }
+    }
     func shutdown() {
         binding=nil;held=false;recordingOwner=nil
         if let lease { try? lease.release() };lease=nil

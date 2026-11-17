@@ -1,9 +1,8 @@
 import XCTest
 import ThermoKit
-@testable import ThermoShell
-@testable import ThermoComposition
+@testable import ToolsFeature
 
-final class AWDLModelTests: ThermoCompositionTestCase {
+final class AWDLModelTests: XCTestCase {
     actor FlushGate {
         var continuation: CheckedContinuation<Void,Never>?
         let entered: XCTestExpectation

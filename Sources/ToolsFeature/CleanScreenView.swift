@@ -1,3 +1,4 @@
+import ToolsControlAPI
 import SystemServicesAPI
 import ThermoUI
 import SwiftUI
@@ -6,7 +7,7 @@ import ThermoL10n
 struct CleanScreenButton: View {
     @ObservedObject private var model = CleanScreenModel.shared
     var body: some View {
-        Button { MainWindow.show(tool: .cleanScreen) } label: {
+        Button { ToolsHost.showPanel(.cleanScreen) } label: {
             FeatureRow(title: tr("Clean Screen"), symbol: "sparkles.tv", note: model.issue)
         }
         .buttonStyle(.plain)

@@ -1,3 +1,4 @@
+import ToolsControlAPI
 import ThermoUI
 import AppKit
 import AgentCore
@@ -75,6 +76,17 @@ struct AWDLBackend: Sendable {
             await readLatest();finish(allowStop:false)
         }
     }
+    /// The feature was switched off: restore AWDL if this app paused it, then wait for the readback.
+    func releaseForSwitchOff() async {
+        while busy { try? await Task.sleep(nanoseconds:100_000_000) }
+        if needsQuitRecovery { stop() }
+        let end=ProcessInfo.processInfo.systemUptime+20
+        while busy || needsQuitRecovery,ProcessInfo.processInfo.systemUptime < end {
+            try? await Task.sleep(nanoseconds:100_000_000)
+        }
+        await backend.flush()
+        viewers=0;poll?.cancel();poll=nil
+    }
     /// Returns true to cancel normal termination while recovery is unconfirmed.
     func requestQuit() -> Bool {
         if quitRequested { return true }
@@ -122,7 +134,7 @@ struct AWDLBackend: Sendable {
 struct AWDLButton: View {
     @ObservedObject private var model=AWDLModel.shared
     var body: some View {
-        Button { MainWindow.show(tool: .lowLatency) } label: {
+        Button { ToolsHost.showPanel(.lowLatency) } label: {
             FeatureRow(title: tr("Network low latency"), symbol: "network",
                        status: model.needsQuitRecovery ? tr(model.state?.phase == .active ? "On" : "Check recovery") : nil,
                        statusColor: Theme.caution, active: model.state?.phase == .active)
@@ -135,7 +147,7 @@ struct AWDLPanel: View {
     @ObservedObject var model: AWDLModel
     @Environment(\.dismiss) private var dismiss
     @State private var seconds=300
-    var configureHelper: () -> Void = { ShellState.shared.services.helper.install() }
+    var configureHelper: () -> Void = { ToolsHost.installHelper() }
     var body: some View {
         VStack(alignment:.leading,spacing:14) {
             Label(tr("Network low latency"),systemImage:"network").font(Theme.heading)

@@ -1,10 +1,9 @@
 import HotkeyCore
 import XCTest
 import Carbon
-@testable import ThermoShell
-@testable import ThermoComposition
+@testable import ToolsFeature
 
-@MainActor final class CleanScreenShortcutTests: ThermoCompositionTestCase {
+@MainActor final class CleanScreenShortcutTests: XCTestCase {
     final class Lease: CleanScreenHotkeyLease {
         var releases=0, fail=false
         func release() throws { releases+=1;if fail { throw Failure.fixture } }

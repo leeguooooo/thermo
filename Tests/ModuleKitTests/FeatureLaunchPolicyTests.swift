@@ -14,7 +14,7 @@ final class FeatureLaunchPolicyTests: XCTestCase {
         try body(defaults, domain, home)
     }
 
-    func testFreshInstallHasExactlyTheFourCoreFeatures() {
+    func testFreshInstallHasTheFourCoreFeaturesAndTheMenuBarTools() {
         fixture { defaults, domain, home in
             let state = FeatureLaunchPolicy.assess(defaults: defaults, domain: domain, home: home)
             XCTAssertEqual(state.cohort, .fresh)
@@ -22,7 +22,7 @@ final class FeatureLaunchPolicyTests: XCTestCase {
             FeatureLaunchPolicy.install(state, in: defaults, persist: true)
             XCTAssertEqual(Set(BuiltinModuleManifests.all.filter {
                 ModulePreferences.isEnabled($0, in: defaults)
-            }.map(\.id)), FeatureLaunchPolicy.coreIDs)
+            }.map(\.id)), FeatureLaunchPolicy.coreIDs.union(FeatureLaunchPolicy.toolIDs))
         }
     }
 
@@ -104,7 +104,7 @@ final class FeatureLaunchPolicyTests: XCTestCase {
             // An absent choice is how a newly introduced builtin appears after an update.
             for feature in BuiltinModuleManifests.all {
                 XCTAssertNil(defaults.persistentDomain(forName: domain)?[ModulePreferences.key(feature.id)])
-                XCTAssertEqual(ModulePreferences.isEnabled(feature, in: defaults), FeatureLaunchPolicy.coreIDs.contains(feature.id))
+                XCTAssertEqual(ModulePreferences.isEnabled(feature, in: defaults), FeatureLaunchPolicy.defaultOnIDs.contains(feature.id))
             }
             let external = ModuleManifest(id: "com.example.optional", name: "External", summary: "", symbol: "folder", version: "1", enabledByDefault: true)
             XCTAssertTrue(ModulePreferences.isEnabled(external, in: defaults))
