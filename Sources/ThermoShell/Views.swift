@@ -61,9 +61,9 @@ struct PopoverView: View {
 
     var footer: some View {
         VStack(alignment: .leading, spacing: 7) {
-            HStack(spacing: 6) {
+            PanelFooterRow {
                 PanelButton(title: tr("Open Console"), symbol: "macwindow", prominent: true) { MainWindow.show(.overview) }
-                Spacer(minLength: 0)
+            } icons: {
                 ModulePanelLinks()
                 shortcut("stethoscope", tr("AI Agent Diagnostics"), .native(.init(BuiltinModuleManifests.agents.id,"home")))
                 ForEach(ShellNativeCatalog.catalog.menuEntries.filter{modules.isOn($0.ref.module)}) {entry in
@@ -76,7 +76,7 @@ struct PopoverView: View {
                     }
                 }
                 shortcut("clock.arrow.circlepath", tr("History"), .native(.init(BuiltinModuleManifests.history.id,"home")))
-                // An icon like its neighbours: with a text button the English row overflowed the 372 pt panel.
+                // An icon like its neighbours, not a text button: the row stays short enough for one line by default.
                 shortcut("slider.horizontal.3", tr("Customize menu bar…"), .settings)
                 Button { NSApp.terminate(nil) } label: { Image(systemName: "power").frame(width: 22) }
                     .buttonStyle(.plain).foregroundStyle(Theme.textSecondary).help(tr("Quit Thermo"))

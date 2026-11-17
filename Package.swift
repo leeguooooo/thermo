@@ -133,6 +133,7 @@ let package = Package(
         .target(name:"ThermoComposition",dependencies:["ThermoShell","ModuleDevTesting","SearchControlAPI","CaptureControlAPI","SystemServicesAPI","NativeFeatureAPI","ModuleKit","CleanKit","ThermoL10n","PerformanceFeature","MenuBarFeature","CaptureFeature","SearchFeature","DiskFeature","AgentDiagnosticsFeature","SpaceFeature","AppsFeature","BrowserFeature","DownloadFeature","HistoryFeature","ConnectionsFeature","ClaudeFeature","CheckupFeature","PluginsFeature"]),
         .executableTarget(name:"ThermoApp",dependencies:["ThermoComposition"]),
         .testTarget(name:"CaptureFeatureTests",dependencies:["CaptureControlAPI","CaptureFeature","NativeFeatureAPI","CaptureCore","CaptureScriptCore","HotkeyCore","ThermoUI","ThermoL10n","ModuleKit","AgentCore"]),
+        .testTarget(name:"ThermoUITests",dependencies:["ThermoUI"]),
         .testTarget(name:"DocumentPreviewHostTests",dependencies:["DocumentPreviewHost","DocumentPreviewAPI","ModuleHost"]),
         .testTarget(name:"SearchFeatureTests",dependencies:["SearchFeature","NativeFeatureAPI","DocumentPreviewAPI","HotkeyCore","SearchCore","ModuleKit","ThermoUI","AgentCore"]),
         .testTarget(name:"DiskFeatureTests",dependencies:["DiskFeature","NativeFeatureAPI","LocalAIUI","ThermoUI","ThermoL10n","ModuleKit","AgentCore","CleanKit"]),
