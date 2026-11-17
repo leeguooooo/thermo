@@ -41,9 +41,11 @@ package enum ToolsFeature {
     let tool: ShellTool
     private let availability: FeatureAvailability
     private let runtime: ToolRuntime
-    init(tool: ShellTool, availability: FeatureAvailability, runtime: ToolRuntime = .live) {
+    init(tool: ShellTool, availability: FeatureAvailability, runtime: ToolRuntime) {
         self.tool = tool; self.availability = availability; self.runtime = runtime
     }
+    func retireVisibility() {}
+    func quitBlocker() -> NativeFeatureBlocker? { nil }
     func ui(_ surface: NativeUISurface, navigation: NativeNavigation) -> AnyView? {
         guard availability.acceptsWork else { return nil }
         switch surface {
@@ -169,7 +171,8 @@ package enum ToolsFeature {
 
 /// Keep awake: the common lengths right in the menu, everything else in its panel.
 @MainActor enum KeepAwakeMenu {
-    static func nodes(_ model: IdleAwakeModel = .shared) -> [NativeMenuNode] {
+    static func nodes() -> [NativeMenuNode] { nodes(.shared) }
+    static func nodes(_ model: IdleAwakeModel) -> [NativeMenuNode] {
         var items: [NativeMenuNode] = []
         if model.canStop {
             items += [.action(.init(title: tr("Stop keeping awake"), symbol: "stop.circle") { model.stop() }), .separator]
@@ -185,7 +188,8 @@ package enum ToolsFeature {
 
 /// The focus timer's actions for the current phase. The status menu and the countdown item share them.
 @MainActor enum FocusMenu {
-    static func nodes(_ model: FocusTimerModel = .shared) -> [NativeMenuNode] {
+    static func nodes() -> [NativeMenuNode] { nodes(.shared) }
+    static func nodes(_ model: FocusTimerModel) -> [NativeMenuNode] {
         FocusAction.available(in: model.phase).map { action in .action(.init(title: action.title) { action.run(model) }) }
             + [.separator, .action(.init(title: tr("Focus timer options…"), symbol: "slider.horizontal.3") { ToolsHost.showPanel(.focus) })]
     }
@@ -206,7 +210,7 @@ package enum ToolsFeature {
         }
         return menu
     }
-    private final class MenuAction: NSMenuItem {
+    @MainActor private final class MenuAction: NSMenuItem {
         private let run: NativeMenuAction
         init(_ action: NativeMenuAction) {
             run = action

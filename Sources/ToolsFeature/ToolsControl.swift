@@ -18,15 +18,15 @@ import ToolsControlAPI
     private let defaults: UserDefaults
     private let screen: CleanScreenModel
     private let idleAwake: IdleAwakeModel
-    private let shortcut: () -> CleanScreenShortcutModel
-    private let network: () -> AWDLModel
+    private let shortcut: @MainActor () -> CleanScreenShortcutModel
+    private let network: @MainActor () -> AWDLModel
     private let enabled: (ShellTool) -> Bool
     private var mutating = false
     init(defaults: UserDefaults = .standard, screen: CleanScreenModel? = nil, idleAwake: IdleAwakeModel? = nil,
-         shortcut: @escaping () -> CleanScreenShortcutModel = { .shared }, network: @escaping () -> AWDLModel = { .shared },
+         shortcut: (@MainActor () -> CleanScreenShortcutModel)? = nil, network: (@MainActor () -> AWDLModel)? = nil,
          enabled: @escaping (ShellTool) -> Bool) {
         self.defaults = defaults; self.screen = screen ?? .shared; self.idleAwake = idleAwake ?? .shared
-        self.shortcut = shortcut; self.network = network; self.enabled = enabled
+        self.shortcut = shortcut ?? { .shared }; self.network = network ?? { .shared }; self.enabled = enabled
     }
 
     func handle(_ request: AppControlRequest) async -> AppControlResponse {
