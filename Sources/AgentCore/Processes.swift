@@ -24,6 +24,10 @@ public struct AgentProcess: Equatable, Sendable {
     /// Nil only for legacy/manual fixtures. Live reads preserve unavailable counters.
     public var memoryReading: ProcessMemoryReading? = nil
     public var sampledIdentity: ProcessIdentity? = nil
+    /// True when launchd adopted it after its starter exited: its parent is 1 and it belongs to a process
+    /// group whose leader is gone. A job launchd started itself, or a deliberately detached daemon, leads
+    /// its own group and is not counted. It says nothing about whether the process is still wanted.
+    public var starterExited = false
 
     public init(pid: pid_t, ppid: pid_t = 1, uid: uid_t = getuid(), name: String, executable: String? = nil,
                 executableFromArgv: Bool = false, argv: [String] = [], cwd: String? = nil, cpu: Double = 0,
@@ -39,6 +43,11 @@ public struct AgentProcess: Equatable, Sendable {
 
 /// A snapshot of running processes. Build one by hand in tests with `init(entries:)`.
 public struct ProcessTable: Sendable {
+    /// `leaderAlive` answers for a process-group id; live reads ask the kernel.
+    public static func starterExited(pid: pid_t, ppid: pid_t, pgid: pid_t,
+                                     leaderAlive: (pid_t) -> Bool = { kill($0, 0) == 0 || errno != ESRCH }) -> Bool {
+        ppid == 1 && pgid > 1 && pgid != pid && !leaderAlive(pgid)
+    }
     public let entries: [AgentProcess]
     public let available: Bool
     /// False if rows were dropped because process identities changed during enumeration.
@@ -105,6 +114,7 @@ public struct ProcessTable: Sendable {
                                     footprintKB: reading.footprintKB ?? 0, elapsed: started > 0 ? max(0, now - started) : 0)
             if let before, before != identity(pid) { inventoryComplete=false;continue }
             process.sampledIdentity = before
+            process.starterExited = Self.starterExited(pid: pid, ppid: k.kp_eproc.e_ppid, pgid: k.kp_eproc.e_pgid)
             process.memoryReading = reading
             out.append(process)
         }

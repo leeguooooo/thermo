@@ -77,6 +77,27 @@ final class MemoryInventoryTests: XCTestCase {
         XCTAssertFalse(try XCTUnwrap(contexts.first { $0.pids == [10] }).quittable)
     }
 
+    func testStarterExitedIsMarkedOnlyOnProcessesThatCanBeEnded() throws {
+        func process(_ pid: pid_t, _ name: String, _ executable: String, left: Bool) -> AgentProcess {
+            var p = AgentProcess(pid: pid, name: name, executable: executable, argv: [name], cwd: "/p")
+            p.starterExited = left
+            return p
+        }
+        let contexts = MachinePulse.group([process(20, "workerd", "/opt/tools/workerd", left: true),
+                                           process(21, "workerd", "/opt/tools/workerd", left: false),
+                                           process(22, "claude", "/opt/tools/claude", left: true),
+                                           process(23, "syslogd", "/usr/sbin/syslogd", left: true),
+                                           process(24, "Example", "/Applications/Example.app/Contents/MacOS/Example", left: true)],
+                                          byMemory: true, limit: nil)
+        let parts = Dictionary(contexts.flatMap { $0.parts ?? [] }.map { ($0.pid, $0) }, uniquingKeysWith: { a, _ in a })
+        XCTAssertEqual(parts[20]?.starterExited, true)
+        XCTAssertNil(try XCTUnwrap(parts[21]).starterExited)
+        // Never an agent session, a system process or an app, whatever their parent is.
+        XCTAssertNil(try XCTUnwrap(parts[22]).starterExited)
+        XCTAssertNil(try XCTUnwrap(parts[23]).starterExited)
+        XCTAssertNil(try XCTUnwrap(parts[24]).starterExited)
+    }
+
     func testAgentsStayProtectedInsideMergedGroups() {
         let contexts = MachinePulse.group([AgentProcess(pid: 10, name: "claude", argv: ["claude"], cwd: "/p"),
                                            AgentProcess(pid: 11, name: "claude", argv: ["claude"], cwd: "/q")], limit: nil)

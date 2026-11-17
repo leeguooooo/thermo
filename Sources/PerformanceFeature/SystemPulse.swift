@@ -284,7 +284,28 @@ final class SystemPulse: ObservableObject {
         /// Processes of the same program that stay because their row is protected or an agent session.
         var leftAlone = 0
         var memoryKB = 0
+        /// Only the processes whose starter has exited; the rest of the program keeps running.
+        var starterExitedOnly = false
         var identities: [ProcessIdentity] { rows.flatMap(\.identities) }
+
+        /// Only the processes whose starter has exited, from rows that offer End themselves and with
+        /// the identities those rows were read with. Nil when there are none.
+        static func starterExited(in program: MemoryProgram) -> ProgramStop? {
+            var rows: [Row] = []
+            var memory = 0
+            for h in program.contexts where h.app == nil && h.quittable && (h.processIdentities?.count ?? 0) == h.pids.count {
+                let left = (h.parts ?? []).filter { $0.starterExited == true && $0.stop == .end }
+                let pids = Set(left.map(\.pid))
+                let identities = (h.processIdentities ?? []).filter { pids.contains($0.pid) }
+                guard !identities.isEmpty else { continue }
+                rows.append(.init(project: h.project, identities: identities))
+                memory += left.reduce(0) { $0 + $1.memoryKB }
+            }
+            guard !rows.isEmpty else { return nil }
+            let count = rows.reduce(0) { $0 + $1.identities.count }
+            return ProgramStop(id: program.id + "#starter-exited", name: program.name, rows: rows,
+                               leftAlone: program.processCount - count, memoryKB: memory, starterExitedOnly: true)
+        }
     }
     struct ProgramStopResult: Equatable { var ended = 0, stillRunning = 0, skipped = 0 }
 

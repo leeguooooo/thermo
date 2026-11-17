@@ -133,6 +133,28 @@ final class SingleProcessStopTests: XCTestCase {
         XCTAssertTrue(second.isRunning); XCTAssertTrue(agent.isRunning)
     }
 
+    func testEndingLeftBehindProcessesNamesOnlyThose() {
+        func identity(_ pid: pid_t) -> ProcessIdentity { .init(pid: pid, uid: getuid(), started: Date(timeIntervalSince1970: 1_000), executable: "/opt/tools/workerd") }
+        func row(_ project: String, _ pids: [(pid_t, Bool)], quittable: Bool = true) -> MachinePulse.Hog {
+            var h = MachinePulse.Hog(id: "cmd:workerd|" + project, name: "workerd", cpu: 0, memoryKB: pids.count * 100, pids: pids.map(\.0),
+                                     app: nil, quittable: quittable, project: project)
+            h.parts = pids.map { .init(pid: $0.0, role: "main", memoryKB: 100, residentKB: nil, cpu: 0, uptime: nil,
+                                       starterExited: $0.1 ? true : nil, stop: quittable ? .end : nil) }
+            h.processIdentities = pids.map { identity($0.0) }
+            return h
+        }
+        let program = MemoryProgram(id: "program:cmd:workerd", name: "workerd",
+                                    contexts: [row("~/tests", [(1, true), (2, true)]), row("~/server", [(3, false)]),
+                                               row("~/mixed", [(4, true), (5, false)]), row("~/protected", [(6, true)], quittable: false)])
+        let stop = SystemPulse.ProgramStop.starterExited(in: program)
+        XCTAssertEqual(stop?.identities.map(\.pid), [1, 2, 4])
+        XCTAssertEqual(stop?.rows.map(\.project), ["~/tests", "~/mixed"])
+        XCTAssertEqual(stop?.leftAlone, 3)
+        XCTAssertEqual(stop?.memoryKB, 300)
+        XCTAssertEqual(stop?.starterExitedOnly, true)
+        XCTAssertNil(SystemPulse.ProgramStop.starterExited(in: MemoryProgram(id: "p", name: "workerd", contexts: [row("~/server", [(3, false)])])))
+    }
+
     func testReusedOrExitedPIDSendsNothing() throws {
         let (process, identity) = try start(try binary("/bin/sleep", named: "worker"), ["60"])
         var stale = identity; stale.started = identity.started.addingTimeInterval(-60)
