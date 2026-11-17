@@ -4,11 +4,11 @@ import ThermoUI
 import AppKit
 import ThermoKit
 import ThermoL10n
+import ToolsControlAPI
 
-/// The tools in the menu bar panel that open a panel of their own.
-enum ToolSheet: String, Identifiable {
-    case keepAwake, cleanScreen, lowLatency, batteryCare, focus
-    var id: String { rawValue }
+/// The menu bar tools, reached only through their own module.
+@MainActor enum ShellTools {
+    static var access: any ToolsApplicationAccess { ShellState.shared.assembly.makeTools(ShellState.shared.nativeFeatures) }
 }
 
 /// The menu bar item's menu: every place in the window and every tool, one click away, grouped
@@ -21,6 +21,7 @@ final class StatusMenu: NSObject, NSMenuDelegate {
     func make(battery: Bool) -> NSMenu {
         let nativeEntries=ShellNativeCatalog.catalog.menuEntries.filter{$0.hasContent && ModuleCenter.shared.isOn($0.ref.module)}
         let retained=ShellState.shared.nativeFeatures.retainedMenuContent()
+        let tools=ShellTools.access
         
         let context = StatusMenuLayout.RuntimeContext(
             nativeMenusAppear:!nativeEntries.isEmpty,
@@ -31,14 +32,19 @@ final class StatusMenu: NSObject, NSMenuDelegate {
             spaceEnabled: ModuleCenter.shared.isOn(BuiltinModuleManifests.space.id),
             browserEnabled:ModuleCenter.shared.isOn(BuiltinModuleManifests.browser.id),connectionsEnabled:ModuleCenter.shared.isOn(BuiltinModuleManifests.connections.id),historyEnabled:ModuleCenter.shared.isOn(BuiltinModuleManifests.history.id),agentsEnabled:ModuleCenter.shared.isOn(BuiltinModuleManifests.agents.id),checkupEnabled:ModuleCenter.shared.isOn(BuiltinModuleManifests.checkup.id),
             hasBattery: battery,
-            keepAwakeActive: IdleAwakeModel.shared.state.phase == .active,
-            focusTimerActive: FocusTimerModel.shared.phase.isActive,
+            keepAwakeEnabled: ModuleCenter.shared.isOn(ShellTool.keepAwake.manifest.id),
+            focusTimerEnabled: ModuleCenter.shared.isOn(ShellTool.focus.manifest.id),
+            cleanScreenEnabled: ModuleCenter.shared.isOn(ShellTool.cleanScreen.manifest.id),
+            lowLatencyEnabled: ModuleCenter.shared.isOn(ShellTool.lowLatency.manifest.id),
+            batteryProtectionEnabled: ModuleCenter.shared.isOn(ShellTool.batteryCare.manifest.id),
+            keepAwakeActive: tools.isActive(.keepAwake),
+            focusTimerActive: tools.isActive(.focus),
             retainedQuickControlsAppear: !retained.isEmpty,
             updatesCanCheck: ShellState.shared.updates.canCheck,
             moreToolsActiveStates: StatusMenuLayout.MoreToolsActiveStates(
-                cleanScreenActive: CleanScreenModel.shared.active,
-                lowLatencyActive: AWDLModel.shared.state?.phase == .active,
-                batteryProtectionActive: battery && (BatteryCareModel.shared.state?.ownedByCaller == true)
+                cleanScreenActive: tools.isActive(.cleanScreen),
+                lowLatencyActive: tools.isActive(.lowLatency),
+                batteryProtectionActive: battery && tools.isActive(.batteryCare)
             )
         )
         
@@ -62,14 +68,17 @@ final class StatusMenu: NSObject, NSMenuDelegate {
                 menu.addItem(materializeGroup(group))
                 
             case .directStatusItem(let status):
-                if status.title == "Keep awake" {
-                    menu.addItem(keepAwake())
-                } else if status.title == "Focus timer" {
-                    let focus = NSMenuItem(title: tr("Focus timer"), action: nil, keyEquivalent: "")
-                    focus.image = symbol("timer")
-                    if status.isActive { focus.state = .on }
-                    focus.submenu = focusMenu()
-                    menu.addItem(focus)
+                let tool: ShellTool? = status.title == "Keep awake" ? .keepAwake : status.title == "Focus timer" ? .focus : nil
+                if let tool {
+                    let nodes = tools.menu(tool)
+                    guard !nodes.isEmpty else { break }
+                    let parent = NSMenuItem(title: tr(status.title), action: nil, keyEquivalent: "")
+                    parent.image = symbol(tool.manifest.symbol)
+                    if status.isActive { parent.state = .on }
+                    let sub = NSMenu()
+                    NativeMenuRendering.append(to: sub, nodes: nodes, owner: tool.options)
+                    parent.submenu = sub
+                    menu.addItem(parent)
                 }
                 
             case .manageMenuBar:
@@ -151,55 +160,16 @@ final class StatusMenu: NSObject, NSMenuDelegate {
             case .smartCheck:
                 submenu.addItem(page(tr("Smart Check"), "stethoscope", .native(.init(BuiltinModuleManifests.agents.id,"home"))))
             case .cleanScreen:
-                submenu.addItem(item(tr("Clean Screen"), "sparkles.tv") { MainWindow.show(tool: .cleanScreen) })
+                NativeMenuRendering.append(to: submenu, nodes: ShellTools.access.menu(.cleanScreen), owner: ShellTool.cleanScreen.options)
             case .networkLowLatency:
-                submenu.addItem(item(tr("Network low latency"), "network") { MainWindow.show(tool: .lowLatency) })
+                NativeMenuRendering.append(to: submenu, nodes: ShellTools.access.menu(.lowLatency), owner: ShellTool.lowLatency.options)
             case .batteryProtection:
-                submenu.addItem(item(tr("Battery charging protection"), "battery.75") { MainWindow.show(tool: .batteryCare) })
+                NativeMenuRendering.append(to: submenu, nodes: ShellTools.access.menu(.batteryCare), owner: ShellTool.batteryCare.options)
             }
         }
         
         parent.submenu = submenu
         return parent
-    }
-
-    /// Keep awake: the common lengths right here, everything else in its panel.
-    private func keepAwake() -> NSMenuItem {
-        let model = IdleAwakeModel.shared
-        let parent = NSMenuItem(title: tr("Keep awake"), action: nil, keyEquivalent: "")
-        parent.image = symbol("cup.and.saucer")
-        if model.state.phase == .active { parent.state = .on }
-        let sub = NSMenu()
-        sub.autoenablesItems = false
-        if model.canStop {
-            sub.addItem(item(tr("Stop keeping awake"), "stop.circle") { model.stop() })
-            sub.addItem(.separator())
-        }
-        for (title, seconds) in [(tr("30 minutes"), 1800.0), (tr("1 hour"), 3600.0), (tr("2 hours"), 7200.0)] {
-            let entry = item(title, nil) { model.start(mode: .both, seconds: seconds) }
-            entry.isEnabled = model.canStart
-            sub.addItem(entry)
-        }
-        let forever = item(tr("Until I turn it off"), nil) { model.start(mode: .both, seconds: nil) }
-        forever.isEnabled = model.canStart
-        sub.addItem(forever)
-        sub.addItem(.separator())
-        sub.addItem(item(tr("Options…"), "slider.horizontal.3") { MainWindow.show(tool: .keepAwake) })
-        parent.submenu = sub
-        return parent
-    }
-
-    /// 主菜单的子菜单和计时状态项的菜单共用，按当前阶段列出可做的操作。
-    func focusMenu() -> NSMenu {
-        let model = FocusTimerModel.shared
-        let sub = NSMenu()
-        sub.autoenablesItems = false
-        for action in FocusAction.available(in: model.phase) {
-            sub.addItem(item(action.title, nil) { action.run(model) })
-        }
-        sub.addItem(.separator())
-        sub.addItem(item(tr("Focus timer options…"), "slider.horizontal.3") { MainWindow.show(tool: .focus) })
-        return sub
     }
 
     private func page(_ title: String, _ symbolName: String, _ target: MainPage) -> NSMenuItem {

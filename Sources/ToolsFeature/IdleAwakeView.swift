@@ -1,3 +1,4 @@
+import ToolsControlAPI
 import ThermoUI
 import AgentCore
 import AppKit
@@ -144,7 +145,7 @@ import ThermoL10n
 struct IdleAwakeButton: View {
     @ObservedObject private var model = IdleAwakeModel.shared
     var body: some View {
-        Button { MainWindow.show(tool: .keepAwake) } label: {
+        Button { ToolsHost.showPanel(.keepAwake) } label: {
             FeatureRow(title: tr(model.state.requested ? "Keep awake · session configured" : "Keep awake"), symbol: "cup.and.saucer",
                        active: model.state.phase == .active)
         }

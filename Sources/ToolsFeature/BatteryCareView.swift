@@ -1,3 +1,4 @@
+import ToolsControlAPI
 import SystemServicesAPI
 import ThermoUI
 import AppKit
@@ -146,6 +147,22 @@ struct BatteryCareBackend: Sendable {
             await readLatest(); finish(allowStop: policy != .off)
         }
     }
+    /// The feature was switched off: end this app's charge limit so the Mac charges normally again,
+    /// the same as quitting Thermo. The saved preference is kept, so it applies again once the feature
+    /// is back on at the next launch. Another owner's limit is not touched.
+    func releaseForSwitchOff() async {
+        launch?.cancel(); launch = nil
+        resumeOnNextRead = false
+        while busy { try? await Task.sleep(nanoseconds: 100_000_000) }
+        if needsQuitRecovery { perform(.off) }
+        let end = ProcessInfo.processInfo.systemUptime + 20
+        while (busy || needsQuitRecovery), ProcessInfo.processInfo.systemUptime < end {
+            try? await Task.sleep(nanoseconds: 100_000_000)
+        }
+        await backend.flush()
+        launchChecked = false
+        viewers = 0; poll?.cancel(); poll = nil
+    }
     func requestQuit() -> Bool {
         launch?.cancel()
         resumeOnNextRead = false
@@ -195,7 +212,7 @@ struct BatteryCareBackend: Sendable {
 
 struct BatteryCareButton: View {
     var body: some View {
-        Button { MainWindow.show(tool: .batteryCare) } label: {
+        Button { ToolsHost.showPanel(.batteryCare) } label: {
             FeatureRow(title: tr("Battery charging protection"), symbol: "battery.75")
         }
         .buttonStyle(.plain)
@@ -205,7 +222,7 @@ struct BatteryCareButton: View {
 struct BatteryCarePanel: View {
     @ObservedObject var model: BatteryCareModel
     @Environment(\.dismiss) private var dismiss
-    var configureHelper: () -> Void = { ShellState.shared.services.helper.install() }
+    var configureHelper: () -> Void = { ToolsHost.installHelper() }
     var openBatterySettings: () -> Void = {
         if let url = URL(string: "x-apple.systempreferences:com.apple.Battery-Settings.extension") { NSWorkspace.shared.open(url) }
     }

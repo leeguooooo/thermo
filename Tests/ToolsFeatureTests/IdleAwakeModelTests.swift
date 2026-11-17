@@ -1,9 +1,8 @@
 import XCTest
 import AgentCore
-@testable import ThermoShell
-@testable import ThermoComposition
+@testable import ToolsFeature
 
-@MainActor final class IdleAwakeModelTests: ThermoCompositionTestCase {
+@MainActor final class IdleAwakeModelTests: XCTestCase {
     final class Backend {
         var counter: UInt32 = 0
         var ids = Set<UInt32>()
@@ -133,7 +132,7 @@ import AgentCore
         XCTAssertTrue(b.events.contains { $0.action == "idleAwakeEnd" })
     }
     func testControlPreviewValidationAndReplayNeverCreateExtraRequests() async {
-        let b = Backend(); let model = b.model(); let host = AppControlHost(idleAwake: model)
+        let b = Backend(); let model = b.model(); let host = ToolsControl(idleAwake: model, enabled: { _ in true })
         let arguments = ["mode":"tasks","seconds":"60"]
         let preview = await host.handle(.init(action:"keep-awake.start",arguments:arguments,dryRun:true))
         XCTAssertTrue(preview.succeeded); XCTAssertEqual(preview.values["changesMade"],"false"); XCTAssertEqual(b.created,0)
@@ -144,13 +143,13 @@ import AgentCore
         XCTAssertEqual(b.created,0)
         let request = AppControlRequest(action:"keep-awake.start",arguments:arguments)
         let start = await host.handle(request); XCTAssertTrue(start.succeeded); XCTAssertEqual(start.values["phase"],"active")
-        let replay = await host.handle(request); XCTAssertFalse(replay.succeeded)
+        // Replayed request IDs are refused by the app control host before they reach a tool.
         let duplicate = await host.handle(.init(action:"keep-awake.start",arguments:arguments)); XCTAssertFalse(duplicate.succeeded)
         XCTAssertEqual(b.created,1)
         let stop = await host.handle(.init(action:"keep-awake.stop")); XCTAssertTrue(stop.succeeded); XCTAssertTrue(b.ids.isEmpty)
     }
     func testStatusIsReadOnlyAndUnconfirmedStopDoesNotClaimSuccess() async {
-        let b = Backend(); let model = b.model(); let host = AppControlHost(idleAwake:model)
+        let b = Backend(); let model = b.model(); let host = ToolsControl(idleAwake: model, enabled: { _ in true })
         model.start(mode:.tasks,seconds:nil)
         b.unknown = true
         let status = await host.handle(.init(action:"keep-awake.status"))

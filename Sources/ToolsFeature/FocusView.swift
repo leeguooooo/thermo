@@ -1,3 +1,4 @@
+import ToolsControlAPI
 import ThermoUI
 import SwiftUI
 import ThermoL10n
@@ -5,7 +6,7 @@ import ThermoL10n
 struct FocusButton: View {
     @ObservedObject private var model = FocusTimerModel.shared
     var body: some View {
-        Button { MainWindow.show(tool: .focus) } label: {
+        Button { ToolsHost.showPanel(.focus) } label: {
             FeatureRow(title: tr("Focus timer"), symbol: "timer", active: model.phase.isActive)
         }
         .buttonStyle(.plain)

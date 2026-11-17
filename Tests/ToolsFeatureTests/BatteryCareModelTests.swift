@@ -1,9 +1,8 @@
 import XCTest
 import ThermoKit
-@testable import ThermoShell
-@testable import ThermoComposition
+@testable import ToolsFeature
 
-final class BatteryCareModelTests: ThermoCompositionTestCase {
+final class BatteryCareModelTests: XCTestCase {
     @MainActor final class Preference {
         var value: Bool
         init(_ value: Bool = false) { self.value = value }

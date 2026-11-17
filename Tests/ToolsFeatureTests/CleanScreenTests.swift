@@ -1,9 +1,8 @@
 import XCTest
 import Combine
-@testable import ThermoShell
-@testable import ThermoComposition
+@testable import ToolsFeature
 
-final class CleanScreenTests: ThermoCompositionTestCase {
+final class CleanScreenTests: XCTestCase {
     func testTimedModesUseMonotonicElapsedTimeAndManualDoesNotExpire() {
         for duration in CleanScreenDuration.allCases {
             let s=CleanScreenSession(started:100,duration:duration)

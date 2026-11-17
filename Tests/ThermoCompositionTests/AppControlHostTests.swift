@@ -3,8 +3,15 @@ import AgentCore
 import ThermoKit
 @testable import ThermoShell
 @testable import ThermoComposition
+@testable import ToolsFeature
 
 final class AppControlHostTests: ThermoCompositionTestCase {
+    /// The real host with the tools' operations bound to test models.
+    @MainActor func host(defaults: UserDefaults = .standard, screen: CleanScreenModel? = nil) -> AppControlHost {
+        let control = ToolsControl(defaults: defaults, screen: screen, enabled: { _ in true })
+        let access = ToolsAccess(store: ShellState.shared.nativeFeatures, control: control)
+        return AppControlHost(tools: { access })
+    }
     @MainActor func testUnknownActionAndReplayAreRefused() async {
         let host = AppControlHost()
         let request = AppControlRequest(action:"status")
@@ -18,7 +25,7 @@ final class AppControlHostTests: ThermoCompositionTestCase {
     @MainActor func testPreviewDoesNotStartInputInterception() async {
         let driver = AppControlTestScreenDriver()
         let model = CleanScreenModel(driver:driver)
-        let host = AppControlHost(screen:model), before = model.active
+        let host = self.host(screen:model), before = model.active
         let result = await host.handle(.init(action:"screen.start",dryRun:true))
         XCTAssertTrue(result.succeeded); XCTAssertEqual(result.values["changesMade"],"false")
         XCTAssertEqual(model.active,before)
@@ -34,7 +41,7 @@ extension AppControlHostTests {
         defer { try? FileManager.default.removeItem(at:root) }
         let driver = AppControlTestScreenDriver()
         let model = CleanScreenModel(driver:driver)
-        let host = AppControlHost(screen:model)
+        let host = self.host(screen:model)
         let server = try AppControlServer(directory:root) { request, reply in
             Task { @MainActor in reply(await host.handle(request)) }
         }
@@ -55,7 +62,7 @@ extension AppControlHostTests {
         let suite = "thermo.cli.duration." + UUID().uuidString
         let defaults = try XCTUnwrap(UserDefaults(suiteName:suite))
         defer { defaults.removePersistentDomain(forName:suite) }
-        let host = AppControlHost(defaults:defaults)
+        let host = self.host(defaults:defaults)
         let preview = await host.handle(.init(action:"screen.duration",arguments:["duration":"fiveMinutes"],dryRun:true))
         XCTAssertTrue(preview.succeeded)
         XCTAssertNil(defaults.string(forKey:CleanScreenDuration.preferenceKey))
@@ -87,7 +94,7 @@ extension AppControlHostTests {
         defer { defaults.removePersistentDomain(forName:suite) }
         let driver = AppControlTestScreenDriver()
         let model = CleanScreenModel(driver:driver)
-        let host = AppControlHost(defaults:defaults,screen:model)
+        let host = self.host(defaults:defaults,screen:model)
         defer { model.stop() }
         let server = try AppControlServer(directory:directory,authorize:{ trust.accepts(auditToken:$0) }) { request,reply in
             Task { @MainActor in reply(await host.handle(request)) }

@@ -10,6 +10,11 @@ public enum FeatureLaunchPolicy {
     public static let cohortKey = "features.initialPolicy.v1"
     public static let selectionKey = "features.selectionCompleted.v1"
     public static let coreIDs: Set<String> = ["dev.thermo.capture", "dev.thermo.menu-bar", "dev.thermo.performance", "dev.thermo.search"]
+    /// The menu bar tools were part of the app before they became modules, so they stay on for every
+    /// cohort: a person who finished the first-launch choice before they existed has no saved choice
+    /// for them, and switching them off by default would take away tools they had.
+    public static let toolIDs: Set<String> = Set(BuiltinModuleManifests.tools.map(\.id))
+    public static var defaultOnIDs: Set<String> { coreIDs.union(toolIDs) }
 
     /// Call before startup creates app.lock, normalizes settings, or starts any feature.
     /// Only this app's durable domain counts; registration, argument and global domains do not.
@@ -46,7 +51,7 @@ public enum FeatureLaunchPolicy {
               BuiltinModuleManifests.all.contains(where: { $0.id == manifest.id }) else {
             return manifest.enabledByDefault
         }
-        return coreIDs.contains(manifest.id)
+        return defaultOnIDs.contains(manifest.id)
     }
 
     /// Review, QA and test entry points must never consume the first launch or present a window.

@@ -15,6 +15,7 @@ import CheckupFeature
 import PluginsFeature
 import ConnectionsFeature
 import BrowserFeature
+import ToolsFeature
 import NativeFeatureAPI
 
 /// Assembly only. Feature targets keep their own models and views internal.
@@ -25,11 +26,13 @@ struct BuiltinFeatureFactory:ShellFeatureFactory {
         let search=SearchFeature.registration(discovery:{environment().discovery},preview:{environment().previewService(worker:SearchFeature.previewWorkerID)})
         let performance=PerformanceFeature.registration(telemetry:{environment().telemetry},administration:{environment().administration},
             fanFactory:{environment().fanFactory},defaults:{environment().defaults},actionsAllowed:{environment().actionsAllowed},showSettings:{environment().showSettings()})
-        let definitions=[DiskFeature.registration(services:{DiskHostServices(environment:environment())}),search.definition,capture.definition,menuBar,performance,
+        let tools=ToolsFeature.registrations(showPanel:{environment().showTool($0)},installHelper:{environment().installHelper()})
+        // The tools first: the settings page lists their rows before other features' settings.
+        let definitions=tools+[DiskFeature.registration(services:{DiskHostServices(environment:environment())}),search.definition,capture.definition,menuBar,performance,
             AgentDiagnosticsFeature.registration,SpaceFeature.registration(services:{SpaceHostServices(environment:environment())}),AppsFeature.registration,BrowserFeature.registration,
             DownloadFeature.registration(presentation:{DownloadHostPresentation(environment:environment())}),HistoryFeature.registration(services:{HistoryHostServices(environment:environment())}),
             ConnectionsFeature.registration(),ClaudeFeature.registration(),CheckupFeature.registration(discovery:{environment().discovery},reading:{environment().telemetry.latest.snapshot},navigate:{route in _=environment().open(.init(route:route))}),
             PluginsFeature.registration(navigate:{route in _=environment().open(.init(route:route))})]
-        return .init(definitions:definitions,makeSearchAccess:search.makeAccess,makeCaptureControl:capture.makeControl)
+        return .init(definitions:definitions,makeSearchAccess:search.makeAccess,makeCaptureControl:capture.makeControl,makeTools:ToolsFeature.makeAccess)
     }
 }

@@ -1,9 +1,8 @@
 import XCTest
-@testable import ThermoShell
-@testable import ThermoComposition
+@testable import ToolsFeature
 @testable import ThermoL10n
 
-@MainActor final class FocusTimerTests: ThermoCompositionTestCase {
+@MainActor final class FocusTimerTests: XCTestCase {
     final class Screen: FocusBreakScreen {
         var visible = false
         func show(_ model: FocusTimerModel) { visible = true }

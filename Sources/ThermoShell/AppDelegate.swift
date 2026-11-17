@@ -9,6 +9,7 @@ import CleanKit
 import ThermoKit
 import ThermoL10n
 import ModuleKit
+import ToolsControlAPI
 
 /// The menu bar panel is sized once per show for the screen it opens on. SwiftUI changes while it is open
 /// must not resize it, or AppKit shifts it across the menu bar and onto the neighbouring display.
@@ -56,10 +57,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate, UNU
         Settings.register()
         AppInstallationMonitor.shared.start()
         AppControlHost.shared.start()
-        CleanScreenShortcutModel.enableLive()
+        // Starting the features also starts each tool that is on: the Clean Screen shortcut,
+        // charging protection, the focus countdown.
         ModuleCenter.shared.start()
         if CommandLine.arguments.contains("--search") { DispatchQueue.main.async { SearchHost.show() } }
-        BatteryCareModel.shared.restoreSavedPreference()
         _ = ShellState.shared.updates  // Sparkle starts checking with the app
         // Slowdown history and alerts, in the background whether or not the panel is open.
         // The admitted performance session owns background slowdown history.
@@ -80,12 +81,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate, UNU
         popover.animates = false
         popover.delegate = self
         popover.contentViewController = PanelPopover.host(monitor)
-        IdleAwakeModel.shared.onStateChange = { [weak self] in
+        ShellTools.access.observeKeepAwake { [weak self] in
             guard let self else { return }
             self.updateTitle(self.monitor.latest)
         }
-        FocusStatusItem.shared.start()
-        FocusTimerModel.shared.launch()
         // Hidden panel curves do not keep resource readers running.
         ShellState.shared.nativeFeatures.setMenuPanelVisible(false)
 
@@ -380,16 +379,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate, UNU
     private func updateTitle(_ s: Snapshot?) {
         guard let button = statusItem.button else { return }
         if !ModuleCenter.shared.isOn(BuiltinModuleManifests.performance.id) {
-            let awake = IdleAwakeModel.shared.state
-            let marker = awake.phase == .active ? "☕︎" : awake.phase == .ending ? "☕︎?" : awake.requested ? "☕︎⏸" : ""
+            let marker = ShellTools.access.keepAwakeMarker
             button.title = marker.isEmpty ? "" : " " + marker
             lastTitle = nil
             return
         }
         let d = UserDefaults.standard
         // Redrawing the status item costs ~2 ms; skip it when nothing visible changed.
-        let awake = IdleAwakeModel.shared.state
-        let marker = awake.phase == .active ? "☕︎" : awake.phase == .ending ? "☕︎?" : awake.requested ? "☕︎⏸" : ""
+        let marker = ShellTools.access.keepAwakeMarker
         let display = MenuDisplay.make(preferences: MenuBarPreferences.read(), snapshot: s,
                                        live: monitor.menuLive, fahrenheit: d.bool(forKey: Settings.fahrenheit), marker: marker,
                                        sensorReadStarted: monitor.menuLive.sampled, validAfter: menuValidAfter)
@@ -444,11 +441,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate, UNU
         let tools: [(String, AnyView)] = [
             // The panel itself, hosted like the sheets so its capture Menu draws as a real control.
             ("panel", AnyView(PopoverView(monitor: monitor).frame(width: 372))),
-            ("tool-keep-awake", AnyView(IdleAwakePanel(model: IdleAwakeModel.shared))),
-            ("tool-clean-screen", AnyView(CleanScreenSetupView(model: CleanScreenModel.shared))),
-            ("tool-low-latency", AnyView(AWDLPanel(model: AWDLModel.shared))),
-            ("tool-battery-care", AnyView(BatteryCarePanel(model: BatteryCareModel.shared))),
-            ("tool-focus", AnyView(FocusPanel(model: FocusTimerModel.shared))),
+            ("tool-keep-awake", ShellState.shared.nativeFeatures.renderPreview(ShellTool.keepAwake.options) ?? AnyView(ModuleOffView())),
+            ("tool-clean-screen", ShellState.shared.nativeFeatures.renderPreview(ShellTool.cleanScreen.options) ?? AnyView(ModuleOffView())),
+            ("tool-low-latency", ShellState.shared.nativeFeatures.renderPreview(ShellTool.lowLatency.options) ?? AnyView(ModuleOffView())),
+            ("tool-battery-care", ShellState.shared.nativeFeatures.renderPreview(ShellTool.batteryCare.options) ?? AnyView(ModuleOffView())),
+            ("tool-focus", ShellState.shared.nativeFeatures.renderPreview(ShellTool.focus.options) ?? AnyView(ModuleOffView())),
             ("tool-menu-bar", ShellState.shared.nativeFeatures.renderPreview(.init(BuiltinModuleManifests.menuBar.id,"management")) ?? AnyView(EmptyView())),
             // The search panel at its window size, with a query so the result rows and footer show.
             ("tool-search", AnyView((ShellState.shared.nativeFeatures.renderPreview(.init(BuiltinModuleManifests.search.id,"settings")) ?? AnyView(ModuleOffView())).frame(width:680,height:520))),
@@ -570,12 +567,12 @@ private final class PageMenuTarget: NSObject, NSMenuItemValidation {
 /// `--ui-review` keeps a visible window while suppressing automatic helper/policy restoration.
 @MainActor func openMainOnly(_ args: [String]) {
     Settings.register()
-    if !AppLaunchMode.suppressesAutomaticControl(arguments: args) {
-        CleanScreenShortcutModel.enableLive()
-        BatteryCareModel.shared.restoreSavedPreference()
-    }
     installStandardMenus()
     ModuleCenter.shared.start(prewarmBuiltins: false)
+    // Only the tools whose state outlives a window: the Clean Screen shortcut and charging protection.
+    if !AppLaunchMode.suppressesAutomaticControl(arguments: args) {
+        for tool in [ShellTool.cleanScreen, .batteryCare] where ModuleCenter.shared.isOn(tool.manifest.id) { NativeModules.start(tool.manifest.id) }
+    }
     let models = ShellState.shared
     func value(after flag: String) -> String? { args.firstIndex(of: flag).flatMap { $0 + 1 < args.count ? args[$0 + 1] : nil } }
     var page = value(after: "--page").flatMap(MainPage.init(argument:)) ?? .overview

@@ -21,6 +21,11 @@ struct StatusMenuLayout {
         var agentsEnabled:Bool = true
         var checkupEnabled:Bool = true
         let hasBattery: Bool
+        var keepAwakeEnabled:Bool = true
+        var focusTimerEnabled:Bool = true
+        var cleanScreenEnabled:Bool = true
+        var lowLatencyEnabled:Bool = true
+        var batteryProtectionEnabled:Bool = true
         let keepAwakeActive: Bool
         let focusTimerActive: Bool
         let retainedQuickControlsAppear: Bool
@@ -184,10 +189,18 @@ struct StatusMenuLayout {
         if context.hasBattery {
             moreToolsLeaves.append(.batteryProtection)
         }
-        moreToolsLeaves.removeAll{if case .smartCheck=$0{return !context.agentsEnabled};return false}
-        let moreToolsActive = context.moreToolsActiveStates.cleanScreenActive ||
-                               context.moreToolsActiveStates.lowLatencyActive ||
-                               (context.hasBattery && context.moreToolsActiveStates.batteryProtectionActive)
+        moreToolsLeaves.removeAll{
+            switch $0 {
+            case .smartCheck:return !context.agentsEnabled
+            case .cleanScreen:return !context.cleanScreenEnabled
+            case .networkLowLatency:return !context.lowLatencyEnabled
+            case .batteryProtection:return !context.batteryProtectionEnabled
+            default:return false
+            }
+        }
+        let moreToolsActive = (context.cleanScreenEnabled && context.moreToolsActiveStates.cleanScreenActive) ||
+                               (context.lowLatencyEnabled && context.moreToolsActiveStates.lowLatencyActive) ||
+                               (context.hasBattery && context.batteryProtectionEnabled && context.moreToolsActiveStates.batteryProtectionActive)
         productItems.append(.menuGroup(MenuGroup(
             title: "More tools",
             leaves: moreToolsLeaves,
@@ -195,18 +208,22 @@ struct StatusMenuLayout {
         )))
         
         // 8. Keep awake (Direct Status Item)
-        productItems.append(.directStatusItem(DirectStatusItem(
-            title: "Keep awake",
-            isActive: context.keepAwakeActive,
-            submenuActions: []
-        )))
+        if context.keepAwakeEnabled {
+            productItems.append(.directStatusItem(DirectStatusItem(
+                title: "Keep awake",
+                isActive: context.keepAwakeActive,
+                submenuActions: []
+            )))
+        }
         
         // 9. Focus timer (Direct Status Item)
-        productItems.append(.directStatusItem(DirectStatusItem(
-            title: "Focus timer",
-            isActive: context.focusTimerActive,
-            submenuActions: []
-        )))
+        if context.focusTimerEnabled {
+            productItems.append(.directStatusItem(DirectStatusItem(
+                title: "Focus timer",
+                isActive: context.focusTimerActive,
+                submenuActions: []
+            )))
+        }
         
         // 10. Manage menu bar…
         if context.menuBarEnabled { productItems.append(.manageMenuBar) }

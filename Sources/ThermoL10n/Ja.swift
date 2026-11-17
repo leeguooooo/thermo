@@ -33,4 +33,6 @@ let ja: [String: String] = [
     "Break finished": "休憩終了",
     "Start the next focus when you're ready.": "準備ができたら次の集中を始めましょう。",
     "New lengths apply from the next focus or break.": "新しい長さは次の集中または休憩から適用されます。",
+    // Menu bar tools as modules
+    "Focus and break rounds with a countdown in the menu bar and a full-screen break.": "集中と休憩を交互に計り、メニューバーにカウントダウン、休憩中は全画面で表示します。",
 ]

@@ -33,6 +33,7 @@ public enum BuiltinModuleFootprints {
             .init(support + "Search", "Search index"),
         ]),
         BuiltinModuleManifests.menuBar.id: .init(globalShortcuts: true),
+        BuiltinModuleManifests.cleanScreen.id: .init(globalShortcuts: true),
         BuiltinModuleManifests.performance.id: .init(data: [
             .init(support + "pulse-history.jsonl", "Performance history"),
             .init(support + "memory-history.jsonl", "Memory history"),

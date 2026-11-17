@@ -13,6 +13,14 @@ import ThermoL10n
         update()
     }
 
+    /// The feature was switched off: the countdown item goes with it.
+    func stop() {
+        model.onChange = nil
+        ticker?.invalidate(); ticker = nil
+        if let item { NSStatusBar.system.removeStatusItem(item) }
+        item = nil
+    }
+
     private func update() {
         guard let display = FocusMenuBarDisplay.make(model, now: Date(), showProgressIcon: FocusSettings.read().showProgressIcon) else {
             ticker?.invalidate(); ticker = nil
@@ -48,7 +56,7 @@ import ThermoL10n
     @objc private func click() {
         guard let item else { return }
         // 与主状态项相同的做法：临时挂菜单弹出，再卸下，下次点击仍走这里。
-        item.menu = StatusMenu.shared.focusMenu()
+        item.menu = FocusMenu.make()
         item.button?.performClick(nil)
         item.menu = nil
     }

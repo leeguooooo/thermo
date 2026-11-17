@@ -6,6 +6,7 @@ import Charts
 import SwiftUI
 import ThermoKit
 import ThermoL10n
+import ToolsControlAPI
 
 struct PopoverView: View {
     @ObservedObject private var modules = ModuleCenter.shared
@@ -22,9 +23,11 @@ struct PopoverView: View {
             if renderingPreview { mainSections } else {
                 ScrollView(.vertical) { mainSections }.frame(minHeight: 120, idealHeight: 640, maxHeight: 640)
                 LazyVGrid(columns: [GridItem(.flexible(), spacing: Theme.Space.s), GridItem(.flexible(), spacing: Theme.Space.s)], spacing: Theme.Space.s) {
-                    Group {
-                        CleanScreenButton(); AWDLButton(); IdleAwakeButton(); FocusButton()
-                        if monitor.snapshot?.battery != nil { BatteryCareButton() }
+                    // Each tool's own row, while its feature is on.
+                    ForEach([ShellTool.cleanScreen, .lowLatency, .keepAwake, .focus, .batteryCare].filter {
+                        modules.isOn($0.manifest.id) && ($0 != .batteryCare || monitor.snapshot?.battery != nil)
+                    }) { tool in
+                        ShellState.shared.nativeFeatures.inlineSettings(tool.options)
                     }
                     .background(RoundedRectangle(cornerRadius: Theme.radiusSmall, style: .continuous).fill(Theme.surface))
                     .overlay(RoundedRectangle(cornerRadius: Theme.radiusSmall, style: .continuous).strokeBorder(Theme.hairline))
@@ -141,15 +144,7 @@ struct SettingsView: View {
             }
             // Features with their own panel: one group of rows, each opening its panel.
             section(tr("Tools")) {
-                CleanScreenButton()
-                InspectorDivider(inset: 46)
-                IdleAwakeButton()
-                InspectorDivider(inset: 46)
-                FocusButton()
-                InspectorDivider(inset: 46)
-                AWDLButton()
-                InspectorDivider(inset: 46)
-                BatteryCareButton()
+                // The tools come first, each from its own feature; then every other feature's settings rows.
                 ModuleSettingsControls(center: modules, models: .shared)
             }
             section(tr("General")) {

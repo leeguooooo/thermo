@@ -4707,5 +4707,12 @@ let zhHans: [String: String] = [
     "%1$@ is on and ready to use.": "「%1$@」已开启，可以使用。",
     "Dismiss feature suggestion": "关闭这条功能建议",
     "Suggest features for check-up findings": "根据体检结果推荐功能",
-
+    // Menu bar tools as modules
+    "Blocks the keyboard and covers the screen while you wipe it; a hold of Esc ends it.": "擦屏幕时屏蔽键盘并盖住屏幕，按住 Esc 结束。",
+    "Keeps the display or running tasks awake for a set time or until you stop it.": "让屏幕或正在运行的任务保持唤醒，到设定时间或你手动停止为止。",
+    "Focus and break rounds with a countdown in the menu bar and a full-screen break.": "专注与休息轮流计时，菜单栏显示倒计时，休息时全屏覆盖。",
+    "Pauses AWDL for a set time to steady Wi-Fi latency, then restores it.": "在设定时间内暂停 AWDL，让 Wi-Fi 延迟更稳定，到时恢复。",
+    "Holds charging at 80% while Thermo runs; normal charging returns when it stops.": "Thermo 运行时把充电停在 80%，停止后恢复正常充电。",
+    "Wait for Thermo to restore AWDL before switching this feature off.": "等 Thermo 恢复 AWDL 后再关闭这个功能。",
+    "Wait for normal charging to be restored before switching this feature off.": "等恢复正常充电后再关闭这个功能。",
 ]

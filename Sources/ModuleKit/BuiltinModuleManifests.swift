@@ -141,7 +141,18 @@ public enum BuiltinModuleManifests {
         id:"dev.thermo.download",name:"YunX Download",summary:"Cloud and media downloads, account sign-in and reviewed media tool installation.",
         symbol:"arrow.down.circle",version:"1.0.0",launch:.prewarm,enabledByDefault:true,
         entries:[.init(id:"home",kind:.page,title:"YunX Download",symbol:"arrow.down.circle",scene:"yunx")])
-    public static let all = [disk, search, capture, menuBar, performance, apps, space, browser, connections, history, agents, checkup, plugins, claude, download]
+    // The menu bar tools. Each is its own switch; their one entry is the row that opens the tool's panel.
+    private static func tool(_ id:String,_ name:String,_ summary:String,_ symbol:String,_ scene:String)->ModuleManifest {
+        ModuleManifest(id:id,name:name,summary:summary,symbol:symbol,version:"1.0.0",launch:.always,enabledByDefault:true,
+                       entries:[.init(id:"options",kind:.settingsItem,title:name,symbol:symbol,scene:scene)])
+    }
+    public static let cleanScreen=tool("dev.thermo.clean-screen","Clean Screen","Blocks the keyboard and covers the screen while you wipe it; a hold of Esc ends it.","sparkles.tv","tool-clean-screen")
+    public static let keepAwake=tool("dev.thermo.keep-awake","Keep awake","Keeps the display or running tasks awake for a set time or until you stop it.","cup.and.saucer","tool-keep-awake")
+    public static let focus=tool("dev.thermo.focus","Focus timer","Focus and break rounds with a countdown in the menu bar and a full-screen break.","timer","tool-focus")
+    public static let lowLatency=tool("dev.thermo.low-latency","Network low latency","Pauses AWDL for a set time to steady Wi-Fi latency, then restores it.","network","tool-low-latency")
+    public static let batteryCare=tool("dev.thermo.battery-care","Battery charging protection","Holds charging at 80% while Thermo runs; normal charging returns when it stops.","battery.75","tool-battery-care")
+    public static let tools=[cleanScreen, keepAwake, focus, lowLatency, batteryCare]
+    public static let all = [disk, search, capture, menuBar, performance, apps, space, browser, connections, history, agents, checkup, plugins, claude, download] + tools
 }
 
 public enum ModulePreferences {

@@ -3,6 +3,7 @@ import DocumentPreviewAPI
 import Foundation
 import NativeFeatureAPI
 import SystemServicesAPI
+import ToolsControlAPI
 
 /// Only composition receives this host environment. Each feature receives its own narrow contract.
 @MainActor package final class ShellFeatureEnvironment {
@@ -43,6 +44,8 @@ import SystemServicesAPI
         MainWindow.show(.native(checked));return true
     }
     package func showSettings(){MainWindow.show(.settings)}
+    package func showTool(_ tool:ShellTool){MainWindow.show(tool:tool)}
+    package func installHelper(){ShellState.shared.services.helper.install()}
     package func showSearchSettings(){_=SearchHost.show(settings:true)}
     package func closeMenuPanel(){(NSApp.delegate as? AppDelegate)?.closeMenuPanel()}
     package func requestScanNotifications(){SystemPresentation.requestNotificationPermission()}

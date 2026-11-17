@@ -8,6 +8,7 @@ import AppKit
 import SwiftUI
 import ThermoKit
 import ThermoL10n
+import ToolsControlAPI
 
 /// Where the main window is.
 enum MainPage: Hashable {
@@ -60,14 +61,15 @@ enum MainWindow {
     final class State: ObservableObject {
         @Published var page: MainPage = .overview
         /// A tool panel asked for from outside the window (the menu bar menu); shown as a sheet.
-        @Published var tool: ToolSheet?
+        @Published var tool: ShellTool?
         @Published var visible = false
     }
 
     /// Tool sheets need a stable NSWindow. A sheet attached to an NSPopover can
     /// expose its accessibility tree while drawing a completely blank surface.
     /// Close the menu panel in show() before presenting through this shared host.
-    static func show(tool: ToolSheet) {
+    static func show(tool: ShellTool) {
+        guard ModuleCenter.shared.isOn(tool.manifest.id) else { show(.features); return }
         show()
         state.tool = tool
     }
@@ -235,13 +237,8 @@ enum MainWindow {
                 }
                 .id(language)
                 .sheet(item: $state.tool) { tool in
-                    switch tool {
-                    case .keepAwake: IdleAwakePanel(model: IdleAwakeModel.shared)
-                    case .cleanScreen: CleanScreenSetupView(model: CleanScreenModel.shared)
-                    case .lowLatency: AWDLPanel(model: AWDLModel.shared)
-                    case .batteryCare: BatteryCarePanel(model: BatteryCareModel.shared)
-                    case .focus: FocusPanel(model: FocusTimerModel.shared)
-                    }
+                    // The tool owns its panel; a tool switched off meanwhile shows that it is off.
+                    models.nativeFeatures.renderPreview(tool.options) ?? AnyView(ModuleOffView().padding(40))
                 }
                 .onAppear { installStandardMenus() }
                 .onChange(of: language) { preference in

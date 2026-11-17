@@ -1,22 +1,21 @@
-import HotkeyCore
+import ApplicationServices
 import ModuleKit
 import ThermoUI
 import AgentCore
 import AppKit
 import Foundation
 import ThermoKit
+import ToolsControlAPI
 
 /// App-owned operations execute in the same models as their visible controls.
 /// The socket is same-user only; requests are bounded and never interpreted as shell commands.
 @MainActor final class AppControlHost {
     static let shared = AppControlHost()
-    private let defaults: UserDefaults
-    private let screen: CleanScreenModel
-    private let idleAwake: IdleAwakeModel
     typealias CaptureHandler = @MainActor (AppControlRequest) async->AppControlResponse
     private let captureHandler:CaptureHandler
-    init(defaults: UserDefaults = .standard, screen: CleanScreenModel? = nil, idleAwake: IdleAwakeModel? = nil,capture:CaptureHandler? = nil) {
-        self.captureHandler=capture ?? CaptureControlBridge.handle;self.defaults = defaults; self.screen = screen ?? .shared; self.idleAwake = idleAwake ?? .shared
+    private let tools: @MainActor () -> any ToolsApplicationAccess
+    init(capture:CaptureHandler? = nil, tools: (@MainActor () -> any ToolsApplicationAccess)? = nil) {
+        self.captureHandler=capture ?? CaptureControlBridge.handle; self.tools = tools ?? { ShellTools.access }
     }
     private var server: AppControlServer?
     private let integration = AgentAccess()
@@ -46,44 +45,15 @@ import ThermoKit
             return result([:], "Search apps and files is switched off. Enable it in Thermo Settings before using it.")
         }
         if action.hasPrefix("capture."){return await captureHandler(request)}
-        let reads = ["status","screen.status","login.status","updates.status","helper.status","permissions.status","integration.status","awdl.status","keep-awake.status"]
-        let writes = ["screen.start","screen.stop","screen.duration","screen.shortcut","screen.clear-shortcut","login.on","login.off","updates.on","updates.off","updates.check","helper.install","helper.uninstall","permissions.notifications","permissions.accessibility","permissions.login","integration.link","integration.claude","integration.codex","awdl.on","awdl.off","keep-awake.start","keep-awake.stop","search.show","search.settings","search.useCommandSpace","search.giveBackCommandSpace"]
+        // Clean Screen, low latency and keep awake belong to their own features.
+        let tools = self.tools()
+        if tools.handles(action) { return await tools.handle(request) }
+        let reads = ["status","login.status","updates.status","helper.status","permissions.status","integration.status"]
+        let writes = ["login.on","login.off","updates.on","updates.off","updates.check","helper.install","helper.uninstall","permissions.notifications","permissions.accessibility","permissions.login","integration.link","integration.claude","integration.codex","search.show","search.settings","search.useCommandSpace","search.giveBackCommandSpace"]
         guard reads.contains(action) || writes.contains(action) else { return result([:], "Unsupported App control operation.") }
-        guard request.arguments.keys.allSatisfy({ action == "keep-awake.start" ? ["mode","seconds","duration"].contains($0) : action == "awdl.on" ? $0 == "seconds" : ["screen.start","screen.duration"].contains(action) ? $0 == "duration" : action == "screen.shortcut" ? ["key-code","modifiers","key-label"].contains($0) : false }) else { return result([:], "Unexpected operation arguments.") }
-        let screen = self.screen
-        var idleMode: IdleAwakeMode?
-        var idleSeconds: Double?
-        if action == "keep-awake.start" {
-            guard let raw = request.arguments["mode"], let mode = IdleAwakeMode(rawValue: raw) else { return result([:], "An explicit display, tasks or both mode is required.") }
-            idleMode = mode
-            if let duration = request.arguments["duration"] {
-                guard duration == "manual", request.arguments["seconds"] == nil else { return result([:], "Use a timed duration or manual, not both.") }
-            } else {
-                guard let raw = request.arguments["seconds"], let seconds = Int(raw), (1...604800).contains(seconds) else { return result([:], "An explicit duration of 1…604800 seconds or manual is required.") }
-                idleSeconds = Double(seconds)
-            }
-        }
-        var duration: CleanScreenDuration?
-        var binding: CleanScreenKeyBinding?
-        if action == "screen.start" || action == "screen.duration" {
-            if action == "screen.duration", request.arguments["duration"] == nil { return result([:], "An explicit duration is required.") }
-            let saved = defaults.string(forKey:CleanScreenDuration.preferenceKey).flatMap(CleanScreenDuration.init(rawValue:)) ?? .twoMinutes
-            guard let selected = CleanScreenDuration(rawValue:request.arguments["duration"] ?? saved.rawValue) else { return result([:], "Invalid screen duration.") }; duration = selected
-        }
-        if action == "screen.shortcut" {
-            guard let key = UInt32(request.arguments["key-code"] ?? ""), let modifiers = UInt32(request.arguments["modifiers"] ?? ""), let label = request.arguments["key-label"] else { return result([:], "Invalid shortcut fields.") }
-            let candidate = CleanScreenKeyBinding(keyCode: key, modifiers: modifiers, keyLabel: label)
-            guard candidate.valid else { return result([:], "Shortcut requires a supported key and at least two modifiers including Command, Control or Option.") }; binding = candidate
-        }
-        if action == "awdl.on" {
-            guard let seconds = Int(request.arguments["seconds"] ?? "300"), (60...3600).contains(seconds) else { return result([:], "AWDL duration must be 60…3600 seconds.") }
-        }
+        guard request.arguments.isEmpty else { return result([:], "Unexpected operation arguments.") }
         if request.dryRun {
-            if action.hasPrefix("keep-awake.") {
-                return result(["action":action,"dryRun":"true","changesMade":"false","requiresRunningApp":"true","requiresHelper":"false"])
-            }
-            screen.refreshPermission()
-            return result(["action":action,"dryRun":"true","changesMade":"false","accessibility":String(screen.hasAccessibility),"requiresRunningApp":"true"])
+            return result(["action":action,"dryRun":"true","changesMade":"false","accessibility":String(AXIsProcessTrusted()),"requiresRunningApp":"true"])
         }
         if writes.contains(action) {
             guard !mutating else { return result([:], "Another App control mutation is in progress. Query status; do not retry an uncertain action.") }
@@ -99,42 +69,6 @@ import ThermoKit
             let state=taking ? SearchHost.access.takeOverSpotlight():SearchHost.access.giveBackSpotlight()
             let values=["action":action,"shortcut":state.label,"spotlightReleased":String(state.spotlightReleased)]
             return result(values,state.confirmed ? nil:state.issue ?? "The ⌘Space change was not confirmed. Check Search settings.")
-        case "keep-awake.start", "keep-awake.stop", "keep-awake.status":
-            if action == "keep-awake.start", let idleMode { idleAwake.start(mode: idleMode, seconds: idleSeconds) }
-            if action == "keep-awake.stop" { idleAwake.stop() }
-            let values = idleAwake.controlValues()
-            if action == "keep-awake.start", let issue = idleAwake.issue { return result(values, issue) }
-            if action == "keep-awake.start", values["phase"] != "active" { return result(values, values["issue"] ?? "Idle awake did not become active. Query status before another action.") }
-            if values["phase"] == "ending" { return result(values, values["issue"] ?? "Idle-awake state is unconfirmed.") }
-            return result(values)
-        case "awdl.on", "awdl.off", "awdl.status":
-            let network = AWDLModel.shared
-            guard !network.busy else { return result([:], "An AWDL operation is already in progress.") }
-            network.refresh()
-            guard await wait(seconds: 8, until: { !network.busy }) else { return result([:], "AWDL state is unconfirmed.") }
-            if action == "awdl.on" {
-                guard let seconds = Int(request.arguments["seconds"] ?? "300"), (60...3600).contains(seconds), network.canStart else { return result([:], "AWDL start is unavailable or duration is invalid.") }
-                network.start(seconds: seconds)
-            }
-            if action == "awdl.off" {
-                guard network.canStop else { return result([:], "This App does not own an AWDL session it can stop.") }
-                network.stop()
-            }
-            guard await wait(seconds: 15, until: { !network.busy }), let state = network.state else { return result([:], "AWDL result is unconfirmed; query state before another action.") }
-            let confirmed = action == "awdl.status" || (action == "awdl.on" ? state.phase == .active && state.ownedByCaller : state.phase == .idle)
-            return result(["phase":state.phase.rawValue,"ownedByApp":String(state.ownedByCaller)], network.issue ?? (confirmed ? nil : "AWDL state did not confirm the requested change."))
-        case "screen.start":
-            if screen.active, screen.session?.duration != duration { return result(screenState(), "A different screen session is already active; stop it explicitly before changing duration.") }
-            if request.arguments["duration"] != nil { defaults.set(duration!.rawValue,forKey:CleanScreenDuration.preferenceKey) }
-            screen.start(duration!)
-            return result(screenState(), screen.active ? nil : screen.issue ?? "Clean Screen did not start.")
-        case "screen.stop": screen.stop(); return result(screenState())
-        case "screen.duration": defaults.set(duration!.rawValue,forKey:CleanScreenDuration.preferenceKey); return result(screenState())
-        case "screen.shortcut", "screen.clear-shortcut":
-            let shortcut = CleanScreenShortcutModel.shared
-            shortcut.apply(action == "screen.clear-shortcut" ? nil : binding)
-            return result(screenState(), shortcut.issue)
-        case "screen.status": return result(screenState())
         case "login.on", "login.off", "login.status":
             let login = LoginItemAccess.shared
             if action != "login.status" { login.setRequested(action == "login.on") } else { login.refresh() }
@@ -170,7 +104,9 @@ import ThermoKit
                 return result(["version":version ?? "unknown"], helper.latest.error ?? "Installed helper did not confirm the expected version.")
             }
             return result(["state":String(describing:helper.latest.phase),"busy":String(helper.latest.busy),"version":version ?? "unknown"], action == "helper.status" ? nil : helper.latest.error)
-        case "permissions.accessibility": screen.openAccessibilitySettings(); return result(["outcome":"settingsOpened","permissionGranted":"unknown"])
+        case "permissions.accessibility":
+            NSWorkspace.shared.open(URL(string:"x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility")!)
+            return result(["outcome":"settingsOpened","permissionGranted":"unknown"])
         case "permissions.login": LoginItemAccess.shared.openSettings(); return result(["outcome":"settingsOpened","permissionGranted":"unknown"])
         case "permissions.notifications":
             let access = NotificationAccess.shared; access.request()
@@ -190,14 +126,12 @@ import ThermoKit
             if action == "integration.codex", integration.codex != .added { return result(values, integration.message ?? "Codex integration not confirmed.") }
             return result(values)
         case "permissions.status":
-            let notifications = NotificationAccess.shared; notifications.refresh(); screen.refreshPermission()
+            let notifications = NotificationAccess.shared; notifications.refresh()
             try? await Task.sleep(nanoseconds: 100_000_000)
-            return result(["accessibility":String(screen.hasAccessibility),"notifications":String(describing:notifications.state)])
+            return result(["accessibility":String(AXIsProcessTrusted()),"notifications":String(describing:notifications.state)])
         default:
-            let awake = idleAwake.inspect()
             let store=ShellState.shared.nativeFeatures,performance=store.status(BuiltinModuleManifests.performance.id)
-            return result(["appVersion":AppInfo.version,"controlProtocol":"1","busy":String(mutating),"screenActive":String(screen.active),
-                           "keepAwakeRequested":String(awake.requested),"keepAwakePhase":awake.phase.rawValue,
+            return result(tools.statusValues.merging(["appVersion":AppInfo.version,"controlProtocol":"1","busy":String(mutating),
                            "windowVisible":String(store.hostPresentation.windowVisible),
                            "mainPage":String(describing: MainWindow.state.page),
                            "cpuPageSampling":String(performance.readers["cpu"]?.sampling ?? false),
@@ -207,16 +141,8 @@ import ThermoKit
                            "menuPanelOpen":String(store.hostPresentation.menuPanelVisible),
                            "menuPanelSampling":String(performance.readers["panel"]?.sampling ?? false),
                            "pulseSampling":String(performance.readers["pulse"]?.sampling ?? false),
-                           "pulseHolders":String(performance.readers["pulse"]?.holders ?? 0)])
+                           "pulseHolders":String(performance.readers["pulse"]?.holders ?? 0)]){$1})
         }
-    }
-    private func screenState() -> [String:String] {
-        let model = screen; model.refreshPermission()
-        let shortcut = CleanScreenShortcutModel.shared
-        var state = ["active":String(model.active),"accessibility":String(model.hasAccessibility),"shortcut":shortcut.binding?.label ?? "", "shortcutUncertain":String(shortcut.uncertain),"savedDuration":defaults.string(forKey:CleanScreenDuration.preferenceKey).flatMap(CleanScreenDuration.init(rawValue:))?.rawValue ?? CleanScreenDuration.twoMinutes.rawValue]
-        if let session = model.session { state["duration"] = session.duration.rawValue; state["remainingSeconds"] = session.remaining(ProcessInfo.processInfo.systemUptime).map(String.init(describing:)) ?? "manual" }
-        if let issue = model.issue { state["issue"] = issue }
-        return state
     }
     private func wait(seconds: Double, until done: @escaping @MainActor () -> Bool) async -> Bool {
         let end = ProcessInfo.processInfo.systemUptime + seconds
