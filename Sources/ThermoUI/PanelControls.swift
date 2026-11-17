@@ -30,6 +30,23 @@ package struct PanelButton: View {
     }
 }
 
+/// The panel's bottom row: one titled button, then icon shortcuts that wrap onto another row when there are more
+/// than fit. Modules add icons here; in a plain HStack they made the row wider than the panel, and the panel's
+/// whole content slid off its left edge.
+package struct PanelFooterRow<Lead: View, Icons: View>: View {
+    let lead: Lead
+    let icons: Icons
+    package init(@ViewBuilder lead: () -> Lead, @ViewBuilder icons: () -> Icons) { self.lead = lead(); self.icons = icons() }
+    package var body: some View {
+        HStack(alignment: .top, spacing: 6) {
+            lead.fixedSize()
+            // As tall as the button, so one row of icons is centred on it and a second row starts below it.
+            FlowLayout(spacing: 6, alignment: .trailing) { icons.frame(minHeight: 24) }
+                .frame(maxWidth: .infinity, alignment: .trailing)
+        }
+    }
+}
+
 package enum PanelFormat {
     package static func rate(_ bytesPerSecond: Double?) -> (String, String) {
         guard let b = bytesPerSecond, b.isFinite else { return ("—", "") }
