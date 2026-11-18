@@ -9,6 +9,7 @@ import ThermoL10n
 /// on a machine that is swapping.
 @MainActor final class ToolProcessesModel: ObservableObject {
     @Published private(set) var groups: [ToolProcessGroup] = []
+    @Published private(set) var loaded = false
     @Published private(set) var working = false
     @Published var feedback: String?
     private var reading = false
@@ -26,7 +27,7 @@ import ThermoL10n
         let read = read
         DispatchQueue.global(qos: .userInitiated).async {
             let found = ToolProcesses.inventory(read())
-            DispatchQueue.main.async { self.groups = found; self.reading = false }
+            DispatchQueue.main.async { self.groups = found; self.reading = false; self.loaded = true }
         }
     }
 
@@ -70,22 +71,30 @@ enum ToolProcessesText {
             : seconds >= 3600 ? tr("%1$@ h", String(Int(seconds / 3600))) : tr("%1$@ min", String(max(1, Int(seconds / 60))))
     }
 
-    static let rescueSummary = tr("Ends the tool processes AI agents left behind: the ones whose starter has exited, and the ones a shared agent service has held for over an hour while they do nothing. Each is asked to stop (SIGTERM) and forced after 5 seconds (SIGKILL).")
+    static let rescueSummary = tr("Ends the tool processes AI agents left behind: the ones whose starter has exited, and the idle ones a shared agent service holds for over an hour or in five or more copies of the same tool. Each is asked to stop (SIGTERM) and forced after 5 seconds (SIGKILL).")
     static let rescueFootnote = tr("AI agent sessions, apps and the tools of a session in a terminal are not touched. A thread that still uses one of these tools loses it until it is restarted.")
 }
 
 /// The Memory page's "tool processes" list: every MCP server and helper per host, with one button
 /// for what was left behind and an End per row.
 struct ToolProcessesCard: View {
+    @ObservedObject var model: ToolProcessesModel
     let acted: () -> Void
     @Environment(\.performanceOperations) private var operations
-    @StateObject private var model = ToolProcessesModel()
     @State private var confirmingRescue = false
     @State private var ending: ToolProcesses.Summary?
     @State private var showAll = false
 
     var body: some View {
-        VStack(spacing: 0) { content }.onAppear { model.refresh() }
+        VStack(spacing: 0) {
+            content
+            if model.groups.isEmpty && model.feedback == nil {
+                Text(model.loaded ? tr("No tool processes of AI agents are running.") : tr("Reading processes…"))
+                    .font(Theme.secondary).foregroundStyle(Theme.textSecondary)
+                    .frame(maxWidth: .infinity, alignment: .leading).padding(Theme.Space.l)
+                    .background(RoundedRectangle(cornerRadius: Theme.radius, style: .continuous).fill(Theme.surface))
+            }
+        }
     }
 
     @ViewBuilder var content: some View {

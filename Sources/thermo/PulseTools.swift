@@ -64,7 +64,7 @@ extension PulseCommand {
             return
         }
         guard !identities.isEmpty else {
-            actionOutput(tr("Nothing is left behind: no tool process has lost its starter or sat idle under a shared agent service for over an hour."))
+            actionOutput(tr("Nothing is left behind: no tool process has lost its starter, and no shared agent service holds idle ones for over an hour or in five or more copies."))
             if app.args.has("json") { print(Export.json(ToolProcesses.Outcome())) }
             return
         }

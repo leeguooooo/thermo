@@ -19,6 +19,15 @@ struct MemoryPage: View {
         let name = args[i + 1].lowercased()
         return ["program:cmd:" + name, "program:app:" + name]
     }()
+    /// The lists below the summary, one at a time: stacking them made the page a wall.
+    enum Section: String, Hashable { case programs, tools, trend }
+    @State private var section: Section = {
+        // Offscreen review: `--memory-tab tools|trend` opens that list.
+        let args = CommandLine.arguments
+        guard args.contains("--main"), let i = args.firstIndex(of: "--memory-tab"), i + 1 < args.count else { return .programs }
+        return Section(rawValue: args[i + 1]) ?? .programs
+    }()
+    @StateObject private var tools = ToolProcessesModel()
     @State private var confirming: MachinePulse.Hog?
     @State private var restartTarget: MachinePulse.Hog?
     @State private var showAll = false
@@ -39,13 +48,19 @@ struct MemoryPage: View {
                     breakdownCard(b)
                     MemoryReliefCard(programs: model.programs, quit: { confirming = $0 }, restart: { restartTarget = $0 },
                                      inspect: { name in
-                                         search = name
+                                         search = name; section = .programs
                                          expanded.formUnion(["program:cmd:" + name.lowercased(), "program:app:" + name.lowercased()])
                                      }, acted: resample)
-                    ToolProcessesCard(acted: resample)
-                    if !model.suspects.isEmpty { suspectsCard }
-                    programsCard
-                    trendCard
+                    leftBehindNotice
+                    actionNotices
+                    ThermoTabs(selection: $section, options: sectionOptions, label: tr("Show"))
+                    switch section {
+                    case .programs: programsCard
+                    case .tools: ToolProcessesCard(model: tools, acted: resample)
+                    case .trend:
+                        if !model.suspects.isEmpty { suspectsCard }
+                        trendCard
+                    }
                 } else {
                     SkeletonList(rows: 3)
                     SkeletonList(rows: 6)
@@ -57,13 +72,13 @@ struct MemoryPage: View {
         }
         .onReceive(model.$inspect) { name in
             guard let name else { return }
-            search = name
+            search = name; section = .programs
             expanded.formUnion(["program:cmd:" + name.lowercased(), "program:app:" + name.lowercased()])
             DispatchQueue.main.async { model.inspect = nil }
         }
         .samplingWhileVisible { owner, active in
             model.setVisible(active, owner: owner)
-            if active { pulse.hold() } else { pulse.release() }
+            if active { pulse.hold(); tools.refresh() } else { pulse.release() }
         }
         .sheet(item: $confirming) { h in
             ConfirmSheet(title: h.app != nil ? tr("Quit %1$@?", h.name) : tr("End %1$@?", h.name),
@@ -115,6 +130,25 @@ struct MemoryPage: View {
 
     func resample() {
         for delay in [2.0, 8.0, 20.0] { DispatchQueue.main.asyncAfter(deadline: .now() + delay) { model.sample() } }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 3) { tools.refresh() }
+    }
+
+    /// Each tab says what is behind it, so nothing needs opening just to find out it is empty.
+    var sectionOptions: [(Section, String)] {
+        let toolRows = ToolProcesses.summary(tools.groups).count
+        return [(.programs, tr("Programs")),
+                (.tools, toolRows == 0 ? tr("AI tool processes") : tr("AI tool processes (%1$@)", String(toolRows))),
+                (.trend, model.suspects.isEmpty ? tr("Trend") : tr("Trend (%1$@ growing)", String(model.suspects.count)))]
+    }
+
+    /// Left-behind tool processes are worth a line whatever tab is open.
+    @ViewBuilder var leftBehindNotice: some View {
+        if tools.rescueProcesses > 0 && section != .tools {
+            HStack(spacing: 10) {
+                NoticeBanner(text: tr("AI agents left %1$@ tool processes behind (%2$@).", String(tools.rescueProcesses), MemoryFormat.string(kibibytes: tools.rescueKB)))
+                Button(tr("Review")) { section = .tools }.buttonStyle(PillButtonStyle(prominent: true)).controlSize(.small)
+            }
+        }
     }
 
     // MARK: Header
@@ -288,7 +322,7 @@ struct MemoryPage: View {
                     }
                     Spacer()
                     Text(MemoryFormat.string(kibibytes: s.memoryKB)).font(Theme.figure(.row)).foregroundStyle(Theme.textPrimary)
-                    Button(tr("Inspect")) { expanded.insert(s.id); search = s.name }.buttonStyle(PillButtonStyle()).controlSize(.small)
+                    Button(tr("Inspect")) { expanded.insert(s.id); search = s.name; section = .programs }.buttonStyle(PillButtonStyle()).controlSize(.small)
                 }
             }
         }
@@ -331,7 +365,6 @@ struct MemoryPage: View {
                 ThermoTabs(selection: $sortByResident, options: [(false, tr("Memory footprint")), (true, tr("Resident memory"))],
                            size: .small, label: tr("Sort by"))
             }
-            actionNotices
             if !model.inventoryAvailable {
                 Text(tr("Process readings unavailable. Try refreshing.")).font(Theme.caption).foregroundStyle(Theme.caution)
             }
