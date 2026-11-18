@@ -101,12 +101,12 @@ enum CommandContract {
         if args.has("dry-run") {
             let families = ["capture", "clean", "apps", "app", "space", "tabs", "privacy", "claude-reset", "screen", "app-control", "permissions", "integration", "fan", "helper", "awake", "keep-awake", "awdl", "charge", "settings", "config"]
             let agent = ["agents","agent","doctor"].contains(root) && ["fix","disable","uninstall","remove","rm","run","inspect-all"].contains(sub)
-            let pulse = ["pulse","status"].contains(root) && (["quit","restart","end"].contains(sub) || Array(p.prefix(3)) == [root,"chrome","close"])
+            let pulse = ["pulse","status"].contains(root) && (["quit","restart","end","rescue"].contains(sub) || Array(p.prefix(3)) == [root,"chrome","close"])
             guard families.contains(root) || agent || pulse else { throw CLIError("--dry-run is not supported for this command; no action was performed.") }
         }
         if args.has("csv") {
             guard ["temps","temp","t","fans","f","power","p","battery","b","watch","w","list","ls","get","memory","settings","config","helper","fan","pulse","status","bench","agents","agent","doctor","clean"].contains(root),
-                  !(["pulse","status"].contains(root) && ["quit","restart","explain","inspect","why","end"].contains(sub)),
+                  !(["pulse","status"].contains(root) && ["quit","restart","explain","inspect","why","end","tools","rescue"].contains(sub)),
                   !(root == "helper" && !["","status"].contains(sub)),
                   !(root == "fan" && !["","status"].contains(sub)) else { throw CLIError("This command supports --json, not --csv.") }
         }

@@ -64,7 +64,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate, UNU
         _ = ShellState.shared.updates  // Sparkle starts checking with the app
         // Slowdown history and alerts, in the background whether or not the panel is open.
         // The admitted performance session owns background slowdown history.
-        if Bundle.main.bundleIdentifier != nil { UNUserNotificationCenter.current().delegate = self }
+        if Bundle.main.bundleIdentifier != nil { UNUserNotificationCenter.current().delegate = self; ToolRescueNotifications.register() }
 
         statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
         if let button = statusItem.button {
@@ -150,6 +150,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate, UNU
     nonisolated func userNotificationCenter(_ center: UNUserNotificationCenter, didReceive response: UNNotificationResponse,
                                 withCompletionHandler done: @escaping () -> Void) {
         let program = response.notification.request.content.userInfo["program"] as? String
+        // The reminder's own button: end them without opening anything.
+        if ToolRescueNotifications.handle(action: response.actionIdentifier) { done(); return }
         DispatchQueue.main.async {
             _ = ShellState.shared.nativeFeatures.preparePresentation(.init(route:.init(BuiltinModuleManifests.performance.id,"overview"),options:["program":.text(program ?? "")]))
             self.showPanel()

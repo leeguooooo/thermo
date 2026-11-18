@@ -20,6 +20,8 @@ package enum TitleMetric: String, CaseIterable, Identifiable {
 
 package enum Settings {
     package static let slowdownAlerts="slowdownAlerts"
+    /// Off by default: left-behind tool processes are ended without asking once they add up.
+    package static let autoEndLeftBehindTools="autoEndLeftBehindTools"
     package static let interval = "interval"
     package static let titleMetric = "titleMetric"
     package static let alertsEnabled = "alertsEnabled"

@@ -42,6 +42,7 @@ struct MemoryPage: View {
                                          search = name
                                          expanded.formUnion(["program:cmd:" + name.lowercased(), "program:app:" + name.lowercased()])
                                      }, acted: resample)
+                    ToolProcessesCard(acted: resample)
                     if !model.suspects.isEmpty { suspectsCard }
                     programsCard
                     trendCard
@@ -371,10 +372,16 @@ struct MemoryPage: View {
     @ViewBuilder var actionNotices: some View {
         if let u = pulse.unresponsive {
             HStack(spacing: 10) {
-                NoticeBanner(text: tr("%1$@ (PID %2$@) was asked to stop and is still running.", u.name, String(u.identity.pid)),
-                             dismiss: { pulse.dismissUnresponsive() })
-                Button(tr("Force end…")) { var forced = u; forced.force = true; stopping = forced }
+                NoticeBanner(text: SystemPulse.unresponsiveText(u), dismiss: { pulse.dismissUnresponsive() })
+                Button(u.appPath != nil ? tr("Force quit…") : tr("Force end…")) { var forced = u; forced.force = true; stopping = forced }
                     .buttonStyle(PillButtonStyle(prominent: true, color: Theme.danger)).controlSize(.small)
+            }
+        }
+        ForEach(pulse.closedAppsToOffer()) { app in
+            HStack(spacing: 10) {
+                NoticeBanner(text: tr("%1$@ was closed from here. Reopening it brings back its windows the way it does after any launch.", app.name),
+                             dismiss: { pulse.dismissClosed(app) })
+                Button(tr("Open again")) { pulse.reopen(app) }.buttonStyle(PillButtonStyle()).controlSize(.small)
             }
         }
         ForEach([pulse.quitProblem, pulse.restartProblem, pulse.actionFeedback].compactMap { $0 }, id: \.self) { t in
@@ -657,6 +664,7 @@ struct MemoryPage: View {
         else { name = h.name }
         // The folder goes beside the command, not into the name: a long path pushed the PID out of the title.
         return SystemPulse.SingleStop(identity: identity, name: name, folder: h.app == nil ? h.project : nil, application: h.app != nil,
+                                      appPath: appMain ? h.app : nil,
                                       agentSession: kind == .agentSession, force: force, memoryKB: p.memoryKB)
     }
 

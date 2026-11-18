@@ -193,6 +193,27 @@ public struct SlowdownAlerts: Sendable {
         public var program: String?
         /// Overrides `Limits.cooldown` for this reason.
         public var repeatAfter: TimeInterval? = nil
+        /// What the notification's button does; nil for a notification that only tells.
+        public var action: String? = nil
+    }
+
+    /// Tool processes pile up for days before memory runs out: say so while the Mac still responds.
+    public static let toolsAction = "rescue-tools"
+    public static let toolsFloorKB = 1_048_576
+    public static let toolsFloorProcesses = 50
+
+    public mutating func evaluateTools(_ groups: [ToolProcessGroup], now: Date = Date()) -> [Alert] {
+        let processes = ToolProcesses.rescueIdentities(groups).count
+        let kb = groups.reduce(0) { $0 + $1.rescueKB }
+        guard kb >= Self.toolsFloorKB || processes >= Self.toolsFloorProcesses else { return [] }
+        let key = "tools-left"
+        if let last = lastFired[key], now.timeIntervalSince(last) < limits.cooldown { return [] }
+        lastFired[key] = now
+        let names = ToolProcesses.summary(groups.filter { !$0.rescueCopies.isEmpty }).prefix(3).map { "\($0.name) ×\($0.rescueCopies)" }.joined(separator: ", ")
+        return [Alert(key: key, title: tr("AI agents left %1$@ tool processes behind", String(processes)),
+                      body: tr("They hold %1$@ and nobody is using them (%2$@). End them now, before memory runs out; no session or app is closed.",
+                               MemoryFormat.string(kibibytes: kb), names),
+                      program: nil, action: Self.toolsAction)]
     }
 
     public var limits = Limits()

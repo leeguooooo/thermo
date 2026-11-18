@@ -17,6 +17,7 @@ struct PulseCard: View {
     @Environment(\.performanceInspections) private var inspections
     @State private var confirming: SystemPulse.Hog?
     @State private var restartTarget: SystemPulse.Hog?
+    @State private var forcing: SystemPulse.SingleStop?
     @State private var explaining: ProcessInspectionTarget?
     @State private var holds = false
     @EnvironmentObject private var recorder: PulseRecorder
@@ -108,6 +109,26 @@ struct PulseCard: View {
                 }
             }
             }
+            if !renderingPreview { ToolRescueRow(active: active, strained: pulse.memory != .normal, indent: indent) }
+            if let u = pulse.unresponsive, u.appPath != nil, !renderingPreview {
+                HStack(alignment: .top, spacing: 6) {
+                    Text(SystemPulse.unresponsiveText(u)).font(.caption).foregroundStyle(.orange).fixedSize(horizontal: false, vertical: true)
+                    Spacer(minLength: 4)
+                    Button(tr("Force quit…")) { var forced = u; forced.force = true; forcing = forced }
+                        .controlSize(.small).modifier(ActionButtonStyle(prominent: true))
+                }
+                .padding(.leading, indent)
+            }
+            if !renderingPreview {
+                ForEach(pulse.closedAppsToOffer()) { app in
+                    HStack(spacing: 6) {
+                        Text(tr("%1$@ was closed from here.", app.name)).font(.caption).foregroundStyle(.secondary)
+                        Spacer(minLength: 4)
+                        Button(tr("Open again")) { pulse.reopen(app) }.controlSize(.small).modifier(ActionButtonStyle(prominent: false))
+                    }
+                    .padding(.leading, indent)
+                }
+            }
             if let problem = pulse.quitProblem {
                 Text(problem).font(.caption).foregroundStyle(.red).fixedSize(horizontal: false, vertical: true).padding(.leading, indent)
             }
@@ -147,6 +168,14 @@ struct PulseCard: View {
                          footnote: tr("Thermo never stops system processes, AI agent sessions or itself."),
                          confirmTitle: h.app != nil ? tr("Quit") : tr("End"),
                          confirm: { confirming = nil; pulse.quit(h) }, cancel: { confirming = nil })
+        }
+        .sheet(item: $forcing) { s in
+            ConfirmSheet(title: tr("Force quit %1$@?", s.name),
+                         summary: tr("It is stopped at once (SIGKILL), the same as Force Quit. Unsaved work in it is lost."),
+                         destructive: true, heading: tr("What will run"), lines: ["kill -KILL \(s.identity.pid)"],
+                         footnote: tr("Thermo never stops system processes, AI agent sessions or itself."),
+                         confirmTitle: tr("Force quit"),
+                         confirm: { forcing = nil; pulse.end(s) }, cancel: { forcing = nil })
         }
         .sheet(item: $restartTarget) { h in
             ConfirmSheet(title: tr("Restart %1$@?", h.name),

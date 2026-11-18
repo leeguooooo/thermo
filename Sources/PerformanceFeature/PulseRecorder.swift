@@ -40,6 +40,8 @@ final class PulseRecorder: ObservableObject {
     private var timer: DispatchSourceTimer?
     private var interval: TimeInterval = 0
     private var memory: [PulseRecord] = []
+    /// Confined to `queue`: the processes the latest diagnosis was made from.
+    private var lastProcesses: [SlowdownProcess] = []
     @MainActor private var readOnlySession=false
 
     init(queue: DispatchQueue? = nil, readHistory: (@Sendable () -> [PulseRecord])? = nil,
@@ -122,6 +124,10 @@ final class PulseRecorder: ObservableObject {
         // One memory notification: the diagnosis names the culprit, the older rules only the biggest program.
         if found.memoryStrain == .exhausted { fired.removeAll { $0.key == "swap" || $0.key == "memory" } }
         fired += alerts.evaluate(found, now: now)
+        // Before memory is tight: tool processes left behind are named as soon as they add up.
+        let tools = ToolProcesses.inventory(lastProcesses)
+        if UserDefaults.standard.bool(forKey: Settings.autoEndLeftBehindTools) { autoEnd(tools) }
+        else { fired += alerts.evaluateTools(tools, now: now) }
         if enabled, lifetime.accepts(token) { for a in fired { notify(a) } }
         reschedule()
     }
@@ -132,7 +138,10 @@ final class PulseRecorder: ObservableObject {
         let fixture = ProcessInfo.processInfo.environment["THERMO_DIAGNOSIS_FIXTURE"]
             .flatMap { FileManager.default.contents(atPath: $0) }
             .flatMap { try? JSONDecoder().decode(SlowdownDiagnosis.self, from: $0) }
-        let found = fixture ?? readDiagnosis?().0 ?? SlowdownDiagnosis.diagnose(slowdown.sample(), system: .read())
+        let found: SlowdownDiagnosis
+        if let fixture { found = fixture; lastProcesses = [] }
+        else if let read = readDiagnosis?() { found = read.0; lastProcesses = read.1 }
+        else { let processes = slowdown.sample(); lastProcesses = processes; found = SlowdownDiagnosis.diagnose(processes, system: .read()) }
         DispatchQueue.main.async {
             if self.samplingAllowed(), self.lifetime.accepts(token) { self.diagnosis = found }
         }
@@ -171,13 +180,27 @@ final class PulseRecorder: ObservableObject {
         }
     }
 
+    /// Runs on `queue`. The person switched this on: left-behind tools go as soon as they add up, and a
+    /// notification says what was ended. Same floor as the reminder, so a couple of strays are left alone.
+    private func autoEnd(_ groups: [ToolProcessGroup]) {
+        let identities = ToolProcesses.rescueIdentities(groups)
+        guard groups.reduce(0, { $0 + $1.rescueKB }) >= SlowdownAlerts.toolsFloorKB || identities.count >= SlowdownAlerts.toolsFloorProcesses else { return }
+        let memory = Dictionary(lastProcesses.map { ($0.pid, $0.footprintKB) }, uniquingKeysWith: { a, _ in a })
+        DispatchQueue.global(qos: .utility).async {
+            let outcome = ToolProcesses.end(identities, memoryKB: memory, subject: "auto")
+            guard outcome.asked > 0 else { return }
+            ToolRescueNotifications.post(title: tr("Thermo ended left-behind tool processes"), body: outcome.summary, id: "thermo.tools.ended")
+        }
+    }
+
     private func notify(_ a: SlowdownAlerts.Alert) {
         // UserNotifications throws outside an app bundle (bare dev builds).
         guard Bundle.main.bundleIdentifier != nil else { return }
         let content = UNMutableNotificationContent()
         content.title = a.title
         content.body = a.body
-        content.userInfo = ["program": a.program ?? ""]
+        content.userInfo = ["program": a.program ?? "", "action": a.action ?? ""]
+        if a.action == SlowdownAlerts.toolsAction { content.categoryIdentifier = ToolRescueNotifications.category }
         UNUserNotificationCenter.current().add(UNNotificationRequest(identifier: "thermo.slowdown.\(a.key)", content: content, trigger: nil))
     }
 }

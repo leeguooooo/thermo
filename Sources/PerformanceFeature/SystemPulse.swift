@@ -30,11 +30,14 @@ final class SystemPulse: ObservableObject {
     private let observe: @MainActor (MachinePulse) -> Void
     private let actionsAllowed: @MainActor () -> Bool
     private let reviewDelay: TimeInterval
+    /// How long an app gets to answer a quit request before the cards offer to force it.
+    private let quitGrace: TimeInterval
+    private let closedAppsDefaults: UserDefaults?
     private let readActionReview: (@Sendable (Hog, MachinePulse, PulseActionReview.Action) -> PulseActionReview)?
     private let recordActionReview: @Sendable (PulseActionReview) -> Void
 
     init(readSample: (@Sendable () -> MachinePulse)? = nil, samplingQueue: DispatchQueue? = nil, samplingAllowed: @escaping @MainActor () -> Bool = { true },
-         reviewDelay: TimeInterval = 5,
+         reviewDelay: TimeInterval = 5, quitGrace: TimeInterval = 5, closedAppsDefaults: UserDefaults? = .standard,
          readActionReview: (@Sendable (Hog, MachinePulse, PulseActionReview.Action) -> PulseActionReview)? = nil,
          recordActionReview: @escaping @Sendable (PulseActionReview) -> Void = { $0.record() },
          observe: @escaping @MainActor (MachinePulse) -> Void = { _ in }, actionsAllowed: @escaping @MainActor () -> Bool = { true }) {
@@ -42,6 +45,9 @@ final class SystemPulse: ObservableObject {
         self.observe = observe; self.actionsAllowed = actionsAllowed
         self.samplingAllowed = samplingAllowed
         self.reviewDelay = reviewDelay
+        self.quitGrace = quitGrace
+        self.closedAppsDefaults = closedAppsDefaults
+        closedApps = Self.loadClosedApps(closedAppsDefaults)
         self.readActionReview = readActionReview
         self.recordActionReview = recordActionReview
         queue = samplingQueue ?? DispatchQueue(label: "dev.thermo.app.pulse", qos: .userInitiated)
@@ -206,15 +212,85 @@ final class SystemPulse: ObservableObject {
         quitting.insert(hog.id)
         queue.asyncAfter(deadline: .now() + 1) { [weak self] in self?.sample() }
         let identities = hog.app == nil ? hog.processIdentities ?? [] : hog.applicationIdentity.map { [$0] } ?? []
-        queue.asyncAfter(deadline: .now() + 5) { [weak self] in
+        let appStop = hog.app.flatMap { path in hog.applicationIdentity.map {
+            SingleStop(identity: $0, name: hog.name, application: true, appPath: path, memoryKB: hog.memoryKB) } }
+        let grace = quitGrace
+        queue.asyncAfter(deadline: .now() + grace) { [weak self] in
             let stillRunning = identities.contains { ProcessTable.identity($0.pid)==$0 }
             DispatchQueue.main.async {
                 self?.quitting.remove(hog.id)
                 if stillRunning {
-                    self?.quitProblem = tr("%1$@ is still running. Check any save dialogs before trying again.", hog.name)
-                }
+                    // An app that hangs never answers the quit request: offer to force it instead of a dead end.
+                    if let appStop { self?.unresponsive = appStop }
+                    else { self?.quitProblem = tr("%1$@ is still running. Check any save dialogs before trying again.", hog.name) }
+                } else if let appStop { self?.noteClosed(appStop) }
             }
             self?.sample()
+            guard stillRunning, let appStop else { return }
+            // It may only be slow (many tabs, a save dialog): once it has gone, the offer goes too.
+            // Off the sampling queue, which must stay free for readings.
+            DispatchQueue.global(qos: .utility).async {
+                let deadline = Date().addingTimeInterval(120)
+                while Date() < deadline, ProcessTable.identity(appStop.identity.pid) == appStop.identity { usleep(250_000) }
+                guard ProcessTable.identity(appStop.identity.pid) != appStop.identity else { return }
+                DispatchQueue.main.async {
+                    guard let self, self.unresponsive == appStop else { return }
+                    self.unresponsive = nil; self.noteClosed(appStop)
+                }
+            }
+        }
+    }
+
+    /// An app that was quit or force quit from here and has gone; the cards offer to open it again.
+    struct ClosedApp: Identifiable, Equatable, Codable {
+        var name: String
+        var path: String
+        var closed = Date()
+        var id: String { path }
+    }
+    private static let closedAppsKey = "pulse.closedApps"
+    /// Newest first. Kept across launches: after a freeze the user may come back to it much later.
+    @Published private(set) var closedApps: [ClosedApp] = []
+
+    static func loadClosedApps(_ defaults: UserDefaults?, now: Date = Date()) -> [ClosedApp] {
+        guard let data = defaults?.data(forKey: closedAppsKey),
+              let saved = try? JSONDecoder().decode([ClosedApp].self, from: data) else { return [] }
+        return saved.filter { now.timeIntervalSince($0.closed) < 86_400 && FileManager.default.fileExists(atPath: $0.path) }
+    }
+
+    private func saveClosedApps() {
+        guard let closedAppsDefaults else { return }
+        if closedApps.isEmpty { closedAppsDefaults.removeObject(forKey: Self.closedAppsKey) }
+        else if let data = try? JSONEncoder().encode(closedApps) { closedAppsDefaults.set(data, forKey: Self.closedAppsKey) }
+    }
+
+    @MainActor func noteClosed(_ stop: SingleStop) {
+        guard let path = stop.appPath else { return }
+        closedApps.removeAll { $0.path == path }
+        closedApps.insert(ClosedApp(name: stop.name, path: path), at: 0)
+        if closedApps.count > 5 { closedApps.removeLast(closedApps.count - 5) }
+        saveClosedApps()
+    }
+
+    @MainActor func dismissClosed(_ app: ClosedApp) { closedApps.removeAll { $0.id == app.id }; saveClosedApps() }
+
+    /// Closed apps that are not running now: one the user reopened by hand needs no offer.
+    @MainActor func closedAppsToOffer(running: [String] = NSWorkspace.shared.runningApplications.compactMap { $0.bundleURL?.standardizedFileURL.path }) -> [ClosedApp] {
+        closedApps.filter { !running.contains($0.path) }
+    }
+
+    /// Opens an app that was closed from here; it restores its own windows the way it does after any launch.
+    @MainActor func reopen(_ app: ClosedApp,
+                           open: @escaping (URL, @escaping @Sendable (Bool) -> Void) -> Void = { url, done in
+                               NSWorkspace.shared.openApplication(at: url, configuration: .init()) { opened, error in done(opened != nil && error == nil) }
+                           }) {
+        restartProblem = nil
+        open(URL(fileURLWithPath: app.path)) { [weak self] ok in
+            DispatchQueue.main.async {
+                guard let self else { return }
+                if ok { self.dismissClosed(app) }
+                else { self.restartProblem = tr("Could not reopen %1$@. Open it manually.", app.name) }
+            }
         }
     }
 
@@ -227,6 +303,8 @@ final class SystemPulse: ObservableObject {
         var folder: String? = nil
         /// The process belongs to an app bundle (a helper, or with `force` the app itself).
         var application = false
+        /// Set for the app's own process: the bundle to open again after it has gone.
+        var appPath: String? = nil
         /// An AI agent session: allowed here only because the user chose this one process.
         var agentSession = false
         /// SIGKILL straight away instead of SIGTERM.
@@ -242,6 +320,12 @@ final class SystemPulse: ObservableObject {
     @Published private(set) var unresponsive: SingleStop?
 
     @MainActor func dismissUnresponsive() { unresponsive = nil }
+
+    static func unresponsiveText(_ u: SingleStop) -> String {
+        u.appPath != nil
+            ? tr("%1$@ was asked to quit and is still running. If it shows a save dialog, answer it; if it is not responding, force quit it.", u.name)
+            : tr("%1$@ (PID %2$@) was asked to stop and is still running.", u.name, String(u.identity.pid))
+    }
 
     @MainActor func end(_ stop: SingleStop, grace: TimeInterval = 5,
                         perform: @escaping @Sendable (SingleStop, TimeInterval) -> SingleStopResult = { SystemPulse.perform($0, grace: $1) },
@@ -261,7 +345,8 @@ final class SystemPulse: ObservableObject {
                 let freed = MemoryFormat.string(kibibytes: stop.memoryKB)
                 switch result {
                 case .stopped: self.actionFeedback = tr("%1$@ (PID %2$@) stopped after being asked; about %3$@ freed.", stop.name, String(pid), freed)
-                case .killed: self.actionFeedback = tr("%1$@ (PID %2$@) was forced to quit; about %3$@ freed.", stop.name, String(pid), freed)
+                    self.noteClosed(stop)
+                case .killed: self.noteClosed(stop); self.actionFeedback = tr("%1$@ (PID %2$@) was forced to quit; about %3$@ freed.", stop.name, String(pid), freed)
                 case .stillRunning:
                     if stop.force { self.quitProblem = tr("%1$@ (PID %2$@) is still running.", stop.name, String(pid)) }
                     else { self.unresponsive = stop }

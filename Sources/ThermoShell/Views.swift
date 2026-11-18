@@ -108,6 +108,7 @@ struct SettingsView: View {
     @ObservedObject var monitor: SystemPresentation
     @AppStorage(Settings.showInDock) private var showInDock = true
     @AppStorage(Settings.slowdownAlerts) private var slowdownAlerts = true
+    @AppStorage(Settings.autoEndLeftBehindTools) private var autoEndTools = false
     @ObservedObject var updates: Updates
     @ObservedObject private var notifications = NotificationAccess.shared
     @ObservedObject private var loginItem = LoginItemAccess.shared
@@ -223,6 +224,10 @@ struct SettingsView: View {
                 row(tr("Warn me before my Mac gets slow")) {
                     Toggle("", isOn: $slowdownAlerts)
                         .onChange(of: slowdownAlerts) { enabled in if enabled { notifications.request() } }
+                }
+                row(tr("End left-behind AI tool processes automatically")) {
+                    Toggle("", isOn: $autoEndTools)
+                        .help(tr("When MCP servers and helpers that nobody uses add up to 1 GB or 50 processes, Thermo ends them and tells you. Sessions and apps are never closed."))
                 }
                 row(tr("Alert when hot"), last: !alertsEnabled) {
                     Toggle("", isOn: $alertsEnabled)
