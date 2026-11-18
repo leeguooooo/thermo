@@ -9,6 +9,7 @@ struct MemoryPage: View {
     @ObservedObject var model: MemoryModel
     @EnvironmentObject private var pulse: SystemPulse
     @Environment(\.performanceNavigation) private var navigation
+    @Environment(\.performanceOperations) private var operations
     let open: (PerformanceDestination) -> Void
     @State private var hours = 6
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
@@ -50,8 +51,7 @@ struct MemoryPage: View {
                                      inspect: { name in
                                          search = name; section = .programs
                                          expanded.formUnion(["program:cmd:" + name.lowercased(), "program:app:" + name.lowercased()])
-                                     }, acted: resample)
-                    leftBehindNotice
+                                     }, acted: resample, tools: tools, showTools: { section = .tools })
                     actionNotices
                     ThermoTabs(selection: $section, options: sectionOptions, label: tr("Show"))
                     switch section {
@@ -100,6 +100,18 @@ struct MemoryPage: View {
                          confirmTitle: s.force ? tr("Force end") : tr("End"),
                          confirm: { stopping = nil; pulse.end(s); resample() }, cancel: { stopping = nil })
         }
+        .sheet(isPresented: $tools.confirmingRescue) {
+            let targets = tools.groups.filter { !$0.rescueCopies.isEmpty }
+            ConfirmSheet(title: tr("End %1$@ left-behind tool processes?", String(tools.rescueProcesses)),
+                         summary: ToolProcessesText.rescueSummary, destructive: true, heading: tr("What will run"),
+                         lines: ToolProcesses.summary(targets).map { "kill -TERM  \($0.name) ×\($0.rescueCopies)  # \(MemoryFormat.string(kibibytes: $0.rescueKB)) · \(ToolProcessesText.host($0))" },
+                         footnote: ToolProcessesText.rescueFootnote, confirmTitle: tr("End them"),
+                         confirm: {
+                             tools.confirmingRescue = false
+                             guard let operation = operations.begin() else { tools.feedback = tr("This feature is switched off."); return }
+                             tools.end(ToolProcesses.rescueIdentities(targets), rescueOnly: true, subject: "rescue") { operations.end(operation); resample() }
+                         }, cancel: { tools.confirmingRescue = false })
+        }
         .sheet(item: $stoppingProgram) { s in
             ConfirmSheet(title: s.starterExitedOnly ? tr("End %1$@ %2$@ processes whose starter has exited?", String(s.identities.count), s.name)
                                                     : tr("End all %1$@ %2$@ processes?", String(s.identities.count), s.name),
@@ -139,16 +151,6 @@ struct MemoryPage: View {
         return [(.programs, tr("Programs")),
                 (.tools, toolRows == 0 ? tr("AI tool processes") : tr("AI tool processes (%1$@)", String(toolRows))),
                 (.trend, model.suspects.isEmpty ? tr("Trend") : tr("Trend (%1$@ growing)", String(model.suspects.count)))]
-    }
-
-    /// Left-behind tool processes are worth a line whatever tab is open.
-    @ViewBuilder var leftBehindNotice: some View {
-        if tools.rescueProcesses > 0 && section != .tools {
-            HStack(spacing: 10) {
-                NoticeBanner(text: tr("AI agents left %1$@ tool processes behind (%2$@).", String(tools.rescueProcesses), MemoryFormat.string(kibibytes: tools.rescueKB)))
-                Button(tr("Review")) { section = .tools }.buttonStyle(PillButtonStyle(prominent: true)).controlSize(.small)
-            }
-        }
     }
 
     // MARK: Header
@@ -417,6 +419,7 @@ struct MemoryPage: View {
                 Button(tr("Open again")) { pulse.reopen(app) }.buttonStyle(PillButtonStyle()).controlSize(.small)
             }
         }
+        if let done = tools.feedback, section != .tools { NoticeBanner(text: done, dismiss: { tools.feedback = nil }) }
         ForEach([pulse.quitProblem, pulse.restartProblem, pulse.actionFeedback].compactMap { $0 }, id: \.self) { t in
             NoticeBanner(text: t)
         }

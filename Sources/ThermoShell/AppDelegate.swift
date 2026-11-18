@@ -594,6 +594,8 @@ private final class PageMenuTarget: NSObject, NSMenuItemValidation {
         }
         // Give each page what it needs to be worth a picture, but never wait more than 90 s.
         if Date().timeIntervalSince(started) > 90 { return true }
+        // `--snapshot-wait SEC`: for cards that fill in after the page's own readings (a diagnosis, a process list).
+        if let wait = value(after: "--snapshot-wait").flatMap(Double.init), Date().timeIntervalSince(started) < min(wait, 60) { return false }
         if let ready = NativeModules.snapshotReady(page, arguments: args, models: models, center: .shared, started: started) { return ready }
         switch page {
         case let .module(id, _):
