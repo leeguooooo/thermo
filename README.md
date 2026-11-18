@@ -274,7 +274,7 @@ thermo tabs forget UUID --yes   # 把这组暂存记录移到废纸篓，不动�
   总览单独显示项目与源代码目录，按仓库列出整体占用；它包含源码，不能当作全部可释放空间。点击“扫描构建产物”进入项目分类，再选择具体产物。Xcode、开发缓存和临时文件也有对应扫描入口，按钮不直接执行删除。项目根目录会去掉重复别名、嵌套根目录和指向整个 home 的别名；其他磁盘上的项目不计入当前磁盘容量。
   空间总览可复用 CLI 的完整缓存，并按 App 当前语言显示分类标题；切换语言只更新文字，保留原扫描日期和大小。路径保护同时核对父目录符号链接解析后的实际位置，避免缓存或项目别名指向文稿、凭据或用户目录以外的内容。
   空间总览按子目录增量更新。流式 `entry` 的 `id` 在分类内保持不变，调用方应替换该分类的旧条目；`complete`、`measuredLocations`、`totalLocations` 标明分类进度。未完成分类显示“至少”多少空间，`finished` 事件返回扫描结束时的最终状态。扫描最多四个工作线程，页面更新会合并，避免大量临时文件造成任务和界面更新堆积。
-  扫描默认使用 60 秒的协作式预算，并持续向 stderr 输出进度（包括 `--json` 模式）；stdout 保持单份有效 JSON。`--timeout` 是 `--budget` 的别名，两者不能同时指定。大型项目和工作树使用有界的已分配空间测量，下限标为 `sizeIncomplete`，估算标为 `estimatedSize`；`--exact --budget 300` 可完整测量。严重磁盘 I/O 等待可能延迟到下一处取消检查，预算不是内核调用的硬超时。
+  扫描默认使用 180 秒的协作式预算，并持续向 stderr 输出进度（包括 `--json` 模式）；stdout 保持单份有效 JSON。`--timeout` 是 `--budget` 的别名，两者不能同时指定。大型项目和工作树使用有界的已分配空间测量，下限标为 `sizeIncomplete`，估算标为 `estimatedSize`；`--exact --budget 300` 可完整测量。严重磁盘 I/O 等待可能延迟到下一处取消检查，预算不是内核调用的硬超时。
 
   给 agent 限时获取结果可用 `thermo clean overview --budget 10 --stream`，或 `thermo clean projects --budget 10 --json`。预算到期后在下一处取消检查停止，结果标记 `cancelled: true`，仅统计已完整测量的目录；未完成分类标注 `complete: false`，大小是下限，不替换已有完整报告。`stopReason` 说明停止原因（`budget`、`user`、`signal`），`clean` 报告另有 `unfinishedSteps` 和 `unfinishedCategories`；未完成时退出码为 3。`clean overview` 默认预算 120 秒，大盘可用 `--budget 1800` 跑完整。`--budget` 只用于扫描，不能用于执行清理。
   完成的报告按分类、项目目录、保留天数和语言分别缓存，最多保留 32 个范围。再次打开分类页面或执行清理时，只复用范围一致且未过期的报告；清理后所有旧计划失效。项目活动读取会校验文件身份和修改时间，未变化的 Codex 会话无需反复打开。

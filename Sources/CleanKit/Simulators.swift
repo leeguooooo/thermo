@@ -79,9 +79,14 @@ enum Simulators {
 
     /// "iOS 27.2" from "com.apple.CoreSimulator.SimRuntime.iOS-27-2".
     static func runtimeName(_ id: String?, version: String?) -> String {
-        let platform = id?.components(separatedBy: ".").last?.components(separatedBy: "-").first ?? "Simulator"
-        return [platform, version].compactMap { $0 }.joined(separator: " ")
+        let parts = id?.components(separatedBy: ".").last?.components(separatedBy: "-") ?? []
+        let platform = parts.first ?? "Simulator"
+        let fromID = parts.count > 1 ? parts.dropFirst().joined(separator: ".") : nil
+        return [platform, version ?? fromID].compactMap { $0 }.joined(separator: " ")
     }
+
+    /// Days without use after which an available simulator counts as idle.
+    static let simulatorIdleDays = 14
 
     static func items(runtimes: [Runtime], devices: [String: [Device]], ctx: ScanContext) -> [CleanItem] {
         var out: [CleanItem] = []
@@ -118,24 +123,27 @@ enum Simulators {
                                  commands: unavailable.map { ["/usr/bin/xcrun", "simctl", "delete", $0.udid] }))
         }
 
-        // Big devices nobody booted lately: erasing resets their data and keeps the device.
+        // Big devices nobody used lately. Simulators pile up one per runtime and device type, and a few
+        // weeks idle already marks a leftover, so the bar is lower than the general age.
+        let idleDays = min(ctx.options.olderThanDays, simulatorIdleDays)
+        let idle = ctx.now.addingTimeInterval(-Double(idleDays) * 86400)
         for (runtime, devs) in devices {
             for d in devs where d.isAvailable != false {
                 let size = d.dataPathSize ?? 0
                 guard size >= 500_000_000 else { continue }
-                let booted = date(d.lastBootedAt) ?? date(d.lastUsedAt)
-                let touched = booted ?? d.dataPath.flatMap { (try? FileManager.default.attributesOfItem(atPath: $0))?[.modificationDate] as? Date }
-                guard (touched ?? .distantPast) < stale else { continue }
+                let used = [date(d.lastBootedAt), date(d.lastUsedAt)].compactMap { $0 }.max()
+                let touched = used ?? d.dataPath.flatMap { (try? FileManager.default.attributesOfItem(atPath: $0))?[.modificationDate] as? Date }
+                guard (touched ?? .distantPast) < idle else { continue }
                 out.append(CleanItem(
                     id: "simulator-device/\(d.udid)", category: .xcode,
-                    title: tr("Simulator data · %1$@", d.name),
-                    detail: runtimeName(runtime, version: nil) + " · " + (booted == nil ? tr("Last simulator use is unavailable")
-                        : tr("last booted %1$@ days ago", String(Int(ctx.now.timeIntervalSince(booted!) / 86400)))),
+                    title: tr("Idle simulator · %1$@", d.name),
+                    detail: runtimeName(runtime, version: nil) + " · " + (touched == nil ? tr("Last simulator use is unavailable")
+                        : tr("last used %1$@ days ago", String(Int(ctx.now.timeIntervalSince(touched!) / 86400)))),
                     safety: .review, bytes: size, files: 1, lastUsed: touched,
-                    note: tr("erasing resets the simulator like a new device; apps installed in it are removed"),
+                    note: tr("deletes the simulator and the apps in it; add it again in Xcode when needed"),
                     blocked: d.state == "Booted" ? tr("the simulator is running") : nil,
-                    hint: "xcrun simctl erase \(d.udid)",
-                    commands: [["/usr/bin/xcrun", "simctl", "erase", d.udid]]))
+                    hint: "xcrun simctl delete \(d.udid)",
+                    commands: [["/usr/bin/xcrun", "simctl", "delete", d.udid]]))
             }
         }
         return out.map { original in

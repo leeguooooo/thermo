@@ -149,11 +149,6 @@ public enum Rules {
         // MARK: Xcode
         PathRule("xcode-derived-data", .xcode, "Xcode DerivedData", ["~/Library/Developer/Xcode/DerivedData"],
                  scope: .contents, apps: ["Xcode"]),
-        PathRule("xcode-device-support", .xcode, "iOS / watchOS device support",
-                 ["~/Library/Developer/Xcode/iOS DeviceSupport", "~/Library/Developer/Xcode/watchOS DeviceSupport",
-                  "~/Library/Developer/Xcode/tvOS DeviceSupport", "~/Library/Developer/Xcode/visionOS DeviceSupport"],
-                 scope: .staleContents, safety: .safe, note: "symbols copied from devices; recreated when a device connects",
-                 keepNewest: 2),
         PathRule("xcode-archives", .xcode, "Xcode archives", ["~/Library/Developer/Xcode/Archives"],
                  scope: .staleContents, safety: .review, note: "needed to symbolicate crash reports of shipped builds"),
         PathRule("xcode-caches", .xcode, "Xcode caches & previews",

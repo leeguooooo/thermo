@@ -80,6 +80,8 @@ struct CleanCommand {
 
     /// `clean overview` walks everything; without a limit a full disk took 19 minutes.
     static let overviewBudget: TimeInterval = 120
+    /// A full scan of a large developer disk (100+ GB of projects) takes 80–120 s; 60 s stopped before projects finished.
+    static let scanBudget: TimeInterval = 180
 
     static func incompleteMessage(_ what: String, reason: String?, budget: TimeInterval?, unfinished: [String]? = nil) -> String {
         var message = what + " is incomplete"
@@ -185,7 +187,7 @@ struct CleanCommand {
         if let categories { o.categories = categories }
         o.onlyIDs = onlyIDs
         let scanner = DiskScanner(options: o)
-        let budget = try Self.budget(args) ?? 60
+        let budget = try Self.budget(args) ?? Self.scanBudget
         let deadline = Self.deadline(after: budget, cancellation: scanner.cancellation)
         defer { deadline?.cancel() }
         let restoreSignals = Self.stopOnSignals(scanner.cancellation)
@@ -198,7 +200,7 @@ struct CleanCommand {
         }
         let progress = DispatchSource.makeTimerSource(queue: DispatchQueue.global(qos: .utility))
         let progressStarted = Date()
-        FileHandle.standardError.write(Data("scanning… budget \(try Self.budget(args) ?? 60)s; JSON results arrive when finished (--stream for events)\n".utf8))
+        FileHandle.standardError.write(Data("scanning… budget \(Int(budget))s; JSON results arrive when finished (--stream for events)\n".utf8))
         progress.schedule(deadline: .now() + 5, repeating: 5)
         progress.setEventHandler {
             FileHandle.standardError.write(Data(String(format: "scanning… %.0fs elapsed\n", Date().timeIntervalSince(progressStarted)).utf8))
