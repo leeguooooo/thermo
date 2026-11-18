@@ -41,6 +41,8 @@ public enum HostCommandSpecification {
     pulse|pulse [--json|--csv]|cli
     pulse why|pulse why [--for SEC] [--json]|cli
     pulse end|pulse end PID [--dry-run] [--yes] [--json]|cli
+    pulse tools|pulse tools [--json]|cli
+    pulse rescue|pulse rescue [--dry-run] [--yes] [--json]|cli
     pulse inspect|pulse inspect NAME_or_PID [--json]|cli
     pulse explain|pulse explain PID [--json]|cli
     pulse history|pulse history [--since 6h] [--json]|app-recorded-history

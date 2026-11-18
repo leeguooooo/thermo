@@ -49,7 +49,7 @@ struct PulseCommand {
     }
 
     func run(_ rest: [String] = []) throws {
-        guard rest.isEmpty || ["explain","quit","restart","history","inspect","chrome","why","end"].contains(rest[0]) else { throw CLIError("Unknown pulse operation. Run thermo pulse --help.") }
+        guard rest.isEmpty || ["explain","quit","restart","history","inspect","chrome","why","end","tools","rescue"].contains(rest[0]) else { throw CLIError("Unknown pulse operation. Run thermo pulse --help.") }
         if rest.first == "explain" {
             guard rest.count == 2, let pid = Int32(rest[1]), pid > 0 else { throw CLIError("usage: thermo pulse explain PID [--json]") }
             let report = try ProcessExplanation.capture(pid)
@@ -116,6 +116,8 @@ struct PulseCommand {
         }
         if rest.first == "why" { try why(Array(rest.dropFirst())); return }
         if rest.first == "end" { try end(Array(rest.dropFirst())); return }
+        if rest.first == "tools" { try tools(Array(rest.dropFirst())); return }
+        if rest.first == "rescue" { try rescue(Array(rest.dropFirst())); return }
         if rest.first == "quit" { try quit(Array(rest.dropFirst())); return }
         if rest.first == "restart" { try restart(Array(rest.dropFirst())); return }
         if rest.first == "history" { try history(); return }

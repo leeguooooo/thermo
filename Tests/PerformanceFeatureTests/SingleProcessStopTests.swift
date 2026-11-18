@@ -118,6 +118,50 @@ final class SingleProcessStopTests: XCTestCase {
         XCTAssertNotNil(pulse.quitProblem); XCTAssertNil(pulse.actionFeedback)
     }
 
+    @MainActor func testForceQuitAppIsOfferedForReopeningAndTheOfferSurvivesARelaunch() async throws {
+        let suite = "com.example.pulse-closed-\(UUID().uuidString)"
+        let defaults = try XCTUnwrap(UserDefaults(suiteName: suite))
+        defer { defaults.removePersistentDomain(forName: suite) }
+        let path = "/System/Applications/Calculator.app"
+        var stop = fixture(force: true); stop.application = true; stop.appPath = path; stop.name = "Calculator"
+        let calls = Calls(), pulse = SystemPulse(closedAppsDefaults: defaults)
+        await run(pulse, stop, result: .killed, calls: calls)
+        XCTAssertEqual(pulse.closedApps.map(\.path), [path])
+        XCTAssertEqual(pulse.closedAppsToOffer(running: [path]), [], "an app the user reopened by hand needs no offer")
+        XCTAssertEqual(pulse.closedAppsToOffer(running: []).map(\.name), ["Calculator"])
+
+        let relaunched = SystemPulse(closedAppsDefaults: defaults)
+        XCTAssertEqual(relaunched.closedApps.map(\.path), [path])
+        let old = [SystemPulse.ClosedApp(name: "Old", path: path, closed: Date().addingTimeInterval(-90_000)),
+                   SystemPulse.ClosedApp(name: "Gone", path: "/Applications/com.example.missing.app")]
+        defaults.set(try JSONEncoder().encode(old), forKey: "pulse.closedApps")
+        XCTAssertEqual(SystemPulse.loadClosedApps(defaults), [], "day-old and uninstalled apps are not offered")
+
+        let failed = expectation(description: "failed"), opened = expectation(description: "opened")
+        let app = try XCTUnwrap(relaunched.closedApps.first)
+        relaunched.reopen(app) { _, done in done(false); failed.fulfill() }
+        await fulfillment(of: [failed], timeout: 5)
+        await Task.yield(); try await Task.sleep(nanoseconds: 100_000_000)
+        XCTAssertNotNil(relaunched.restartProblem); XCTAssertEqual(relaunched.closedApps.count, 1)
+        relaunched.reopen(app) { url, done in XCTAssertEqual(url.path, path); done(true); opened.fulfill() }
+        await fulfillment(of: [opened], timeout: 5)
+        try await Task.sleep(nanoseconds: 100_000_000)
+        XCTAssertTrue(relaunched.closedApps.isEmpty); XCTAssertNil(relaunched.restartProblem)
+    }
+
+    @MainActor func testEndedCommandLineProcessIsNotOfferedForReopening() async {
+        let calls = Calls(), pulse = SystemPulse(closedAppsDefaults: nil)
+        await run(pulse, fixture(force: true), result: .killed, calls: calls)
+        XCTAssertTrue(pulse.closedApps.isEmpty)
+    }
+
+    func testAnAppThatDoesNotQuitGetsTheForceQuitWording() {
+        var app = fixture(); app.application = true; app.appPath = "/Applications/Example.app"
+        XCTAssertFalse(SystemPulse.unresponsiveText(app).contains("4242"), "an app is named, not given as a PID")
+        XCTAssertNotEqual(SystemPulse.unresponsiveText(app), SystemPulse.unresponsiveText(fixture()))
+        XCTAssertTrue(SystemPulse.unresponsiveText(fixture()).contains("4242"))
+    }
+
     func testEndingAWholeProgramSkipsAgentsAndChangedIdentities() throws {
         let worker = try binary("/bin/sleep", named: "worker")
         let (first, a) = try start(worker, ["60"]), (second, b) = try start(worker, ["60"])
