@@ -63,6 +63,9 @@ struct MemoryReliefCard: View {
     let restart: (MachinePulse.Hog) -> Void
     let inspect: (String) -> Void
     let acted: () -> Void
+    @ObservedObject var tools: ToolProcessesModel
+    let showTools: () -> Void
+    @State private var opened: Set<String> = []
 
     @EnvironmentObject private var recorder: PulseRecorder
     @Environment(\.performanceOperations) private var operations
@@ -83,15 +86,16 @@ struct MemoryReliefCard: View {
     }
 
     @ViewBuilder var content: some View {
-        if let d = recorder.diagnosis, d.memoryStrain != .none || feedback != nil {
+        if let d = recorder.diagnosis, d.memoryStrain != .none || feedback != nil || tools.rescueProcesses > 0 {
             let plan = MemoryReliefPlan(d)
-            if !plan.steps.isEmpty || feedback != nil {
+            if !plan.steps.isEmpty || feedback != nil || tools.rescueProcesses > 0 {
                 VStack(alignment: .leading, spacing: 0) {
                     header(d, plan)
                     if advice.phase == .preview, let s = advice.snapshot { divider; preview(s) }
                     if case .failed(let why) = advice.phase { divider; note(why, symbol: "exclamationmark.triangle") }
                     if let r = advice.report, advice.phase != .preview { divider; summary(r) }
-                    ForEach(plan.steps) { step in
+                    if tools.rescueProcesses > 0 { divider; toolsRow }
+                    ForEach(rows(plan)) { step in
                         divider
                         row(step)
                     }
@@ -133,7 +137,9 @@ struct MemoryReliefCard: View {
             .frame(width: 28, height: 28).accessibilityHidden(true)
             VStack(alignment: .leading, spacing: Theme.Space.xs) {
                 Text(state).font(Theme.heading).foregroundStyle(Theme.textPrimary).fixedSize(horizontal: false, vertical: true)
-                Text(safe.isEmpty
+                Text(safe.isEmpty && tools.rescueProcesses > 0
+                     ? tr("Start with the left-behind tool processes: ending them interrupts nothing. The rest is yours to decide.")
+                     : safe.isEmpty
                      ? tr("Nothing can be freed without interrupting something. The steps below are yours to decide, biggest first.")
                      : tr("%1$@ idle or leftover processes hold about %2$@ and can go without interrupting your work. The rest is yours to decide.",
                           String(count), MemoryFormat.string(kibibytes: plan.safeKB)))
@@ -204,54 +210,89 @@ struct MemoryReliefCard: View {
         }
     }
 
+    /// One line a step: what, what it costs, how much comes back, the button. The reasoning is one
+    /// click away instead of three lines on every row.
     func row(_ step: MemoryReliefPlan.Step) -> some View {
         let c = step.culprit
-        let (label, color) = Self.tag(step.tier)
+        let (_, color) = Self.tag(step.tier)
         let (lead, rest) = SlowdownCulpritsCard.split(c.guidance)
-        return HStack(alignment: .top, spacing: Theme.Space.m) {
-            Image(systemName: step.tier == .safe ? "checkmark.circle.fill" : step.tier == .ask ? "macwindow" : "hand.raised")
-                .font(.system(size: 13, weight: .medium)).foregroundStyle(color)
-                .frame(width: 28, alignment: .center).padding(.top, 1).accessibilityHidden(true)
-            VStack(alignment: .leading, spacing: Theme.Space.xs) {
-                HStack(alignment: .firstTextBaseline, spacing: Theme.Space.s) {
+        let open = opened.contains(step.id)
+        return VStack(alignment: .leading, spacing: Theme.Space.xs) {
+            HStack(alignment: .center, spacing: Theme.Space.m) {
+                Image(systemName: step.tier == .safe ? "checkmark.circle.fill" : step.tier == .ask ? "macwindow" : "terminal")
+                    .font(.system(size: 13, weight: .medium)).foregroundStyle(color)
+                    .frame(width: 28, alignment: .center).accessibilityHidden(true)
+                VStack(alignment: .leading, spacing: 1) {
                     Text(c.name).font(Theme.body.weight(.semibold)).foregroundStyle(Theme.textPrimary).lineLimit(1)
-                    Text(tr("frees ~%1$@", MemoryFormat.string(kibibytes: c.freesKB)))
-                        .font(Theme.caption.monospacedDigit()).foregroundStyle(Theme.caution).fixedSize()
-                    StatusTag(text: label, color: color).fixedSize()
-                    Spacer(minLength: Theme.Space.s)
-                    action(step)
+                    Text(lead).font(Theme.caption).foregroundStyle(Theme.textSecondary).lineLimit(open ? nil : 1)
+                        .fixedSize(horizontal: false, vertical: open).help(lead)
                 }
-                Text(lead).font(Theme.secondary).foregroundStyle(Theme.textSecondary)
-                    .lineLimit(3).fixedSize(horizontal: false, vertical: true)
-                if let f = advice.finding(for: step), !f.impact.isEmpty {
-                    let (verdict, tone) = AISafetyPresentation.label(f.safety)
-                    HStack(alignment: .firstTextBaseline, spacing: Theme.Space.s) {
-                        Label(tr("AI advice: %1$@", verdict), systemImage: "sparkles").font(Theme.label).foregroundStyle(tone)
-                            .padding(.horizontal, 6).padding(.vertical, 2).background(Capsule().fill(tone.opacity(0.15))).fixedSize()
-                        Text(f.impact).font(Theme.secondary).foregroundStyle(Theme.textPrimary).textSelection(.enabled)
-                            .fixedSize(horizontal: false, vertical: true)
-                    }
-                    if (step.tier == .safe && f.safety != .safe) || (step.tier != .safe && f.safety == .safe) {
-                        Text(tr("AI advice differs from Thermo’s checks. Review the impact before acting; AI never changes which processes the button can end."))
-                            .font(Theme.caption).foregroundStyle(Theme.caution).fixedSize(horizontal: false, vertical: true)
-                    }
+                Spacer(minLength: Theme.Space.s)
+                Text(MemoryFormat.string(kibibytes: c.freesKB)).font(Theme.body.monospacedDigit()).foregroundStyle(Theme.textPrimary).fixedSize()
+                action(step)
+                Button { if open { opened.remove(step.id) } else { opened.insert(step.id) } } label: {
+                    Image(systemName: open ? "chevron.up" : "chevron.down").font(.system(size: 10, weight: .semibold))
+                        .foregroundStyle(Theme.textTertiary).frame(width: 18, height: 18)
                 }
-                DisclosureGroup {
-                    VStack(alignment: .leading, spacing: Theme.Space.xs) {
-                        if !rest.isEmpty { Text(rest).font(Theme.caption).foregroundStyle(Theme.textSecondary).fixedSize(horizontal: false, vertical: true) }
-                        Text(c.evidence).font(Theme.caption).foregroundStyle(Theme.textTertiary).fixedSize(horizontal: false, vertical: true)
-                        if let sessions = c.sessions, !sessions.isEmpty {
-                            Text(sessions.prefix(12).joined(separator: "\n")).font(Theme.caption.monospacedDigit()).foregroundStyle(Theme.textTertiary)
-                                .textSelection(.enabled)
-                        }
-                    }
-                    .padding(.top, Theme.Space.xs)
-                } label: {
-                    Text(tr("Details")).font(Theme.caption).foregroundStyle(Theme.textTertiary)
+                .buttonStyle(.plain).accessibilityLabel(tr("Details")).help(tr("Details"))
+            }
+            if let f = advice.finding(for: step), !f.impact.isEmpty {
+                let (verdict, tone) = AISafetyPresentation.label(f.safety)
+                HStack(alignment: .firstTextBaseline, spacing: Theme.Space.s) {
+                    Label(tr("AI advice: %1$@", verdict), systemImage: "sparkles").font(Theme.label).foregroundStyle(tone)
+                        .padding(.horizontal, 6).padding(.vertical, 2).background(Capsule().fill(tone.opacity(0.15))).fixedSize()
+                    Text(f.impact).font(Theme.secondary).foregroundStyle(Theme.textPrimary).textSelection(.enabled)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+                .padding(.leading, 28 + Theme.Space.m)
+                if (step.tier == .safe && f.safety != .safe) || (step.tier != .safe && f.safety == .safe) {
+                    Text(tr("AI advice differs from Thermo’s checks. Review the impact before acting; AI never changes which processes the button can end."))
+                        .font(Theme.caption).foregroundStyle(Theme.caution).fixedSize(horizontal: false, vertical: true)
+                        .padding(.leading, 28 + Theme.Space.m)
                 }
             }
+            if open {
+                VStack(alignment: .leading, spacing: Theme.Space.xs) {
+                    if !rest.isEmpty { Text(rest).font(Theme.caption).foregroundStyle(Theme.textSecondary).fixedSize(horizontal: false, vertical: true) }
+                    Text(c.evidence).font(Theme.caption).foregroundStyle(Theme.textTertiary).fixedSize(horizontal: false, vertical: true)
+                    if let sessions = c.sessions, !sessions.isEmpty {
+                        Text(sessions.prefix(12).joined(separator: "\n")).font(Theme.caption.monospacedDigit()).foregroundStyle(Theme.textTertiary)
+                            .textSelection(.enabled)
+                    }
+                }
+                .padding(.leading, 28 + Theme.Space.m)
+            }
         }
-        .padding(.horizontal, Theme.Space.l).padding(.vertical, Theme.Space.m)
+        .padding(.horizontal, Theme.Space.l).padding(.vertical, Theme.Space.s)
+    }
+
+    /// Left-behind tool processes: the one row here that frees memory without anyone losing work.
+    var toolsRow: some View {
+        HStack(alignment: .center, spacing: Theme.Space.m) {
+            Image(systemName: "checkmark.circle.fill").font(.system(size: 13, weight: .medium)).foregroundStyle(Theme.good)
+                .frame(width: 28, alignment: .center).accessibilityHidden(true)
+            VStack(alignment: .leading, spacing: 1) {
+                Text(tr("%1$@ left-behind AI tool processes", String(tools.rescueProcesses))).font(Theme.body.weight(.semibold)).foregroundStyle(Theme.textPrimary)
+                Text(tr("Nobody is using them; no session or app is closed.")).font(Theme.caption).foregroundStyle(Theme.textSecondary).lineLimit(1)
+            }
+            Spacer(minLength: Theme.Space.s)
+            Text(MemoryFormat.string(kibibytes: tools.rescueKB)).font(Theme.body.monospacedDigit()).foregroundStyle(Theme.textPrimary).fixedSize()
+            Button(tools.working ? tr("Stopping…") : tr("End them…")) { tools.confirmingRescue = true }
+                .buttonStyle(PillButtonStyle(prominent: true, color: Theme.caution)).controlSize(.small).disabled(tools.working)
+            Button { showTools() } label: {
+                Image(systemName: "chevron.right").font(.system(size: 10, weight: .semibold)).foregroundStyle(Theme.textTertiary).frame(width: 18, height: 18)
+            }
+            .buttonStyle(.plain).accessibilityLabel(tr("Details")).help(tr("Details"))
+        }
+        .padding(.horizontal, Theme.Space.l).padding(.vertical, Theme.Space.s)
+    }
+
+    /// Steps worth a row: a service whose pile the tools row already ends is not listed a second time.
+    func rows(_ plan: MemoryReliefPlan) -> [MemoryReliefPlan.Step] {
+        let covered = Set(tools.groups.filter { !$0.rescueCopies.isEmpty }.compactMap(\.hostPID))
+        return plan.steps.filter { step in
+            !(step.culprit.kind == .leakyParent && step.culprit.pids.contains { covered.contains($0) })
+        }
     }
 
     /// The Memory page's own row for the app, which carries the identity its quit and restart check.

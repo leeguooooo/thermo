@@ -12,6 +12,8 @@ import ThermoL10n
     @Published private(set) var loaded = false
     @Published private(set) var working = false
     @Published var feedback: String?
+    /// Asked for from any card; the page shows the one confirmation.
+    @Published var confirmingRescue = false
     private var reading = false
     private let read: @Sendable () -> [SlowdownProcess]
 
@@ -81,7 +83,6 @@ struct ToolProcessesCard: View {
     @ObservedObject var model: ToolProcessesModel
     let acted: () -> Void
     @Environment(\.performanceOperations) private var operations
-    @State private var confirmingRescue = false
     @State private var ending: ToolProcesses.Summary?
     @State private var showAll = false
 
@@ -112,7 +113,7 @@ struct ToolProcessesCard: View {
                     }
                     Spacer(minLength: 8)
                     if model.rescueProcesses > 0 {
-                        Button(model.working ? tr("Stopping…") : tr("End left behind…")) { confirmingRescue = true }
+                        Button(model.working ? tr("Stopping…") : tr("End left behind…")) { model.confirmingRescue = true }
                             .buttonStyle(PillButtonStyle(prominent: true, color: Theme.danger)).controlSize(.small).disabled(model.working)
                     }
                 }
@@ -135,15 +136,6 @@ struct ToolProcessesCard: View {
                 }
             }
             .background(RoundedRectangle(cornerRadius: Theme.radius, style: .continuous).fill(Theme.surface))
-            .sheet(isPresented: $confirmingRescue) {
-                let targets = model.groups.filter { !$0.rescueCopies.isEmpty }
-                ConfirmSheet(title: tr("End %1$@ left-behind tool processes?", String(model.rescueProcesses)),
-                             summary: ToolProcessesText.rescueSummary, destructive: true, heading: tr("What will run"),
-                             lines: ToolProcesses.summary(targets).map { "kill -TERM  \($0.name) ×\($0.rescueCopies)  # \(MemoryFormat.string(kibibytes: $0.rescueKB)) · \(ToolProcessesText.host($0))" },
-                             footnote: ToolProcessesText.rescueFootnote, confirmTitle: tr("End them"),
-                             confirm: { confirmingRescue = false; run(ToolProcesses.rescueIdentities(targets), rescueOnly: true, subject: "rescue") },
-                             cancel: { confirmingRescue = false })
-            }
             .sheet(item: $ending) { g in
                 ConfirmSheet(title: tr("End %1$@ ×%2$@?", g.name, String(g.copies)),
                              summary: g.hostKind == .none
