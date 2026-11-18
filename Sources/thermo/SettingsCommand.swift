@@ -61,6 +61,8 @@ struct SettingsCommand {
                 show: { v in String(format: "%g", (v as? Double) ?? 90) }),
         Setting(key: "slowdown-alerts", defaultsKey: "slowdownAlerts", help: "on | off (notify before slowdowns)",
                 parse: bool, show: { ($0 as? Bool ?? true) ? "on" : "off" }),
+        Setting(key: "auto-end-tools", defaultsKey: "autoEndLeftBehindTools", help: "on | off (end left-behind AI tool processes without asking)",
+                parse: bool, show: { ($0 as? Bool ?? false) ? "on" : "off" }),
         Setting(key: "unnamed-sensors", defaultsKey: "unnamedSensors", help: "on | off (include unnamed readings in Sensors)",
                 parse: bool, show: { ($0 as? Bool ?? false) ? "on" : "off" }),
         Setting(key: "fahrenheit", defaultsKey: "fahrenheit", help: "on | off",

@@ -84,6 +84,21 @@ final class ToolProcessesTests: XCTestCase {
         XCTAssertEqual(rescue.count, 38 * 3 + 40 + 73 + 1)
     }
 
+    func testThePileIsReportedBeforeMemoryIsTightAndOnlyOnceAnHour() {
+        let groups = ToolProcesses.inventory(incident(), me: 999_999, starterExited: { $0.pid == 90_001 })
+        var alerts = SlowdownAlerts()
+        let now = Date()
+        let fired = alerts.evaluateTools(groups, now: now)
+        XCTAssertEqual(fired.map(\.action), [SlowdownAlerts.toolsAction])
+        XCTAssertEqual(fired.first?.title.contains("228"), true)
+        XCTAssertTrue(alerts.evaluateTools(groups, now: now.addingTimeInterval(600)).isEmpty)
+        XCTAssertEqual(alerts.evaluateTools(groups, now: now.addingTimeInterval(3700)).count, 1)
+        // A couple of strays are not worth a notification.
+        var quiet = SlowdownAlerts()
+        let few = ToolProcesses.inventory(incident().filter { $0.pid >= 80_000 || $0.pid == 1 }, me: 999_999, starterExited: { $0.pid == 90_001 })
+        XCTAssertTrue(quiet.evaluateTools(few, now: now).isEmpty)
+    }
+
     func testAnythingLeadingToTheCallerIsLeftOut() {
         var ps = incident()
         // The CLI was started from a tool of that Codex thread.
