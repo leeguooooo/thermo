@@ -85,16 +85,18 @@ struct MemoryPage: View {
                          confirm: { stopping = nil; pulse.end(s); resample() }, cancel: { stopping = nil })
         }
         .sheet(item: $stoppingProgram) { s in
-            ConfirmSheet(title: tr("End all %1$@ %2$@ processes?", String(s.identities.count), s.name),
+            ConfirmSheet(title: s.starterExitedOnly ? tr("End %1$@ %2$@ processes whose starter has exited?", String(s.identities.count), s.name)
+                                                    : tr("End all %1$@ %2$@ processes?", String(s.identities.count), s.name),
                          summary: MachinePulse.sentences(
                             tr("Each process is asked to stop (SIGTERM). Unsaved work in them may be lost; a program that needs one again starts a new copy."),
-                            s.leftAlone > 0 ? tr("%1$@ more are protected or AI agent sessions and are left running.", String(s.leftAlone)) : ""),
+                            s.leftAlone == 0 ? "" : s.starterExitedOnly ? tr("The other %1$@ %2$@ processes are left running.", String(s.leftAlone), s.name)
+                                : tr("%1$@ more are protected or AI agent sessions and are left running.", String(s.leftAlone))),
                          destructive: true, heading: tr("What will run"),
                          lines: s.rows.map { row in
                              "kill -TERM " + row.identities.map { String($0.pid) }.joined(separator: " ") + (row.project.map { "   # " + $0 } ?? "")
                          },
                          footnote: tr("Thermo never stops system processes or itself."),
-                         confirmTitle: tr("End all"),
+                         confirmTitle: s.starterExitedOnly ? tr("End") : tr("End all"),
                          confirm: { stoppingProgram = nil; pulse.endAll(s); resample() }, cancel: { stoppingProgram = nil })
         }
         .sheet(item: $restartTarget) { h in
@@ -456,6 +458,7 @@ struct MemoryPage: View {
             .contextMenu { if let target = program.actionTarget { rowMenu(target) } }
             if isOpen {
                 VStack(alignment: .leading, spacing: 8) {
+                    strandedNotice(program)
                     programTrend(program)
                     ForEach(program.contexts) { h in contextRow(h, showActions: program.actionTarget == nil) }
                 }
@@ -481,8 +484,11 @@ struct MemoryPage: View {
                         AxisGridLine()
                         AxisValueLabel { if let d = v.as(Double.self) { Text(String(format: "%.1f GiB", d)) } }
                     } }
-                Text(tr("Program totals include changing workloads; growth alone does not prove a leak."))
-                    .foregroundStyle(Theme.textSecondary)
+                // With processes left behind the notice above says what the growth is made of.
+                if stranded(program).count == 0 {
+                    Text(tr("Program totals include changing workloads; growth alone does not prove a leak."))
+                        .foregroundStyle(Theme.textSecondary)
+                }
             }.font(Theme.caption).padding(.leading, 32).padding(.trailing, 16)
         } else {
             Text(tr("Program trend appears after comparable samples are collected."))
@@ -540,7 +546,7 @@ struct MemoryPage: View {
         // A row that is this one process already carries the End; here it stays in the context menu.
         let button = h.pids.count > 1 ? target : nil
         // Verbatim: a PID is an identifier, not a quantity, so no thousands separator.
-        let title = [MachinePulse.roleName(p.role), "PID \(p.pid)", p.uptime.map { tr("running for %1$@", MemorySuspects.duration($0)) }]
+        let title = [p.starterExited == true ? tr("starter has exited") : MachinePulse.roleName(p.role), "PID \(p.pid)", p.uptime.map { tr("running for %1$@", MemorySuspects.duration($0)) }]
             .compactMap { $0 }.joined(separator: " · ")
         let footprint = metric(p.memoryKB, p.memoryMetric)
         let resident = p.residentKB.map { MemoryFormat.string(kibibytes: $0) } ?? "—"
@@ -595,6 +601,39 @@ struct MemoryPage: View {
                                        rows: endable.map { .init(project: $0.project, identities: $0.processIdentities ?? []) },
                                        leftAlone: program.processCount - endable.reduce(0) { $0 + $1.pids.count },
                                        memoryKB: endable.reduce(0) { $0 + $1.memoryKB })
+    }
+
+    func stranded(_ program: MemoryProgram) -> (count: Int, memoryKB: Int, stop: SystemPulse.ProgramStop?) {
+        guard let stop = SystemPulse.ProgramStop.starterExited(in: program) else { return (0, 0, nil) }
+        return (stop.identities.count, stop.memoryKB, stop)
+    }
+
+    /// Says what the left-behind processes are and offers to end only those. It states what was read;
+    /// a server started on purpose to keep running looks the same, so it never calls them safe to end.
+    @ViewBuilder func strandedNotice(_ program: MemoryProgram) -> some View {
+        let left = stranded(program)
+        if let stop = left.stop {
+            let busy = pulse.endingPrograms.contains(stop.id)
+            HStack(alignment: .top, spacing: 10) {
+                Image(systemName: "exclamationmark.triangle.fill").foregroundStyle(Theme.caution)
+                VStack(alignment: .leading, spacing: 3) {
+                    Text(left.count == program.processCount
+                         ? tr("All %1$@ processes were started by a program that has since exited. Nothing is managing them, and they hold %2$@.",
+                              String(left.count), MemoryFormat.string(kibibytes: left.memoryKB))
+                         : tr("%1$@ of %2$@ processes were started by a program that has since exited. Nothing is managing them, and they hold %3$@.",
+                              String(left.count), String(program.processCount), MemoryFormat.string(kibibytes: left.memoryKB)))
+                        .foregroundStyle(Theme.textPrimary)
+                    Text(MachinePulse.sentences(MachinePulse.toolNote(program.name) ?? "",
+                                                tr("Leftovers of a finished test run or build look like this and can be ended. A server you started to keep running in the background looks the same: check the folders below first.")))
+                        .foregroundStyle(Theme.textSecondary)
+                }.fixedSize(horizontal: false, vertical: true).frame(maxWidth: .infinity, alignment: .leading)
+                Button(busy ? tr("Stopping…") : tr("End these %1$@…", String(left.count))) { stoppingProgram = stop }
+                    .buttonStyle(PillButtonStyle()).controlSize(.small).disabled(busy)
+            }
+            .font(Theme.caption).padding(10).padding(.leading, 0)
+            .background(RoundedRectangle(cornerRadius: Theme.radiusSmall, style: .continuous).fill(Theme.caution.opacity(0.08)))
+            .padding(.leading, 32).padding(.trailing, 16)
+        }
     }
 
     func endButton(_ target: SystemPulse.SingleStop) -> some View {
@@ -669,6 +708,8 @@ struct MemoryPage: View {
     /// "Expand for processes" only while there is something to expand to.
     func programSubtitle(_ program: MemoryProgram, open: Bool) -> String {
         let app = program.contexts.first?.app != nil
+        let left = stranded(program).count
+        if !open, left > 0 { return tr("%1$@ left running after their starter exited · expand for details", String(left)) }
         if open { return app ? tr("Application") : tr("%1$@ projects", String(program.projects.count)) }
         return app ? tr("App · expand for processes") : tr("%1$@ projects · expand for processes", String(program.projects.count))
     }
@@ -677,6 +718,8 @@ struct MemoryPage: View {
         var parts = [tr("%1$@ processes", String(h.pids.count))]
         if let o = h.owner { parts.append(tr("started by %1$@", o)) }
         if let up = h.uptime { parts.append(tr("oldest process: %1$@", MemorySuspects.duration(up))) }
+        let left = (h.parts ?? []).filter { $0.starterExited == true }.count
+        if left > 0 { parts.append(left == h.pids.count ? tr("starter has exited") : tr("%1$@ whose starter has exited", String(left))) }
         if !h.quittable {
             let processes = h.parts ?? []
             let choosable = processes.filter { singleStop(h, $0) != nil }.count

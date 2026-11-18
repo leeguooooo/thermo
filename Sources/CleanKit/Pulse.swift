@@ -84,6 +84,9 @@ public struct MachinePulse: Codable, Sendable, Equatable {
         public var uptime: TimeInterval?
         /// Current parent PID; 1 alone does not distinguish launchd startup from adoption.
         public var ppid: Int32? = nil
+        /// True for a command-line process this user may end whose starter has exited (see
+        /// `AgentProcess.starterExited`). Never set for apps, agent sessions or protected processes.
+        public var starterExited: Bool? = nil
         public var owner: String? = nil
         public var project: String? = nil
         /// How this one process may be stopped by hand; nil for system processes, other users'
@@ -309,7 +312,7 @@ public struct MachinePulse: Codable, Sendable, Equatable {
                              details: ProcessDetails(executable: p.executable, argv: p.argv, cwd: p.cwd),
                              owner: owner(p), residentKB: reading.residentKB, uptime: p.elapsed > 0 ? p.elapsed : nil,
                              memoryMetric: reading.footprintKB != nil ? .footprint : reading.residentKB != nil ? .residentEstimate : .unavailable,
-                             ppid: p.ppid)
+                             ppid: p.ppid, starterExited: p.starterExited)
         }, byMemory: byMemory, me: me, limit: limit)
     }
 
@@ -326,6 +329,7 @@ public struct MachinePulse: Codable, Sendable, Equatable {
         var uptime: TimeInterval? = nil
         var memoryMetric: MemoryMetric = .footprint
         var ppid: pid_t? = nil
+        var starterExited = false
     }
 
     static func group(_ procs: [Candidate], byMemory: Bool, me: pid_t, limit: Int? = 4) -> [Hog] {
@@ -370,7 +374,8 @@ public struct MachinePulse: Codable, Sendable, Equatable {
                     if h.parts == nil { h.parts = [] }
                     h.parts!.append(Part(pid: p.pid, role: role(p.details.argv), memoryKB: p.memoryKB, residentKB: p.residentKB,
                                       memoryMetric: p.memoryMetric, cpu: p.cpu, uptime: p.uptime,
-                                      ppid: p.ppid, owner: p.owner, project: project, stop: stop))
+                                      ppid: p.ppid, starterExited: app == nil && stop == .end && p.starterExited ? true : nil,
+                                      owner: p.owner, project: project, stop: stop))
                 }
             }
             add(&byKey[key, default: Hog(id: key, name: name, cpu: 0, memoryKB: 0, pids: [], app: app, quittable: quittable,
@@ -458,6 +463,16 @@ public struct MachinePulse: Codable, Sendable, Equatable {
     }
 
     /// A part's role, for people ("page" rather than "renderer").
+    /// What a few command-line tools are, for programs whose name says nothing to most people.
+    public static func toolNote(_ name: String) -> String? {
+        switch name.lowercased() {
+        case "workerd": return tr("workerd is the Cloudflare Workers runtime for local use; wrangler dev and Workers test runs (vitest) start it.")
+        case "esbuild": return tr("esbuild is a JavaScript bundler; dev servers and build tools start it.")
+        case "chromedriver": return tr("chromedriver drives Chrome for automated browser tests.")
+        default: return nil
+        }
+    }
+
     public static func roleName(_ role: String) -> String {
         switch role {
         case "GPU": return tr("GPU")
