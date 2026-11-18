@@ -57,8 +57,8 @@ final class ToolProcessesTests: XCTestCase {
         let codegraph = try XCTUnwrap(group("codegraph", .sharedService))
         XCTAssertEqual(codegraph.copies.count, 39)
         XCTAssertEqual(codegraph.processes, 38 * 3 + 1, "a copy is its whole tree")
-        XCTAssertEqual(codegraph.rescueCopies.count, 38, "the ten-minute-old copy belongs to a thread that may be working")
-        XCTAssertEqual(codegraph.rescueKB, 38 * 85 * mb)
+        XCTAssertEqual(codegraph.rescueCopies.count, 39, "39 copies under one service is a pile whatever their age")
+        XCTAssertEqual(codegraph.rescueKB, 38 * 85 * mb + 80 * mb)
         XCTAssertEqual(codegraph.hostPID, 58_828)
         XCTAssertEqual(group("mcp-feedback-channel.mjs", .sharedService)?.rescueCopies.count ?? group("mcp-feedback-channel", .sharedService)?.rescueCopies.count, 40,
                        "a script named after MCP is a tool even when the command is plain node")
@@ -81,7 +81,7 @@ final class ToolProcessesTests: XCTestCase {
         XCTAssertEqual(lines.first { $0.name == "codegraph" && $0.hostKind == .session }?.hosts, 1)
 
         let rescue = ToolProcesses.rescueIdentities(groups)
-        XCTAssertEqual(rescue.count, 38 * 3 + 40 + 73 + 1)
+        XCTAssertEqual(rescue.count, 38 * 3 + 1 + 40 + 73 + 1)
     }
 
     func testThePileIsReportedBeforeMemoryIsTightAndOnlyOnceAnHour() {
@@ -90,13 +90,26 @@ final class ToolProcessesTests: XCTestCase {
         let now = Date()
         let fired = alerts.evaluateTools(groups, now: now)
         XCTAssertEqual(fired.map(\.action), [SlowdownAlerts.toolsAction])
-        XCTAssertEqual(fired.first?.title.contains("228"), true)
+        XCTAssertEqual(fired.first?.title.contains("229"), true)
         XCTAssertTrue(alerts.evaluateTools(groups, now: now.addingTimeInterval(600)).isEmpty)
         XCTAssertEqual(alerts.evaluateTools(groups, now: now.addingTimeInterval(3700)).count, 1)
         // A couple of strays are not worth a notification.
         var quiet = SlowdownAlerts()
         let few = ToolProcesses.inventory(incident().filter { $0.pid >= 80_000 || $0.pid == 1 }, me: 999_999, starterExited: { $0.pid == 90_001 })
         XCTAssertTrue(quiet.evaluateTools(few, now: now).isEmpty)
+    }
+
+    /// 2026-11-18, 15:27: minutes after the pile was ended, the service started a full set again for
+    /// every thread. None was an hour old, and all of them were idle.
+    func testAFreshPileUnderASharedServiceIsStillAPileButAFewYoungCopiesAreNot() {
+        let node = "/opt/homebrew/bin/node"
+        var ps = [process(58_828, 1, "codex", "\(home)/.codex/bin/codex", ["codex", "app-server"], elapsed: 780_000)]
+        for i in 0..<10 { ps.append(process(61_000 + Int32(i), 58_828, "node", node, ["node", "/opt/homebrew/bin/rea", "mcp"], kb: 290 * mb, elapsed: 240)) }
+        for i in 0..<4 { ps.append(process(62_000 + Int32(i), 58_828, "node", node, ["node", "/opt/homebrew/bin/codegraph", "serve", "--mcp"], kb: 60 * mb, elapsed: 240)) }
+        ps.append(process(63_000, 58_828, "node", node, ["node", "/opt/homebrew/bin/rea", "mcp"], cpu: 35, kb: 290 * mb, elapsed: 240))
+        let groups = ToolProcesses.inventory(ps, me: 999_999, starterExited: { _ in false })
+        XCTAssertEqual(groups.first { $0.name == "rea" }?.rescueCopies.count, 10, "the copy that is working stays")
+        XCTAssertEqual(groups.first { $0.name == "codegraph" }?.rescueCopies.count, 0, "four young copies can be four threads at work")
     }
 
     func testAnythingLeadingToTheCallerIsLeftOut() {

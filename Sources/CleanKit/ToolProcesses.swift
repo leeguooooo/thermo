@@ -48,6 +48,9 @@ public struct ToolProcessGroup: Sendable, Equatable, Identifiable, Encodable {
 public enum ToolProcesses {
     /// A copy held by a shared service counts as left behind once it is this old and not working.
     public static let rescueAge: TimeInterval = 3600
+    /// One thread uses one copy of a tool. This many under one shared service is a pile whatever its
+    /// age: the service starts a full set again for every thread it resumes.
+    public static let pileCopies = 5
     /// Helpers an agent service starts per thread that are not MCP servers by name.
     static let serviceHelpers: Set<String> = ["node_repl", "skycomputeruseclient"]
     static let shells: Set<String> = ["zsh", "bash", "sh", "fish", "dash", "ksh", "tcsh", "login"]
@@ -125,7 +128,14 @@ public enum ToolProcesses {
             }
             groups[key]?.copies.append(copy)
         }
-        return groups.values.map { g in var g = g; g.copies.sort { $0.memoryKB > $1.memoryKB }; return g }
+        return groups.values.map { g in
+            var g = g
+            if g.hostKind == .sharedService, g.copies.count >= pileCopies {
+                for i in g.copies.indices where g.copies[i].cpu < 2 { g.copies[i].rescue = true }
+            }
+            g.copies.sort { $0.memoryKB > $1.memoryKB }
+            return g
+        }
             .sorted { a, b in a.memoryKB != b.memoryKB ? a.memoryKB > b.memoryKB : a.id < b.id }
     }
 
