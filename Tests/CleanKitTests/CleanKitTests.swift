@@ -497,15 +497,80 @@ final class CleanKitTests: XCTestCase {
         XCTAssertEqual(item.paths, [home + "/Library/Logs/Other"])
     }
 
-    func testKeepsNewestDeviceSupport() throws {
-        let base = "Library/Developer/Xcode/iOS DeviceSupport/"
-        try write(base + "16.0/a", age: 300)
-        try write(base + "17.0/a", age: 200)
-        try write(base + "18.0/a", age: 100)
-        let rule = try XCTUnwrap(Rules.paths.first { $0.id == "xcode-device-support" })
-        var o = ScanOptions(); o.home = home
-        let item = try XCTUnwrap(DiskScanner(options: o).evaluate(rule, ctx: context(), denied: { _ in }))
-        XCTAssertEqual(item.paths, [home + "/" + base + "16.0"])
+    func deviceSupport(_ name: String, age: Double) throws -> String {
+        let p = try write("Library/Developer/Xcode/iOS DeviceSupport/" + name + "/Symbols/dyld", age: age)
+        let dir = ((p as NSString).deletingLastPathComponent as NSString).deletingLastPathComponent
+        try touch(dir + "/Symbols", age: age); try touch(dir, age: age)
+        return dir
+    }
+
+    func testDeviceSupportKeepsEachPairedDevicesCurrentBuild() throws {
+        let beta = try deviceSupport("iPhone14,7 27.2 (24B5089g)", age: 20)
+        _ = try deviceSupport("iPhone14,7 27.2.1 (24B156)", age: 1)
+        _ = try deviceSupport("iPhone14,5 27.0 (24A435)", age: 25)
+        let gone = try deviceSupport("iPhone12,1 26.0 (23A341)", age: 40)
+        let recentUnpaired = try deviceSupport("iPhone13,2 26.6 (23G80)", age: 5)
+        let paired: Set<DeviceSupport.Paired> = [.init(model: "iPhone14,7", build: "24B156"), .init(model: "iPhone14,5", build: "24A435")]
+        let folders = try XCTUnwrap(FS.children(home + "/Library/Developer/Xcode/iOS DeviceSupport")).map { path in
+            let p = DeviceSupport.parse((path as NSString).lastPathComponent)
+            return DeviceSupport.Folder(path: path, model: p.model, version: p.version, build: p.build,
+                                        size: FS.size(path, trackNewest: true), touched: FS.mtime(path))
+        }
+        let item = try XCTUnwrap(DeviceSupport.item(folders, paired: paired, ctx: context()))
+        XCTAssertEqual(item.paths, [beta, gone].sorted(), "a replaced build and a long-unused model go; current builds stay")
+        XCTAssertFalse(item.paths.contains(recentUnpaired), "a model with no pairing record is kept while recently used")
+        XCTAssertEqual(item.safety, .safe)
+        XCTAssertEqual(item.parts?.count, 2)
+        XCTAssertTrue(item.parts?.first { $0.paths == [beta] }?.title.hasPrefix("iPhone14,7 27.2 (24B5089g)") ?? false)
+
+        // Without devicectl each model keeps its newest build.
+        let fallback = try XCTUnwrap(DeviceSupport.item(folders, paired: nil, ctx: context()))
+        XCTAssertEqual(fallback.paths, [beta, gone].sorted())
+    }
+
+    func testDeviceSupportParsesNamesAndDevicectl() throws {
+        XCTAssertEqual(DeviceSupport.parse("iPhone14,7 27.2.1 (24B156)").model, "iPhone14,7")
+        XCTAssertEqual(DeviceSupport.parse("iPhone14,7 27.2.1 (24B156)").build, "24B156")
+        XCTAssertNil(DeviceSupport.parse("16.0 (20A362)").model)
+        XCTAssertEqual(DeviceSupport.parse("16.0 (20A362)").version, "16.0")
+        let json = #"""
+        {"result":{"devices":[
+          {"properties":{"hardware":{"productType":"iPhone14,5"},"software":{"osBuildVersions":{"buildVersion":{"name":"24A435"}}}}},
+          {"hardwareProperties":{"productType":"iPhone18,2"},"deviceProperties":{"osBuildUpdate":"24B119"}},
+          {"hardwareProperties":{"productType":"iPhone19,4"},"deviceProperties":{}}
+        ]}}
+        """#
+        XCTAssertEqual(DeviceSupport.paired(fromJSON: json), [.init(model: "iPhone14,5", build: "24A435"), .init(model: "iPhone18,2", build: "24B119")])
+        XCTAssertNil(DeviceSupport.paired(fromJSON: "error"))
+    }
+
+    func testDeviceSupportWithoutModelKeepsTwoNewest() throws {
+        let old = try deviceSupport("16.0 (20A362)", age: 300)
+        _ = try deviceSupport("17.0 (21A329)", age: 200)
+        _ = try deviceSupport("18.0 (22A3354)", age: 100)
+        let folders = FS.children(home + "/Library/Developer/Xcode/iOS DeviceSupport").map { path in
+            let p = DeviceSupport.parse((path as NSString).lastPathComponent)
+            return DeviceSupport.Folder(path: path, model: p.model, version: p.version, build: p.build,
+                                        size: FS.size(path, trackNewest: true), touched: FS.mtime(path))
+        }
+        XCTAssertEqual(DeviceSupport.item(folders, paired: [], ctx: context())?.paths, [old])
+    }
+
+    func testIdleAndroidEmulators() throws {
+        let avd = home + "/.android/avd/"
+        for (name, age) in [("Old", 20.0), ("Fresh", 3.0), ("Running", 30.0)] {
+            let img = try write(".android/avd/" + name + ".avd/userdata-qemu.img", age: age)
+            _ = try write(".android/avd/" + name + ".avd/multiinstance.lock", "", age: age)
+            if name == "Running" { _ = try write(".android/avd/Running.avd/hardware-qemu.ini.lock", "", age: age) }
+            _ = try write(".android/avd/" + name + ".ini", "path=x", age: age)
+            try touch(img, age: age); try touch(avd + name + ".avd", age: age)
+        }
+        let items = Dictionary(uniqueKeysWithValues: AndroidEmulators.scan(context(), minimumBytes: 1).map { ($0.id, $0) })
+        XCTAssertEqual(Set(items.keys), ["android-avd/Old", "android-avd/Running"], "used three days ago is not idle")
+        XCTAssertEqual(items["android-avd/Old"]?.paths, [avd + "Old.avd", avd + "Old.ini"], "the .ini goes with the folder")
+        XCTAssertEqual(items["android-avd/Old"]?.safety, .review)
+        XCTAssertNil(items["android-avd/Old"]?.blocked, "multiinstance.lock stays after the emulator quits")
+        XCTAssertNotNil(items["android-avd/Running"]?.blocked)
     }
 
     func testChromeProfileCachesExpandProfiles() throws {

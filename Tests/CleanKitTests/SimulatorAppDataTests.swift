@@ -40,6 +40,8 @@ final class SimulatorAppDataTests: XCTestCase {
                 .init(udid: "B", name: "iPad Air", state: "Shutdown", isAvailable: true, dataPath: nil, dataPathSize: 3_400_000_000, lastBootedAt: iso(90)),
                 .init(udid: "C", name: "iPhone 17", state: "Booted", isAvailable: true, dataPath: nil, dataPathSize: 2_000_000_000, lastBootedAt: iso(60)),
                 .init(udid: "D", name: "Gone", state: "Shutdown", isAvailable: false, dataPath: nil, dataPathSize: 600_000_000, lastBootedAt: nil),
+                .init(udid: "E", name: "iPhone 17e", state: "Shutdown", isAvailable: true, dataPath: nil, dataPathSize: 3_000_000_000, lastBootedAt: nil, lastUsedAt: iso(20)),
+                .init(udid: "F", name: "iPhone 18 Pro", state: "Shutdown", isAvailable: true, dataPath: nil, dataPathSize: 3_000_000_000, lastBootedAt: iso(40), lastUsedAt: iso(10)),
             ],
         ]
         for index in runtimes.indices {
@@ -69,8 +71,10 @@ final class SimulatorAppDataTests: XCTestCase {
         XCTAssertNil(byID["simulator-runtime/SYS"], "not deletable")
 
         XCTAssertEqual(byID["simulator-unavailable"]?.commands, [["/usr/bin/xcrun", "simctl", "delete", "D"]])
-        XCTAssertEqual(byID["simulator-device/B"]?.commands, [["/usr/bin/xcrun", "simctl", "erase", "B"]])
-        XCTAssertNotNil(byID["simulator-device/C"]?.blocked, "a running simulator is not erased")
+        XCTAssertEqual(byID["simulator-device/B"]?.commands, [["/usr/bin/xcrun", "simctl", "delete", "B"]])
+        XCTAssertNotNil(byID["simulator-device/C"]?.blocked, "a running simulator is not deleted")
+        XCTAssertEqual(byID["simulator-device/E"]?.title, "Idle simulator · iPhone 17e", "idle for 20 days counts")
+        XCTAssertNil(byID["simulator-device/F"], "used ten days ago")
         XCTAssertNil(byID["simulator-device/A"], "small device data is not worth a line")
     }
 
