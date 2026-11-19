@@ -40,6 +40,28 @@ extension PulseCommand {
         if let cmd = c.command { print("   " + style.cyan("→ " + cmd)) }
     }
 
+    /// `thermo pulse end PID` on an on-demand system XPC service: SIGTERM, SIGKILL if it is ignored,
+    /// then report whether macOS has started a new copy.
+    func restartService(_ p: SlowdownProcess) throws {
+        guard let identity = ProcessTable.identity(p.pid) else { throw CLIError("PID \(p.pid) is not running") }
+        if app.args.has("dry-run") {
+            struct Plan: Encodable { let dryRun = true; let action = "restart-service"; let processes: [SlowdownProcess]; let steps: [String] }
+            print(Export.json(Plan(processes: [p], steps: ["recheck PID identity, owner and parent (launchd)", "SIGTERM", "wait 3 s", "SIGKILL if still running",
+                                                           "confirm it exited", "look for the copy macOS started again"])))
+            return
+        }
+        actionOutput(app.style.bold(tr("About to restart %1$@", SlowdownDiagnosis.friendlyName(p)))
+                     + app.style.dim(String(format: "  PID %d · %@ · ", p.pid, Self.size(p.footprintKB)) + Self.duration(p.elapsed)))
+        actionOutput(app.style.dim("  " + (p.executable ?? "")))
+        actionOutput("  " + tr("This is a system service that macOS starts on demand. It is asked to stop (SIGTERM); if it is still running after 3 seconds it is forced (SIGKILL). macOS starts it again the next time it is needed, and the memory it piled up is given back."))
+        actionOutput("  " + app.style.yellow(tr("Whatever is using it at this moment is interrupted.")))
+        guard try confirm() else { return }
+        let result = SystemService.restart(identity, memoryKB: p.footprintKB)
+        actionOutput((result.done ? app.style.green("✓ ") : app.style.red("✗ ")) + result.summary)
+        if app.args.has("json") { print(Export.json(result)) }
+        if !result.done { throw CLIError("the service was not restarted", exitCode: 3) }
+    }
+
     func end(_ rest: [String]) throws {
         guard !rest.isEmpty, rest.allSatisfy({ Int32($0).map { $0 > 1 } ?? false }) else {
             throw CLIError("usage: thermo pulse end PID [--dry-run] [--yes] [--json]")
@@ -50,6 +72,12 @@ extension PulseCommand {
         var targets: [(SlowdownProcess, ProcessIdentity?)] = []
         for pid in pids {
             guard let p = byPID[pid] else { throw CLIError("PID \(pid) is not running") }
+            // The one system process acted on: an on-demand XPC service, restarted by itself.
+            if SystemService.restartable(p) {
+                guard pids.count == 1 else { throw CLIError("PID \(pid) is a system service; restart it by itself: thermo pulse end \(pid)") }
+                try restartService(p)
+                return
+            }
             guard SlowdownFix.endable(p) else {
                 throw CLIError(SlowdownFix.refusal(p).summary)
             }

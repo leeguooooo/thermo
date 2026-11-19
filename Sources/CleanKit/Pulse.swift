@@ -92,6 +92,9 @@ public struct MachinePulse: Codable, Sendable, Equatable {
         /// How this one process may be stopped by hand; nil for system processes, other users'
         /// processes and Thermo itself, which are never stopped.
         public var stop: Stop? = nil
+        /// True for an on-demand system XPC service this user may restart (`SystemService.restartable`).
+        /// It is never ended like other processes, so `stop` stays nil.
+        public var restartableService: Bool? = nil
     }
 
     /// `agentSession` is offered only on the Memory page, one process at a time, after a
@@ -349,6 +352,7 @@ public struct MachinePulse: Codable, Sendable, Equatable {
             let own = p.pid != me && p.uid == getuid() && !exe.hasPrefix("/System/") && !exe.hasPrefix("/usr/")
             let quittable = own && !agent
             let stop: Stop? = !own ? nil : agent ? .agentSession : .end
+            let service = !own && SystemService.restartable(executable: p.details.executable, pid: p.pid, ppid: p.ppid ?? 0, uid: p.uid, me: me)
             // In place: copying the row out and back would copy its pids and parts for every process.
             func add(_ h: inout Hog) {
                 if app == nil, !h.pids.isEmpty, h.owner != p.owner || h.owners != nil {
@@ -375,7 +379,8 @@ public struct MachinePulse: Codable, Sendable, Equatable {
                     h.parts!.append(Part(pid: p.pid, role: role(p.details.argv), memoryKB: p.memoryKB, residentKB: p.residentKB,
                                       memoryMetric: p.memoryMetric, cpu: p.cpu, uptime: p.uptime,
                                       ppid: p.ppid, starterExited: app == nil && stop == .end && p.starterExited ? true : nil,
-                                      owner: p.owner, project: project, stop: stop))
+                                      owner: p.owner, project: project, stop: stop,
+                                      restartableService: service ? true : nil))
                 }
             }
             add(&byKey[key, default: Hog(id: key, name: name, cpu: 0, memoryKB: 0, pids: [], app: app, quittable: quittable,

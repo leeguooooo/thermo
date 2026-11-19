@@ -158,8 +158,28 @@ public struct MemorySuspect: Codable, Sendable, Equatable, Identifiable {
     public var grewKB: Int?
     public var span: TimeInterval?
     public var uptime: TimeInterval?
+    /// Set when the growth also looks like a leak; see `MemorySuspects.leak`.
+    public var leak: Leak? = nil
+
+    /// Growth that only went up, in a process that has run for hours and keeps almost none of it resident.
+    public struct Leak: Codable, Sendable, Equatable {
+        /// The lowest comparable reading, where the growth started.
+        public var fromKB: Int
+        public var residentKB: Int
+        /// Current footprint: what a restart hands back, as an upper bound.
+        public var reclaimKB: Int
+    }
+
+    /// The verdict in one line, for the program's own row.
+    public var leakText: String? {
+        guard let leak else { return nil }
+        return tr("Suspected leak: it only grew for %1$@ (%2$@ → %3$@) and almost none of it is in use (resident %4$@). Restarting it frees about %5$@.",
+                  MemorySuspects.duration(span ?? 0), MemoryFormat.string(kibibytes: leak.fromKB), MemoryFormat.string(kibibytes: memoryKB),
+                  MemoryFormat.string(kibibytes: leak.residentKB), MemoryFormat.string(kibibytes: leak.reclaimKB))
+    }
 
     public var text: String {
+        if let leakText { return leakText }
         switch kind {
         case .growing:
             return tr("grew by %1$@ in %2$@ across comparable readings; inspect its processes before taking action",
@@ -196,14 +216,38 @@ public enum MemorySuspects {
                 let low = points.map(\.1).min() ?? h.memoryKB
                 let high = points.map(\.1).max() ?? h.memoryKB
                 let lowAt = points.first { $0.1 == low }?.0 ?? first.0
-                if h.memoryKB - low >= 300 * 1024, Double(h.memoryKB) >= Double(low) * 1.5, Double(h.memoryKB) >= Double(high) * 0.9 {
-                    out.append(MemorySuspect(id: h.id, name: h.name, kind: .growing, memoryKB: h.memoryKB, grewKB: h.memoryKB - low,
-                                             span: now.timeIntervalSince(lowAt), uptime: h.uptime))
-                    continue
+                if h.memoryKB - low >= 300 * 1024, Double(h.memoryKB) >= Double(high) * 0.9 {
+                    // A big process that leaks adds less than half of itself in a day: for a leak the
+                    // 300 MB is enough, for plain growth it also has to be 50 % above its lowest.
+                    let leak = leak(points: points.map(\.1), residentKB: h.residentKB, started: current?.map(\.started).max(), now: now)
+                    if leak != nil || Double(h.memoryKB) >= Double(low) * 1.5 {
+                        out.append(MemorySuspect(id: h.id, name: h.name, kind: .growing, memoryKB: h.memoryKB, grewKB: h.memoryKB - low,
+                                                 span: now.timeIntervalSince(lowAt), uptime: h.uptime, leak: leak))
+                        continue
+                    }
                 }
             }
         }
         return out.sorted { ($0.kind == .growing ? 1 : 0, $0.memoryKB) > ($1.kind == .growing ? 1 : 0, $1.memoryKB) }
+    }
+
+    /// How long every process of the program must have been running before growth is called a leak.
+    public static let leakAge: TimeInterval = 6 * 3600
+
+    /// A growing program is a suspected leak when three more things hold together:
+    /// the readings only went up (a dip of more than 5 % or 16 MiB below the highest so far is a
+    /// workload coming and going), its youngest process has run for `leakAge`, and resident memory
+    /// is at most a quarter of the footprint, so most of what it holds is compressed or swapped
+    /// out and nothing is reading it. `points` are the comparable readings, oldest first, ending now.
+    public static func leak(points: [Int], residentKB: Int?, started: Date?, now: Date = Date()) -> MemorySuspect.Leak? {
+        guard let last = points.last, let low = points.min(), let residentKB, let started,
+              now.timeIntervalSince(started) >= leakAge, residentKB >= 0, residentKB <= last / 4 else { return nil }
+        var high = 0
+        for value in points {
+            if value < high - max(high / 20, 16 * 1024) { return nil }
+            high = max(high, value)
+        }
+        return MemorySuspect.Leak(fromKB: low, residentKB: residentKB, reclaimKB: last)
     }
 
     /// "26 h", "3 d", "45 min".

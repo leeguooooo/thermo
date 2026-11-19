@@ -359,6 +359,35 @@ final class SystemPulse: ObservableObject {
         }
     }
 
+    /// One on-demand system XPC service the user picked to restart. The only system process acted on:
+    /// `SystemService.restart` sends SIGTERM, then SIGKILL, and looks for the copy macOS starts again.
+    struct ServiceStop: Identifiable, Equatable {
+        var identity: ProcessIdentity
+        var name: String
+        var memoryKB = 0
+        var id: Int32 { identity.pid }
+    }
+
+    @MainActor func restartService(_ stop: ServiceStop,
+                                   perform: @escaping @Sendable (ServiceStop) -> SystemService.Result = {
+                                       SystemService.restart($0.identity, memoryKB: $0.memoryKB)
+                                   }) {
+        guard samplingAllowed(), actionsAllowed() else { quitProblem = tr("This feature is switched off."); return }
+        let pid = stop.identity.pid
+        guard !ending.contains(pid) else { return }
+        quitProblem = nil; actionFeedback = nil; unresponsive = nil
+        ending.insert(pid)
+        DispatchQueue.global(qos: .userInitiated).async { [weak self] in
+            let result = perform(stop)
+            DispatchQueue.main.async {
+                guard let self else { return }
+                self.ending.remove(pid)
+                if result.done { self.actionFeedback = result.summary } else { self.quitProblem = result.summary }
+            }
+            self?.queue.async { self?.sample() }
+        }
+    }
+
     /// Every process of one command-line program, across its project rows. Built only from rows
     /// that could be ended on their own: agent sessions, apps and protected rows are never in it.
     struct ProgramStop: Identifiable, Equatable {

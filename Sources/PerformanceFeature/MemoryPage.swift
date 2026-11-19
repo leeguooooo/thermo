@@ -32,13 +32,20 @@ struct MemoryPage: View {
     @State private var confirming: MachinePulse.Hog?
     @State private var restartTarget: MachinePulse.Hog?
     @State private var showAll = false
-    @State private var search = ""
+    @State private var search: String = {
+        // Offscreen review: `--inspect-memory NAME` also searches for it, so a small program is in frame.
+        let args = CommandLine.arguments
+        guard args.contains("--main"), args.contains("--offscreen"), let i = args.firstIndex(of: "--inspect-memory"), i + 1 < args.count else { return "" }
+        return args[i + 1]
+    }()
     @State private var expandedContexts: Set<String> = []
     @State private var sortByResident = false
     /// One process picked by hand, waiting for its confirmation.
     @State private var stopping: SystemPulse.SingleStop?
     /// Every process of one command-line program, waiting for its confirmation.
     @State private var stoppingProgram: SystemPulse.ProgramStop?
+    /// One on-demand system service, waiting for its confirmation.
+    @State private var restartingService: SystemPulse.ServiceStop?
 
     var body: some View {
         ScrollView {
@@ -86,7 +93,7 @@ struct MemoryPage: View {
                                                      : tr("The process is asked to stop (SIGTERM). Unsaved work in it may be lost."),
                          destructive: h.app == nil, heading: tr("What will run"),
                          lines: h.app != nil ? [tr("quit %1$@", h.app!)] : h.pids.map { "kill -TERM \($0)" },
-                         footnote: tr("Thermo never stops system processes or itself."),
+                         footnote: tr("System processes and Thermo itself are not ended here."),
                          confirmTitle: h.app != nil ? tr("Quit") : tr("End"),
                          confirm: { confirming = nil; pulse.quit(h); resample() }, cancel: { confirming = nil })
         }
@@ -96,7 +103,7 @@ struct MemoryPage: View {
                          summary: stopSummary(s), destructive: true, heading: tr("What will run"),
                          lines: ["kill -\(s.force ? "KILL" : "TERM") \(s.identity.pid)" + (s.folder.map { "   # " + $0 } ?? "")],
                          footnote: s.agentSession ? tr("Only this one process is ended. Freeing memory in one click never ends AI agent sessions.")
-                                                  : tr("Thermo never stops system processes or itself."),
+                                                  : tr("System processes and Thermo itself are not ended here."),
                          confirmTitle: s.force ? tr("Force end") : tr("End"),
                          confirm: { stopping = nil; pulse.end(s); resample() }, cancel: { stopping = nil })
         }
@@ -123,9 +130,20 @@ struct MemoryPage: View {
                          lines: s.rows.map { row in
                              "kill -TERM " + row.identities.map { String($0.pid) }.joined(separator: " ") + (row.project.map { "   # " + $0 } ?? "")
                          },
-                         footnote: tr("Thermo never stops system processes or itself."),
+                         footnote: tr("System processes and Thermo itself are not ended here."),
                          confirmTitle: s.starterExitedOnly ? tr("End") : tr("End all"),
                          confirm: { stoppingProgram = nil; pulse.endAll(s); resample() }, cancel: { stoppingProgram = nil })
+        }
+        .sheet(item: $restartingService) { s in
+            ConfirmSheet(title: tr("Restart %1$@ (PID %2$@)?", s.name, String(s.identity.pid)),
+                         summary: MachinePulse.sentences(
+                            tr("This is a system service that macOS starts on demand. It is asked to stop (SIGTERM); if it is still running after 3 seconds it is forced (SIGKILL). macOS starts it again the next time it is needed, and the memory it piled up is given back."),
+                            tr("Whatever is using it at this moment is interrupted.")),
+                         destructive: true, heading: tr("What will run"),
+                         lines: ["kill -TERM \(s.identity.pid)", "kill -KILL \(s.identity.pid)   # " + tr("only if it is still running after 3 seconds")],
+                         footnote: tr("Offered only for on-demand XPC services inside system frameworks that run as you. Other system processes are never stopped."),
+                         confirmTitle: tr("Restart"),
+                         confirm: { restartingService = nil; pulse.restartService(s); resample() }, cancel: { restartingService = nil })
         }
         .sheet(item: $restartTarget) { h in
             ConfirmSheet(title: tr("Restart %1$@?", h.name),
@@ -358,7 +376,7 @@ struct MemoryPage: View {
                         Text(sampled, style: .time).font(Theme.caption.monospacedDigit()).foregroundStyle(Theme.textTertiary)
                     }
                     // The column is easy to read as RAM or swap; what it is stays one click away.
-                    InfoButton(text: tr("Memory footprint is Activity Monitor's Memory column: what a program is charged for, compressed memory included, some of which may be in swap. Adding programs up gives neither the used memory above nor the swap size; resident memory counts shared pages and cannot be subtracted from footprint to get swap."),
+                    InfoButton(text: tr("Memory footprint is Activity Monitor's Memory column: what a program is charged for, compressed memory included, some of which may be in swap. Adding programs up gives neither the used memory above nor the swap size; resident memory counts shared pages and cannot be subtracted from footprint to get swap. A footprint far above resident memory still means most of it has been compressed or moved to swap."),
                                title: tr("Memory footprint"))
                 }
             }
@@ -502,6 +520,7 @@ struct MemoryPage: View {
             if isOpen {
                 VStack(alignment: .leading, spacing: 8) {
                     strandedNotice(program)
+                    gapNotice(program)
                     programTrend(program)
                     ForEach(program.contexts) { h in contextRow(h, showActions: program.actionTarget == nil) }
                 }
@@ -528,7 +547,10 @@ struct MemoryPage: View {
                         AxisValueLabel { if let d = v.as(Double.self) { Text(String(format: "%.1f GiB", d)) } }
                     } }
                 // With processes left behind the notice above says what the growth is made of.
-                if stranded(program).count == 0 {
+                if let leak = leakText(program) {
+                    Label(leak, systemImage: "exclamationmark.triangle.fill").foregroundStyle(Theme.caution)
+                        .fixedSize(horizontal: false, vertical: true)
+                } else if stranded(program).count == 0 {
                     Text(tr("Program totals include changing workloads; growth alone does not prove a leak."))
                         .foregroundStyle(Theme.textSecondary)
                 }
@@ -537,6 +559,51 @@ struct MemoryPage: View {
             Text(tr("Program trend appears after comparable samples are collected."))
                 .font(Theme.caption).foregroundStyle(Theme.textSecondary).padding(.leading, 32)
         }
+    }
+
+    /// The leak verdict for a program, with what restarting it involves when it is a system service.
+    func leakText(_ program: MemoryProgram) -> String? {
+        guard let text = model.suspects.first(where: { $0.id == program.id })?.leakText else { return nil }
+        let service = program.contexts.allSatisfy { h in !(h.parts ?? []).isEmpty && (h.parts ?? []).allSatisfy { $0.restartableService == true } }
+        return service ? MachinePulse.sentences(text, tr("It is a system service: macOS starts it again the next time it is needed.")) : text
+    }
+
+    /// Why the two columns are far apart: most of the footprint is compressed or in swap.
+    @ViewBuilder func gapNotice(_ program: MemoryProgram) -> some View {
+        if let resident = program.residentKB,
+           MemoryGap.outOfRAMKB(footprintKB: program.memoryKB, residentKB: resident, metric: program.memoryMetric) != nil {
+            Text(MemoryGap.text(footprintKB: program.memoryKB, residentKB: resident,
+                                swapUsed: model.breakdown?.swapReadable == false ? nil : model.breakdown?.swapUsed,
+                                swapFiles: model.breakdown?.swapFiles))
+                .font(Theme.caption).foregroundStyle(Theme.textSecondary).fixedSize(horizontal: false, vertical: true)
+                .padding(.leading, 32).padding(.trailing, 16)
+        }
+    }
+
+    /// The restart of one on-demand system service, or nil for every other process.
+    func serviceStop(_ h: MachinePulse.Hog, _ p: MachinePulse.Part) -> SystemPulse.ServiceStop? {
+        guard p.restartableService == true, p.stop == nil, h.app == nil,
+              let identity = h.processIdentities?.first(where: { $0.pid == p.pid }) else { return nil }
+        return SystemPulse.ServiceStop(identity: identity, name: h.name, memoryKB: p.memoryMetric == .footprint || p.memoryMetric == nil ? p.memoryKB : 0)
+    }
+
+    /// A button of its own only when the service holds enough to matter or looks like it leaks;
+    /// smaller ones keep the action in the context menu.
+    func showsServiceButton(_ target: SystemPulse.ServiceStop, leaking: Bool) -> Bool {
+        leaking || target.memoryKB >= SystemService.buttonFloorKB
+    }
+
+    func isLeaking(_ h: MachinePulse.Hog) -> Bool {
+        let id = (h.app == nil ? "program:cmd:" : "program:app:") + h.name.lowercased()
+        return model.suspects.contains { $0.id == id && $0.leak != nil }
+    }
+
+    func serviceButton(_ target: SystemPulse.ServiceStop, leaking: Bool) -> some View {
+        let busy = pulse.ending.contains(target.identity.pid)
+        return Button(busy ? tr("Restarting…") : tr("Restart")) { restartingService = target }
+            .buttonStyle(PillButtonStyle(prominent: leaking, color: Theme.caution)).controlSize(.small).disabled(busy)
+            .help(tr("Restart to give its memory back; macOS starts it again on demand."))
+            .accessibilityLabel(tr("Restart %1$@ (PID %2$@)?", target.name, String(target.identity.pid)))
     }
 
     func contextRow(_ h: MachinePulse.Hog, showActions: Bool) -> some View {
@@ -588,6 +655,8 @@ struct MemoryPage: View {
         let target = singleStop(h, p)
         // A row that is this one process already carries the End; here it stays in the context menu.
         let button = h.pids.count > 1 ? target : nil
+        let service = serviceStop(h, p)
+        let serviceShown = h.pids.count > 1 ? service.flatMap { showsServiceButton($0, leaking: isLeaking(h)) ? $0 : nil } : nil
         // Verbatim: a PID is an identifier, not a quantity, so no thousands separator.
         let title = [p.starterExited == true ? tr("starter has exited") : MachinePulse.roleName(p.role), "PID \(p.pid)", p.uptime.map { tr("running for %1$@", MemorySuspects.duration($0)) }]
             .compactMap { $0 }.joined(separator: " · ")
@@ -598,7 +667,11 @@ struct MemoryPage: View {
                 Text(verbatim: title).textSelection(.enabled).frame(maxWidth: .infinity, alignment: .leading)
                 Text(footprint).frame(width: 84, alignment: .trailing)
                 Text(resident).frame(width: 84, alignment: .trailing)
-                Group { if let button { endButton(button) } else { Color.clear.frame(height: 1) } }
+                Group {
+                    if let button { endButton(button) }
+                    else if let serviceShown { serviceButton(serviceShown, leaking: isLeaking(h)) }
+                    else { Color.clear.frame(height: 1) }
+                }
                     .frame(width: 190, alignment: .trailing)
             }.frame(minWidth: 600)
             HStack(alignment: .top) {
@@ -608,6 +681,7 @@ struct MemoryPage: View {
                 }
                 Spacer(minLength: 4)
                 if let button { endButton(button) }
+                else if let serviceShown { serviceButton(serviceShown, leaking: isLeaking(h)) }
             }
         }
         .foregroundStyle(Theme.textSecondary).padding(.leading, 20)
@@ -618,6 +692,8 @@ struct MemoryPage: View {
                 Button(tr("Force end…")) { var forced = target; forced.force = true; stopping = forced }
             } else if let forced = singleStop(h, p, force: true) {
                 Button(tr("Force quit…")) { stopping = forced }
+            } else if let service {
+                Button(tr("Restart service…")) { restartingService = service }
             }
             Button(tr("Copy PID")) { copy(String(p.pid)) }
         }
@@ -739,6 +815,9 @@ struct MemoryPage: View {
            let forced = singleStop(h, main, force: true) {
             Button(tr("Force quit…")) { stopping = forced }
         }
+        if let processes = h.parts, processes.count == 1, let service = serviceStop(h, processes[0]) {
+            Button(tr("Restart service…")) { restartingService = service }
+        }
         Button(h.pids.count == 1 ? tr("Copy PID") : tr("Copy PIDs")) { copy(h.pids.map { String($0) }.joined(separator: " ")) }
     }
 
@@ -771,6 +850,8 @@ struct MemoryPage: View {
                 parts.append(processes.count == 1 ? tr("AI agent session") : tr("AI agent sessions"))
             } else if choosable > 0 {
                 parts.append(tr("some of its processes are protected"))
+            } else if !processes.isEmpty, processes.allSatisfy({ $0.restartableService == true }) {
+                parts.append(tr("system service, macOS restarts it on demand"))
             } else {
                 parts.append(tr("system process, cannot be ended"))
             }
@@ -791,7 +872,9 @@ struct MemoryPage: View {
                     .buttonStyle(PillButtonStyle(prominent: emphasizeRestart, color: Theme.caution)).controlSize(.small)
                     .disabled(pulse.restarting != nil || pulse.quitting.contains(h.id))
             }
-            if h.app == nil, let processes = h.parts, processes.count == 1, let only = singleStop(h, processes[0]) {
+            if h.app == nil, let processes = h.parts, processes.count == 1, let service = serviceStop(h, processes[0]) {
+                if showsServiceButton(service, leaking: isLeaking(h)) { serviceButton(service, leaking: isLeaking(h)) }
+            } else if h.app == nil, let processes = h.parts, processes.count == 1, let only = singleStop(h, processes[0]) {
                 // A row that is one process: its End is the row's End, with the offer to force it.
                 endButton(only)
             } else if h.quittable {
