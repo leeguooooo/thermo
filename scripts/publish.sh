@@ -38,7 +38,18 @@ cp -cR "$R" "$STAGE"
 for f in $(find "$STAGE" -type f -size +25600k); do
     name="$(basename "$f")"
     ver="$(printf '%s' "$name" | sed -nE 's/^Thermo-([0-9.]*[0-9])\.(dmg|zip)$/\1/p')"
-    [ -n "$ver" ] || { echo "$name is over 25 MiB and is not a Thermo installer; Pages cannot serve it" >&2; exit 1; }
+    # A delta (Thermo<new build>-<old build>.delta) belongs to the release whose appcast item lists it.
+    if [ -z "$ver" ] && printf '%s' "$name" | grep -qE '^Thermo[0-9]+-[0-9]+\.delta$'; then
+        ver="$(python3 -I - "$R/appcast.xml" "$name" <<'PY'
+import sys, xml.etree.ElementTree as ET
+S = '{http://www.andymatuschak.org/xml-namespaces/sparkle}'
+for item in ET.parse(sys.argv[1]).iter('item'):
+    if any(e.get('url', '').endswith('/' + sys.argv[2]) for e in item.iter('enclosure')):
+        print(item.findtext(S + 'shortVersionString') or ''); break
+PY
+)"
+    fi
+    [ -n "$ver" ] || { echo "$name is over 25 MiB and is not a Thermo installer or listed delta; Pages cannot serve it" >&2; exit 1; }
     url="https://github.com/leeguooooo/thermo/releases/download/v$ver/$name"
     curl -sfIL -o /dev/null "$url" || { echo "$name is over 25 MiB: attach it to GitHub Release v$ver first ($url)" >&2; exit 1; }
     rm "$f"
