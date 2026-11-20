@@ -96,6 +96,9 @@ python3 scripts/math-renderer/verify.py
 ditto Resources/CaptureMath "$C/Resources/CaptureMath"
 python3 scripts/word-template/verify.py
 ditto Resources/CaptureWord "$C/Resources/CaptureWord"
+# Offline web apps (PDF, Photo Studio, Time Tracking). Built once per pinned commit; a release must include them.
+[ -f .build/webapps/pdf/index.html ] || scripts/build-web-apps.sh
+ditto .build/webapps "$C/Resources/WebApps"
 ditto Resources/ThirdPartyNotices "$C/Resources/ThirdPartyNotices"
 ditto Resources/ThirdPartyNotices "$DIST/ThirdPartyNotices"
 cp THIRD_PARTY_LICENSES "$C/Resources/THIRD_PARTY_LICENSES"

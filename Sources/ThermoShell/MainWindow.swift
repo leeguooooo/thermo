@@ -389,6 +389,11 @@ struct MainSidebar: View {
                         }
                     }
 
+                    if nativeGroups.contains(where:{$0.location == .workspace}) {
+                        header(tr("Productivity tools"))
+                        moduleRows(.workspace)
+                    }
+
                     if nativeGroups.contains(where:{$0.location == .agents}) {
                         header(tr("AI Agent Diagnostics"))
                         moduleRows(.agents)

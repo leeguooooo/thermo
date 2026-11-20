@@ -16,6 +16,7 @@ import PluginsFeature
 import ConnectionsFeature
 import BrowserFeature
 import ToolsFeature
+import WebAppsFeature
 import NativeFeatureAPI
 
 /// Assembly only. Feature targets keep their own models and views internal.
@@ -32,7 +33,7 @@ struct BuiltinFeatureFactory:ShellFeatureFactory {
             AgentDiagnosticsFeature.registration,SpaceFeature.registration(services:{SpaceHostServices(environment:environment())}),AppsFeature.registration,BrowserFeature.registration,
             DownloadFeature.registration(presentation:{DownloadHostPresentation(environment:environment())}),HistoryFeature.registration(services:{HistoryHostServices(environment:environment())}),
             ConnectionsFeature.registration(),ClaudeFeature.registration(),CheckupFeature.registration(discovery:{environment().discovery},reading:{environment().telemetry.latest.snapshot},navigate:{route in _=environment().open(.init(route:route))}),
-            PluginsFeature.registration(navigate:{route in _=environment().open(.init(route:route))})]
+            PluginsFeature.registration(navigate:{route in _=environment().open(.init(route:route))})]+WebAppsFeature.registrations()
         return .init(definitions:definitions,makeSearchAccess:search.makeAccess,makeCaptureControl:capture.makeControl,makeTools:ToolsFeature.makeAccess)
     }
 }

@@ -4807,4 +4807,14 @@ let zhHans: [String: String] = [
     "Holds charging at 80% while Thermo runs; normal charging returns when it stops.": "Thermo 运行时把充电停在 80%，停止后恢复正常充电。",
     "Wait for Thermo to restore AWDL before switching this feature off.": "等 Thermo 恢复 AWDL 后再关闭这个功能。",
     "Wait for normal charging to be restored before switching this feature off.": "等恢复正常充电后再关闭这个功能。",
+
+    // Web apps
+    "Productivity tools": "效率工具",
+    "PDF": "PDF",
+    "Photo Studio": "修图",
+    "Time Tracking": "工时记录",
+    "View, annotate, merge, split and recognize text in PDFs on this Mac.": "在本机查看、批注、合并、拆分 PDF，并识别其中的文字。",
+    "Layered image editing on this Mac; nothing is uploaded.": "在本机按图层编辑图片，不上传任何内容。",
+    "Timesheets by client, project and task, stored on this Mac.": "按客户、项目和任务记录工时，数据保存在本机。",
+    "This build of Thermo does not include the app's files. Run scripts/build-web-apps.sh, then open it again.": "这个 Thermo 版本没有包含该应用的文件。请运行 scripts/build-web-apps.sh 后重新打开。",
 ]

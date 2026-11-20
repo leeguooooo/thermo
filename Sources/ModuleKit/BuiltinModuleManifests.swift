@@ -152,7 +152,16 @@ public enum BuiltinModuleManifests {
     public static let lowLatency=tool("dev.thermo.low-latency","Network low latency","Pauses AWDL for a set time to steady Wi-Fi latency, then restores it.","network","tool-low-latency")
     public static let batteryCare=tool("dev.thermo.battery-care","Battery charging protection","Holds charging at 80% while Thermo runs; normal charging returns when it stops.","battery.75","tool-battery-care")
     public static let tools=[cleanScreen, keepAwake, focus, lowLatency, batteryCare]
-    public static let all = [disk, search, capture, menuBar, performance, apps, space, browser, connections, history, agents, checkup, plugins, claude, download] + tools
+    // Local web apps bundled with Thermo (from HeyPuter/everything). Each runs offline in its own web view.
+    private static func webApp(_ id:String,_ name:String,_ summary:String,_ symbol:String,_ scene:String)->ModuleManifest {
+        ModuleManifest(id:id,name:name,summary:summary,symbol:symbol,version:"1.0.0",launch:.onDemand,enabledByDefault:true,
+                       entries:[.init(id:"home",kind:.page,title:name,symbol:symbol,scene:scene)])
+    }
+    public static let pdf=webApp("dev.thermo.pdf","PDF","View, annotate, merge, split and recognize text in PDFs on this Mac.","doc.richtext","webapp:pdf")
+    public static let photoStudio=webApp("dev.thermo.photo-studio","Photo Studio","Layered image editing on this Mac; nothing is uploaded.","paintbrush","webapp:photo-studio")
+    public static let timeTracking=webApp("dev.thermo.time-tracking","Time Tracking","Timesheets by client, project and task, stored on this Mac.","clock.badge.checkmark","webapp:time-tracking")
+    public static let webApps=[pdf, photoStudio, timeTracking]
+    public static let all = [disk, search, capture, menuBar, performance, apps, space, browser, connections, history, agents, checkup, plugins, claude, download] + tools + webApps
 }
 
 public enum ModulePreferences {

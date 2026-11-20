@@ -13,7 +13,7 @@ package struct NativeHostPresentation: Equatable, Sendable {
 }
 
 package enum NativeSidebarLocation:String,CaseIterable,Hashable,Sendable {
-    case overview,machine,resources,storage,software,footer,agents
+    case overview,machine,resources,storage,software,footer,agents,workspace
 }
 package struct NativeUIContributions:Sendable {
     package let sidebarLocations:Set<NativeSidebarLocation>
