@@ -22,6 +22,7 @@ import WebKit
         config.websiteDataStore = .dedicated(for: app)
         config.preferences.setValue(true, forKey: "developerExtrasEnabled")
         let controller = config.userContentController
+        controller.addUserScript(.init(source: app.offlineScript, injectionTime: .atDocumentStart, forMainFrameOnly: true))
         if app.needsLocalStore {
             let store = WebAppLocalStore(directory: WebAppResources.dataDirectory(for: app))
             controller.addScriptMessageHandler(store, contentWorld: .page, name: WebAppLocalStore.handlerName)
@@ -62,7 +63,8 @@ import WebKit
 }
 
 private extension WKWebsiteDataStore {
-    /// A persistent store of its own per app (macOS 14+); older systems share the default store.
+    /// A persistent store of its own per app (macOS 14+). On older systems the default store is shared,
+    /// but each app is still its own origin (`thermo-webapp://<app>`), so their data stays apart.
     @MainActor static func dedicated(for app: WebApp) -> WKWebsiteDataStore {
         if #available(macOS 14.0, *) {
             return WKWebsiteDataStore(forIdentifier: app.storeIdentifier)

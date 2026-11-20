@@ -32,3 +32,15 @@ final class WebAppSchemeHandlerTests: XCTestCase {
         XCTAssertTrue(try store.handle(["op": "kvGet", "key": "k"]) is NSNull)
     }
 }
+
+import JavaScriptCore
+
+final class WebAppInjectedScriptTests: XCTestCase {
+    /// Parses (without running) every script injected into the pages.
+    func testInjectedScriptsParse() throws {
+        let context = try XCTUnwrap(JSContext())
+        context.setObject([WebApp.pdf.offlineScript, WebApp.photoStudio.offlineScript, WebApp.timeTracking.offlineScript, WebAppLocalStore.shim], forKeyedSubscript: "sources" as NSString)
+        let result = context.evaluateScript("sources.map((s) => { try { new Function(s); return 'ok'; } catch (e) { return String(e); } })")
+        XCTAssertEqual(result?.toArray() as? [String], ["ok", "ok", "ok", "ok"])
+    }
+}

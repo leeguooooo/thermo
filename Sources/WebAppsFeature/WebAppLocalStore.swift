@@ -128,7 +128,7 @@ import WebKit
         del: (key) => call('kvDel', { key }),
         MAX_KEY_SIZE: 1024, MAX_VALUE_SIZE: 400 * 1024,
       };
-      const user = { uuid: 'thermo-local', username: 'local' };
+      const user = { uuid: 'thermo-local', username: 'This Mac' };
       const puter = {
         env: 'web', appID: 'thermo-local', fs, kv,
         auth: { isSignedIn: () => true, getUser: async () => user, signIn: async () => user, signOut: () => {} },

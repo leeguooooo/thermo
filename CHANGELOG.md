@@ -2,7 +2,7 @@
 
 ## Unreleased
 
-- 新增「效率工具」分组：PDF（查看、批注、合并、拆分、文字识别）、修图（按图层编辑）和工时记录，均可在功能中心单独开关。三个应用来自开源项目 HeyPuter/everything，随 Thermo 打包、完全离线运行：网页内的所有网络请求都被拦截，链接改在浏览器中打开。工时记录的数据保存在「~/Library/Application Support/Thermo/WebApps/time-tracking」，不需要登录。
+- 新增「效率工具」分组：PDF（查看、批注、合并、拆分、文字识别）、修图（按图层编辑）和工时记录，均可在功能中心单独开关。三个应用来自开源项目 HeyPuter/everything，随 Thermo 打包、完全离线运行：网页内的所有网络请求都被拦截，链接改在浏览器中打开。工时记录的数据保存在「~/Library/Application Support/Thermo/WebApps/time-tracking」，不需要登录。只能用 Puter 云的按钮（登录、从 Puter 打开、云端保存、AI 助手与 AI 生成）已隐藏；PDF 的「保存」和 ⌘S 改为保存到本机文件，修图的「Save」保存 .photo 工程文件。
 
 ## 1.5.67
 
