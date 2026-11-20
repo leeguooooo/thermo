@@ -81,6 +81,10 @@ struct PopoverView: View {
                 shortcut("clock.arrow.circlepath", tr("History"), .native(.init(BuiltinModuleManifests.history.id,"home")))
                 // An icon like its neighbours, not a text button: the row stays short enough for one line by default.
                 shortcut("slider.horizontal.3", tr("Customize menu bar…"), .settings)
+                if ShellState.shared.updates.enabled {
+                    Button { ShellState.shared.updates.checkForUpdates() } label: { Image(systemName: "arrow.triangle.2.circlepath").frame(width: 22) }
+                        .buttonStyle(.plain).foregroundStyle(Theme.textSecondary).help(tr("Check for Updates…"))
+                }
                 Button { NSApp.terminate(nil) } label: { Image(systemName: "power").frame(width: 22) }
                     .buttonStyle(.plain).foregroundStyle(Theme.textSecondary).help(tr("Quit Thermo"))
             }
